@@ -42,4 +42,9 @@ Thumbs.db
 
 *.user
 *.suo
+*.sdf
+*.opensdf
 externals/
+out/
+bin/
+ipch/

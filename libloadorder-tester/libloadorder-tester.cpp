@@ -62,7 +62,7 @@ int main() {
 
 	std::ofstream out("libloadorder-tester.txt");
 	if (!out.good()){
-		cout << "File could not be opened for reading.";
+		std::cout << "File could not be opened for reading.";
 		exit(1);
 	}
 
