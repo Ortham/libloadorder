@@ -30,9 +30,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
-#include <boost/fusion/adapted/struct/detail/extension.hpp>
 #include <boost/unordered_set.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 
 struct Game;
@@ -40,7 +38,6 @@ struct Game;
 namespace liblo {
 
 	class Plugin {
-		friend struct boost::fusion::extension::access;
 	public:
 		Plugin();
 		Plugin(const std::string filename);  //Automatically trims .ghost extension.

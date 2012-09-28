@@ -26,7 +26,6 @@
 #include "libloadorder.h"
 #include "plugins.h"
 #include "game.h"
-#include "exception.h"
 #include "helpers.h"
 #include "libespm-interface.h"
 #include <boost/algorithm/string.hpp>
