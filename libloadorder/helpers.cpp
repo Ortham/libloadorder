@@ -31,7 +31,6 @@
 #include <boost/spirit/include/support_istream_iterator.hpp>
 #include <boost/spirit/include/karma.hpp>
 #include <boost/regex.hpp>
-#include <alphanum.hpp>
 
 #if _WIN32 || _WIN64
 #	include "Windows.h"
@@ -474,40 +473,30 @@ namespace liblo {
 	}
 
 	bool Version::operator < (Version ver) {
-		//Version string could have a wide variety of formats. Use regex to choose specific comparison types.
-
-		boost::regex reg1("(\\d+\\.?)+");  //a.b.c.d.e.f.... where the letters are all integers, and 'a' is the shortest possible match.
-
-		//boost::regex reg2("(\\d+\\.?)+([a-zA-Z\\-]+(\\d+\\.?)*)+");  //Matches a mix of letters and numbers - from "0.99.xx", "1.35Alpha2", "0.9.9MB8b1", "10.52EV-D", "1.62EV" to "10.0EV-D1.62EV".
-
-		if (boost::regex_match(verString, reg1) && boost::regex_match(ver.AsString(), reg1)) {
-			//First type: numbers separated by periods. If two versions have a different number of numbers, then the shorter should be padded 
-			//with zeros. An arbitrary number of numbers should be supported.
-			istringstream parser1(verString);
-			istringstream parser2(ver.AsString());
-			while (parser1.good() || parser2.good()) {
-				//Check if each stringstream is OK for i/o before doing anything with it. If not, replace its extracted value with a 0.
-				uint32_t n1, n2;
-				if (parser1.good()) {
-					parser1 >> n1;
-					parser1.get();
-				} else
-					n1 = 0;
-				if (parser2.good()) {
-					parser2 >> n2;
-					parser2.get();
-				} else
-					n2 = 0;
-				if (n1 < n2)
-					return true;
-				else if (n1 > n2)
-					return false;
-			}
-			return false;
-		} else {
-			//Wacky format. Use the Alphanum Algorithm. (what a name!)
-			return (doj::alphanum_comp(verString, ver.AsString()) < 0);
+		/* In libloadorder, the version comparison is only used for checking the versions of games, 
+		   which always have the format "a.b.c.d" where a, b, c and d are all integers. */
+		
+		istringstream parser1(verString);
+		istringstream parser2(ver.AsString());
+		while (parser1.good() || parser2.good()) {
+			//Check if each stringstream is OK for i/o before doing anything with it. If not, replace its extracted value with a 0.
+			uint32_t n1, n2;
+			if (parser1.good()) {
+				parser1 >> n1;
+				parser1.get();
+			} else
+				n1 = 0;
+			if (parser2.good()) {
+				parser2 >> n2;
+				parser2.get();
+			} else
+				n2 = 0;
+			if (n1 < n2)
+				return true;
+			else if (n1 > n2)
+				return false;
 		}
+		return false;
 	}
 
 	bool Version::operator > (Version ver) {

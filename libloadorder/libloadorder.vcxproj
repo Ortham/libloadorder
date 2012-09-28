@@ -166,7 +166,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>
       </Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
@@ -185,7 +185,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>
       </Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
@@ -206,7 +206,7 @@
       </Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -228,7 +228,7 @@
       </Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -250,7 +250,7 @@
       </Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -276,7 +276,7 @@
       </Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8;$(SolutionDir)externals\alphanum</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\boost;$(SolutionDir)externals\utf8</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

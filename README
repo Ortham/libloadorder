@@ -31,20 +31,15 @@ Requirements:
     - <http://sourceforge.net/projects/utfcpp/>
 	- Download the latest zipped v2.x source code.
 	- Tested with v2.3.2.
-  * Alphanum Algorithm
-    - <http://www.davekoelle.com/alphanum.html>
-	- Download the C++, not Windows dependent .hpp file.
 	
 	
 Preparing Requirements:
 
   1. Install Microsoft Visual C++ 2010 if you haven't already.
   2. Create an 'externals' folder in the top-level folder of the libloadorder source, beside this readme file.
-  3. Create an 'alphanum' folder inside the 'externals' folder.
-  4. Place the Alphanum Algorithm file you downloaded into the 'alphanum' folder.
-  5. Create a 'utf8' folder inside the 'externals' folder.
-  6. Place the folders inside the UTF8-CPP archive you downloaded (should be 'source', 'doc') into the 'utf8' folder.
-  7. Prepare Boost (see instructions below).
+  3. Create a 'utf8' folder inside the 'externals' folder.
+  4. Place the folders inside the UTF8-CPP archive you downloaded (should be 'source', 'doc') into the 'utf8' folder.
+  5. Prepare Boost (see instructions below).
   
   Preparing Boost:
   
