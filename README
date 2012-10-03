@@ -29,7 +29,7 @@ Requirements:
 
   * Microsoft Visual C++ 2010 Express Edition
     - <http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express>
-	- Proffesional Edition will also work.
+	- Professional Edition will also work.
   * Boost C++ Libraries
     - <http://sourceforge.net/projects/boost/files/boost/>
 	- Download the latest 7-zipped source code.
