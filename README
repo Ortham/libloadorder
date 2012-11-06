@@ -1,7 +1,7 @@
 libloadorder
 ============
 
-libloadorder is a free software library for manipulating the load order and 
+libloadorder is a free software library for manipulating the load order and
 active status of plugins for TES III: Morrowind, TES IV: Oblivion,
 TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
 
@@ -12,70 +12,80 @@ more information.
 Build Instructions
 ==================
 
-Note that libloadorder uses Registry queries to determine the storage 
-locations for the files it interacts with. Windows-specific code is wrapped 
-in preprocessor platform checks, so will not hinder building on Linux, but 
-there is no equivalent code for the Registry queries, so libloadorder compiled 
-for Linux will probably look in the wrong place. BUILDING LIBLOADORDER ON 
-NON-WINDOWS PLATFORMS IS IS UNTESTED AND UNSUPPORTED.
+Note: These build instructions are a work in progress, as I have
+recently switched from Windows 7 to Ubuntu. Sorry about that. Currently
+my knowledge is limited to compiling for Linux and cross-compiling for
+Windows. The whole point of using CMake is that you should be able to
+generate MSVC project files from it though.
 
-(If you know how to implement equivalent code to the Registry checks, contact 
-me and I will get it added.)
+Note: All paths are given relative to the top directory of the
+libloadorder source (ie. where this README is).
 
-All paths are given relative to the top level of the libloadorder source code, 
-ie. the folder in which this readme lies.
 
 Requirements:
 
-  * Microsoft Visual C++ 2010 Express Edition
-    - <http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express>
-	- Professional Edition will also work.
+  * CMake
+    - <http://cmake.org/>
+    - Tested with v2.8.9.
   * Boost C++ Libraries
     - <http://sourceforge.net/projects/boost/files/boost/>
-	- Download the latest 7-zipped source code.
-	- Tested with v1.51.0.
+    - Download the latest 7-zipped source code.
+    - Tested with v1.51.0.
   * UTF8-CPP
     - <http://sourceforge.net/projects/utfcpp/>
-	- Download the latest zipped v2.x source code.
-	- Tested with v2.3.2.
-	
-	
-Preparing Requirements:
+    - Download the latest zipped v2.x source code.
+    - Tested with v2.3.2.
+  * A native build system of your choice.
+    - Tested with GNU Make on Ubuntu Linux 12.10.
 
-  1. Install Microsoft Visual C++ 2010 if you haven't already.
-  2. Create an 'externals' folder in the top-level folder of the libloadorder 
-     source, beside this readme file.
-  3. Create a 'utf8' folder inside the 'externals' folder.
-  4. Place the folders inside the UTF8-CPP archive you downloaded (should be 
+
+Preparing UTF8-CPP:
+  1. Create a 'utf8' folder inside the 'externals' folder.
+  2. Place the folders inside the UTF8-CPP archive you downloaded (should be
      'source', 'doc') into the 'utf8' folder.
-  5. Prepare Boost (see instructions below).
-  
-  Preparing Boost:
-  
-    1. Create a 'boost' folder inside your 'externals' folder.
-	2. Extract the downloaded Boost archive to your 'boost' folder, so that 
-	   (for example) 'b2.exe' is at 'externals/boost/b2.exe'.
-	3. Start a Command Prompt and cd to 'externals/boost'.
-	4. Run 'bootstrap.bat' from the Command Prompt window.
-	5. Run 'b2 --toolset=msvc-10.0 --build-type=complete stage' from the 
-	   Command Prompt. This will take a long time.
-	6. Rename 'externals/boost/stage/lib' to 'externals/boost/stage/lib-32'.
-	7. To build 64 bit binaries:
-	  a. Run 
-	     'b2 --toolset=msvc-10.0 --build-type=complete --address-model=64 stage' 
-		 from the Command Prompt. This will take a long time.
-	  b. Rename 'externals/boost/stage/lib' to 'externals/boost/stage/lib-64'.
-	  
 
-Building libloadorder:
 
-  1. Open the 'libloadorder.sln' file in Visual C++ 2010.
-  2. Set the build configuration, selecting build type and architecture:
-    - 'Release' will build the library as a DLL.
-	- 'StaticRelease' will build the library as a static .lib library.
-  3. Select Build->Build Solution to build the library and the tester 
-     application. The tester application is not necessary for use of the 
-	 library, but it takes seconds to build any may serve as a useful example.
-  4. Binaries are located in 'bin/<type>-<architecture>', eg. 'bin/StaticRelease-32'.
-  
-    
+Preparing Boost:
+  1. Create a 'boost' folder inside the 'externals' folder.
+  2. Extract the downloaded Boost archive to your 'boost' folder, so that
+     (for example) 'b2.exe' is at 'externals/boost/b2.exe'.
+
+
+Building libloadorder
+---------------------
+
+Open a Terminal window and navigate to the root of the liblibloadorder
+source.
+
+    cd externals/boost
+    ./bootstrap.sh
+    echo "" > tools/build/v2/user-config.jam
+    ./b2 toolset=gcc link=static variant=release address-model=32 cxxflags=-fPIC --with-filesystem --with-locale --with-regex --with-program_options --with-system --stagedir=stage-32
+    mkdir ../../build
+    cd ../../build
+    cmake .. -DLIBLO_ARCH=32 -DLIBLO_LINK=STATIC
+    make
+
+
+For cross-compiling to Windows:
+
+    cd externals/boost
+    ./bootstrap.sh
+    echo "using gcc : 4.6.3 : i586-mingw32msvc-g++ : <rc>i586-mingw32msvc-windres <archiver>i586-mingw32msvc-ar <ranlib>i586-mingw32msvc-ranlib ;" > tools/build/v2/user-config.jam
+    ./b2 toolset=gcc-4.6.3 target-os=windows link=static variant=release address-model=32 cxxflags=-fPIC --with-filesystem --with-locale --with-regex --with-program_options --with-system --stagedir=stage-mingw-32
+    mkdir ../../build
+    cd ../../build
+    cmake .. -DLIBLO_ARCH=32 -DLIBLO_LINK=STATIC -DCMAKE_TOOLCHAIN_FILE=mingw32-toolchain.cmake
+    make
+
+If both native and cross-compiling, you'll need to delete the 'build'
+folder otherwise CMake will get confused and only build one of them (it
+doesn't seem to overwrite all the necessary config files when it
+generates the build system the second time).
+
+To compile a shared library, swap -DLIBSTR_LINK=STATIC with
+-DLIBSTR_LINK=SHARED
+
+To compile a 64 bit library, replace all instances of "32" in the above
+commands with "64". Also replace all instances of "i586-mingw32msvc"
+in the echo command with "x86_64-w64-mingw32".
