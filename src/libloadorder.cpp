@@ -36,11 +36,11 @@ using namespace liblo;
    Global variables
 ------------------------------*/
 
-const uint32_t LIBLO_VERSION_MAJOR = 1;
-const uint32_t LIBLO_VERSION_MINOR = 0;
-const uint32_t LIBLO_VERSION_PATCH = 0;
+const unsigned int LIBLO_VERSION_MAJOR = 2;
+const unsigned int LIBLO_VERSION_MINOR = 0;
+const unsigned int LIBLO_VERSION_PATCH = 0;
 
-uint8_t * extErrorString = NULL;
+char * extErrorString = NULL;
 
 
 /*------------------------------
@@ -48,31 +48,31 @@ uint8_t * extErrorString = NULL;
 ------------------------------*/
 
 /* The following are the possible codes that the library can return. */
-const uint32_t LIBLO_OK                         = 0;
-const uint32_t LIBLO_WARN_BAD_FILENAME          = 1;
-const uint32_t LIBLO_WARN_LO_MISMATCH           = 2;
-const uint32_t LIBLO_ERROR_FILE_READ_FAIL       = 3;
-const uint32_t LIBLO_ERROR_FILE_WRITE_FAIL      = 4;
-const uint32_t LIBLO_ERROR_FILE_NOT_UTF8        = 5;
-const uint32_t LIBLO_ERROR_FILE_NOT_FOUND       = 6;
-const uint32_t LIBLO_ERROR_FILE_RENAME_FAIL     = 7;
-const uint32_t LIBLO_ERROR_TIMESTAMP_READ_FAIL  = 8;
-const uint32_t LIBLO_ERROR_TIMESTAMP_WRITE_FAIL = 9;
-const uint32_t LIBLO_ERROR_FILE_PARSE_FAIL      = 10;
-const uint32_t LIBLO_ERROR_NO_MEM               = 11;
-const uint32_t LIBLO_ERROR_INVALID_ARGS         = 12;
-const uint32_t LIBLO_RETURN_MAX                 = LIBLO_ERROR_INVALID_ARGS;
+const unsigned int LIBLO_OK                         = 0;
+const unsigned int LIBLO_WARN_BAD_FILENAME          = 1;
+const unsigned int LIBLO_WARN_LO_MISMATCH           = 2;
+const unsigned int LIBLO_ERROR_FILE_READ_FAIL       = 3;
+const unsigned int LIBLO_ERROR_FILE_WRITE_FAIL      = 4;
+const unsigned int LIBLO_ERROR_FILE_NOT_UTF8        = 5;
+const unsigned int LIBLO_ERROR_FILE_NOT_FOUND       = 6;
+const unsigned int LIBLO_ERROR_FILE_RENAME_FAIL     = 7;
+const unsigned int LIBLO_ERROR_TIMESTAMP_READ_FAIL  = 8;
+const unsigned int LIBLO_ERROR_TIMESTAMP_WRITE_FAIL = 9;
+const unsigned int LIBLO_ERROR_FILE_PARSE_FAIL      = 10;
+const unsigned int LIBLO_ERROR_NO_MEM               = 11;
+const unsigned int LIBLO_ERROR_INVALID_ARGS         = 12;
+const unsigned int LIBLO_RETURN_MAX                 = LIBLO_ERROR_INVALID_ARGS;
 
 /* The following are for signifying what load order method is being used. */
-const uint32_t LIBLO_METHOD_TIMESTAMP           = 0;
-const uint32_t LIBLO_METHOD_TEXTFILE            = 1;
+const unsigned int LIBLO_METHOD_TIMESTAMP           = 0;
+const unsigned int LIBLO_METHOD_TEXTFILE            = 1;
 
 /* The following are the games identifiers used by the library. */
-const uint32_t LIBLO_GAME_TES3                  = 1;
-const uint32_t LIBLO_GAME_TES4                  = 2;
-const uint32_t LIBLO_GAME_TES5                  = 3;
-const uint32_t LIBLO_GAME_FO3                   = 4;
-const uint32_t LIBLO_GAME_FNV                   = 5;
+const unsigned int LIBLO_GAME_TES3                  = 1;
+const unsigned int LIBLO_GAME_TES4                  = 2;
+const unsigned int LIBLO_GAME_TES5                  = 3;
+const unsigned int LIBLO_GAME_FO3                   = 4;
+const unsigned int LIBLO_GAME_FNV                   = 5;
 
 
 /*------------------------------
@@ -81,14 +81,14 @@ const uint32_t LIBLO_GAME_FNV                   = 5;
 
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */
-LIBLO bool IsCompatibleVersion(const uint32_t versionMajor, const uint32_t versionMinor, const uint32_t versionPatch) {
-    if (versionMajor == 1 && versionMinor == 0 && versionPatch == 0)
+LIBLO bool lo_is_compatible(const unsigned int versionMajor, const unsigned int versionMinor, const unsigned int versionPatch) {
+    if (versionMajor == 2 && versionMinor == 0 && versionPatch == 0)
         return true;
     else
         return false;
 }
 
-LIBLO void GetVersionNums(uint32_t * versionMajor, uint32_t * versionMinor, uint32_t * versionPatch) {
+LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMinor, unsigned int * versionPatch) {
     *versionMajor = LIBLO_VERSION_MAJOR;
     *versionMinor = LIBLO_VERSION_MINOR;
     *versionPatch = LIBLO_VERSION_PATCH;
@@ -102,7 +102,7 @@ LIBLO void GetVersionNums(uint32_t * versionMajor, uint32_t * versionMinor, uint
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function called for the given
    game handle. */
-LIBLO uint32_t GetLastErrorDetails(uint8_t ** details) {
+LIBLO unsigned int lo_get_error_message(char ** details) {
     if (details == NULL)
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
 
@@ -111,7 +111,7 @@ LIBLO uint32_t GetLastErrorDetails(uint8_t ** details) {
     extErrorString = NULL;
 
     try {
-        extErrorString = ToUint8_tString(lastException.what());
+        extErrorString = ToNewCString(lastException.what());
     } catch (bad_alloc /*&e*/) {
         return error(LIBLO_ERROR_NO_MEM).code();
     }
@@ -120,7 +120,7 @@ LIBLO uint32_t GetLastErrorDetails(uint8_t ** details) {
     return LIBLO_OK;
 }
 
-LIBLO void CleanUpErrorDetails() {
+LIBLO void lo_cleanup() {
     delete [] extErrorString;
     extErrorString = NULL;
 }
@@ -133,7 +133,7 @@ LIBLO void CleanUpErrorDetails() {
 /* Creates a handle for the game given by gameId, which is found at gamePath. This handle allows
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
    is case-sensitive. */
-LIBLO uint32_t CreateGameHandle(game_handle * gh, const uint32_t gameId, const uint8_t * gamePath) {
+LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int gameId, const char * gamePath) {
     if (gh == NULL || gamePath == NULL) //Check for valid args.
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
     else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
@@ -185,13 +185,13 @@ LIBLO uint32_t CreateGameHandle(game_handle * gh, const uint32_t gameId, const u
 }
 
 /* Destroys the given game handle, freeing up memory allocated during its use. */
-LIBLO void DestroyGameHandle(game_handle gh) {
+LIBLO void lo_destroy_handle(lo_game_handle gh) {
     delete gh;
 }
 
 /* Sets the game's master file to a given filename, eg. for use with total conversions where
    the original main master file is replaced. */
-LIBLO uint32_t SetNonStandardGameMaster(game_handle gh, const uint8_t * masterFile) {
+LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * masterFile) {
     if (gh == NULL || masterFile == NULL) //Check for valid args.
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
 

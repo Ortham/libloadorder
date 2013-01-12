@@ -26,6 +26,7 @@
 #include "helpers.h"
 #include "libloadorder.h"
 #include "exception.h"
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <source/utf8.h>
@@ -47,16 +48,10 @@ using namespace std;
 
 namespace liblo {
 
-    // std::string to null-terminated uint8_t string converter.
-    uint8_t * ToUint8_tString(string str) {
-        size_t length = str.length() + 1;
-        uint8_t * p = new uint8_t[length];
-
-        for (size_t j=0; j < str.length(); j++) {  //UTF-8, so this is code-point by code-point rather than char by char, but same result here.
-            p[j] = str[j];
-        }
-        p[length - 1] = '\0';
-        return p;
+    // std::string to null-terminated char string converter.
+    char * ToNewCString(string str) {
+        char * p = new char[str.length() + 1];
+        return strcpy(p, str.c_str());
     }
 
     //UTF-8 file validator.
@@ -86,7 +81,7 @@ namespace liblo {
     }
 
     //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
-    string IntToString(const uint32_t n) {
+    string IntToString(const unsigned int n) {
         string out;
         back_insert_iterator<string> sink(out);
         boost::spirit::karma::generate(sink,boost::spirit::karma::upper[boost::spirit::karma::uint_],n);
@@ -358,7 +353,7 @@ namespace liblo {
         currentEncoding = 0;
     }
 
-    void Transcoder::SetEncoding(const uint32_t inEncoding) {
+    void Transcoder::SetEncoding(const unsigned int inEncoding) {
         if (inEncoding != 1252)
             return;
 
@@ -367,12 +362,12 @@ namespace liblo {
         currentEncoding = inEncoding;
 
         //Now create the UTF-8 -> enc map.
-        for (boost::unordered_map<char, uint32_t>::iterator iter = encToUtf8.begin(); iter != encToUtf8.end(); ++iter) {
+        for (boost::unordered_map<char, unsigned int>::iterator iter = encToUtf8.begin(); iter != encToUtf8.end(); ++iter) {
             utf8toEnc.emplace(iter->second, iter->first);  //Swap mapping. There *should* be unique values for each character either way.
         }
     }
 
-    uint32_t Transcoder::GetEncoding() {
+    unsigned int Transcoder::GetEncoding() {
         return currentEncoding;
     }
 
@@ -383,7 +378,7 @@ namespace liblo {
         try {
             utf8::iterator<string::const_iterator> iter(strIter, strIter, inString.end());
             for (iter; iter.base() != inString.end(); ++iter) {
-                boost::unordered_map<uint32_t, char>::iterator mapIter = utf8toEnc.find(*iter);
+                boost::unordered_map<unsigned int, char>::iterator mapIter = utf8toEnc.find(*iter);
                 if (mapIter != utf8toEnc.end())
                     outString << mapIter->second;
                 else
@@ -398,7 +393,7 @@ namespace liblo {
     string Transcoder::EncToUtf8(const string inString) {
         string outString;
         for (string::const_iterator iter = inString.begin(); iter != inString.end(); ++iter) {
-            boost::unordered_map<char, uint32_t>::iterator mapIter = encToUtf8.find(*iter);
+            boost::unordered_map<char, unsigned int>::iterator mapIter = encToUtf8.find(*iter);
             if (mapIter != encToUtf8.end()) {
                 try {
                     utf8::append(mapIter->second, back_inserter(outString));
@@ -458,7 +453,7 @@ namespace liblo {
             FILE *fp = popen(cmd.c_str(), "r");
 
             // read out the version string
-            static const uint32_t BUFSIZE = 32;
+            static const unsigned int BUFSIZE = 32;
             char buf[BUFSIZE];
             if (NULL != fgets(buf, BUFSIZE, fp))
                 verString = string(buf);
@@ -479,7 +474,7 @@ namespace liblo {
         istringstream parser2(ver.AsString());
         while (parser1.good() || parser2.good()) {
             //Check if each stringstream is OK for i/o before doing anything with it. If not, replace its extracted value with a 0.
-            uint32_t n1, n2;
+            unsigned int n1, n2;
             if (parser1.good()) {
                 parser1 >> n1;
                 parser1.get();

@@ -42,9 +42,9 @@ namespace tester {
            Version Functions
         ------------------------------*/
 
-        bool IsCompatible(const uint32_t versionMajor, const uint32_t versionMinor, const uint32_t versionPatch);
+        bool IsCompatible(const unsigned int versionMajor, const unsigned int versionMinor, const unsigned int versionPatch);
 
-        void GetVersionNums(uint32_t& versionMajor, uint32_t& versionMinor, uint32_t& versionPatch);
+        void GetVersionNums(unsigned int& versionMajor, unsigned int& versionMinor, unsigned int& versionPatch);
 
 
         /*------------------------------
@@ -54,12 +54,12 @@ namespace tester {
         class exception {
         public:
             exception();
-            exception(uint32_t code, std::string message);
+            exception(unsigned int code, std::string message);
 
-            uint32_t code();
+            unsigned int code();
             std::string what();
         private:
-            uint32_t errCode;
+            unsigned int errCode;
             std::string errMessage;
         };
 
@@ -70,12 +70,12 @@ namespace tester {
 
         class GameHandle {
         public:
-            GameHandle(const uint32_t gameId, const std::string gamePath);
+            GameHandle(const unsigned int gameId, const std::string gamePath);
             ~GameHandle();
 
             void SetGameMaster(const std::string filename);
 
-            uint32_t LoadOrderMethod();
+            unsigned int LoadOrderMethod();
 
             std::vector<std::string> LoadOrder();
             void LoadOrder(const std::vector<std::string>& newLoadOrder);
@@ -91,18 +91,18 @@ namespace tester {
             bool IsPluginActive(const std::string plugin);
             void SetPluginActiveStatus(const std::string plugin, const bool active);
         private:
-            game_handle gh;
+            lo_game_handle gh;
 
             //Return code handler - throws exception on receiving an error code.
-            void Handler(uint32_t retCode);
-            void Handler(uint32_t retCode, uint8_t * pointer);
-            void Handler(uint32_t retCode, uint8_t ** arrPointer, size_t arrSize);
+            void Handler(unsigned int retCode);
+            void Handler(unsigned int retCode, char * pointer);
+            void Handler(unsigned int retCode, char ** arrPointer, size_t arrSize);
 
             //Explicit memory management, need to call delete on the output when finished with it.
-            uint8_t * ToUint8_tString(std::string str);
+            char * ToNewCString(std::string str);
 
             //No explicit memory management. Returns new string object, so probably (not sure) lasts until calling function terminates.
-            std::string ToStdString(uint8_t * str);
+            std::string ToStdString(char * str);
         };
 
     }

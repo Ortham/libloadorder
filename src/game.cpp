@@ -37,7 +37,7 @@ using namespace liblo;
 
 namespace fs = boost::filesystem;
 
-    Game::Game(uint32_t gameId, string path)
+    Game::Game(unsigned int gameId, string path)
         : id(gameId),
         gamePath(fs::path(path)),
         extString(NULL),
@@ -118,7 +118,7 @@ namespace fs = boost::filesystem;
 
         if (extStringArray != NULL) {
             for (size_t i=0; i < extStringArraySize; i++)
-                delete[] extStringArray[i];  //Clear all the uint8_t strings created.
+                delete[] extStringArray[i];  //Clear all the char strings created.
             delete[] extStringArray;  //Clear the string array.
         }
     }
@@ -127,7 +127,7 @@ namespace fs = boost::filesystem;
         masterFile = file;
     }
 
-    uint32_t Game::Id() const {
+    unsigned int Game::Id() const {
         return id;
     }
 
@@ -135,7 +135,7 @@ namespace fs = boost::filesystem;
         return masterFile;
     }
 
-    uint32_t Game::LoadOrderMethod() const {
+    unsigned int Game::LoadOrderMethod() const {
         return loMethod;
     }
 

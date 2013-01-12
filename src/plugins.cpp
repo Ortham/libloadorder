@@ -70,9 +70,9 @@ namespace liblo {
 
     bool Plugin::IsMasterFile(const Game& parentGame) const {
         if (IsGhosted(parentGame))
-            return libespm::IsPluginMaster(parentGame.PluginsFolder() / fs::path(name + ".ghost"));
+            return libespm::IsPluginMaster(parentGame, name + ".ghost");
         else
-            return libespm::IsPluginMaster(parentGame.PluginsFolder() / name);
+            return libespm::IsPluginMaster(parentGame, name);
     }
 
     bool Plugin::IsFalseFlagged(const Game& parentGame) const {
@@ -101,6 +101,20 @@ namespace liblo {
         } catch(fs::filesystem_error e) {
             throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, name, e.what());
         }
+    }
+
+    std::vector<Plugin> Plugin::GetMasters(const Game& parentGame) const {
+        vector<Plugin> masters;
+        vector<string> strMasters;
+        if (IsGhosted(parentGame))
+            strMasters = libespm::GetPluginMasters(parentGame, name + ".ghost");
+        else
+            strMasters = libespm::GetPluginMasters(parentGame, name);
+
+        for (vector<string>::iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
+            masters.push_back(Plugin(*it));
+        }
+        return masters;
     }
 
     void Plugin::UnGhost(const Game& parentGame) const {
@@ -215,9 +229,15 @@ namespace liblo {
     void LoadOrder::Save(Game& parentGame) {
         if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
             //Update timestamps.
-            time_t masterTime = at(0).GetModTime(parentGame);
+            time_t lastTime = at(0).GetModTime(parentGame);
             for (size_t i=1, max=size(); i < max; i++) {
-                at(i).SetModTime(parentGame, masterTime + i*60);  //Space timestamps by a minute.
+                time_t thisTime = at(i).GetModTime(parentGame);
+                if (thisTime > lastTime)
+                    lastTime = thisTime;
+                else {
+                    lastTime += 60;
+                    at(i).SetModTime(parentGame, lastTime);  //Space timestamps by a minute.
+                }
             }
             //Now record new plugins folder mtime.
             mtime = fs::last_write_time(parentGame.PluginsFolder());
@@ -257,7 +277,12 @@ namespace liblo {
                 return false;
             if (hashset.find(*it) != hashset.end())
                 return false;
-            hashset.emplace(*it);
+            vector<Plugin> masters = it->GetMasters(parentGame);
+            for (vector<Plugin>::iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
+                if (hashset.find(*jt) == hashset.end())
+                    return false;
+            }
+            hashset.insert(*it);
             wasMaster = isMaster;
         }
 
@@ -468,9 +493,16 @@ namespace liblo {
     }
 
     bool ActivePlugins::IsValid(const Game& parentGame) {
+        boost::unordered_set<Plugin> hashset;
         for (boost::unordered_set<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
                 return false;
+            vector<Plugin> masters = it->GetMasters(parentGame);
+            for (vector<Plugin>::iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
+                if (hashset.find(*jt) == hashset.end())
+                    return false;
+            }
+            hashset.insert(*it);
         }
 
         if (size() > 255)

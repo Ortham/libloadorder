@@ -33,22 +33,22 @@
 using std::endl;
 
 int main() {
-    uint32_t vMajor, vMinor, vPatch;
+    unsigned int vMajor, vMinor, vPatch;
 
-    game_handle db;
-    const uint8_t * gamePath = reinterpret_cast<const uint8_t *>("C:/Program Files (x86)/Steam/steamapps/common/oblivion");
-    uint32_t game = LIBLO_GAME_TES4;
-    uint32_t ret;
+    lo_game_handle db;
+    const char * gamePath = reinterpret_cast<const char *>("C:/Program Files (x86)/Steam/steamapps/common/oblivion");
+    unsigned int game = LIBLO_GAME_TES4;
+    unsigned int ret;
 
-    uint32_t loMethod;
-    const uint8_t * master = reinterpret_cast<const uint8_t *>("Oblivion.esm");
-    const uint8_t * plugin = reinterpret_cast<const uint8_t *>("Unofficial Oblivion Patch.esp");
-    uint8_t ** loadOrder;
+    unsigned int loMethod;
+    const char * master = reinterpret_cast<const char *>("Oblivion.esm");
+    const char * plugin = reinterpret_cast<const char *>("Unofficial Oblivion Patch.esp");
+    char ** loadOrder;
     size_t len;
     size_t index;
-    uint8_t * outPlugin;
+    char * outPlugin;
 
-    uint8_t ** activePlugins;
+    char ** activePlugins;
     bool active;
 
     std::ofstream out("libloadorder-tester.txt");
@@ -62,8 +62,8 @@ int main() {
 
     out << "TESTING C LIBRARY INTERFACE" << endl;
 
-    out << "TESTING IsCompatibleVersion(...)" << endl;
-    bool b = IsCompatibleVersion(1,0,0);
+    out << "TESTING lo_is_compatible(...)" << endl;
+    bool b = lo_is_compatible(2,0,0);
     if (b)
         out << '\t' << "library is compatible." << endl;
     else {
@@ -71,34 +71,34 @@ int main() {
         return 0;
     }
 
-    out << "TESTING GetVersionNums(...)" << endl;
-    GetVersionNums(&vMajor, &vMinor, &vPatch);
+    out << "TESTING lo_get_version(...)" << endl;
+    lo_get_version(&vMajor, &vMinor, &vPatch);
     out << '\t' << "Version: " << vMajor << '.' << vMinor << '.' << vPatch << endl;
 
-    out << "TESTING CreateGameHandle(...)" << endl;
-    ret = CreateGameHandle(&db, game, gamePath);
+    out << "TESTING lo_create_handle(...)" << endl;
+    ret = lo_create_handle(&db, game, gamePath);
     if (ret != LIBLO_OK)
-        out << '\t' << "CreateGameHandle(...) failed. Error: " << ret << endl;
+        out << '\t' << "lo_create_handle(...) failed. Error: " << ret << endl;
     else {
 
-        out << "TESTING SetNonStandardGameMaster(...)" << endl;
-        ret = SetNonStandardGameMaster(db, master);
+        out << "TESTING lo_set_game_master(...)" << endl;
+        ret = lo_set_game_master(db, master);
         if (ret != LIBLO_OK)
-            out << '\t' << "SetNonStandardGameMaster(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_set_game_master(...) failed. Error: " << ret << endl;
         else
-            out << '\t' << "SetNonStandardGameMaster(...) successful." << endl;
+            out << '\t' << "lo_set_game_master(...) successful." << endl;
 
-        out << "TESTING GetLoadOrderMethod(...)" << endl;
-        ret = GetLoadOrderMethod(db, &loMethod);
+        out << "TESTING lo_get_load_order_method(...)" << endl;
+        ret = lo_get_load_order_method(db, &loMethod);
         if (ret != LIBLO_OK)
-            out << '\t' << "GetLoadOrderMethod(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_load_order_method(...) failed. Error: " << ret << endl;
         else
             out << '\t' << "Load Order Method: " << loMethod << endl;
 
-        out << "TESTING GetLoadOrder(...)" << endl;
-        ret = GetLoadOrder(db, &loadOrder, &len);
+        out << "TESTING lo_get_load_order(...)" << endl;
+        ret = lo_get_load_order(db, &loadOrder, &len);
         if (ret != LIBLO_OK)
-            out << '\t' << "GetLoadOrder(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_load_order(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
             for (size_t i=0; i<len; i++) {
@@ -106,10 +106,10 @@ int main() {
             }
         }
 
-        out << "TESTING SetLoadOrder(...)" << endl;
-        ret = SetLoadOrder(db, loadOrder, len);
+        out << "TESTING lo_set_load_order(...)" << endl;
+        ret = lo_set_load_order(db, loadOrder, len);
         if (ret != LIBLO_OK)
-            out << '\t' << "SetLoadOrder(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_set_load_order(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
             for (size_t i=0; i<len; i++) {
@@ -117,38 +117,38 @@ int main() {
             }
         }
 
-        out << "TESTING GetPluginLoadOrder(...)" << endl;
-        ret = GetPluginLoadOrder(db, plugin, &index);
+        out << "TESTING lo_get_plugin_position(...)" << endl;
+        ret = lo_get_plugin_position(db, plugin, &index);
         if (ret != LIBLO_OK)
-            out << '\t' << "GetPluginLoadOrder(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_plugin_position(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "\"" << plugin << "\" position: " << index << endl;
         }
 
-        out << "TESTING SetPluginLoadOrder(...)" << endl;
+        out << "TESTING lo_set_plugin_position(...)" << endl;
         len = 1;
-        ret = SetPluginLoadOrder(db, plugin, index);
+        ret = lo_set_plugin_position(db, plugin, index);
         if (ret != LIBLO_OK)
-            out << '\t' << "SetPluginLoadOrder(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_set_plugin_position(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "\"" << plugin << "\" set position: " << index << endl;
         }
 
         index++;
 
-        out << "TESTING GetIndexedPlugin(...)" << endl;
+        out << "TESTING lo_get_indexed_plugin(...)" << endl;
         len = 10;
-        ret = GetIndexedPlugin(db, index, &outPlugin);
+        ret = lo_get_indexed_plugin(db, index, &outPlugin);
         if (ret != LIBLO_OK)
-            out << '\t' << "GetIndexedPlugin(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_indexed_plugin(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "Plugin at position " << index << " : " << outPlugin << endl;
         }
 
-        out << "TESTING GetActivePlugins(...)" << endl;
-        ret = GetActivePlugins(db, &activePlugins, &len);
+        out << "TESTING lo_get_active_plugins(...)" << endl;
+        ret = lo_get_active_plugins(db, &activePlugins, &len);
         if (ret != LIBLO_OK)
-            out << '\t' << "GetActivePlugins(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_active_plugins(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
             for (size_t i=0; i<len; i++) {
@@ -156,10 +156,10 @@ int main() {
             }
         }
 
-        out << "TESTING SetActivePlugins(...)" << endl;
-        ret = SetActivePlugins(db, activePlugins, len);
+        out << "TESTING lo_set_active_plugins(...)" << endl;
+        ret = lo_set_active_plugins(db, activePlugins, len);
         if (ret != LIBLO_OK)
-            out << '\t' << "SetActivePlugins(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_set_active_plugins(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
             for (size_t i=0; i<len; i++) {
@@ -167,40 +167,41 @@ int main() {
             }
         }
 
-        out << "TESTING IsPluginActive(...)" << endl;
-        ret = IsPluginActive(db, plugin, &active);
+        out << "TESTING lo_get_plugin_active(...)" << endl;
+        ret = lo_get_plugin_active(db, plugin, &active);
         if (ret != LIBLO_OK)
-            out << '\t' << "IsPluginActive(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_get_plugin_active(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
 
-        out << "TESTING SetPluginActiveStatus(...)" << endl;
-        ret = SetPluginActiveStatus(db, plugin, !active);
+        out << "TESTING lo_set_plugin_active(...)" << endl;
+        ret = lo_set_plugin_active(db, plugin, !active);
         if (ret != LIBLO_OK) {
-            ret = GetLastErrorDetails(&outPlugin);
+            ret = lo_get_error_message(&outPlugin);
             if (ret != LIBLO_OK)
-                out << '\t' << "GetLastErrorDetails(...) failed. Error: " << ret << endl;
-            out << '\t' << "SetPluginActiveStatus(...) failed. Error: " << outPlugin << endl;
+                out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
+            out << '\t' << "lo_set_plugin_active(...) failed. Error: " << outPlugin << endl;
         } else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
 
         out << "TESTING GetLastErrorDetails(...)" << endl;
-        ret = SetPluginActiveStatus(db, NULL, !active);
+        ret = lo_set_plugin_active(db, NULL, !active);
         if (ret != LIBLO_OK) {
-            ret = GetLastErrorDetails(&outPlugin);
+            ret = lo_get_error_message(&outPlugin);
             if (ret != LIBLO_OK)
-                out << '\t' << "GetLastErrorDetails(...) failed. Error: " << ret << endl;
+                out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
             else
-                out << '\t' << "SetPluginActiveStatus(...) failed. Error: " << outPlugin << endl;
+                out << '\t' << "lo_set_plugin_active(...) failed. Error: " << outPlugin << endl;
         } else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
+        lo_cleanup();
 
-        out << "TESTING DestroyGameHandle(...)" << endl;
-        DestroyGameHandle(db);
-        out << "DestroyGameHandle(...) successful." << endl;
+        out << "TESTING lo_destroy_handle(...)" << endl;
+        lo_destroy_handle(db);
+        out << "lo_destroy_handle(...) successful." << endl;
     }
 
     //Now let's test the C++ wrapper.
@@ -214,7 +215,7 @@ int main() {
     out << "TESTING C++ WRAPPER INTERFACE" << endl;
 
     out << "TESTING IsCompatible(...)" << endl;
-    if (tester::liblo::IsCompatible(1, 0, 0))
+    if (tester::liblo::IsCompatible(2, 0, 0))
         out << '\t' << "library is compatible." << endl;
     else
         out << '\t' << "library is incompatible." << endl;

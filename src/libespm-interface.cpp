@@ -71,14 +71,14 @@ namespace libespm {
     //          http://www.uesp.net/wiki/Tes4Mod:Mod_File_Format/TES4
     //
 
-    bool IsPluginMaster(boost::filesystem::path filename) {
+    bool IsPluginMaster(const Game& parentGame, const std::string& filename) {
         char        buffer[MAXLENGTH];
         char*       bufptr = buffer;
 
         if (filename.empty())
             return false;
 
-        ifstream    file(filename.string().c_str(), ios_base::binary);
+        ifstream    file((parentGame.PluginsFolder() / filename).string().c_str(), ios_base::binary);
 
         if (file.bad())
             return false;
@@ -87,17 +87,22 @@ namespace libespm {
         file.read(&buffer[0], sizeof(buffer));
 
         // Check for the 'magic' marker at start
-        if (Read<uint32_t>(bufptr) != TES4)
+        if (Read<unsigned int>(bufptr) != TES4)
             return false;
 
         // Next field is the total header size
-        /*uint32_t headerSize =*/ Read<uint32_t>(bufptr);
+        /*unsigned int headerSize =*/ Read<unsigned int>(bufptr);
 
         // Next comes the header record Flags
-        uint32_t flags = Read<uint32_t>(bufptr);
+        unsigned int flags = Read<unsigned int>(bufptr);
 
         // LSb of this record's flags is used to indicate if the
         //  mod is a master or a plugin
         return ((flags & 0x1) != 0);
+    }
+
+    std::vector<std::string> GetPluginMasters(const Game& parentGame, const std::string& filename) {
+        vector<string> vec;
+        return vec;
     }
 }

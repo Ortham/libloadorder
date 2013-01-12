@@ -1,26 +1,26 @@
-/*	libloadorder
+/*  libloadorder
 
-	A library for reading and writing the load order of plugin files for
-	TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and
-	Fallout: New Vegas.
+    A library for reading and writing the load order of plugin files for
+    TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and
+    Fallout: New Vegas.
 
     Copyright (C) 2012    WrinklyNinja
 
-	This file is part of libloadorder.
+    This file is part of libloadorder.
 
-    libloadorder is free software: you can redistribute 
-	it and/or modify it under the terms of the GNU General Public License 
-	as published by the Free Software Foundation, either version 3 of 
-	the License, or (at your option) any later version.
+    libloadorder is free software: you can redistribute
+    it and/or modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation, either version 3 of
+    the License, or (at your option) any later version.
 
-    libloadorder is distributed in the hope that it will 
-	be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+    libloadorder is distributed in the hope that it will
+    be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with libloadorder.  If not, see 
-	<http://www.gnu.org/licenses/>.
+    along with libloadorder.  If not, see
+    <http://www.gnu.org/licenses/>.
 */
 
 #ifndef LIBLO_GAME_H
@@ -32,44 +32,44 @@
 #include <stdint.h>
 #include <boost/filesystem.hpp>
 
-	struct Game {
-	public:
-		Game(uint32_t id, std::string path);  //Currently missing desync correction.
-		~Game();
+struct Game {
+    public:
+        Game(unsigned int id, std::string path);  //Currently missing desync correction.
+        ~Game();
 
-		void SetMasterFile(std::string file);
-	
-		uint32_t Id() const;
-		std::string MasterFile() const;
-		uint32_t LoadOrderMethod() const;
+        void SetMasterFile(std::string file);
 
-		boost::filesystem::path PluginsFolder() const;
-		boost::filesystem::path ActivePluginsFile() const;
-		boost::filesystem::path LoadOrderFile() const;
+        unsigned int Id() const;
+        std::string MasterFile() const;
+        unsigned int LoadOrderMethod() const;
 
-		liblo::LoadOrder loadOrder;
-		liblo::ActivePlugins activePlugins;
+        boost::filesystem::path PluginsFolder() const;
+        boost::filesystem::path ActivePluginsFile() const;
+        boost::filesystem::path LoadOrderFile() const;
 
-		uint8_t * extString;
-		uint8_t ** extStringArray;
+        liblo::LoadOrder loadOrder;
+        liblo::ActivePlugins activePlugins;
 
-		size_t extStringArraySize;
-	private:
-		uint32_t id;
-		uint32_t loMethod;
+        char * extString;
+        char ** extStringArray;
 
-		std::string executable;
-		std::string masterFile;
+        size_t extStringArraySize;
+    private:
+        unsigned int id;
+        unsigned int loMethod;
 
-		std::string appdataFolderName;
-		std::string pluginsFolderName;
-		std::string pluginsFileName;
+        std::string executable;
+        std::string masterFile;
 
-		boost::filesystem::path gamePath;
-		boost::filesystem::path pluginsPath;
-		boost::filesystem::path loadorderPath;
+        std::string appdataFolderName;
+        std::string pluginsFolderName;
+        std::string pluginsFileName;
 
-		boost::filesystem::path GetLocalAppDataPath() const;
-	};
+        boost::filesystem::path gamePath;
+        boost::filesystem::path pluginsPath;
+        boost::filesystem::path loadorderPath;
+
+        boost::filesystem::path GetLocalAppDataPath() const;
+};
 
 #endif
