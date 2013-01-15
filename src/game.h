@@ -32,10 +32,10 @@
 #include <stdint.h>
 #include <boost/filesystem.hpp>
 
-struct Game {
+struct _lo_game_handle_int {
     public:
-        Game(unsigned int id, std::string path);  //Currently missing desync correction.
-        ~Game();
+        _lo_game_handle_int(unsigned int id, std::string path);  //Currently missing desync correction.
+        ~_lo_game_handle_int();
 
         void SetMasterFile(std::string file);
 

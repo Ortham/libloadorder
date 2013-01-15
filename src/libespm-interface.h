@@ -32,9 +32,9 @@
 #include <vector>
 
 namespace libespm {
-    bool IsPluginMaster(const Game& parentGame, const std::string& filename);
+    bool IsPluginMaster(const _lo_game_handle_int& parentGame, const std::string& filename);
 
-    std::vector<std::string> GetPluginMasters(const Game& parentGame, const std::string& filename);
+    std::vector<std::string> GetPluginMasters(const _lo_game_handle_int& parentGame, const std::string& filename);
 }
 
 #endif

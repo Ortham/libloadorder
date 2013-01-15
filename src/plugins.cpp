@@ -68,14 +68,14 @@ namespace liblo {
         return (boost::iequals(ext, ".esp") || boost::iequals(ext, ".esm"));
     }
 
-    bool Plugin::IsMasterFile(const Game& parentGame) const {
+    bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
         if (IsGhosted(parentGame))
             return libespm::IsPluginMaster(parentGame, name + ".ghost");
         else
             return libespm::IsPluginMaster(parentGame, name);
     }
 
-    bool Plugin::IsFalseFlagged(const Game& parentGame) const {
+    bool Plugin::IsFalseFlagged(const _lo_game_handle_int& parentGame) const {
         string ext;
         if (IsGhosted(parentGame))
             ext = fs::path(name).stem().extension().string();
@@ -84,15 +84,15 @@ namespace liblo {
         return ((IsMasterFile(parentGame) && !boost::iequals(ext, ".esm")) || (!IsMasterFile(parentGame) && boost::iequals(ext, ".esm")));
     }
 
-    bool Plugin::IsGhosted(const Game& parentGame) const {
+    bool Plugin::IsGhosted(const _lo_game_handle_int& parentGame) const {
         return (fs::exists(parentGame.PluginsFolder() / fs::path(name + ".ghost")));
     }
 
-    bool Plugin::Exists(const Game& parentGame) const {
+    bool Plugin::Exists(const _lo_game_handle_int& parentGame) const {
         return (fs::exists(parentGame.PluginsFolder() / name) || fs::exists(parentGame.PluginsFolder() / fs::path(name + ".ghost")));
     }
 
-    time_t Plugin::GetModTime(const Game& parentGame) const {
+    time_t Plugin::GetModTime(const _lo_game_handle_int& parentGame) const {
         try {
             if (IsGhosted(parentGame))
                 return fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"));
@@ -103,7 +103,7 @@ namespace liblo {
         }
     }
 
-    std::vector<Plugin> Plugin::GetMasters(const Game& parentGame) const {
+    std::vector<Plugin> Plugin::GetMasters(const _lo_game_handle_int& parentGame) const {
         vector<Plugin> masters;
         vector<string> strMasters;
         if (IsGhosted(parentGame))
@@ -117,7 +117,7 @@ namespace liblo {
         return masters;
     }
 
-    void Plugin::UnGhost(const Game& parentGame) const {
+    void Plugin::UnGhost(const _lo_game_handle_int& parentGame) const {
         if (IsGhosted(parentGame)) {
             try {
                 fs::rename(parentGame.PluginsFolder() / fs::path(name + ".ghost"), parentGame.PluginsFolder() / name);
@@ -127,7 +127,7 @@ namespace liblo {
         }
     }
 
-    void Plugin::SetModTime(const Game& parentGame, const time_t modificationTime) const {
+    void Plugin::SetModTime(const _lo_game_handle_int& parentGame, const time_t modificationTime) const {
         try {
             if (IsGhosted(parentGame))
                 fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"), modificationTime);
@@ -151,8 +151,8 @@ namespace liblo {
     /////////////////////////
 
     struct pluginComparator {
-        const Game& parentGame;
-        pluginComparator(const Game& game) : parentGame(game) {}
+        const _lo_game_handle_int& parentGame;
+        pluginComparator(const _lo_game_handle_int& game) : parentGame(game) {}
 
         bool    operator () (const Plugin plugin1, const Plugin plugin2) {
             //Return true if plugin1 goes before plugin2, false otherwise.
@@ -171,7 +171,7 @@ namespace liblo {
         }
     };
 
-    void LoadOrder::Load(const Game& parentGame) {
+    void LoadOrder::Load(const _lo_game_handle_int& parentGame) {
         clear();
         if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
             /*Game uses the new load order system.
@@ -226,7 +226,7 @@ namespace liblo {
         }
     }
 
-    void LoadOrder::Save(Game& parentGame) {
+    void LoadOrder::Save(_lo_game_handle_int& parentGame) {
         if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
             //Update timestamps.
             time_t lastTime = at(0).GetModTime(parentGame);
@@ -263,7 +263,7 @@ namespace liblo {
         }
     }
 
-    bool LoadOrder::IsValid(const Game& parentGame) {
+    bool LoadOrder::IsValid(const _lo_game_handle_int& parentGame) {
         if (at(0) != Plugin(parentGame.MasterFile()))
             return false;
 
@@ -289,7 +289,7 @@ namespace liblo {
         return true;
     }
 
-    bool LoadOrder::HasChanged(const Game& parentGame) {
+    bool LoadOrder::HasChanged(const _lo_game_handle_int& parentGame) {
         if (empty())
             return true;
 
@@ -330,7 +330,7 @@ namespace liblo {
         return max;
     }
 
-    size_t LoadOrder::LastMasterPos(const Game& parentGame) const {
+    size_t LoadOrder::LastMasterPos(const _lo_game_handle_int& parentGame) const {
         size_t max = size();
         for (size_t i=0; i < max; i++) {
             if (!at(i).IsMasterFile(parentGame))
@@ -339,7 +339,7 @@ namespace liblo {
         return max - 1;
     }
 
-    void LoadOrder::LoadFromFile(const Game& parentGame, const fs::path file) {
+    void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path file) {
         Transcoder trans;
         bool transcode = false;
         if (file == parentGame.ActivePluginsFile()) {
@@ -391,7 +391,7 @@ namespace liblo {
     // ActivePlugins Members
     ///////////////////////////
 
-    void ActivePlugins::Load(const Game& parentGame) {
+    void ActivePlugins::Load(const _lo_game_handle_int& parentGame) {
         clear();
 
         Transcoder trans;
@@ -435,7 +435,7 @@ namespace liblo {
         }
     }
 
-    void ActivePlugins::Save(const Game& parentGame) {
+    void ActivePlugins::Save(const _lo_game_handle_int& parentGame) {
         Transcoder trans;
         trans.SetEncoding(1252);
         string settings, badFilename;
@@ -492,7 +492,7 @@ namespace liblo {
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename, "1252");
     }
 
-    bool ActivePlugins::IsValid(const Game& parentGame) {
+    bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) {
         boost::unordered_set<Plugin> hashset;
         for (boost::unordered_set<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
@@ -521,7 +521,7 @@ namespace liblo {
         return true;
     }
 
-    bool ActivePlugins::HasChanged(const Game& parentGame) {
+    bool ActivePlugins::HasChanged(const _lo_game_handle_int& parentGame) {
         if (empty())
             return true;
 

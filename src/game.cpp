@@ -37,7 +37,7 @@ using namespace liblo;
 
 namespace fs = boost::filesystem;
 
-    Game::Game(unsigned int gameId, string path)
+    _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, string path)
         : id(gameId),
         gamePath(fs::path(path)),
         extString(NULL),
@@ -113,7 +113,7 @@ namespace fs = boost::filesystem;
             loMethod = LIBLO_METHOD_TIMESTAMP;
     }
 
-    Game::~Game() {
+    _lo_game_handle_int::~_lo_game_handle_int() {
         delete[] extString;
 
         if (extStringArray != NULL) {
@@ -123,35 +123,35 @@ namespace fs = boost::filesystem;
         }
     }
 
-    void Game::SetMasterFile(string file) {
+    void _lo_game_handle_int::SetMasterFile(string file) {
         masterFile = file;
     }
 
-    unsigned int Game::Id() const {
+    unsigned int _lo_game_handle_int::Id() const {
         return id;
     }
 
-    string Game::MasterFile() const {
+    string _lo_game_handle_int::MasterFile() const {
         return masterFile;
     }
 
-    unsigned int Game::LoadOrderMethod() const {
+    unsigned int _lo_game_handle_int::LoadOrderMethod() const {
         return loMethod;
     }
 
-    boost::filesystem::path Game::PluginsFolder() const {
+    boost::filesystem::path _lo_game_handle_int::PluginsFolder() const {
         return gamePath / pluginsFolderName;
     }
 
-    boost::filesystem::path Game::ActivePluginsFile() const {
+    boost::filesystem::path _lo_game_handle_int::ActivePluginsFile() const {
         return pluginsPath;
     }
 
-    boost::filesystem::path Game::LoadOrderFile() const {
+    boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
         return loadorderPath;
     }
 
-    boost::filesystem::path Game::GetLocalAppDataPath() const {
+    boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
 #if _WIN32 || _WIN64
         HWND owner;
         TCHAR path[MAX_PATH];

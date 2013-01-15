@@ -35,20 +35,22 @@ IF (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
     set (CMAKE_CXX_FLAGS "/EHsc")
 ENDIF ()
 
+# Settings when not cross-compiling.
+IF (CMAKE_SYSTEM_NAME MATCHES CMAKE_HOST_SYSTEM_NAME)
+    link_directories ("${LIBLO_LIBS_DIR}/boost/stage-${LIBLO_ARCH}/lib")
+ENDIF ()
+
 # Settings when compiling and cross-compiling on Linux.
 IF (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
-    set (LIBLO_LIBS boost_filesystem boost_system boost_regex)
     set (CMAKE_C_FLAGS  "-m${LIBLO_ARCH}")
     set (CMAKE_CXX_FLAGS "-m${LIBLO_ARCH}")
     set (CMAKE_EXE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
     set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
     set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
 
-    link_directories ("${LIBLO_LIBS_DIR}/boost/stage-${LIBLO_ARCH}/lib")
-
     IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         link_directories ("${LIBLO_LIBS_DIR}/boost/stage-mingw-${LIBLO_ARCH}/lib")
-        link_directories (version)
+        set (LIBLO_LIBS boost_filesystem boost_system boost_regex version)
     ENDIF ()
 ENDIF ()
 

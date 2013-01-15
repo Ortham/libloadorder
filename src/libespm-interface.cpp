@@ -71,7 +71,7 @@ namespace libespm {
     //          http://www.uesp.net/wiki/Tes4Mod:Mod_File_Format/TES4
     //
 
-    bool IsPluginMaster(const Game& parentGame, const std::string& filename) {
+    bool IsPluginMaster(const _lo_game_handle_int& parentGame, const std::string& filename) {
         char        buffer[MAXLENGTH];
         char*       bufptr = buffer;
 
@@ -101,7 +101,7 @@ namespace libespm {
         return ((flags & 0x1) != 0);
     }
 
-    std::vector<std::string> GetPluginMasters(const Game& parentGame, const std::string& filename) {
+    std::vector<std::string> GetPluginMasters(const _lo_game_handle_int& parentGame, const std::string& filename) {
         vector<string> vec;
         return vec;
     }

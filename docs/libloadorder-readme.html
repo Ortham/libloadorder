@@ -2,51 +2,48 @@
 <meta charset="utf-8">
 <title>libloadorder Readme</title>
 <style>
-    body {font-family:Helvetica,sans-serif;font-size:10pt;}
-    h1 + p {text-align:center;}
-    li {margin-bottom:10px;}
-    li ul, li ol {margin-top:0.4em;}
-    q {font-style:italic;}
-    code {display:inline-block; padding:2px 5px; background:#eee;}
-    td, th {border:1px solid #ddd; padding: 5px; vertical-align:top;}
-    table {border-collapse:collapse; margin:1em;background:#FafaFf;}
-    thead {font-weight:bold;background:#99CCFF;}
-    code.box {line-height:20px; white-space:pre; margin:1em 0 0 3em; display:table; padding:5px 10px;}
-    ol li ol {list-style:lower-alpha;}
-    ol li ol li ol {list-style:lower-roman;}
- ol ol li {margin-bottom:0.2em;}
-    blockquote {background:#E6E6FA; display:table; padding:5px 30px 5px 10px;}
-    h1 {text-align:center;font-size:24pt;}
-    h2 {margin-top:3em;font-size:20pt;}
-    h3 {margin-top:2em;font-size:16pt;}
-    h4 {margin-top:2em;font-size:12pt;}
+    body {
+        font:12pt/1.5 Helvetica,sans-serif;
+        text-rendering:optimizeLegibility;}
+    p, ul, li {margin:1.5em 0;}
+    h1,h3,h2 {font-weight:normal;}
+h1{
+    font-size:36pt;
+    line-height:0.5;
+    margin-top:1.125em;
+    margin-bottom:0.375em;}
+h2{
+    font-size:24pt;
+    line-height:0.75;
+    margin-top:3em;
+    margin-bottom:1.5em;}
+h3{
+    font-size:18pt;
+    line-height:1;
+    margin-top:3.5em;
+    margin-bottom:1em;}
+    ul, ol {margin-top:0.5em; margin-bottom:1em;}
+    li {margin:0.75em 0;}
     a:link {text-decoration:none;}
     a:hover {text-decoration:underline;}
+    ol ol {list-style:lower-alpha;}
+
+    code {display:inline-block; padding:0 3px; background:#eee;}
+    td, th {border:1px solid #ddd; padding: 5px; vertical-align:top;}
+    table {border-collapse:collapse; margin:1.5em; margin-bottom: 3em; background:#fafafa;}
+    thead {background:#99CCFF;}
+    code.box {border-radius:5px; border:1px solid #ccc; padding:0.75em; white-space:pre; overflow-x:auto; display:table; margin:1.5em;}
+
+    blockquote {border-radius:3px; border:1px solid #0c0; padding:5px; background:#7e7; display:table;margin:1.5em;}
+
     a[href^="http"]:after {padding-left:2px; content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAVklEQVR4Xn3PgQkAMQhDUXfqTu7kTtkpd5RA8AInfArtQ2iRXFWT2QedAfttj2FsPIOE1eCOlEuoWWjgzYaB/IkeGOrxXhqB+uA9Bfcm0lAZuh+YIeAD+cAqSz4kCMUAAAAASUVORK5CYII=);}
 
-    ul.errorMessages > li {margin-bottom:1.4em;}
-    td.t {background:#90ff90;text-align:center;}
-    td.c {background:#ff9090;text-align:center;}
-    td.t:after {content: '\2713';}
-    td.c:after {content: '\2717';}
-    img {border:0;}
-    .slideshow img {opacity:0;
-        position:absolute;
-        transition: opacity 1.5s;
-        -moz-transition: opacity 1.5s;
-        -webkit-transition: opacity 1.5s;
-        -o-transition: opacity 1.5s;}
-    .slideshow img:first-child {opacity:1;}
-    figcaption {font-style:italic; margin-bottom:2em;}
-    tr.inactive {color:#888;}
- tr.inactive td.c, tr.inactive td.t {background:#E3E3E3;}
-    code.box {margin-left:0em;}
     span[title] {border-bottom: 1px dotted; font-family: sans-serif; cursor:help;}
-    dt {margin-bottom:0.5em; margin-top:1em; font-style:italic;}
-    dd {margin-bottom:0.8em;}
     abbr {cursor:help;}
 
-    ul {margin-bottom:2em;}
+    #warning {background:#c00; padding:10px 5px;margin:-8px;}
+    var {color:#8B4513;}
+    .dfn {display:block; margin-bottom:4.5em; font-style:normal;}
 </style>
 
 <!-- libloadorder
@@ -116,7 +113,7 @@
     <li>Uses load order and active plugin list caching to avoid unnecessary disk reads, increasing performance.
     <li>Free and open source software licensed under the GNU General Public License v3.0.
 </ul>
-<p>libloadorder is designed to free modding utility developers from the task of implementing and maintaining their own code for the functionality it provides. It is one component of the <q>Community Mod Utility Libraries</q>, and is <a href="https://github.com/WrinklyNinja/libloadorder">available on GitHub</a>.
+<p>libloadorder is designed to free modding utility developers from the task of implementing and maintaining their own code for the functionality it provides.
 <p>This documentation assumes a familiarity with the basics of load ordering. An introduction to the concepts involved may be found in the <a href="textfile-standard.html">Textfile-based Load Order Standard</a>.
 <p><strong>Note</strong>: libloadorder is <strong>not</strong> thread safe. Thread safety is a goal, but one that has not yet been achieved. Bear this in mind if using it in a multi-threaded client.
 
@@ -124,30 +121,30 @@
 <h2 id="types">Variable Types</h2>
 <p>libloadorder uses character strings and integers for information input/output.
 <ul>
-    <li>All strings are unsigned 8-bit character strings (char*) encoded in UTF-8 and are null-terminated.
-    <li>All codes are unsigned 32-bit integers (unsigned int).
-    <li>All array sizes and positions use the unsigned data type size_t.
+    <li>All strings are null-terminated byte character strings encoded in UTF-8.
+    <li>All codes are unsigned integers at least 16 bits in size.
+    <li>All array sizes are unsigned integers at least 16 bits in size.
     <li>File paths are case-sensitive if and only if the underlying file system is case-sensitive.
 </ul>
 <p>libloadorder also introduces one new structure:
-<code class="box" id="game_handle">typedef struct Game * game_handle;</code>
-<p>The game_handle structure abstracts the definition of libloadorder's internal state while still providing type safety across the library's functions.
+<code class="box" id="lo_game_handle">typedef struct _lo_game_handle_int * lo_game_handle;</code>
+<p>The <code>lo_game_handle</code> structure abstracts the definition of libloadorder's internal state while still providing type safety across the library's functions.
 
 
 <h2 id="memory">Memory Management</h2>
 <p>libloadorder manages the memory of strings and arrays it returns internally, so such strings and arrays should not be deallocated by the client.
-<p>A string or array outputted by libloadorder lasts until the next call to a function which outputs data of the same type, eg. a string will last until a function outputting a string is called. <a href="#lo_destroy_handle">lo_destroy_handle</a> will also destroy all outputted strings and arrays.
-<p>The one exception to the above is the string outputted by <a href="#lo_get_error_message">lo_get_error_message</a>. This string is allocated independently of all other strings, so lasts until the next call to <a href="#lo_get_error_message">lo_get_error_message</a> or until <a href="#lo_cleanup">lo_cleanup</a> is called. It is not destroyed by <a href="#lo_destroy_handle">lo_destroy_handle</a>.
+<p>Data returned by a function lasts until a function is called which returns data of the same type (eg. a string is stored until the client calls another function which returns a string, an integer array lasts until another integer array is returned, etc.).
+<p>All allocated memory is freed when <a href="#lo_destroy_handle">lo_destroy_handle</a> is called, except the string allocated by <a href="#lo_get_error_message">lo_get_error_message</a>, which must be freed by calling <a href="#lo_cleanup">lo_cleanup</a>.
 
 
 <h2 id="codes">Library Codes</h2>
 <h3 id="codes-return">Return Codes</h3>
-<p>libloadorder functions use the following unsigned int return codes to signal how a function completes. WARN return codes signify a problem that did not cause the function to exit prematurely, whereas ERROR return codes signify issues that did cause the function to exit prematurely. When a function exits prematurely, a reversal of changes made during its prior execution is attempted.
+<p>The following codes are used to signal how a function completes. WARN return codes signify a problem that did not cause the function to exit prematurely, whereas ERROR return codes signify issues that did cause the function to exit prematurely. When a function exits prematurely, a reversal of changes made during its prior execution is attempted.
 <table>
     <thead><tr><th>Return Code<th>Description
     <tbody>
         <tr><td>LIBLO_OK                                <td>The function completed successfully.
-        <tr><td>LIBLO_WARN_BAD_FILENAME             <td>A plugin filename contains characters that do not have Windows-1251/1252 code points. The plugin cannot be activated.
+        <tr><td>LIBLO_WARN_BAD_FILENAME             <td>A plugin filename contains characters that do not have Windows-1252 code points. The plugin cannot be activated.
         <tr><td>LIBLO_WARN_LO_MISMATCH              <td>This return code can only ever be encountered when using libloadorder with a game that uses the textfile-based load order system. It is only ever returned by <a href="#lo_create_handle">lo_create_handle</a>, and signifies that the load order in the active plugins list file (eg. <q>plugins.txt</q>) is not equivalent to the load order in the full load order file (eg. <q>loadorder.txt</q>). Synchronisation of the two is automatic when load order is managed through libloadorder, but other utilities (eg. the Skyrim launcher) may cause desync to occur. See the <a href="textfile-standard.html">Textfile-based Load Order Standard</a> for more information.
         <tr><td>LIBLO_ERROR_FILE_READ_FAIL          <td>A file could not be read.
         <tr><td>LIBLO_ERROR_FILE_WRITE_FAIL         <td>A file could not be written to.
@@ -187,52 +184,66 @@
 <p>libloadorder provides the functions listed below to clients. Where a function returns a unsigned int value, this is the function's return code.
 
 <h3 id="functions-error">Error Handling Functions</h3>
-<dfn id="lo_get_error_message">lo_get_error_message</dfn> - Outputs a string giving the details of the last time an error or warning return code was returned by a function.
-<code class="box">unsigned int <a href="#lo_get_error_message">lo_get_error_message</a> (char ** details);</code>
+<div class="dfn" id="lo_get_error_message">
+<code class="box">unsigned int lo_get_error_message (char ** details);</code>
+<p>Outputs a string giving the details of the last time an error or warning return code was returned by a function.
 <ul>
     <li><var>details</var> - A pointer to the error details string outputted by the function.
 </ul>
-
-<dfn id="lo_cleanup">lo_cleanup</dfn> - Frees the memory allocated to the last error details string.
-<code class="box">void <a href="#lo_cleanup">lo_cleanup</a> ();</code>
-<ul>
-    <li><var>details</var> - A pointer to the error details string outputted by the function.
-</ul>
+</div>
+<div class="dfn" id="lo_cleanup">
+<code class="box">void lo_cleanup ();</code>
+<p>Frees the memory allocated to the last error details string.
+</div>
 
 <h3 id="functions-version">Version Functions</h3>
-<dfn id="lo_is_compatible">lo_is_compatible</dfn> - Returns whether this version of libloadorder is compatible with the given version of libloadorder. Abstracts library stability policy away from clients.
-<code class="box">bool <a href="#lo_is_compatible">lo_is_compatible</a> (const unsigned int bossVersionMajor, const unsigned int bossVersionMinor, const unsigned int bossVersionPatch);</code>
+<div class="dfn" id="lo_is_compatible">
+<code class="box">bool lo_is_compatible (const unsigned int versionMajor,
+                       const unsigned int versionMinor,
+                       const unsigned int versionPatch);</code>
+<p>Checks if this version of libloadorder is compatible with the given version of libloadorder. Abstracts library stability policy away from clients.
 <ul>
-    <li><var>versionMajor</var> - The major version number (<b>major</b>.minor.patch) of the library version the client's code was written for.
-    <li><var>versionMinor</var> - The minor version number (major.<b>minor</b>.patch) of the library version the client's code was written for.
-    <li><var>versionPatch</var> - The patch version number (major.minor.<b>patch</b>) of the library version the client's code was written for.
+    <li><var>versionMajor</var> - The major version number (<b>major</b>.minor.patch) to check.
+    <li><var>versionMinor</var> - The minor version number (major.<b>minor</b>.patch) to check.
+    <li><var>versionPatch</var> - The patch version number (major.minor.<b>patch</b>) to check.
 </ul>
-
-<dfn id="lo_get_version">lo_get_version</dfn> - Returns the version numbers for the loaded version of libloadorder.
-<code class="box">unsigned int <a href="#lo_get_version">lo_get_version</a> (unsigned int * versionMajor, unsigned int * versionMinor, unsigned int * versionPatch);</code>
+</div>
+<div class="dfn" id="lo_get_version">
+<code class="box">unsigned int lo_get_version (unsigned int * versionMajor,
+                             unsigned int * versionMinor,
+                             unsigned int * versionPatch);</code>
+<p>Outputs the version numbers for the loaded version of libloadorder.
 <ul>
-    <li><var>versionMajor</var> - The major version number (<b>major</b>.minor.patch) of the library.
-    <li><var>versionMinor</var> - The minor version number (major.<b>minor</b>.patch) of the library.
-    <li><var>versionPatch</var> - The patch version number (major.minor.<b>patch</b>) of the library.
+    <li><var>versionMajor</var> - A pointer to the major version number (<b>major</b>.minor.patch).
+    <li><var>versionMinor</var> - A pointer to the minor version number (major.<b>minor</b>.patch).
+    <li><var>versionPatch</var> - A pointer to the patch version number (major.minor.<b>patch</b>).
 </ul>
+</div>
 
 <h3 id="functions-lifecycle">Lifecycle Management Functions</h3>
-<dfn id="lo_create_handle">lo_create_handle</dfn> - Creates a handle for one of the games supported by the library. If the <var>gameId</var> uses the textfile-based load order system, this function also checks if the two load order files are in sync, provided that they both exist. You can create multiple game handles, including for the same game, but remember that libloadorder is not thread safe.
-<code class="box">unsigned int <a href="#lo_create_handle">lo_create_handle</a> (game_handle * gh, const unsigned int gameId, const char * gamePath);</code>
+<div class="dfn" id="lo_create_handle">
+<code class="box">unsigned int lo_create_handle (lo_game_handle * gh,
+                               const unsigned int gameId,
+                               const char * gamePath);</code>
+<p>Creates a handle for one of the games supported by the library. If the <var>gameId</var> uses the textfile-based load order system, this function also checks if the two load order files are in sync, provided that they both exist. You can create multiple game handles.
 <ul>
     <li><var>db</var> - A pointer to the handle created by the function.
     <li><var>gameId</var> - A game code specifying which game to create the handle for.
     <li><var>gamePath</var> - A string containing the relative or absolute path to the game folder.
 </ul>
-
-<dfn id="lo_destroy_handle">lo_destroy_handle</dfn> - Destroys the given handle, freeing any memory allocated as part of its use.
-<code class="box">void <a href="#lo_destroy_handle">lo_destroy_handle</a> (game_handle gh);</code>
+</div>
+<div class="dfn" id="lo_destroy_handle">
+<code class="box">void lo_destroy_handle (lo_game_handle gh);</code>
+<p>Destroys the given handle, freeing any memory allocated as part of its use.
 <ul>
     <li><var>gh</var> - The game handle to be destroyed.
 </ul>
+</div>
 
-<dfn id="lo_set_game_master">lo_set_game_master</dfn> - Sets the game's master file to a given filename, eg. for use with total conversions where the original main master file is replaced with one of a different filename.
-<code class="box">unsigned int <a href="#lo_set_game_master">lo_set_game_master</a> (game_handle gh, const char * masterFile);</code>
+<div class="dfn" id="lo_set_game_master">
+<code class="box">unsigned int lo_set_game_master (lo_game_handle gh,
+                                 const char * masterFile);</code>
+<p>Sets the game's master file to a given filename, eg. for use with total conversions where the original main master file is replaced with one of a different filename.
 <ul>
     <li><var>gh</var> - The game handle to be destroyed.
     <li><var>masterFile</var> - The filename of the replacement main master file.
@@ -249,39 +260,55 @@
     <li>Contains no more than 255 plugins.
     <li>If for Skyrim, contains <code>Skyrim.esm</code>.
     <li>If for Skyrim and <code>Update.esm</code> is installed, contains <code>Update.esm</code>.
-</ul>
+</ul><br>
 
-<dfn id="lo_get_active_plugins">lo_get_active_plugins</dfn> - Gets an array of all plugins in the active plugin list.
-<code class="box">unsigned int <a href="#lo_get_active_plugins">lo_get_active_plugins</a> (game_handle gh, char *** plugins, size_t * numPlugins);</code>
+<div class="dfn" id="lo_get_active_plugins">
+<code class="box">unsigned int lo_get_active_plugins (lo_game_handle gh,
+                                    char *** plugins,
+                                    size_t * numPlugins);</code>
+<p>Gets an array of all plugins in the active plugin list.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
-    <li><var>plugins</var> - The outputted array of active plugins. If <var>numPlugins</var> is 0, this will be <code>NULL</code>.
-    <li><var>numPlugins</var> - The size of the outputted <var>plugins</var> array.
+    <li><var>plugins</var> - The outputted array of active plugins. <code>null</code> if no plugins are active.
+    <li><var>numPlugins</var> - The size of the outputted <var>plugins</var> array. <code>0</code> if <var>plugins</var> is <code>null</code>.
 </ul>
+</div>
 
-<dfn id="lo_set_active_plugins">lo_set_active_plugins</dfn> - Replaces the contents of the active plugin list with the given plugins.
-<code class="box">unsigned int <a href="#lo_set_active_plugins">lo_set_active_plugins</a> (game_handle gh, char ** plugins, const size_t numPlugins);</code>
+<div class="dfn" id="lo_set_active_plugins">
+<code class="box">unsigned int lo_set_active_plugins (lo_game_handle gh,
+                                    char ** plugins,
+                                    const size_t numPlugins);</code>
+<p>Replaces the contents of the active plugin list with the given plugins.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugins</var> - The inputted array of plugins to be made active.
     <li><var>numPlugins</var> - The size of the <var>plugins</var> array.
 </ul>
+</div>
 
-<dfn id="lo_get_plugin_active">lo_get_plugin_active</dfn> - Checks to see if the given plugin is in the active plugin list.
-<code class="box">unsigned int <a href="#lo_get_plugin_active">lo_get_plugin_active</a> (game_handle gh, const char * plugin, bool * result);</code>
+<div class="dfn" id="lo_get_plugin_active">
+<code class="box">unsigned int lo_get_plugin_active (lo_game_handle gh,
+                                   const char * plugin,
+                                   bool * result);</code>
+<p>Checks to see if the given plugin is in the active plugin list.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugin</var> - A string containing the filename of the plugin to check the active/inactive status of.
     <li><var>isActive</var> - A pointer to the boolean output. The output is <code>true</code> if the plugin is active, and <code>false</code> otherwise.
 </ul>
+</div>
 
-<dfn id="lo_set_plugin_active">lo_set_plugin_active</dfn> - If <var>active</var> is true, activates the given plugin if it is not already active. If <var>active</var> is false, deactivates the plugin if it is not already inactive. If the given plugin is already of the status it is being set to, its status is simply not changed. If activating a plugin that is ghosted, the <code>.ghost</code> extension is removed.
-<code class="box">unsigned int <a href="#lo_set_plugin_active">lo_set_plugin_active</a> (game_handle gh, const char * plugin, const bool active);</code>
+<div class="dfn" id="lo_get_plugin_active">
+<code class="box">unsigned int lo_set_plugin_active (lo_game_handle gh,
+                                   const char * plugin,
+                                   const bool active);</code>
+<p>If <var>active</var> is true, activates the given plugin if it is not already active. If <var>active</var> is false, deactivates the plugin if it is not already inactive. If the given plugin is already of the status it is being set to, its status is simply not changed. If activating a plugin that is ghosted, the <code>.ghost</code> extension is removed.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugin</var> - A string containing the filename of the plugin to change the active/inactive status of.
     <li><var>active</var> - Whether to activate or deactivate the plugin. If <code>true</code>, then the plugin is activated if it is not already active. If <code>false</code>, the plugin is deactivated unless it is already inactive.
 </ul>
+</div>
 
 <h3 id="functions-sorting">Plugin Sorting Functions</h3>
 <p>These functions require a game handle. Ghosted plugins can be passed using their ghosted or unghosted filenames.</p>
@@ -292,49 +319,71 @@
     <li>Contains no duplicate entries.
     <li>The first plugin in the load order must be the game's main master file. <small>Use <a href="#lo_set_game_master">lo_set_game_master</a> before manipulating load order if the main master file in use does not have the same filename as the original.</small>
     <li>Loads all master files before all plugin files. <small>Master bit flag value, rather than file extension, is checked.</small>
-</ul>
+</ul><br>
 
-<dfn id="lo_get_load_order_method">lo_get_load_order_method</dfn> - Returns which method BOSS is using for the load order.
-<code class="box">unsigned int <a href="#lo_get_load_order_method">lo_get_load_order_method</a> (game_handle gh, unsigned int * method);</code>
+<div class="dfn" id="lo_get_load_order_method">
+<code class="box">unsigned int lo_get_load_order_method (lo_game_handle gh,
+                                       unsigned int * method);</code>
+<p>Returns which method BOSS is using for the load order.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>method</var> - A pointer to the load order method code for the load order system that is being used by the handle <var>gh</var>.
 </ul>
+</div>
 
-<dfn id="lo_get_load_order">lo_get_load_order</dfn> - Outputs the current load order.
-<code class="box">unsigned int <a href="#lo_get_load_order">lo_get_load_order</a> (game_handle gh, char *** plugins, size_t * numPlugins);</code>
+<div class="dfn" id="lo_get_load_order">
+<code class="box">unsigned int lo_get_load_order (lo_game_handle gh,
+                                char *** plugins,
+                                size_t * numPlugins);</code>
+<p>Outputs the current load order.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
-    <li><var>plugins</var> - A pointer to the outputted array of plugins in load order. If <var>numPlugins</var> is 0, this will be <code>NULL</code>. The outputted load order may be invalid.
-    <li><var>numPlugins</var> - A pointer to the size of the outputted <var>plugins</var> array.
+    <li><var>plugins</var> - A pointer to the outputted array of plugins in load order. <code>null</code> if no plugins are in the current load order. The outputted load order may be invalid.
+    <li><var>numPlugins</var> - A pointer to the size of the outputted <var>plugins</var> array. <code>0</code> if <var>plugins</var> is <code>null</code>.
 </ul>
+</div>
 
-<dfn id="lo_set_load_order">lo_set_load_order</dfn> - Sets the load order to the passed plugin array, then scans the plugins directory and inserts any plugins not included in the passed array. Plugin files are inserted at the end of the load order, and master files are inserted after the last master file in the load order. The order of plugin insertion is undefined besides the distinction made between master files and plugin files.
-<code class="box">unsigned int <a href="#lo_set_load_order">lo_set_load_order</a> (game_handle gh, char ** plugins, const size_t numPlugins);</code>
+<div class="dfn" id="lo_set_load_order">
+<code class="box">unsigned int lo_set_load_order (lo_game_handle gh,
+                                char ** plugins,
+                                const size_t numPlugins);</code>
+<p>Sets the load order to the passed plugin array, then scans the plugins directory and inserts any plugins not included in the passed array. Plugin files are inserted at the end of the load order, and master files are inserted after the last master file in the load order. The order of plugin insertion is undefined besides the distinction made between master files and plugin files.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugins</var> - The inputted array of plugins in their new load order. This load order must be valid.
     <li><var>numPlugins</var> - The size of the <var>plugins</var> array.
 </ul>
+</div>
 
-<dfn id="lo_get_plugin_position">lo_get_plugin_position</dfn> - Gets the current load order position of the specified plugin.
-<code class="box">unsigned int <a href="#lo_get_plugin_position">lo_get_plugin_position</a> (game_handle gh, const char * plugin, size_t * index);</code>
+<div class="dfn" id="lo_get_plugin_position">
+<code class="box">unsigned int lo_get_plugin_position (lo_game_handle gh,
+                                     const char * plugin,
+                                     size_t * index);</code>
+<p>Gets the current load order position of the specified plugin.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugin</var> - A string containing the filename of the plugin to get the load order position of.
     <li><var>index</var> - A pointer to the outputted load order index of the inputted plugin.
 </ul>
+</div>
 
-<dfn id="lo_set_plugin_position">lo_set_plugin_position</dfn> - Sets the load order position of the specified plugin.
-<code class="box">unsigned int <a href="#lo_set_plugin_position">lo_set_plugin_position</a> (game_handle gh, const char * plugin, const size_t index);</code>
+<div class="dfn" id="lo_set_plugin_position">
+<code class="box">unsigned int lo_set_plugin_position (lo_game_handle gh,
+                                     const char * plugin,
+                                     const size_t index);</code>
+<p>Sets the load order position of the specified plugin.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>plugin</var> - A string containing the filename of the plugin to set the load order of.
     <li><var>index</var> - The load order index to be set for the inputted plugin. If the index specified is greater than the number of plugins in the load order, the plugin will be inserted at the end of the load order.
 </ul>
+</div>
 
-<dfn id="lo_get_indexed_plugin">lo_get_indexed_plugin</dfn> - Gets the filename of the plugin is at the specified load order position.
-<code class="box">unsigned int <a href="#lo_get_indexed_plugin">lo_get_indexed_plugin</a> (game_handle gh, const size_t index, char ** plugin);</code>
+<div class="dfn" id="lo_get_indexed_plugin">
+<code class="box">unsigned int lo_get_indexed_plugin (lo_game_handle gh,
+                                    const size_t index,
+                                    char ** plugin);</code>
+<p>Gets the filename of the plugin is at the specified load order position.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
     <li><var>index</var> - The load order index to be looked at.
@@ -344,7 +393,6 @@
 
 <h2 id="example">Example Usage</h2>
 <p>The source code of the <code>libloadorder-tester</code> application provides a very simple example of libloadorder usage, both by using the library's C interface directly and by using a C++ wrapper that allows a neater implementation in a C++-based project. The source code for <code>libloadorder-tester</code> is hosted alongside the libloadorder source code.
-<p>More complex usage examples are to follow.
 
 <h2 id="credits">Credits</h2>
 <p>libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of the <a href="http://utfcpp.sourceforge.net/">UTF8-CPP</a> library and some of the <a href="http://www.boost.org/">Boost</a> libraries.

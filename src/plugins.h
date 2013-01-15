@@ -33,7 +33,7 @@
 #include <boost/unordered_set.hpp>
 #include <boost/filesystem.hpp>
 
-struct Game;
+struct _lo_game_handle_int;
 
 namespace liblo {
 
@@ -45,15 +45,15 @@ namespace liblo {
         std::string Name() const;
 
         bool    IsValid     () const;  //.Checks if plugin is a .esp or .esm file.
-        bool    IsMasterFile(const Game& parentGame) const;         //This should be implemented using libespm.
-        bool    IsFalseFlagged(const Game& parentGame) const;           //True if IsMasterFile does not match file extension.
-        bool    IsGhosted   (const Game& parentGame) const;         //Checks if the file exists in ghosted form.
-        bool    Exists      (const Game& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
-        time_t  GetModTime  (const Game& parentGame) const;         //Can throw exception.
-        std::vector<Plugin> GetMasters(const Game& parentGame) const;
+        bool    IsMasterFile(const _lo_game_handle_int& parentGame) const;         //This should be implemented using libespm.
+        bool    IsFalseFlagged(const _lo_game_handle_int& parentGame) const;           //True if IsMasterFile does not match file extension.
+        bool    IsGhosted   (const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in ghosted form.
+        bool    Exists      (const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
+        time_t  GetModTime  (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
+        std::vector<Plugin> GetMasters(const _lo_game_handle_int& parentGame) const;
 
-        void    UnGhost     (const Game& parentGame) const;         //Can throw exception.
-        void    SetModTime  (const Game& parentGame, const time_t modificationTime) const;
+        void    UnGhost     (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
+        void    SetModTime  (const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
 
         bool operator == (Plugin p);
         bool operator != (Plugin p);
@@ -67,32 +67,32 @@ namespace liblo {
 
     class LoadOrder : public std::vector<Plugin> {
     public:
-        void Load(const Game& parentGame);
-        void Save(Game& parentGame);  //Also updates mtime and active plugins list.
+        void Load(const _lo_game_handle_int& parentGame);
+        void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
 
-        bool IsValid(const Game& parentGame);  //Game master first, masters before plugins, plugins all exist.
+        bool IsValid(const _lo_game_handle_int& parentGame);  //Game master first, masters before plugins, plugins all exist.
 
-        bool HasChanged(const Game& parentGame);  //Checks timestamp and also if LoadOrder is empty.
+        bool HasChanged(const _lo_game_handle_int& parentGame);  //Checks timestamp and also if LoadOrder is empty.
 
         void Move(size_t newPos, const Plugin plugin);
 
         size_t Find(const Plugin plugin) const;
-        size_t LastMasterPos(const Game& parentGame) const;
+        size_t LastMasterPos(const _lo_game_handle_int& parentGame) const;
 
         //Assumes that the content of the file is valid.
-        void LoadFromFile(const Game& parentGame, const boost::filesystem::path file);
+        void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path file);
     private:
         time_t mtime;
     };
 
     class ActivePlugins : public boost::unordered_set<Plugin> {
     public:
-        void Load(const Game& parentGame);
-        void Save(const Game& parentGame);
+        void Load(const _lo_game_handle_int& parentGame);
+        void Save(const _lo_game_handle_int& parentGame);
 
-        bool IsValid(const Game& parentGame);  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
+        bool IsValid(const _lo_game_handle_int& parentGame);  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
 
-        bool HasChanged(const Game& parentGame);
+        bool HasChanged(const _lo_game_handle_int& parentGame);
     private:
         time_t mtime;
     };

@@ -147,7 +147,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int game
 
     //Create handle.
     try {
-        *gh = new Game(gameId, string(reinterpret_cast<const char *>(gamePath)));
+        *gh = new _lo_game_handle_int(gameId, string(reinterpret_cast<const char *>(gamePath)));
     } catch (error& e) {
         return e.code();
     }

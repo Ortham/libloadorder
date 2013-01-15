@@ -26,21 +26,20 @@
 #ifndef LIBLO_H
 #define LIBLO_H
 
-#include <stdint.h>
 #include <stddef.h>
 
 #if defined(_MSC_VER)
 //MSVC doesn't support C99, so do the stdbool.h definitions ourselves.
 //START OF stdbool.h DEFINITIONS.
-#       ifndef __cplusplus
-#               define bool     _Bool
-#               define true     1
-#               define false   0
-#       endif
-#       define __bool_true_false_are_defined   1
+#   ifndef __cplusplus
+#       define bool  _Bool
+#       define true  1
+#       define false 0
+#   endif
+#   define __bool_true_false_are_defined 1
 //END OF stdbool.h DEFINITIONS.
 #else
-#       include <stdbool.h>
+#   include <stdbool.h>
 #endif
 
 // set up dll import/export decorators
@@ -48,8 +47,8 @@
 // that use this header do not need to define anything to import the symbols
 // properly.
 #if defined(_WIN32) || defined(_WIN64)
-#       ifdef LIBLO_STATIC
-#               define LIBLO
+#   ifdef LIBLO_STATIC
+#       define LIBLO
 #   elif defined LIBLO_EXPORT
 #       define LIBLO __declspec(dllexport)
 #   else
@@ -75,7 +74,7 @@ extern "C"
 
 /* Abstracts the definition of libloadorder's internal state while still providing
    type safety across the library. */
-typedef struct Game * lo_game_handle;
+typedef struct _lo_game_handle_int * lo_game_handle;
 
 /* The following are the possible codes that the library can return. */
 LIBLO extern const unsigned int LIBLO_OK;
