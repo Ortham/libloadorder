@@ -63,5 +63,5 @@ add_library           (loadorder ${LIBLO_LINK} ${LIBLO_SRC})
 target_link_libraries (loadorder ${LIBLO_LIBS})
 
 # Build libloadorder tester.
-add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp" "${CMAKE_SOURCE_DIR}/src/tester-interface.cpp")
+add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 target_link_libraries (libloadorder-tester loadorder ${LIBLO_LIBS})

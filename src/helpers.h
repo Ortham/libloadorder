@@ -40,9 +40,6 @@ namespace liblo {
     //Reads an entire file into a string buffer.
     void fileToBuffer(const boost::filesystem::path& file, std::string& buffer);
 
-    //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
-    std::string IntToString(const unsigned int n);
-
     // converts between encodings.
     class Transcoder {
     private:
@@ -65,6 +62,9 @@ namespace liblo {
     class Version {
     private:
         std::string verString;
+
+        //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
+        std::string IntToString(const unsigned int n);
     public:
         Version();
         Version(const char * ver);
@@ -72,11 +72,12 @@ namespace liblo {
 
         std::string AsString() const;
 
-        bool operator > (Version&);
-        bool operator < (Version&);
-        bool operator >= (Version&);
-        bool operator == (Version&);
-        bool operator != (Version&);
+        bool operator > (const Version& rhs) const;
+        bool operator < (const Version& rhs) const;
+        bool operator >= (const Version& rhs) const;
+        bool operator <= (const Version& rhs) const;
+        bool operator == (const Version& rhs) const;
+        bool operator != (const Version& rhs) const;
     };
 }
 

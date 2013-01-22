@@ -55,24 +55,22 @@ namespace liblo {
         void    UnGhost     (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
         void    SetModTime  (const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
 
-        bool operator == (Plugin& p);
-        bool operator != (Plugin& p);
+        bool operator == (const Plugin& rhs) const;
+        bool operator != (const Plugin& rhs) const;
     private:
         std::string name;
     };
 
-    bool operator == (Plugin const& a, Plugin const& b);
-
-    std::size_t hash_value(Plugin const& p);
+    std::size_t hash_value(const Plugin& p);
 
     class LoadOrder : public std::vector<Plugin> {
     public:
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
 
-        bool IsValid(const _lo_game_handle_int& parentGame);  //Game master first, masters before plugins, plugins all exist.
+        bool IsValid(const _lo_game_handle_int& parentGame) const;  //Game master first, masters before plugins, plugins all exist.
 
-        bool HasChanged(const _lo_game_handle_int& parentGame);  //Checks timestamp and also if LoadOrder is empty.
+        bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
 
         void Move(size_t newPos, const Plugin& plugin);
 
@@ -90,9 +88,9 @@ namespace liblo {
         void Load(const _lo_game_handle_int& parentGame);
         void Save(const _lo_game_handle_int& parentGame);
 
-        bool IsValid(const _lo_game_handle_int& parentGame);  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
+        bool IsValid(const _lo_game_handle_int& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
 
-        bool HasChanged(const _lo_game_handle_int& parentGame);
+        bool HasChanged(const _lo_game_handle_int& parentGame) const;
     private:
         time_t mtime;
     };

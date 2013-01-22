@@ -80,14 +80,6 @@ namespace liblo {
         );
     }
 
-    //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
-    string IntToString(const unsigned int n) {
-        string out;
-        back_insert_iterator<string> sink(out);
-        boost::spirit::karma::generate(sink,boost::spirit::karma::upper[boost::spirit::karma::uint_],n);
-        return out;
-    }
-
 
     ////////////////////////////////
     // Transcoder Class Functions
@@ -466,7 +458,7 @@ namespace liblo {
         return verString;
     }
 
-    bool Version::operator < (Version& ver) {
+    bool Version::operator < (const Version& ver) const {
         /* In libloadorder, the version comparison is only used for checking the versions of games,
            which always have the format "a.b.c.d" where a, b, c and d are all integers. */
 
@@ -493,19 +485,31 @@ namespace liblo {
         return false;
     }
 
-    bool Version::operator > (Version& ver) {
-        return (*this != ver && !(*this < ver));
+    bool Version::operator > (const Version& rhs) const {
+        return *this != rhs && !(*this < rhs);
     }
 
-    bool Version::operator >= (Version& ver) {
-        return (*this == ver || *this > ver);
+    bool Version::operator >= (const Version& rhs) const {
+        return *this == rhs || *this > rhs;
     }
 
-    bool Version::operator == (Version& ver) {
-        return (verString == ver.AsString());
+    bool Version::operator <= (const Version& rhs) const {
+        return *this == rhs || *this < rhs;
     }
 
-    bool Version::operator != (Version& ver) {
-        return !(*this == ver);
+    bool Version::operator == (const Version& rhs) const {
+        return verString == rhs.AsString();
+    }
+
+    bool Version::operator != (const Version& rhs) const {
+        return !(*this == rhs);
+    }
+
+    //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
+    string Version::IntToString(const unsigned int n) {
+        string out;
+        back_insert_iterator<string> sink(out);
+        boost::spirit::karma::generate(sink,boost::spirit::karma::upper[boost::spirit::karma::uint_],n);
+        return out;
     }
 }

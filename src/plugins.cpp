@@ -38,11 +38,7 @@ namespace fs = boost::filesystem;
 
 namespace liblo {
 
-    bool operator == (Plugin const& a, Plugin const& b) {
-        return boost::iequals(a.Name(), b.Name());
-    }
-
-    std::size_t hash_value(Plugin const& p) {
+    std::size_t hash_value(const Plugin& p) {
         boost::hash<std::string> hasher;
         return hasher(boost::to_lower_copy(p.Name()));
     }
@@ -138,13 +134,14 @@ namespace liblo {
         }
     }
 
-    bool Plugin::operator == (Plugin& p) {
-        return boost::iequals(name, p.Name());
+    bool Plugin::operator == (const Plugin& rhs) const {
+        return boost::iequals(name, rhs.Name());
     }
 
-    bool Plugin::operator != (Plugin& p) {
-        return !(*this == p);
+    bool Plugin::operator != (const Plugin& rhs) const {
+        return !(*this == rhs);
     }
+
 
     /////////////////////////
     // LoadOrder Members
@@ -263,13 +260,13 @@ namespace liblo {
         }
     }
 
-    bool LoadOrder::IsValid(const _lo_game_handle_int& parentGame) {
+    bool LoadOrder::IsValid(const _lo_game_handle_int& parentGame) const {
         if (at(0) != Plugin(parentGame.MasterFile()))
             return false;
 
         bool wasMaster = true;
         boost::unordered_set<Plugin> hashset;
-        for (vector<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it) {
+        for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
                 return false;
             bool isMaster = it->IsMasterFile(parentGame);
@@ -278,7 +275,7 @@ namespace liblo {
             if (hashset.find(*it) != hashset.end())
                 return false;
             vector<Plugin> masters = it->GetMasters(parentGame);
-            for (vector<Plugin>::iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
+            for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
                 if (hashset.find(*jt) == hashset.end())
                     return false;
             }
@@ -289,7 +286,7 @@ namespace liblo {
         return true;
     }
 
-    bool LoadOrder::HasChanged(const _lo_game_handle_int& parentGame) {
+    bool LoadOrder::HasChanged(const _lo_game_handle_int& parentGame) const {
         if (empty())
             return true;
 
@@ -492,13 +489,13 @@ namespace liblo {
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename, "1252");
     }
 
-    bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) {
+    bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) const {
         boost::unordered_set<Plugin> hashset;
-        for (boost::unordered_set<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it) {
+        for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
                 return false;
             vector<Plugin> masters = it->GetMasters(parentGame);
-            for (vector<Plugin>::iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
+            for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
                 if (hashset.find(*jt) == hashset.end())
                     return false;
             }
@@ -507,11 +504,7 @@ namespace liblo {
 
         if (size() > 255)
             return false;
-        if (parentGame.Id() == LIBLO_GAME_TES5) {
-            //Must contain Skyrim.esm and Update.esm (latter if it exists), as these are always active.
-            boost::unordered_set<Plugin>::iterator it1 = find(Plugin("Skyrim.esm"));
-            boost::unordered_set<Plugin>::iterator it2 = find(Plugin("Update.esm"));
-
+        else if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
                 return false;
             else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
@@ -521,7 +514,7 @@ namespace liblo {
         return true;
     }
 
-    bool ActivePlugins::HasChanged(const _lo_game_handle_int& parentGame) {
+    bool ActivePlugins::HasChanged(const _lo_game_handle_int& parentGame) const {
         if (empty())
             return true;
 
