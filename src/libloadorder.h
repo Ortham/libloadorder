@@ -23,8 +23,8 @@
         <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_H
-#define LIBLO_H
+#ifndef __LIBLO_H__
+#define __LIBLO_H__
 
 #include <stddef.h>
 

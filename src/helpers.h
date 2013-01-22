@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_HELPERS_H
-#define LIBLO_HELPERS_H
+#ifndef __LIBLO_HELPERS_H__
+#define __LIBLO_HELPERS_H__
 
 #include <string>
 #include <boost/unordered_map.hpp>
@@ -32,13 +32,13 @@
 
 namespace liblo {
     // std::string to null-terminated char string converter.
-    char * ToNewCString(std::string str);
+    char * ToNewCString(const std::string& str);
 
     //UTF-8 file validator.
-    bool ValidateUTF8File(const boost::filesystem::path file);
+    bool ValidateUTF8File(const boost::filesystem::path& file);
 
     //Reads an entire file into a string buffer.
-    void fileToBuffer(const boost::filesystem::path file, std::string& buffer);
+    void fileToBuffer(const boost::filesystem::path& file, std::string& buffer);
 
     //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
     std::string IntToString(const unsigned int n);
@@ -57,8 +57,8 @@ namespace liblo {
         void SetEncoding(const unsigned int inEncoding);
         unsigned int GetEncoding();
 
-        std::string Utf8ToEnc(const std::string inString);
-        std::string EncToUtf8(const std::string inString);
+        std::string Utf8ToEnc(const std::string& inString);
+        std::string EncToUtf8(const std::string& inString);
     };
 
     //Version class for more robust version comparisons.
@@ -68,15 +68,15 @@ namespace liblo {
     public:
         Version();
         Version(const char * ver);
-        Version(const boost::filesystem::path file);
+        Version(const boost::filesystem::path& file);
 
         std::string AsString() const;
 
-        bool operator > (Version);
-        bool operator < (Version);
-        bool operator >= (Version);
-        bool operator == (Version);
-        bool operator != (Version);
+        bool operator > (Version&);
+        bool operator < (Version&);
+        bool operator >= (Version&);
+        bool operator == (Version&);
+        bool operator != (Version&);
     };
 }
 

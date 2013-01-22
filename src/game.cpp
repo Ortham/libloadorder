@@ -37,7 +37,7 @@ using namespace liblo;
 
 namespace fs = boost::filesystem;
 
-    _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, string path)
+    _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path)
         : id(gameId),
         gamePath(fs::path(path)),
         extString(NULL),
@@ -123,7 +123,7 @@ namespace fs = boost::filesystem;
         }
     }
 
-    void _lo_game_handle_int::SetMasterFile(string file) {
+    void _lo_game_handle_int::SetMasterFile(const string& file) {
         masterFile = file;
     }
 

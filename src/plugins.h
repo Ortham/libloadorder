@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_PLUGINS_H
-#define LIBLO_PLUGINS_H
+#ifndef __LIBLO_PLUGINS_H__
+#define __LIBLO_PLUGINS_H__
 
 #include "exception.h"
 #include <string>
@@ -40,7 +40,7 @@ namespace liblo {
     class Plugin {
     public:
         Plugin();
-        Plugin(const std::string filename);  //Automatically trims .ghost extension.
+        Plugin(const std::string& filename);  //Automatically trims .ghost extension.
 
         std::string Name() const;
 
@@ -55,8 +55,8 @@ namespace liblo {
         void    UnGhost     (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
         void    SetModTime  (const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
 
-        bool operator == (Plugin p);
-        bool operator != (Plugin p);
+        bool operator == (Plugin& p);
+        bool operator != (Plugin& p);
     private:
         std::string name;
     };
@@ -74,13 +74,13 @@ namespace liblo {
 
         bool HasChanged(const _lo_game_handle_int& parentGame);  //Checks timestamp and also if LoadOrder is empty.
 
-        void Move(size_t newPos, const Plugin plugin);
+        void Move(size_t newPos, const Plugin& plugin);
 
-        size_t Find(const Plugin plugin) const;
+        size_t Find(const Plugin& plugin) const;
         size_t LastMasterPos(const _lo_game_handle_int& parentGame) const;
 
         //Assumes that the content of the file is valid.
-        void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path file);
+        void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path& file);
     private:
         time_t mtime;
     };

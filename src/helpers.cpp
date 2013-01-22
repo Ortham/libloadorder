@@ -49,13 +49,13 @@ using namespace std;
 namespace liblo {
 
     // std::string to null-terminated char string converter.
-    char * ToNewCString(string str) {
+    char * ToNewCString(const string& str) {
         char * p = new char[str.length() + 1];
         return strcpy(p, str.c_str());
     }
 
     //UTF-8 file validator.
-    bool ValidateUTF8File(const boost::filesystem::path file) {
+    bool ValidateUTF8File(const boost::filesystem::path& file) {
         ifstream ifs(file.string().c_str());
 
         istreambuf_iterator<char> it(ifs.rdbuf());
@@ -68,7 +68,7 @@ namespace liblo {
     }
 
     //Reads an entire file into a string buffer.
-    void fileToBuffer(const boost::filesystem::path file, string& buffer) {
+    void fileToBuffer(const boost::filesystem::path& file, string& buffer) {
         ifstream ifile(file.string().c_str());
         if (ifile.fail())
             return;
@@ -371,7 +371,7 @@ namespace liblo {
         return currentEncoding;
     }
 
-    string Transcoder::Utf8ToEnc(const string inString) {
+    string Transcoder::Utf8ToEnc(const string& inString) {
         stringstream outString;
         string::const_iterator strIter = inString.begin();
         //I need to use a UTF-8 string iterator. See UTF-CPP for usage.
@@ -390,7 +390,7 @@ namespace liblo {
         return outString.str();
     }
 
-    string Transcoder::EncToUtf8(const string inString) {
+    string Transcoder::EncToUtf8(const string& inString) {
         string outString;
         for (string::const_iterator iter = inString.begin(); iter != inString.end(); ++iter) {
             boost::unordered_map<char, unsigned int>::iterator mapIter = encToUtf8.find(*iter);
@@ -419,7 +419,7 @@ namespace liblo {
     Version::Version(const char * ver)
         : verString(ver) {}
 
-    Version::Version(const boost::filesystem::path file) {
+    Version::Version(const boost::filesystem::path& file) {
 #if _WIN32 || _WIN64
         DWORD dummy = 0;
         DWORD size = GetFileVersionInfoSize(file.wstring().c_str(), &dummy);
@@ -466,7 +466,7 @@ namespace liblo {
         return verString;
     }
 
-    bool Version::operator < (Version ver) {
+    bool Version::operator < (Version& ver) {
         /* In libloadorder, the version comparison is only used for checking the versions of games,
            which always have the format "a.b.c.d" where a, b, c and d are all integers. */
 
@@ -493,19 +493,19 @@ namespace liblo {
         return false;
     }
 
-    bool Version::operator > (Version ver) {
+    bool Version::operator > (Version& ver) {
         return (*this != ver && !(*this < ver));
     }
 
-    bool Version::operator >= (Version ver) {
+    bool Version::operator >= (Version& ver) {
         return (*this == ver || *this > ver);
     }
 
-    bool Version::operator == (Version ver) {
+    bool Version::operator == (Version& ver) {
         return (verString == ver.AsString());
     }
 
-    bool Version::operator != (Version ver) {
+    bool Version::operator != (Version& ver) {
         return !(*this == ver);
     }
 }

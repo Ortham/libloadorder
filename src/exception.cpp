@@ -33,16 +33,16 @@ namespace liblo {
         lastException = *this;
     }
 
-    error::error(unsigned int code) : errCode(code) {
+    error::error(const unsigned int code) : errCode(code) {
         lastException = *this;
     }
 
-    error::error(unsigned int code, std::string subject)
+    error::error(const unsigned int code, const std::string& subject)
         : errCode(code), errSubject(subject) {
         lastException = *this;
     }
 
-    error::error(unsigned int code, std::string subject, std::string detail)
+    error::error(const unsigned int code, const std::string& subject, const std::string& detail)
         : errCode(code), errSubject(subject), errDetail(detail) {
         lastException = *this;
     }

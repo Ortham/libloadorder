@@ -53,7 +53,7 @@ namespace liblo {
 
     Plugin::Plugin() : name("") {}
 
-    Plugin::Plugin(const string filename) : name(filename) {
+    Plugin::Plugin(const string& filename) : name(filename) {
         const string ext = fs::path(name).extension().string();
         if (boost::iequals(ext, ".ghost"))
             name = fs::path(name).stem().string();
@@ -138,11 +138,11 @@ namespace liblo {
         }
     }
 
-    bool Plugin::operator == (Plugin p) {
+    bool Plugin::operator == (Plugin& p) {
         return boost::iequals(name, p.Name());
     }
 
-    bool Plugin::operator != (Plugin p) {
+    bool Plugin::operator != (Plugin& p) {
         return !(*this == p);
     }
 
@@ -309,7 +309,7 @@ namespace liblo {
         }
     }
 
-    void LoadOrder::Move(size_t newPos, const Plugin plugin) {
+    void LoadOrder::Move(size_t newPos, const Plugin& plugin) {
         size_t pos = Find(plugin);
         if (pos == size())
             insert(begin() + newPos, plugin);
@@ -321,7 +321,7 @@ namespace liblo {
         }
     }
 
-    size_t LoadOrder::Find(Plugin plugin) const {
+    size_t LoadOrder::Find(const Plugin& plugin) const {
         size_t max = size();
         for (size_t i=0; i < max; i++) {
             if (plugin == at(i))
@@ -339,7 +339,7 @@ namespace liblo {
         return max - 1;
     }
 
-    void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path file) {
+    void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
         Transcoder trans;
         bool transcode = false;
         if (file == parentGame.ActivePluginsFile()) {

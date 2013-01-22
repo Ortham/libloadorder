@@ -23,8 +23,8 @@
         <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_LIBESPM_INTERFACE_H
-#define LIBLO_LIBESPM_INTERFACE_H
+#ifndef __LIBLO_LIBESPM_INTERFACE_H__
+#define __LIBLO_LIBESPM_INTERFACE_H__
 
 #include "game.h"
 

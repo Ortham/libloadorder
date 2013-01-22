@@ -23,8 +23,8 @@
         <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_EXCEPTION_H
-#define LIBLO_EXCEPTION_H
+#ifndef __LIBLO_EXCEPTION_H__
+#define __LIBLO_EXCEPTION_H__
 
 #include <stdint.h>
 #include <string>
@@ -34,9 +34,9 @@ namespace liblo {
         class error {
         public:
                 error();
-                error(unsigned int code);
-                error(unsigned int code, std::string subject);
-                error(unsigned int code, std::string subject, std::string detail);
+                error(const unsigned int code);
+                error(const unsigned int code, const std::string& subject);
+                error(const unsigned int code, const std::string& subject, const std::string& detail);
 
                 std::string     what()                  const;
                 unsigned int    code()                  const;

@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIBLO_GAME_H
-#define LIBLO_GAME_H
+#ifndef __LIBLO_GAME_H__
+#define __LIBLO_GAME_H__
 
 #include "plugins.h"
 #include <string>
@@ -34,10 +34,10 @@
 
 struct _lo_game_handle_int {
     public:
-        _lo_game_handle_int(unsigned int id, std::string path);  //Currently missing desync correction.
+        _lo_game_handle_int(unsigned int id, const std::string& path);  //Currently missing desync correction.
         ~_lo_game_handle_int();
 
-        void SetMasterFile(std::string file);
+        void SetMasterFile(const std::string& file);
 
         unsigned int Id() const;
         std::string MasterFile() const;
