@@ -63,7 +63,7 @@ source.
     ./b2 toolset=gcc link=static variant=release address-model=32 cxxflags=-fPIC --with-filesystem --with-locale --with-regex --with-program_options --with-system --stagedir=stage-32
     mkdir ../../build
     cd ../../build
-    cmake .. -DLIBLO_LIBS_DIR=.. -DLIBLO_ARCH=32 -DLIBLO_LINK=STATIC
+    cmake .. -DPROJECT_LIBS_DIR=.. -DPROJECT_ARCH=32 -DPROJECT_LINK=STATIC
     make
 
 
@@ -75,7 +75,7 @@ For cross-compiling to Windows:
     ./b2 toolset=gcc-4.6.3 target-os=windows link=static variant=release address-model=32 cxxflags=-fPIC --with-filesystem --with-locale --with-regex --with-program_options --with-system --stagedir=stage-mingw-32
     mkdir ../../build
     cd ../../build
-    cmake .. -DLIBLO_LIBS_DIR=.. -DLIBLO_ARCH=32 -DLIBLO_LINK=STATIC -DCMAKE_TOOLCHAIN_FILE=mingw32-toolchain.cmake
+    cmake .. -DPROJECT_LIBS_DIR=.. -DPROJECT_ARCH=32 -DPROJECT_LINK=STATIC -DCMAKE_TOOLCHAIN_FILE=mingw32-toolchain.cmake
     make
 
 If both native and cross-compiling, you'll need to delete the 'build'

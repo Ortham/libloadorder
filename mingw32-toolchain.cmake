@@ -1,7 +1,7 @@
 # Cross-compiling from Linux to Windows.
 set (CMAKE_SYSTEM_NAME Windows)
 
-IF (LIBLO_ARCH MATCHES "32")
+IF (PROJECT_ARCH MATCHES "32")
     set (MINGW i586-mingw32msvc)
 ELSE ()
     set (MINGW x86_64-w64-mingw32)
