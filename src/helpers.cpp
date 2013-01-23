@@ -354,7 +354,7 @@ namespace liblo {
         currentEncoding = inEncoding;
 
         //Now create the UTF-8 -> enc map.
-        for (boost::unordered_map<char, unsigned int>::iterator iter = encToUtf8.begin(); iter != encToUtf8.end(); ++iter) {
+        for (boost::unordered_map<char, unsigned int>::const_iterator iter = encToUtf8.begin(); iter != encToUtf8.end(); ++iter) {
             utf8toEnc.emplace(iter->second, iter->first);  //Swap mapping. There *should* be unique values for each character either way.
         }
     }
@@ -370,7 +370,7 @@ namespace liblo {
         try {
             utf8::iterator<string::const_iterator> iter(strIter, strIter, inString.end());
             for (iter; iter.base() != inString.end(); ++iter) {
-                boost::unordered_map<unsigned int, char>::iterator mapIter = utf8toEnc.find(*iter);
+                boost::unordered_map<unsigned int, char>::const_iterator mapIter = utf8toEnc.find(*iter);
                 if (mapIter != utf8toEnc.end())
                     outString << mapIter->second;
                 else
@@ -385,7 +385,7 @@ namespace liblo {
     string Transcoder::EncToUtf8(const string& inString) {
         string outString;
         for (string::const_iterator iter = inString.begin(); iter != inString.end(); ++iter) {
-            boost::unordered_map<char, unsigned int>::iterator mapIter = encToUtf8.find(*iter);
+            boost::unordered_map<char, unsigned int>::const_iterator mapIter = encToUtf8.find(*iter);
             if (mapIter != encToUtf8.end()) {
                 try {
                     utf8::append(mapIter->second, back_inserter(outString));

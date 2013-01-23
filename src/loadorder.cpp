@@ -37,7 +37,7 @@ namespace fs = boost::filesystem;
 ------------------------------*/
 
 /* Returns which method the game uses for the load order. */
-LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * method) {
+LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * const method) {
     if (gh == NULL || method == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -48,7 +48,7 @@ LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * me
 
 /* Outputs a list of the plugins installed in the data path specified when the DB was
    created in load order, with the number of plugins given by numPlugins. */
-LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t * numPlugins) {
+LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
     if (gh == NULL || plugins == NULL || numPlugins == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -93,14 +93,14 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t
 /* Sets the load order to the given plugins list of length numPlugins.
    Then scans the Data directory and appends any other plugins not included in the
    array passed to the function. */
-LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const size_t numPlugins) {
+LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
     if (gh == NULL || plugins == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Put input into loadOrder object.
     gh->loadOrder.clear();
     for (size_t i=0; i < numPlugins; i++) {
-        Plugin plugin(string(reinterpret_cast<const char *>(plugins[i])));
+        Plugin plugin(plugins[i]);
         if (plugin.Exists(*gh))
             gh->loadOrder.push_back(plugin);
         else {
@@ -146,7 +146,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const s
 
 /* Gets the load order of the specified plugin, giving it as index. The first position
    in the load order is 0. */
-LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin, size_t * index) {
+LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const plugin, size_t * const index) {
     if (gh == NULL || plugin == NULL || index == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -159,7 +159,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin
     }
 
     //Find plugin pos.
-    const Plugin pluginObj(string(reinterpret_cast<const char *>(plugin)));
+    const Plugin pluginObj(plugin);
     size_t pos = gh->loadOrder.Find(pluginObj);
     if (pos == gh->loadOrder.size())
         return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
@@ -173,7 +173,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin
    if it has one. The first position in the load order is 0. If the index specified is
    greater than the number of plugins in the load order, the plugin will be inserted at
    the end of the load order. */
-LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin, size_t index) {
+LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, size_t index) {
     if (gh == NULL || plugin == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -186,7 +186,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin
     }
 
     //Get current plugin position.
-    const Plugin pluginObj(string(reinterpret_cast<const char *>(plugin)));
+    const Plugin pluginObj(plugin);
     size_t pos = gh->loadOrder.Find(pluginObj);
 
     //Change plugin position.
@@ -217,7 +217,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin
 
 /* Gets the plugin filename is at the specified load order position. The first position
    in the load order is 0. */
-LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** plugin) {
+LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** const plugin) {
     if (gh == NULL || plugin == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 

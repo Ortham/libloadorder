@@ -108,7 +108,7 @@ namespace liblo {
         else
             strMasters = libespm::GetPluginMasters(parentGame, name);
 
-        for (vector<string>::iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
+        for (vector<string>::const_iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
             masters.push_back(Plugin(*it));
         }
         return masters;
@@ -246,7 +246,7 @@ namespace liblo {
             if (outfile.fail())
                 throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to.");
 
-            for (vector<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it)
+            for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
                 outfile << it->Name() << endl;
             outfile.close();
 
@@ -460,7 +460,7 @@ namespace liblo {
         if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
             //Can write the active plugins in any order.
             size_t i = 0;
-            for (boost::unordered_set<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it) {
+            for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
                 if (parentGame.Id() == LIBLO_GAME_TES3) //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
                     outfile << "GameFile" << i << "=";
 

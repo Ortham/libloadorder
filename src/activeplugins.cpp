@@ -36,7 +36,7 @@ using namespace liblo;
 ----------------------------------*/
 
 /* Returns the list of active plugins. */
-LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** plugins, size_t * numPlugins) {
+LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
     if (gh == NULL || plugins == NULL || numPlugins == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -66,7 +66,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** plugins, si
     try {
         gh->extStringArray = new char*[gh->extStringArraySize];
         size_t i = 0;
-        for (boost::unordered_set<Plugin>::iterator it = gh->activePlugins.begin(), endIt = gh->activePlugins.end(); it != endIt; ++it) {
+        for (boost::unordered_set<Plugin>::const_iterator it = gh->activePlugins.begin(), endIt = gh->activePlugins.end(); it != endIt; ++it) {
             gh->extStringArray[i] = ToNewCString(it->Name());
             i++;
         }
@@ -82,14 +82,14 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** plugins, si
 }
 
 /* Replaces the current list of active plugins with the given list. */
-LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** plugins, const size_t numPlugins) {
+LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
     if (gh == NULL || plugins == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Put input into activePlugins object.
     gh->activePlugins.clear();
     for (size_t i=0; i < numPlugins; i++) {
-        Plugin plugin(string(reinterpret_cast<const char *>(plugins[i])));
+        Plugin plugin(plugins[i]);
         if (gh->activePlugins.find(plugin) != gh->activePlugins.end()) {  //Not necessary for unordered set, but present so that invalid active plugin lists are refused.
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_INVALID_ARGS, "The supplied active plugins list is invalid.");
@@ -119,11 +119,11 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** plugins, con
 }
 
 /* Activates or deactivates the given plugin depending on the value of the active argument. */
-LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * plugin, const bool active) {
+LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const plugin, const bool active) {
     if (gh == NULL || plugin == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    Plugin pluginObj(string(reinterpret_cast<const char *>(plugin)));
+    Plugin pluginObj(plugin);
 
     //Check that plugin exists if activating it.
     if (active && !pluginObj.Exists(*gh))
@@ -145,7 +145,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * plugin, 
     }
 
     //Look for plugin in active plugins list.
-    boost::unordered_set<Plugin>::iterator it = gh->activePlugins.find(pluginObj);
+    boost::unordered_set<Plugin>::const_iterator it = gh->activePlugins.find(pluginObj);
     if (active)  //No need to check for duplication, unordered set will silently handle avoidance.
         gh->activePlugins.emplace(pluginObj);
     else if (!active && it != gh->activePlugins.end())
@@ -169,11 +169,11 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * plugin, 
 }
 
 /* Checks to see if the given plugin is active. */
-LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * plugin, bool * result) {
+LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const plugin, bool * const result) {
     if (gh == NULL || plugin == NULL || result == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    Plugin pluginObj(string(reinterpret_cast<const char *>(plugin)));
+    Plugin pluginObj(plugin);
 
     //Update cache if necessary.
     try {

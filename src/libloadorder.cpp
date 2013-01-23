@@ -87,7 +87,7 @@ LIBLO bool lo_is_compatible(const unsigned int versionMajor, const unsigned int 
         return false;
 }
 
-LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMinor, unsigned int * versionPatch) {
+LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * const versionMinor, unsigned int * const versionPatch) {
     *versionMajor = LIBLO_VERSION_MAJOR;
     *versionMinor = LIBLO_VERSION_MINOR;
     *versionPatch = LIBLO_VERSION_PATCH;
@@ -101,7 +101,7 @@ LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMin
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function called for the given
    game handle. */
-LIBLO unsigned int lo_get_error_message(const char ** details) {
+LIBLO unsigned int lo_get_error_message(const char ** const details) {
     if (details == NULL)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
@@ -123,7 +123,7 @@ LIBLO void lo_cleanup() {
 /* Creates a handle for the game given by gameId, which is found at gamePath. This handle allows
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
    is case-sensitive. */
-LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int gameId, const char * gamePath) {
+LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned int gameId, const char * const gamePath) {
     if (gh == NULL || gamePath == NULL) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
     else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
@@ -137,7 +137,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int game
 
     //Create handle.
     try {
-        *gh = new _lo_game_handle_int(gameId, string(reinterpret_cast<const char *>(gamePath)));
+        *gh = new _lo_game_handle_int(gameId, gamePath);
     } catch (error& e) {
         return c_error(e);
     }
@@ -181,12 +181,12 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 
 /* Sets the game's master file to a given filename, eg. for use with total conversions where
    the original main master file is replaced. */
-LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * masterFile) {
+LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
     if (gh == NULL || masterFile == NULL) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     try {
-        gh->SetMasterFile(string(reinterpret_cast<const char *>(masterFile)));
+        gh->SetMasterFile(masterFile);
     } catch (error& e) {
         return c_error(e);
     }

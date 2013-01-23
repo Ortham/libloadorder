@@ -113,7 +113,7 @@ LIBLO extern const unsigned int LIBLO_GAME_FNV;
 LIBLO bool lo_is_compatible(const unsigned int versionMajor, const unsigned int versionMinor, const unsigned int versionPatch);
 
 /* Gets the version numbers for the libary. */
-LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMinor, unsigned int * versionPatch);
+LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * const versionMinor, unsigned int * const versionPatch);
 
 
 /*------------------------------
@@ -122,7 +122,7 @@ LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMin
 
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function. */
-LIBLO unsigned int lo_get_error_message(const char ** details);
+LIBLO unsigned int lo_get_error_message(const char ** const details);
 
 /* Frees the memory allocated to the last error details string. */
 LIBLO void lo_cleanup();
@@ -135,14 +135,14 @@ LIBLO void lo_cleanup();
 /* Creates a handle for the game given by gameId, which is found at gamePath. This handle allows
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
    is case-sensitive. */
-LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int gameId, const char * gamePath);
+LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned int gameId, const char * const gamePath);
 
 /* Destroys the given game handle, freeing up memory allocated during its use. */
 LIBLO void lo_destroy_handle(lo_game_handle gh);
 
 /* Sets the game's master file to a given filename, eg. for use with total conversions where
    the original main master file is replaced. */
-LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * masterFile);
+LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile);
 
 
 /*------------------------------
@@ -150,30 +150,30 @@ LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * masterFile
 ------------------------------*/
 
 /* Returns which method the game uses for the load order. */
-LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * method);
+LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * const method);
 
 /* Outputs a list of the plugins installed in the data path specified when the DB was
    created in load order, with the number of plugins given by numPlugins. */
-LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t * numPlugins);
+LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, size_t * const numPlugins);
 
 /* Sets the load order to the given plugins list of length numPlugins.
    Then scans the Data directory and appends any other plugins not included in the
    array passed to the function. */
-LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const size_t numPlugins);
+LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, const size_t numPlugins);
 
 /* Gets the load order of the specified plugin, giving it as index. The first position
    in the load order is 0. */
-LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin, size_t * index);
+LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const plugin, size_t * const index);
 
 /* Sets the load order of the specified plugin, removing it from its current position
    if it has one. The first position in the load order is 0. If the index specified is
    greater than the number of plugins in the load order, the plugin will be inserted at
    the end of the load order. */
-LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin, size_t index);
+LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, size_t index);
 
 /* Gets the plugin filename is at the specified load order position. The first position
    in the load order is 0. */
-LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** plugin);
+LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** const plugin);
 
 
 /*----------------------------------
@@ -181,16 +181,16 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
 ----------------------------------*/
 
 /* Returns the list of active plugins. */
-LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** plugins, size_t * numPlugins);
+LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugins, size_t * const numPlugins);
 
 /* Replaces the current list of active plugins with the given list. */
-LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** plugins, const size_t numPlugins);
+LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugins, const size_t numPlugins);
 
 /* Activates or deactivates the given plugin depending on the value of the active argument. */
-LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * plugin, const bool active);
+LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const plugin, const bool active);
 
 /* Checks to see if the given plugin is active. */
-LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * plugin, bool * result);
+LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const plugin, bool * const result);
 
 #ifdef __cplusplus
 }
