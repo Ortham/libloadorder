@@ -338,12 +338,9 @@ namespace liblo {
     }
 
     void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
-        Transcoder trans;
         bool transcode = false;
-        if (file == parentGame.ActivePluginsFile()) {
-            trans.SetEncoding(1252);
+        if (file == parentGame.ActivePluginsFile())
             transcode = true;
-        }
 
         if (!transcode && !ValidateUTF8File(file))
             throw error(LIBLO_ERROR_FILE_NOT_UTF8, "\"" + file.string() + "\" is not encoded in valid UTF-8.");
@@ -367,7 +364,7 @@ namespace liblo {
                 //Now cut off everything up to and including the = sign.
                 line = line.substr(line.find('=')+1);
                 if (transcode)
-                    line = trans.EncToUtf8(line);
+                    line = ToUTF8(line);
                 push_back(Plugin(line));
             }
         } else {
@@ -378,7 +375,7 @@ namespace liblo {
                     continue;
 
                 if (transcode)
-                    line = trans.EncToUtf8(line);
+                    line = ToUTF8(line);
                 push_back(Plugin(line));
             }
         }
@@ -391,9 +388,6 @@ namespace liblo {
 
     void ActivePlugins::Load(const _lo_game_handle_int& parentGame) {
         clear();
-
-        Transcoder trans;
-        trans.SetEncoding(1252);
 
         std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
         if (in.fail())
@@ -410,7 +404,7 @@ namespace liblo {
                     continue;
 
                 //Now cut off everything up to and including the = sign.
-                emplace(Plugin(trans.EncToUtf8(line.substr(line.find('=')+1))));
+                emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
             }
         } else {
             while (in.good()) {
@@ -419,7 +413,7 @@ namespace liblo {
                 if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
                     continue;
 
-                emplace(Plugin(trans.EncToUtf8(line)));
+                emplace(Plugin(ToUTF8(line)));
             }
         }
         in.close();
@@ -434,8 +428,6 @@ namespace liblo {
     }
 
     void ActivePlugins::Save(const _lo_game_handle_int& parentGame) {
-        Transcoder trans;
-        trans.SetEncoding(1252);
         string settings, badFilename;
 
         if (parentGame.Id() == LIBLO_GAME_TES3) {  //Must be the plugins file, since loadorder.txt isn't used for MW.
@@ -465,7 +457,7 @@ namespace liblo {
                     outfile << "GameFile" << i << "=";
 
                 try {
-                    outfile << trans.Utf8ToEnc(it->Name()) << endl;
+                    outfile << FromUTF8(it->Name()) << endl;
                 } catch (error& e) {
                     badFilename = e.what();
                 }
@@ -478,7 +470,7 @@ namespace liblo {
                     continue;
 
                 try {
-                    outfile << trans.Utf8ToEnc(it->Name()) << endl;
+                    outfile << FromUTF8(it->Name()) << endl;
                 } catch (error& e) {
                     badFilename = e.what();
                 }

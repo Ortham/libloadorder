@@ -50,8 +50,10 @@ IF (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
 
     IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         link_directories ("${LIBLO_LIBS_DIR}/boost/stage-mingw-${LIBLO_ARCH}/lib")
-        set (LIBLO_LIBS boost_filesystem boost_system boost_regex version)
+        set (LIBLO_LIBS version)
     ENDIF ()
+
+    set (LIBLO_LIBS ${LIBLO_LIBS} boost_locale boost_filesystem boost_system boost_regex)
 ENDIF ()
 
 ##############################

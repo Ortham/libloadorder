@@ -40,23 +40,9 @@ namespace liblo {
     //Reads an entire file into a string buffer.
     void fileToBuffer(const boost::filesystem::path& file, std::string& buffer);
 
-    // converts between encodings.
-    class Transcoder {
-    private:
-        //0x81, 0x8D, 0x8F, 0x90, 0x9D in 1252 are undefined in UTF-8.
-        boost::unordered_map<char, unsigned int> commonMap;  //1251/1252, UTF-8. 0-127, plus some more.
-        boost::unordered_map<char, unsigned int> map1252toUtf8; //1252, UTF-8. 128-255, minus a few common characters.
-        boost::unordered_map<unsigned int, char> utf8toEnc;
-        boost::unordered_map<char, unsigned int> encToUtf8;
-        unsigned int currentEncoding;
-    public:
-        Transcoder();
-        void SetEncoding(const unsigned int inEncoding);
-        unsigned int GetEncoding();
-
-        std::string Utf8ToEnc(const std::string& inString);
-        std::string EncToUtf8(const std::string& inString);
-    };
+    //Only ever have to convert between UTF-8 and Windows-1252.
+    std::string ToUTF8(const std::string& str);
+    std::string FromUTF8(const std::string& str);
 
     //Version class for more robust version comparisons.
     class Version {
