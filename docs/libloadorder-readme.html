@@ -181,7 +181,7 @@ h3{
 
 
 <h2 id="functions">Functions</h2>
-<p>libloadorder provides the functions listed below to clients. Where a function returns a unsigned int value, this is the function's return code.
+<p>libloadorder provides the functions listed below to clients. Where a function returns an unsigned int value, this is the function's return code.
 
 <h3 id="functions-error">Error Handling Functions</h3>
 <div class="dfn" id="lo_get_error_message">
@@ -209,9 +209,9 @@ h3{
 </ul>
 </div>
 <div class="dfn" id="lo_get_version">
-<code class="box">unsigned int lo_get_version (unsigned int * versionMajor,
-                             unsigned int * versionMinor,
-                             unsigned int * versionPatch);</code>
+<code class="box">unsigned int lo_get_version (unsigned int * const versionMajor,
+                             unsigned int * const versionMinor,
+                             unsigned int * const versionPatch);</code>
 <p>Outputs the version numbers for the loaded version of libloadorder.
 <ul>
     <li><var>versionMajor</var> - A pointer to the major version number (<b>major</b>.minor.patch).
@@ -222,9 +222,9 @@ h3{
 
 <h3 id="functions-lifecycle">Lifecycle Management Functions</h3>
 <div class="dfn" id="lo_create_handle">
-<code class="box">unsigned int lo_create_handle (lo_game_handle * gh,
+<code class="box">unsigned int lo_create_handle (lo_game_handle * const gh,
                                const unsigned int gameId,
-                               const char * gamePath);</code>
+                               const char * const gamePath);</code>
 <p>Creates a handle for one of the games supported by the library. If the <var>gameId</var> uses the textfile-based load order system, this function also checks if the two load order files are in sync, provided that they both exist. You can create multiple game handles.
 <ul>
     <li><var>db</var> - A pointer to the handle created by the function.
@@ -242,7 +242,7 @@ h3{
 
 <div class="dfn" id="lo_set_game_master">
 <code class="box">unsigned int lo_set_game_master (lo_game_handle gh,
-                                 const char * masterFile);</code>
+                                 const char * const masterFile);</code>
 <p>Sets the game's master file to a given filename, eg. for use with total conversions where the original main master file is replaced with one of a different filename.
 <ul>
     <li><var>gh</var> - The game handle to be destroyed.
@@ -264,8 +264,8 @@ h3{
 
 <div class="dfn" id="lo_get_active_plugins">
 <code class="box">unsigned int lo_get_active_plugins (lo_game_handle gh,
-                                    char *** plugins,
-                                    size_t * numPlugins);</code>
+                                    char *** const plugins,
+                                    size_t * const numPlugins);</code>
 <p>Gets an array of all plugins in the active plugin list.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -276,7 +276,7 @@ h3{
 
 <div class="dfn" id="lo_set_active_plugins">
 <code class="box">unsigned int lo_set_active_plugins (lo_game_handle gh,
-                                    char ** plugins,
+                                    char ** const plugins,
                                     const size_t numPlugins);</code>
 <p>Replaces the contents of the active plugin list with the given plugins.
 <ul>
@@ -288,8 +288,8 @@ h3{
 
 <div class="dfn" id="lo_get_plugin_active">
 <code class="box">unsigned int lo_get_plugin_active (lo_game_handle gh,
-                                   const char * plugin,
-                                   bool * result);</code>
+                                   const char * const plugin,
+                                   bool * const result);</code>
 <p>Checks to see if the given plugin is in the active plugin list.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -300,7 +300,7 @@ h3{
 
 <div class="dfn" id="lo_get_plugin_active">
 <code class="box">unsigned int lo_set_plugin_active (lo_game_handle gh,
-                                   const char * plugin,
+                                   const char * const plugin,
                                    const bool active);</code>
 <p>If <var>active</var> is true, activates the given plugin if it is not already active. If <var>active</var> is false, deactivates the plugin if it is not already inactive. If the given plugin is already of the status it is being set to, its status is simply not changed. If activating a plugin that is ghosted, the <code>.ghost</code> extension is removed.
 <ul>
@@ -323,7 +323,7 @@ h3{
 
 <div class="dfn" id="lo_get_load_order_method">
 <code class="box">unsigned int lo_get_load_order_method (lo_game_handle gh,
-                                       unsigned int * method);</code>
+                                       unsigned int * const method);</code>
 <p>Returns which method BOSS is using for the load order.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -333,8 +333,8 @@ h3{
 
 <div class="dfn" id="lo_get_load_order">
 <code class="box">unsigned int lo_get_load_order (lo_game_handle gh,
-                                char *** plugins,
-                                size_t * numPlugins);</code>
+                                char *** const plugins,
+                                size_t * const numPlugins);</code>
 <p>Outputs the current load order.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -345,7 +345,7 @@ h3{
 
 <div class="dfn" id="lo_set_load_order">
 <code class="box">unsigned int lo_set_load_order (lo_game_handle gh,
-                                char ** plugins,
+                                char ** const plugins,
                                 const size_t numPlugins);</code>
 <p>Sets the load order to the passed plugin array, then scans the plugins directory and inserts any plugins not included in the passed array. Plugin files are inserted at the end of the load order, and master files are inserted after the last master file in the load order. The order of plugin insertion is undefined besides the distinction made between master files and plugin files.
 <ul>
@@ -357,8 +357,8 @@ h3{
 
 <div class="dfn" id="lo_get_plugin_position">
 <code class="box">unsigned int lo_get_plugin_position (lo_game_handle gh,
-                                     const char * plugin,
-                                     size_t * index);</code>
+                                     const char * const plugin,
+                                     size_t * const index);</code>
 <p>Gets the current load order position of the specified plugin.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -369,7 +369,7 @@ h3{
 
 <div class="dfn" id="lo_set_plugin_position">
 <code class="box">unsigned int lo_set_plugin_position (lo_game_handle gh,
-                                     const char * plugin,
+                                     const char * const plugin,
                                      const size_t index);</code>
 <p>Sets the load order position of the specified plugin.
 <ul>
@@ -382,7 +382,7 @@ h3{
 <div class="dfn" id="lo_get_indexed_plugin">
 <code class="box">unsigned int lo_get_indexed_plugin (lo_game_handle gh,
                                     const size_t index,
-                                    char ** plugin);</code>
+                                    char ** const plugin);</code>
 <p>Gets the filename of the plugin is at the specified load order position.
 <ul>
     <li><var>gh</var> - The handle the function acts on.
@@ -392,7 +392,7 @@ h3{
 
 
 <h2 id="example">Example Usage</h2>
-<p>The source code of the <code>libloadorder-tester</code> application provides a very simple example of libloadorder usage, both by using the library's C interface directly and by using a C++ wrapper that allows a neater implementation in a C++-based project. The source code for <code>libloadorder-tester</code> is hosted alongside the libloadorder source code.
+<p>The source code of the <code>libloadorder-tester</code> application provides a very simple example of libloadorder usage. The source code for <code>libloadorder-tester</code> is hosted alongside the libloadorder source code.
 
 <h2 id="credits">Credits</h2>
 <p>libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of the <a href="http://utfcpp.sourceforge.net/">UTF8-CPP</a> library and some of the <a href="http://www.boost.org/">Boost</a> libraries.
