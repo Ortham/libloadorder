@@ -26,6 +26,7 @@
 #include "libloadorder.h"
 #include "helpers.h"
 #include "game.h"
+#include "error.h"
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 #include <locale>
 
@@ -39,8 +40,6 @@ using namespace liblo;
 const unsigned int LIBLO_VERSION_MAJOR = 2;
 const unsigned int LIBLO_VERSION_MINOR = 0;
 const unsigned int LIBLO_VERSION_PATCH = 0;
-
-char * extErrorString = NULL;
 
 
 /*------------------------------
@@ -102,21 +101,12 @@ LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMin
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function called for the given
    game handle. */
-LIBLO unsigned int lo_get_error_message(char ** details) {
+LIBLO unsigned int lo_get_error_message(const char ** details) {
     if (details == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
-
-    //Free memory if in use.
-    delete [] extErrorString;
-    extErrorString = NULL;
-
-    try {
-        extErrorString = ToNewCString(lastException.what());
-    } catch (bad_alloc /*&e*/) {
-        return error(LIBLO_ERROR_NO_MEM).code();
-    }
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     *details = extErrorString;
+
     return LIBLO_OK;
 }
 
@@ -135,9 +125,9 @@ LIBLO void lo_cleanup() {
    is case-sensitive. */
 LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int gameId, const char * gamePath) {
     if (gh == NULL || gamePath == NULL) //Check for valid args.
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
     else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
 
     //Set the locale to get encoding conversions working correctly.
     setlocale(LC_CTYPE, "");
@@ -149,7 +139,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int game
     try {
         *gh = new _lo_game_handle_int(gameId, string(reinterpret_cast<const char *>(gamePath)));
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     if ((**gh).LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::filesystem::exists((**gh).ActivePluginsFile()) && boost::filesystem::exists((**gh).LoadOrderFile())) {
@@ -164,7 +154,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int game
             PluginsFileLO.LoadFromFile(**gh, (**gh).ActivePluginsFile());
         } catch (error& e) {
             delete *gh;
-            return e.code();
+            return c_error(e);
         }
 
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
@@ -178,7 +168,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * gh, const unsigned int game
 
         //Compare the two LoadOrder objects: they should be identical (since mtimes for each have not been touched).
         if (PluginsFileLO != LoadOrderFileLO)
-            return error(LIBLO_WARN_LO_MISMATCH).code();
+            return c_error(LIBLO_WARN_LO_MISMATCH, "The order of plugins present in both loadorder.txt and plugins.txt differs between the two files.");
     }
 
     return LIBLO_OK;
@@ -193,12 +183,12 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
    the original main master file is replaced. */
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * masterFile) {
     if (gh == NULL || masterFile == NULL) //Check for valid args.
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     try {
         gh->SetMasterFile(string(reinterpret_cast<const char *>(masterFile)));
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     return LIBLO_OK;

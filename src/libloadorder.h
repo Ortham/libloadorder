@@ -122,7 +122,7 @@ LIBLO void lo_get_version(unsigned int * versionMajor, unsigned int * versionMin
 
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function. */
-LIBLO unsigned int lo_get_error_message(char ** details);
+LIBLO unsigned int lo_get_error_message(const char ** details);
 
 /* Frees the memory allocated to the last error details string. */
 LIBLO void lo_cleanup();

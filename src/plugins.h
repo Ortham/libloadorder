@@ -26,7 +26,6 @@
 #ifndef __LIBLO_PLUGINS_H__
 #define __LIBLO_PLUGINS_H__
 
-#include "exception.h"
 #include <string>
 #include <vector>
 #include <stdint.h>

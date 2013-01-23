@@ -24,6 +24,7 @@
 */
 
 #include "libloadorder.h"
+#include "error.h"
 #include "plugins.h"
 #include "game.h"
 #include "helpers.h"
@@ -94,8 +95,8 @@ namespace liblo {
                 return fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"));
             else
                 return fs::last_write_time(parentGame.PluginsFolder() / name);
-        } catch(fs::filesystem_error e) {
-            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, name, e.what());
+        } catch(fs::filesystem_error& e) {
+            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
         }
     }
 
@@ -117,8 +118,8 @@ namespace liblo {
         if (IsGhosted(parentGame)) {
             try {
                 fs::rename(parentGame.PluginsFolder() / fs::path(name + ".ghost"), parentGame.PluginsFolder() / name);
-            } catch (fs::filesystem_error e) {
-                throw error(LIBLO_ERROR_FILE_RENAME_FAIL, name + ".ghost", e.what());
+            } catch (fs::filesystem_error& e) {
+                throw error(LIBLO_ERROR_FILE_RENAME_FAIL, e.what());
             }
         }
     }
@@ -129,8 +130,8 @@ namespace liblo {
                 fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"), modificationTime);
             else
                 fs::last_write_time(parentGame.PluginsFolder() / name, modificationTime);
-        } catch(fs::filesystem_error e) {
-            throw error(LIBLO_ERROR_TIMESTAMP_WRITE_FAIL, name, e.what());
+        } catch(fs::filesystem_error& e) {
+            throw error(LIBLO_ERROR_TIMESTAMP_WRITE_FAIL, e.what());
         }
     }
 
@@ -243,7 +244,7 @@ namespace liblo {
             ofstream outfile;
             outfile.open(parentGame.LoadOrderFile().string<std::string>().c_str(), ios_base::trunc);
             if (outfile.fail())
-                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, parentGame.LoadOrderFile().string());
+                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to.");
 
             for (vector<Plugin>::iterator it=begin(), endIt=end(); it != endIt; ++it)
                 outfile << it->Name() << endl;
@@ -301,8 +302,8 @@ namespace liblo {
                     return (t2 > mtime);
             } else
                 return (fs::last_write_time(parentGame.PluginsFolder()) > mtime);
-        } catch(fs::filesystem_error e) {
-            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, parentGame.PluginsFolder().string(), e.what());
+        } catch(fs::filesystem_error& e) {
+            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
         }
     }
 
@@ -345,13 +346,13 @@ namespace liblo {
         }
 
         if (!transcode && !ValidateUTF8File(file))
-            throw error(LIBLO_ERROR_FILE_NOT_UTF8, file.string());
+            throw error(LIBLO_ERROR_FILE_NOT_UTF8, "\"" + file.string() + "\" is not encoded in valid UTF-8.");
 
         //loadorder.txt is simple enough that we can avoid needing a formal parser.
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
         std::ifstream in(file.string().c_str());
         if (in.fail())
-            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, file.string());
+            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, "\"" + file.string() + "\" could not be parsed.");
 
         string line;
 
@@ -396,7 +397,7 @@ namespace liblo {
 
         std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
         if (in.fail())
-            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, parentGame.ActivePluginsFile().string());
+            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be parsed.");
 
         string line;
 
@@ -450,7 +451,7 @@ namespace liblo {
         ofstream outfile;
         outfile.open(parentGame.ActivePluginsFile().string().c_str(), ios_base::trunc);
         if (outfile.fail())
-            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, parentGame.ActivePluginsFile().string());
+            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be parsed.");
 
         if (!settings.empty())
             outfile << settings << endl;  //Get those Morrowind settings back in.
@@ -465,8 +466,8 @@ namespace liblo {
 
                 try {
                     outfile << trans.Utf8ToEnc(it->Name()) << endl;
-                } catch (error /*&e*/) {
-                    badFilename = it->Name();
+                } catch (error& e) {
+                    badFilename = e.what();
                 }
                 i++;
             }
@@ -478,15 +479,15 @@ namespace liblo {
 
                 try {
                     outfile << trans.Utf8ToEnc(it->Name()) << endl;
-                } catch (error /*&e*/) {
-                    badFilename = it->Name();
+                } catch (error& e) {
+                    badFilename = e.what();
                 }
             }
         }
         outfile.close();
 
         if (!badFilename.empty())
-            throw error(LIBLO_WARN_BAD_FILENAME, badFilename, "1252");
+            throw error(LIBLO_WARN_BAD_FILENAME, badFilename);
     }
 
     bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) const {
@@ -523,8 +524,8 @@ namespace liblo {
                 return (fs::last_write_time(parentGame.ActivePluginsFile()) > mtime);
             else
                 return false;
-        } catch(fs::filesystem_error e) {
-            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, parentGame.ActivePluginsFile().string(), e.what());
+        } catch(fs::filesystem_error& e) {
+            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
         }
     }
 }

@@ -25,7 +25,7 @@
 
 #include "helpers.h"
 #include "libloadorder.h"
-#include "exception.h"
+#include "error.h"
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -374,10 +374,10 @@ namespace liblo {
                 if (mapIter != utf8toEnc.end())
                     outString << mapIter->second;
                 else
-                    throw error(LIBLO_WARN_BAD_FILENAME, inString);
+                    throw error(LIBLO_WARN_BAD_FILENAME, "\"" + inString + "\" cannot be encoded in Windows-1252.");
             }
         } catch (...) {
-            throw error(LIBLO_WARN_BAD_FILENAME, inString);
+            throw error(LIBLO_WARN_BAD_FILENAME, "\"" + inString + "\" cannot be encoded in Windows-1252.");
         }
         return outString.str();
     }
@@ -390,14 +390,14 @@ namespace liblo {
                 try {
                     utf8::append(mapIter->second, back_inserter(outString));
                 } catch (...) {
-                    throw error(LIBLO_WARN_BAD_FILENAME, inString);
+                    throw error(LIBLO_WARN_BAD_FILENAME, "\"" + inString + "\" cannot be encoded in UTF-8.");
                 }
             } else
-                throw error(LIBLO_WARN_BAD_FILENAME, inString);
+                throw error(LIBLO_WARN_BAD_FILENAME, "\"" + inString + "\" cannot be encoded in UTF-8.");
         }
         //Let's check that it's valid UTF-8.
         if (!utf8::is_valid(outString.begin(), outString.end()))
-            throw error(LIBLO_WARN_BAD_FILENAME, outString);
+            throw error(LIBLO_WARN_BAD_FILENAME, "\"" + outString + "\" cannot be encoded in UTF-8.");
         return outString;
     }
 

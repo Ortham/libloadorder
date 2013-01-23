@@ -46,6 +46,7 @@ int main() {
     size_t len;
     size_t index;
     char * outPlugin;
+    const char * error;
 
     char ** activePlugins;
     bool active;
@@ -172,10 +173,10 @@ int main() {
         out << "TESTING lo_set_plugin_active(...)" << endl;
         ret = lo_set_plugin_active(db, plugin, !active);
         if (ret != LIBLO_OK) {
-            ret = lo_get_error_message(&outPlugin);
+            ret = lo_get_error_message(&error);
             if (ret != LIBLO_OK)
                 out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
-            out << '\t' << "lo_set_plugin_active(...) failed. Error: " << outPlugin << endl;
+            out << '\t' << "lo_set_plugin_active(...) failed. Error: " << error << endl;
         } else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
@@ -183,11 +184,11 @@ int main() {
         out << "TESTING lo_get_error_message(...)" << endl;
         ret = lo_set_plugin_active(db, NULL, !active);
         if (ret != LIBLO_OK) {
-            ret = lo_get_error_message(&outPlugin);
+            ret = lo_get_error_message(&error);
             if (ret != LIBLO_OK)
                 out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
             else
-                out << '\t' << "lo_set_plugin_active(...) failed. Error: " << outPlugin << endl;
+                out << '\t' << "lo_set_plugin_active(...) failed. Error: " << error << endl;
         } else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }

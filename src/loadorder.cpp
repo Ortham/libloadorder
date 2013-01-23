@@ -26,7 +26,7 @@
 #include "libloadorder.h"
 #include "game.h"
 #include "helpers.h"
-#include "exception.h"
+#include "error.h"
 
 using namespace std;
 using namespace liblo;
@@ -39,7 +39,7 @@ namespace fs = boost::filesystem;
 /* Returns which method the game uses for the load order. */
 LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * method) {
     if (gh == NULL || method == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     *method = gh->LoadOrderMethod();
 
@@ -50,7 +50,7 @@ LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * me
    created in load order, with the number of plugins given by numPlugins. */
 LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t * numPlugins) {
     if (gh == NULL || plugins == NULL || numPlugins == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
     if (gh->extStringArray != NULL) {
@@ -66,7 +66,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t
         if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.Load(*gh);
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     //Exit now if load order is empty.
@@ -79,8 +79,8 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t
         gh->extStringArray = new char*[gh->extStringArraySize];
         for (size_t i=0; i < gh->extStringArraySize; i++)
             gh->extStringArray[i] = ToNewCString(gh->loadOrder[i].Name());
-    } catch(bad_alloc /*&e*/) {
-        return error(LIBLO_ERROR_NO_MEM).code();
+    } catch(bad_alloc& e) {
+        return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
 
     //Set outputs.
@@ -95,7 +95,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** plugins, size_t
    array passed to the function. */
 LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const size_t numPlugins) {
     if (gh == NULL || plugins == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Put input into loadOrder object.
     gh->loadOrder.clear();
@@ -105,14 +105,14 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const s
             gh->loadOrder.push_back(plugin);
         else {
             gh->loadOrder.clear();
-            return error(LIBLO_ERROR_FILE_NOT_FOUND, plugin.Name()).code();
+            return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
         }
     }
 
     //Check to see if basic rules are being obeyed.
     if (!gh->loadOrder.IsValid(*gh)) {
         gh->loadOrder.clear();
-        return error(LIBLO_ERROR_INVALID_ARGS, "Invalid load order supplied.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid load order supplied.");
     }
 
     //Now add any additional plugins to the load order.
@@ -138,7 +138,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const s
         gh->loadOrder.Save(*gh);
     } catch (error& e) {
         gh->loadOrder.clear();
-        return e.code();
+        return c_error(e);
     }
 
     return LIBLO_OK;
@@ -148,21 +148,21 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** plugins, const s
    in the load order is 0. */
 LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin, size_t * index) {
     if (gh == NULL || plugin == NULL || index == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.Load(*gh);
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     //Find plugin pos.
     const Plugin pluginObj(string(reinterpret_cast<const char *>(plugin)));
     size_t pos = gh->loadOrder.Find(pluginObj);
     if (pos == gh->loadOrder.size())
-        return error(LIBLO_ERROR_FILE_NOT_FOUND, pluginObj.Name()).code();
+        return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
 
     *index = pos;
 
@@ -175,14 +175,14 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * plugin
    the end of the load order. */
 LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin, size_t index) {
     if (gh == NULL || plugin == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.Load(*gh);
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     //Get current plugin position.
@@ -201,7 +201,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin
             gh->loadOrder.erase(gh->loadOrder.begin() + index);
         else
             gh->loadOrder.Move(pos, pluginObj);
-        return error(LIBLO_ERROR_INVALID_ARGS, "The operation results in an invalid load order.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "The operation results in an invalid load order.");
     }
 
     //Now save changes.
@@ -209,7 +209,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin
         gh->loadOrder.Save(*gh);
     } catch (error& e) {
         gh->loadOrder.clear();
-        return e.code();
+        return c_error(e);
     }
 
     return LIBLO_OK;
@@ -219,7 +219,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * plugin
    in the load order is 0. */
 LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** plugin) {
     if (gh == NULL || plugin == NULL)
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
     delete [] gh->extString;
@@ -230,19 +230,19 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
         if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.Load(*gh);
     } catch (error& e) {
-        return e.code();
+        return c_error(e);
     }
 
     //Check index is valid.
     if (index >= gh->loadOrder.size()) {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Index given is equal to or larger than the size of the load order.").code();
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Index given is equal to or larger than the size of the load order.");
     }
 
     //Allocate memory.
     try {
         gh->extString = ToNewCString(gh->loadOrder[index].Name());
-    } catch (bad_alloc /*&e*/) {
-        return error(LIBLO_ERROR_NO_MEM).code();
+    } catch (bad_alloc& e) {
+        return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
 
     //Set output.

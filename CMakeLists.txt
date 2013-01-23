@@ -11,7 +11,7 @@
 cmake_minimum_required (VERSION 2.8.9)
 project (libloadorder)
 
-set (LIBLO_SRC "${CMAKE_SOURCE_DIR}/src/exception.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libespm-interface.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
+set (LIBLO_SRC "${CMAKE_SOURCE_DIR}/src/error.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libespm-interface.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
 
 # Include source and library directories.
 include_directories ("${LIBLO_LIBS_DIR}/boost" "${LIBLO_LIBS_DIR}/utf8" "${CMAKE_SOURCE_DIR}/src")

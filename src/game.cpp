@@ -26,6 +26,7 @@
 #include "game.h"
 #include "libloadorder.h"
 #include "helpers.h"
+#include "error.h"
 
 #if _WIN32 || _WIN64
 #   include "windows.h"
