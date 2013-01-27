@@ -37,7 +37,7 @@ using namespace liblo;
    Global variables
 ------------------------------*/
 
-const unsigned int LIBLO_VERSION_MAJOR = 2;
+const unsigned int LIBLO_VERSION_MAJOR = 3;
 const unsigned int LIBLO_VERSION_MINOR = 0;
 const unsigned int LIBLO_VERSION_PATCH = 0;
 
@@ -140,6 +140,8 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned in
         *gh = new _lo_game_handle_int(gameId, gamePath);
     } catch (error& e) {
         return c_error(e);
+    } catch (std::bad_alloc& e) {
+        return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
 
     if ((**gh).LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::filesystem::exists((**gh).ActivePluginsFile()) && boost::filesystem::exists((**gh).LoadOrderFile())) {
@@ -158,9 +160,9 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned in
         }
 
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
-        vector<Plugin>::iterator it=LoadOrderFileLO.begin(), endIt=LoadOrderFileLO.end(), pEndIt=PluginsFileLO.end();
-        while (it != endIt) {
-            if (PluginsFileLO.begin() + PluginsFileLO.Find(*it) == pEndIt)
+        vector<Plugin>::iterator it=LoadOrderFileLO.begin();
+        while (it != LoadOrderFileLO.end()) {
+            if (PluginsFileLO.Find(*it) == PluginsFileLO.size())
                 it = LoadOrderFileLO.erase(it);
             else
                 ++it;

@@ -349,7 +349,7 @@ namespace liblo {
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
         std::ifstream in(file.string().c_str());
         if (in.fail())
-            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, "\"" + file.string() + "\" could not be parsed.");
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read.");
 
         string line;
 
@@ -376,6 +376,7 @@ namespace liblo {
 
                 if (transcode)
                     line = ToUTF8(line);
+
                 push_back(Plugin(line));
             }
         }
@@ -391,7 +392,7 @@ namespace liblo {
 
         std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
         if (in.fail())
-            throw error(LIBLO_ERROR_FILE_PARSE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be parsed.");
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read.");
 
         string line;
 
