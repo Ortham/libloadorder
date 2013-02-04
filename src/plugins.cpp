@@ -423,7 +423,7 @@ namespace liblo {
         if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
                 emplace(Plugin("Skyrim.esm"));
-            else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
+            if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
                 emplace(Plugin("Update.esm"));
         }
     }
