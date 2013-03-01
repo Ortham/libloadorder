@@ -1,0 +1,33 @@
+/**
+    @mainpage
+    @author WrinklyNinja
+    @version 3.0.0
+    @copyright libloadorder is distributed under the GNU General Public License v3.0. For the full text of the license, see the LICENSE file included in the source archive.
+
+    @section intro_sec Introduction
+
+    libloadorder is a free software library that provides functions for manipulating plugin load order and active status. Its features are:
+      - C frontend.
+      - Available as x86 and x64 static and dynamic libraries.
+      - Supports TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
+      - Supports total conversions which replace any of the supported games' main master files (eg. Nehrim - At Fate's Edge).
+      - Provides a uniform interface to the supported games' differing load order systems.
+      - Supports the community standard textfile-based load order system for TES V: Skyrim.
+      - Supports ghosted plugins.
+      - Get/Set the active plugin list.
+      - Get/Set the full load order.
+      - Get/Set the load order position of an individual plugin.
+      - Get/Set the active status of an individual plugin.
+      - Uses load order and active plugin list caching to avoid unnecessary disk reads, increasing performance.
+      - Free and open source software licensed under the GNU General Public License v3.0.
+
+    libloadorder is designed to free modding utility developers from the task of implementing and maintaining their own code for the functionality it provides.
+
+    This documentation assumes a familiarity with the basics of load ordering. An introduction to the concepts involved may be found in @ref tlos_page.
+
+    All further API documentation is contained within the documentation for libloadorder.h.
+
+    @section credit_sec Credits
+
+    libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of the <a href="http://utfcpp.sourceforge.net/">UTF8-CPP</a> library and some of the <a href="http://www.boost.org/">Boost</a> libraries.
+*/

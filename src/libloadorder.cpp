@@ -195,3 +195,52 @@ LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const mast
 
     return LIBLO_OK;
 }
+
+/*----------------------------------
+   Misc Functions
+----------------------------------*/
+
+/* Removes any plugins that are not present in the filesystem from plugins.txt (and loadorder.txt if used). */
+LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
+    if (gh == NULL)
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
+
+    //Only need to update loadorder.txt if it is used.
+    if (gh->LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+        try {
+            //Update cache if necessary.
+            if (gh->loadOrder.HasChanged(*gh))
+                gh->loadOrder.Load(*gh);
+
+            //Now check all plugins' existences.
+            vector<Plugin>::iterator it = gh->loadOrder.begin();
+            while (it != gh->loadOrder.end()) {
+                if (!it->Exists(*gh))  //Active plugin is not installed.
+                    it = gh->loadOrder.erase(it);
+                else
+                    ++it;
+            }
+        } catch (error& e) {
+            return c_error(e);
+        }
+    }
+
+    try {
+        //Update cache if necessary.
+        if (gh->activePlugins.HasChanged(*gh))
+            gh->activePlugins.Load(*gh);
+
+        //Now check all plugins' existences.
+        boost::unordered_set<Plugin>::iterator it = gh->activePlugins.begin();
+        while (it != gh->activePlugins.end()) {
+            if (!it->Exists(*gh))  //Active plugin is not installed.
+                it = gh->activePlugins.erase(it);
+            else
+                ++it;
+        }
+    } catch (error& e) {
+        return c_error(e);
+    }
+
+    return LIBLO_OK;
+}

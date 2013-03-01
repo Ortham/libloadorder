@@ -263,22 +263,22 @@ namespace liblo {
 
     bool LoadOrder::IsValid(const _lo_game_handle_int& parentGame) const {
         if (at(0) != Plugin(parentGame.MasterFile()))
-            return false;
+            return false;  //Master file is not the first plugin in load order.
 
         bool wasMaster = true;
         boost::unordered_set<Plugin> hashset;
         for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
-                return false;
+                return false;  //Plugin in load order is not installed.
             bool isMaster = it->IsMasterFile(parentGame);
             if (isMaster && !wasMaster)
-                return false;
+                return false;  //Master plugin loaded after non-master plugin.
             if (hashset.find(*it) != hashset.end())
-                return false;
+                return false;  //Plugin is in load order twice.
             vector<Plugin> masters = it->GetMasters(parentGame);
             for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
                 if (hashset.find(*jt) == hashset.end())
-                    return false;
+                    return false;  //Plugin is loaded before one of its masters.
             }
             hashset.insert(*it);
             wasMaster = isMaster;
@@ -484,25 +484,23 @@ namespace liblo {
     }
 
     bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) const {
-        boost::unordered_set<Plugin> hashset;
         for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
-                return false;
+                return false;  //Active plugin is not installed.
             vector<Plugin> masters = it->GetMasters(parentGame);
             for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
-                if (hashset.find(*jt) == hashset.end())
-                    return false;
+                if (this->find(*jt) == this->end())
+                    return false;  //Active plugin has a master which isn't active.
             }
-            hashset.insert(*it);
         }
 
         if (size() > 255)
             return false;
         else if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
-                return false;
+                return false;  //Skyrim.esm isn't active.
             else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
-                return false;
+                return false;  //Update.esm is installed and isn't active.
         }
 
         return true;
