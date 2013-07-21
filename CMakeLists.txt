@@ -61,9 +61,9 @@ ENDIF ()
 ##############################
 
 # Build libloadorder library.
-add_library           (loadorder ${PROJECT_LINK} ${PROJECT_SRC})
-target_link_libraries (loadorder ${PROJECT_LIBS})
+add_library           (loadorder${PROJECT_ARCH} ${PROJECT_LINK} ${PROJECT_SRC})
+target_link_libraries (loadorder${PROJECT_ARCH} ${PROJECT_LIBS})
 
 # Build libloadorder tester.
 add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp")
-target_link_libraries (libloadorder-tester loadorder ${PROJECT_LIBS})
+target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${PROJECT_LIBS})
