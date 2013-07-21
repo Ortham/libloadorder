@@ -198,7 +198,8 @@ LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * cons
 ///@{
 
 /**
-   @brief Returns the message for the last error or warning encountered. @details Outputs a string giving the a message containing the details of the last error or warning encountered by a function. Each time this function is called, the memory for the previous message is freed, so only one error message is available at any one time.
+   @brief Returns the message for the last error or warning encountered.
+   @details Outputs a string giving the a message containing the details of the last error or warning encountered by a function. Each time this function is called, the memory for the previous message is freed, so only one error message is available at any one time.
    @param details A pointer to the error details string outputted by the function.
    @returns A return code.
 */

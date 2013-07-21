@@ -4,9 +4,6 @@ Libloadorder is a free software library for manipulating the load order and
 active status of plugins for TES III: Morrowind, TES IV: Oblivion,
 TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
 
-Please see the HTML readme file at docs/libloadorder-readme.html for
-more information.
-
 
 ## Build Instructions
 

@@ -49,3 +49,6 @@ build/
 out/
 bin/
 ipch/
+docs/html/
+docs/latex/
+libbsa-tester.txt
