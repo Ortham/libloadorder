@@ -13,6 +13,8 @@ project (libloadorder)
 
 set (PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/error.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libespm-interface.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
 
+set (PROJECT_SRC ${PROJECT_SRC} "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
+
 # Include source and library directories.
 include_directories ("${PROJECT_LIBS_DIR}/boost" "${PROJECT_LIBS_DIR}/utf8" "${CMAKE_SOURCE_DIR}/src")
 
@@ -65,5 +67,5 @@ add_library           (loadorder${PROJECT_ARCH} ${PROJECT_LINK} ${PROJECT_SRC})
 target_link_libraries (loadorder${PROJECT_ARCH} ${PROJECT_LIBS})
 
 # Build libloadorder tester.
-add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp")
+add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp" "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
 target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${PROJECT_LIBS})

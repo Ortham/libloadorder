@@ -26,8 +26,8 @@
 #include "helpers.h"
 #include "libloadorder.h"
 #include "error.h"
+#include "streams.h"
 #include <cstring>
-#include <fstream>
 #include <sstream>
 #include <source/utf8.h>
 #include <boost/spirit/include/support_istream_iterator.hpp>
@@ -46,6 +46,7 @@
 #endif
 
 using namespace std;
+using liblo::ifstream;
 
 namespace liblo {
 

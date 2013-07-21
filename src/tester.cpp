@@ -24,18 +24,18 @@
 */
 
 #include "libloadorder.h"
+#include "streams.h"
 
-#include <iostream>
 #include <stdint.h>
-#include <fstream>
 
 using std::endl;
+using liblo::ofstream;
 
 int main() {
     unsigned int vMajor, vMinor, vPatch;
 
     lo_game_handle db;
-    const char * gamePath = "C:/Program Files (x86)/Steam/steamapps/common/oblivion";
+    const char * gamePath = "D:/Program Files (x86)/Steam/steamapps/common/oblivion";
     unsigned int game = LIBLO_GAME_TES4;
     unsigned int ret;
 
@@ -51,7 +51,7 @@ int main() {
     char ** activePlugins;
     bool active;
 
-    std::ofstream out("libloadorder-tester.txt");
+    ofstream out("libloadorder-tester.txt");
     if (!out.good()){
         std::cout << "File could not be opened for reading.";
         return 1;

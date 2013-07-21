@@ -24,13 +24,14 @@
 */
 
 #include "libespm-interface.h"
+#include "streams.h"
 
 #include <cstring>
-#include <fstream>
 
 namespace libespm {
 
     using namespace std;
+    using liblo::ifstream;
 
     typedef unsigned long   ulong;
     const ulong TES4    =   '4SET';
