@@ -40,7 +40,6 @@ make
 
 If natively compiling, all the ```-DCMAKE_TOOLCHAIN_FILE``` arguments can be omitted, as can the ```echo``` line when building Boost.
 
-To build a shared library, swap ```-DPROJECT_LINK=STATIC``` with
-```-DPROJECT_LINK=SHARED```.
+To build a shared library, swap ```-DPROJECT_LINK=STATIC``` with ```-DPROJECT_LINK=SHARED```.
 
 To build a 64 bit library, swap all instances of ```i686``` with ```x86_64``` and ```32``` with ```64```.
