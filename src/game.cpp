@@ -29,6 +29,12 @@
 #include "error.h"
 
 #if _WIN32 || _WIN64
+#   ifndef UNICODE
+#       define UNICODE
+#   endif
+#   ifndef _UNICODE
+#      define _UNICODE
+#   endif
 #   include "windows.h"
 #   include "shlobj.h"
 #endif
@@ -159,8 +165,12 @@ namespace fs = boost::filesystem;
 
         HRESULT res = SHGetFolderPath(owner, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path);
 
+        const int utf8Len = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL);
+        char * narrowPath = new char[utf8Len];
+        WideCharToMultiByte(CP_UTF8, 0, path, -1, narrowPath, utf8Len, NULL, NULL);
+
         if (res == S_OK)
-            return fs::path(path);
+            return fs::path(narrowPath);
         else
             return fs::path("");
 #else
