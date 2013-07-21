@@ -390,34 +390,36 @@ namespace liblo {
     void ActivePlugins::Load(const _lo_game_handle_int& parentGame) {
         clear();
 
-        std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
-        if (in.fail())
-            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read.");
+        if (fs::exists(parentGame.ActivePluginsFile())) {
+            std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
+            if (in.fail())
+                throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read.");
 
-        string line;
+            string line;
 
-        if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-            boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
-            while (in.good()) {
-                getline(in, line);
+            if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
+                boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
+                while (in.good()) {
+                    getline(in, line);
 
-                if (line.empty() || !boost::regex_match(line, reg))
-                    continue;
+                    if (line.empty() || !boost::regex_match(line, reg))
+                        continue;
 
-                //Now cut off everything up to and including the = sign.
-                emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
+                    //Now cut off everything up to and including the = sign.
+                    emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
+                }
+            } else {
+                while (in.good()) {
+                    getline(in, line);
+
+                    if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
+                        continue;
+
+                    emplace(Plugin(ToUTF8(line)));
+                }
             }
-        } else {
-            while (in.good()) {
-                getline(in, line);
-
-                if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
-                    continue;
-
-                emplace(Plugin(ToUTF8(line)));
-            }
+            in.close();
         }
-        in.close();
 
         //Add skyrim.esm, update.esm if missing.
         if (parentGame.Id() == LIBLO_GAME_TES5) {

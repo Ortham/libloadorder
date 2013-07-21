@@ -48,6 +48,10 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         gh->extStringArray = NULL;
         gh->extStringArraySize = 0;
     }
+    
+    //Set initial outputs.
+    *plugins = gh->extStringArray;
+    *numPlugins = gh->extStringArraySize;
 
     //Update cache if necessary.
     try {

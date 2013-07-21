@@ -34,7 +34,7 @@
 
 struct _lo_game_handle_int {
     public:
-        _lo_game_handle_int(unsigned int id, const std::string& path);  //Currently missing desync correction.
+        _lo_game_handle_int(unsigned int id, const std::string& path);
         ~_lo_game_handle_int();
 
         void SetMasterFile(const std::string& file);
