@@ -28,6 +28,8 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 
+// These file streams should be used to allow the i/o of data at file paths which contain non-ANSI characters. They MUST ALWAYS be opened using a boost::filesystem::path object, or it won't work.
+
 namespace liblo {
     typedef boost::iostreams::stream< boost::iostreams::file_descriptor_sink > ofstream;
     typedef boost::iostreams::stream< boost::iostreams::file_descriptor_source > ifstream;

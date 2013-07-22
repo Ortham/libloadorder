@@ -31,7 +31,6 @@
 namespace libespm {
 
     using namespace std;
-    using liblo::ifstream;
 
     typedef unsigned long   ulong;
     const ulong TES4    =   '4SET';
@@ -79,7 +78,7 @@ namespace libespm {
         if (filename.empty())
             return false;
 
-        ifstream    file((parentGame.PluginsFolder() / filename).string().c_str(), ios_base::binary);
+        liblo::ifstream    file(parentGame.PluginsFolder() / filename, ios_base::binary);
 
         if (file.bad())
             return false;

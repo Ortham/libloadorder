@@ -46,7 +46,6 @@
 #endif
 
 using namespace std;
-using liblo::ifstream;
 
 namespace liblo {
 
@@ -58,7 +57,7 @@ namespace liblo {
 
     //UTF-8 file validator.
     bool ValidateUTF8File(const boost::filesystem::path& file) {
-        ifstream ifs(file.string().c_str());
+        liblo::ifstream ifs(file);
 
         istreambuf_iterator<char> it(ifs.rdbuf());
         istreambuf_iterator<char> eos;
@@ -71,7 +70,7 @@ namespace liblo {
 
     //Reads an entire file into a string buffer.
     void fileToBuffer(const boost::filesystem::path& file, string& buffer) {
-        ifstream ifile(file.string().c_str());
+        liblo::ifstream ifile(file);
         if (ifile.fail())
             return;
         ifile.unsetf(ios::skipws); // No white space skipping!

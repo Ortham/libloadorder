@@ -27,9 +27,9 @@
 #include "streams.h"
 
 #include <stdint.h>
+#include <boost/filesystem.hpp>
 
 using std::endl;
-using liblo::ofstream;
 
 int main() {
     unsigned int vMajor, vMinor, vPatch;
@@ -51,7 +51,7 @@ int main() {
     char ** activePlugins;
     bool active;
 
-    ofstream out("libloadorder-tester.txt");
+    liblo::ofstream out(boost::filesystem::path("libloadorder-tester.txt"));
     if (!out.good()){
         std::cout << "File could not be opened for reading.";
         return 1;
