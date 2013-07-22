@@ -29,7 +29,7 @@
 #include "game.h"
 #include "helpers.h"
 #include "libespm-interface.h"
-#include <fstream>
+#include "streams.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
@@ -241,8 +241,8 @@ namespace liblo {
             mtime = fs::last_write_time(parentGame.PluginsFolder());
         } else {
             //Need to write both loadorder.txt and plugins.txt.
-            ofstream outfile;
-            outfile.open(parentGame.LoadOrderFile().string<std::string>().c_str(), ios_base::trunc);
+            liblo::ofstream outfile;
+            outfile.open(parentGame.LoadOrderFile(), ios_base::trunc);
             if (outfile.fail())
                 throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to.");
 
@@ -347,7 +347,7 @@ namespace liblo {
 
         //loadorder.txt is simple enough that we can avoid needing a formal parser.
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
-        std::ifstream in(file.string().c_str());
+        liblo::ifstream in(file);
         if (in.fail())
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read.");
 
@@ -391,7 +391,7 @@ namespace liblo {
         clear();
 
         if (fs::exists(parentGame.ActivePluginsFile())) {
-            std::ifstream in(parentGame.ActivePluginsFile().string().c_str());
+            liblo::ifstream in(parentGame.ActivePluginsFile());
             if (in.fail())
                 throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read.");
 
@@ -443,8 +443,8 @@ namespace liblo {
                 settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
         }
 
-        ofstream outfile;
-        outfile.open(parentGame.ActivePluginsFile().string().c_str(), ios_base::trunc);
+        liblo::ofstream outfile;
+        outfile.open(parentGame.ActivePluginsFile(), ios_base::trunc);
         if (outfile.fail())
             throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be parsed.");
 
