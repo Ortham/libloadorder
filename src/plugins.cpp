@@ -51,8 +51,9 @@ namespace liblo {
     Plugin::Plugin() : name("") {}
 
     Plugin::Plugin(const string& filename) : name(filename) {
-        const string ext = fs::path(name).extension().string();
-        if (boost::iequals(ext, ".ghost"))
+        if (!name.empty() && name[ name.length() - 1 ] == '\r' )
+            name = name.substr(0, name.length() - 1);
+        if (boost::iends_with(name, ".ghost"))
             name = fs::path(name).stem().string();
     };
 
@@ -61,8 +62,7 @@ namespace liblo {
     }
 
     bool Plugin::IsValid() const {
-        const string ext = fs::path(name).extension().string();
-        return (boost::iequals(ext, ".esp") || boost::iequals(ext, ".esm"));
+        return (boost::iends_with(name, ".esp") || boost::iends_with(name, ".esm"));
     }
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
@@ -243,7 +243,7 @@ namespace liblo {
             //Need to write both loadorder.txt and plugins.txt.
             try {
                 liblo::ofstream outfile(parentGame.LoadOrderFile(), ios_base::trunc);
-                outfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+                outfile.exceptions(std::ios_base::badbit);
 
                 for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
                     outfile << it->Name() << endl;
@@ -351,14 +351,13 @@ namespace liblo {
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
         try {
             liblo::ifstream in(file);
-            in.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+            in.exceptions(std::ios_base::badbit);
 
             string line;
 
             if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
                 boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
-                while (in.good()) {
-                    getline(in, line);
+                while (getline(in, line)) {
 
                     if (line.empty() || !boost::regex_match(line, reg))
                         continue;
@@ -370,8 +369,7 @@ namespace liblo {
                     push_back(Plugin(line));
                 }
             } else {
-                while (in.good()) {
-                    getline(in, line);
+                while (getline(in, line)) {
 
                     if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
                         continue;
@@ -399,12 +397,11 @@ namespace liblo {
             string line;
             try {
                 liblo::ifstream in(parentGame.ActivePluginsFile());
-                in.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+                in.exceptions(std::ios_base::badbit);
 
                 if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
                     boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
-                    while (in.good()) {
-                        getline(in, line);
+                    while (getline(in, line)) {
 
                         if (line.empty() || !boost::regex_match(line, reg))
                             continue;
@@ -413,8 +410,7 @@ namespace liblo {
                         emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
                     }
                 } else {
-                    while (in.good()) {
-                        getline(in, line);
+                    while (getline(in, line)) {
 
                         if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
                             continue;
@@ -424,7 +420,7 @@ namespace liblo {
                 }
                 in.close();
             } catch (std::ios_base::failure& e) {
-                throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+                throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read. Details: " + e.what());
             }
         }
 
@@ -452,7 +448,7 @@ namespace liblo {
 
         try {
             liblo::ofstream outfile(parentGame.ActivePluginsFile(), ios_base::trunc);
-            outfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+            outfile.exceptions(std::ios_base::badbit);
 
             if (!settings.empty())
                 outfile << settings << endl;  //Get those Morrowind settings back in.

@@ -35,13 +35,13 @@ int main() {
     unsigned int vMajor, vMinor, vPatch;
 
     lo_game_handle db;
-    const char * gamePath = "D:/Program Files (x86)/Steam/steamapps/common/oblivion";
-    unsigned int game = LIBLO_GAME_TES4;
+    const char * gamePath = "D:/Program Files (x86)/Steam/steamapps/common/skyrim";
+    unsigned int game = LIBLO_GAME_TES5;
     unsigned int ret;
 
     unsigned int loMethod;
-    const char * master = "Oblivion.esm";
-    const char * plugin = "Unofficial Oblivion Patch.esp";
+    const char * master = "Skyrim.esm";
+    const char * plugin = "Unofficial Skyrim Patch.esp";
     char ** loadOrder;
     size_t len;
     size_t index;

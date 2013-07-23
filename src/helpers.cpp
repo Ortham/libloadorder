@@ -59,7 +59,7 @@ namespace liblo {
     bool ValidateUTF8File(const boost::filesystem::path& file) {
         try {
             liblo::ifstream ifs(file);
-            ifs.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+            ifs.exceptions(std::ios_base::badbit);
 
             istreambuf_iterator<char> it(ifs.rdbuf());
             istreambuf_iterator<char> eos;
@@ -69,7 +69,7 @@ namespace liblo {
             else
                 return true;
         } catch (std::ios_base::failure& e) {
-            throw throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
     }
 
@@ -77,7 +77,7 @@ namespace liblo {
     void fileToBuffer(const boost::filesystem::path& file, string& buffer) {
         try {
             liblo::ifstream ifile(file);
-            ifile.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+            ifile.exceptions(std::ios_base::badbit);
             if (ifile.fail())
                 return;
             ifile.unsetf(ios::skipws); // No white space skipping!
@@ -87,7 +87,7 @@ namespace liblo {
                 back_inserter(buffer)
             );
         } catch (std::ios_base::failure& e) {
-            throw throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
     }
 

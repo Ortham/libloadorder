@@ -25,6 +25,8 @@
 
 #include "libespm-interface.h"
 #include "streams.h"
+#include "error.h"
+#include "libloadorder.h"
 
 #include <cstring>
 
@@ -79,8 +81,9 @@ namespace libespm {
             return false;
 
         try {
-            liblo::ifstream    file(parentGame.PluginsFolder() / filename, ios_base::binary);
-            file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+            boost::filesystem::path filepath = parentGame.PluginsFolder() / filename;
+            liblo::ifstream    file(filepath, ios_base::binary);
+            file.exceptions(std::ios_base::badbit);
 
             // Reads the first MAXLENGTH bytes into the buffer
             file.read(&buffer[0], sizeof(buffer));
@@ -99,7 +102,7 @@ namespace libespm {
             //  mod is a master or a plugin
             return ((flags & 0x1) != 0);
         } catch (std::ios_base::failure& e) {
-            throw throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + (parentGame.PluginsFolder() / filename).string() + "\" could not be read. Details: " + e.what());
+            throw liblo::error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + (parentGame.PluginsFolder() / filename).string() + "\" could not be read. Details: " + e.what());
         }
     }
 
