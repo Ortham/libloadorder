@@ -39,7 +39,7 @@ using namespace liblo;
 
 const unsigned int LIBLO_VERSION_MAJOR = 3;
 const unsigned int LIBLO_VERSION_MINOR = 0;
-const unsigned int LIBLO_VERSION_PATCH = 0;
+const unsigned int LIBLO_VERSION_PATCH = 1;
 
 
 /*------------------------------
