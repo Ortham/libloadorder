@@ -241,14 +241,16 @@ namespace liblo {
             mtime = fs::last_write_time(parentGame.PluginsFolder());
         } else {
             //Need to write both loadorder.txt and plugins.txt.
-            liblo::ofstream outfile;
-            outfile.open(parentGame.LoadOrderFile(), ios_base::trunc);
-            if (outfile.fail())
-                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to.");
+            try {
+                liblo::ofstream outfile(parentGame.LoadOrderFile(), ios_base::trunc);
+                outfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
-            for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
-                outfile << it->Name() << endl;
-            outfile.close();
+                for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
+                    outfile << it->Name() << endl;
+                outfile.close();
+            } catch (std::ios_base::failure& e) {
+                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to. Details" + e.what());
+            }
 
             //Now write plugins.txt. Update cache if necessary.
             if (parentGame.activePlugins.HasChanged(parentGame))
@@ -347,53 +349,9 @@ namespace liblo {
 
         //loadorder.txt is simple enough that we can avoid needing a formal parser.
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
-        liblo::ifstream in(file);
-        if (in.fail())
-            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read.");
-
-        string line;
-
-        if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-            boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
-            while (in.good()) {
-                getline(in, line);
-
-                if (line.empty() || !boost::regex_match(line, reg))
-                    continue;
-
-                //Now cut off everything up to and including the = sign.
-                line = line.substr(line.find('=')+1);
-                if (transcode)
-                    line = ToUTF8(line);
-                push_back(Plugin(line));
-            }
-        } else {
-            while (in.good()) {
-                getline(in, line);
-
-                if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
-                    continue;
-
-                if (transcode)
-                    line = ToUTF8(line);
-
-                push_back(Plugin(line));
-            }
-        }
-        in.close();
-    }
-
-    ///////////////////////////
-    // ActivePlugins Members
-    ///////////////////////////
-
-    void ActivePlugins::Load(const _lo_game_handle_int& parentGame) {
-        clear();
-
-        if (fs::exists(parentGame.ActivePluginsFile())) {
-            liblo::ifstream in(parentGame.ActivePluginsFile());
-            if (in.fail())
-                throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be read.");
+        try {
+            liblo::ifstream in(file);
+            in.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
             string line;
 
@@ -406,7 +364,10 @@ namespace liblo {
                         continue;
 
                     //Now cut off everything up to and including the = sign.
-                    emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
+                    line = line.substr(line.find('=')+1);
+                    if (transcode)
+                        line = ToUTF8(line);
+                    push_back(Plugin(line));
                 }
             } else {
                 while (in.good()) {
@@ -415,10 +376,56 @@ namespace liblo {
                     if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
                         continue;
 
-                    emplace(Plugin(ToUTF8(line)));
+                    if (transcode)
+                        line = ToUTF8(line);
+
+                    push_back(Plugin(line));
                 }
             }
             in.close();
+        } catch (std::ios_base::failure& e) {
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+        }
+    }
+
+    ///////////////////////////
+    // ActivePlugins Members
+    ///////////////////////////
+
+    void ActivePlugins::Load(const _lo_game_handle_int& parentGame) {
+        clear();
+
+        if (fs::exists(parentGame.ActivePluginsFile())) {
+            string line;
+            try {
+                liblo::ifstream in(parentGame.ActivePluginsFile());
+                in.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+
+                if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
+                    boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
+                    while (in.good()) {
+                        getline(in, line);
+
+                        if (line.empty() || !boost::regex_match(line, reg))
+                            continue;
+
+                        //Now cut off everything up to and including the = sign.
+                        emplace(Plugin(ToUTF8(line.substr(line.find('=')+1))));
+                    }
+                } else {
+                    while (in.good()) {
+                        getline(in, line);
+
+                        if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
+                            continue;
+
+                        emplace(Plugin(ToUTF8(line)));
+                    }
+                }
+                in.close();
+            } catch (std::ios_base::failure& e) {
+                throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+            }
         }
 
         //Add skyrim.esm, update.esm if missing.
@@ -443,43 +450,44 @@ namespace liblo {
                 settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
         }
 
-        liblo::ofstream outfile;
-        outfile.open(parentGame.ActivePluginsFile(), ios_base::trunc);
-        if (outfile.fail())
-            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be parsed.");
+        try {
+            liblo::ofstream outfile(parentGame.ActivePluginsFile(), ios_base::trunc);
+            outfile.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
-        if (!settings.empty())
-            outfile << settings << endl;  //Get those Morrowind settings back in.
+            if (!settings.empty())
+                outfile << settings << endl;  //Get those Morrowind settings back in.
 
+            if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+                //Can write the active plugins in any order.
+                size_t i = 0;
+                for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
+                    if (parentGame.Id() == LIBLO_GAME_TES3) //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
+                        outfile << "GameFile" << i << "=";
 
-        if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
-            //Can write the active plugins in any order.
-            size_t i = 0;
-            for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
-                if (parentGame.Id() == LIBLO_GAME_TES3) //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
-                    outfile << "GameFile" << i << "=";
-
-                try {
-                    outfile << FromUTF8(it->Name()) << endl;
-                } catch (error& e) {
-                    badFilename = e.what();
+                    try {
+                        outfile << FromUTF8(it->Name()) << endl;
+                    } catch (error& e) {
+                        badFilename = e.what();
+                    }
+                    i++;
                 }
-                i++;
-            }
-        } else {
-            //Need to write the active plugins in load order.
-            for (vector<Plugin>::const_iterator it=parentGame.loadOrder.begin(), endIt=parentGame.loadOrder.end(); it != endIt; ++it) {
-                if (find(*it) == end() || parentGame.Id() == LIBLO_GAME_TES5 && it->Name() == parentGame.MasterFile())
-                    continue;
+            } else {
+                //Need to write the active plugins in load order.
+                for (vector<Plugin>::const_iterator it=parentGame.loadOrder.begin(), endIt=parentGame.loadOrder.end(); it != endIt; ++it) {
+                    if (find(*it) == end() || parentGame.Id() == LIBLO_GAME_TES5 && it->Name() == parentGame.MasterFile())
+                        continue;
 
-                try {
-                    outfile << FromUTF8(it->Name()) << endl;
-                } catch (error& e) {
-                    badFilename = e.what();
+                    try {
+                        outfile << FromUTF8(it->Name()) << endl;
+                    } catch (error& e) {
+                        badFilename = e.what();
+                    }
                 }
             }
+            outfile.close();
+        } catch (std::ios_base::failure& e) {
+            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.ActivePluginsFile().string() + "\" could not be written. Details: " + e.what());
         }
-        outfile.close();
 
         if (!badFilename.empty())
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename);

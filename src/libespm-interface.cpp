@@ -78,27 +78,29 @@ namespace libespm {
         if (filename.empty())
             return false;
 
-        liblo::ifstream    file(parentGame.PluginsFolder() / filename, ios_base::binary);
+        try {
+            liblo::ifstream    file(parentGame.PluginsFolder() / filename, ios_base::binary);
+            file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
-        if (file.bad())
-            return false;
+            // Reads the first MAXLENGTH bytes into the buffer
+            file.read(&buffer[0], sizeof(buffer));
 
-        // Reads the first MAXLENGTH bytes into the buffer
-        file.read(&buffer[0], sizeof(buffer));
+            // Check for the 'magic' marker at start
+            if (Read<unsigned int>(bufptr) != TES4)
+                return false;
 
-        // Check for the 'magic' marker at start
-        if (Read<unsigned int>(bufptr) != TES4)
-            return false;
+            // Next field is the total header size
+            /*unsigned int headerSize =*/ Read<unsigned int>(bufptr);
 
-        // Next field is the total header size
-        /*unsigned int headerSize =*/ Read<unsigned int>(bufptr);
+            // Next comes the header record Flags
+            unsigned int flags = Read<unsigned int>(bufptr);
 
-        // Next comes the header record Flags
-        unsigned int flags = Read<unsigned int>(bufptr);
-
-        // LSb of this record's flags is used to indicate if the
-        //  mod is a master or a plugin
-        return ((flags & 0x1) != 0);
+            // LSb of this record's flags is used to indicate if the
+            //  mod is a master or a plugin
+            return ((flags & 0x1) != 0);
+        } catch (std::ios_base::failure& e) {
+            throw throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + (parentGame.PluginsFolder() / filename).string() + "\" could not be read. Details: " + e.what());
+        }
     }
 
     std::vector<std::string> GetPluginMasters(const _lo_game_handle_int& parentGame, const std::string& filename) {

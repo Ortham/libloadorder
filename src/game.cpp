@@ -27,7 +27,6 @@
 #include "libloadorder.h"
 #include "helpers.h"
 #include "error.h"
-#include "streams.h"
 
 #if _WIN32 || _WIN64
 #   ifndef UNICODE
