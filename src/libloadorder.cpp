@@ -81,7 +81,7 @@ const unsigned int LIBLO_GAME_FNV                   = 5;
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */
 LIBLO bool lo_is_compatible(const unsigned int versionMajor, const unsigned int versionMinor, const unsigned int versionPatch) {
-    if (versionMajor == 2 && versionMinor == 0 && versionPatch == 0)
+    if (versionMajor == LIBLO_VERSION_MAJOR)
         return true;
     else
         return false;
