@@ -89,7 +89,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::Fallout3Settings;
+            espm_settings = espm::SkyrimSettings;
         } else if (id == LIBLO_GAME_FNV) {
             executable = "FalloutNV.exe";
             masterFile = "FalloutNV.esm";
@@ -98,7 +98,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::FalloutNVSettings;
+            espm_settings = espm::SkyrimSettings;
         } else
             throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 
@@ -130,6 +130,8 @@ namespace fs = boost::filesystem;
             loMethod = LIBLO_METHOD_TEXTFILE;
         else
             loMethod = LIBLO_METHOD_TIMESTAMP;
+
+        espm::InitPredefinedSettings();
     }
 
     _lo_game_handle_int::~_lo_game_handle_int() {
