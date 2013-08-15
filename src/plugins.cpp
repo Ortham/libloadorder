@@ -28,11 +28,11 @@
 #include "plugins.h"
 #include "game.h"
 #include "helpers.h"
-#include "libespm-interface.h"
 #include "streams.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <src/playground.h>
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -67,9 +67,9 @@ namespace liblo {
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
         if (IsGhosted(parentGame))
-            return libespm::IsPluginMaster(parentGame, name + ".ghost");
+            return espm::File(name + ".ghost", parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
         else
-            return libespm::IsPluginMaster(parentGame, name);
+            return espm::File(name, parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
     }
 
     bool Plugin::IsFalseFlagged(const _lo_game_handle_int& parentGame) const {
@@ -104,9 +104,9 @@ namespace liblo {
         vector<Plugin> masters;
         vector<string> strMasters;
         if (IsGhosted(parentGame))
-            strMasters = libespm::GetPluginMasters(parentGame, name + ".ghost");
+            strMasters = espm::File(name + ".ghost", parentGame.espm_settings, false, true).getMasters();
         else
-            strMasters = libespm::GetPluginMasters(parentGame, name);
+            strMasters = espm::File(name, parentGame.espm_settings, false, true).getMasters();
 
         for (vector<string>::const_iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
             masters.push_back(Plugin(*it));

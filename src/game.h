@@ -31,6 +31,7 @@
 #include <vector>
 #include <stdint.h>
 #include <boost/filesystem.hpp>
+#include <src/playground.h>
 
 struct _lo_game_handle_int {
     public:
@@ -54,6 +55,8 @@ struct _lo_game_handle_int {
         char ** extStringArray;
 
         size_t extStringArraySize;
+
+        espm::Settings espm_settings;
     private:
         unsigned int id;
         unsigned int loMethod;

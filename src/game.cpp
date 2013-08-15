@@ -28,6 +28,8 @@
 #include "helpers.h"
 #include "error.h"
 
+#include <src/settings.h>
+
 #if _WIN32 || _WIN64
 #   ifndef UNICODE
 #       define UNICODE
@@ -59,6 +61,8 @@ namespace fs = boost::filesystem;
             appdataFolderName = "";
             pluginsFolderName = "Data Files";
             pluginsFileName = "Morrowind.ini";
+
+            espm_settings = espm::MorrowindSettings;
         } else if (id == LIBLO_GAME_TES4) {
             executable = "Oblivion.exe";
             masterFile = "Oblivion.esm";
@@ -66,6 +70,8 @@ namespace fs = boost::filesystem;
             appdataFolderName = "Oblivion";
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
+
+            espm_settings = espm::OblivionSettings;
         } else if (id == LIBLO_GAME_TES5) {
             executable = "TESV.exe";
             masterFile = "Skyrim.esm";
@@ -73,6 +79,8 @@ namespace fs = boost::filesystem;
             appdataFolderName = "Skyrim";
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
+
+            espm_settings = espm::SkyrimSettings;
         } else if (id == LIBLO_GAME_FO3) {
             executable = "Fallout3.exe";
             masterFile = "Fallout3.esm";
@@ -80,6 +88,8 @@ namespace fs = boost::filesystem;
             appdataFolderName = "Fallout3";
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
+
+            espm_settings = espm::Fallout3Settings;
         } else if (id == LIBLO_GAME_FNV) {
             executable = "FalloutNV.exe";
             masterFile = "FalloutNV.esm";
@@ -87,6 +97,8 @@ namespace fs = boost::filesystem;
             appdataFolderName = "FalloutNV";
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
+
+            espm_settings = espm::FalloutNVSettings;
         } else
             throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 

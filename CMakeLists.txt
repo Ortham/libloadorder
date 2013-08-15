@@ -11,12 +11,14 @@
 cmake_minimum_required (VERSION 2.8.9)
 project (libloadorder)
 
-set (PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/error.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libespm-interface.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
+set (PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/error.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
 
 set (PROJECT_SRC ${PROJECT_SRC} "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
 
 # Include source and library directories.
-include_directories ("${PROJECT_LIBS_DIR}/boost" "${PROJECT_LIBS_DIR}/utf8" "${CMAKE_SOURCE_DIR}/src")
+include_directories ("${PROJECT_LIBS_DIR}/boost" "${PROJECT_LIBS_DIR}/utf8" "${CMAKE_SOURCE_DIR}/src" "${PROJECT_LIBS_DIR}/yaml-cpp/include" "${PROJECT_LIBS_DIR}/libespm"  "${PROJECT_LIBS_DIR}/zlib")
+link_directories ("${PROJECT_LIBS_DIR}/yaml-cpp/build")
+link_directories ("${PROJECT_LIBS_DIR}/zlib/build")
 
 ##############################
 # Platform-Specific Settings
@@ -55,7 +57,7 @@ IF (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
         set (PROJECT_LIBS version)
     ENDIF ()
 
-    set (PROJECT_LIBS ${PROJECT_LIBS} boost_locale boost_filesystem boost_system boost_regex)
+    set (PROJECT_LIBS ${PROJECT_LIBS} zlibstatic yaml-cpp boost_locale boost_filesystem boost_system boost_regex)
 ENDIF ()
 
 ##############################
@@ -67,5 +69,5 @@ add_library           (loadorder${PROJECT_ARCH} ${PROJECT_LINK} ${PROJECT_SRC})
 target_link_libraries (loadorder${PROJECT_ARCH} ${PROJECT_LIBS})
 
 # Build libloadorder tester.
-add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp" "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
+add_executable        (libloadorder-tester "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${PROJECT_LIBS})
