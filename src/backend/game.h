@@ -31,7 +31,7 @@
 #include <vector>
 #include <stdint.h>
 #include <boost/filesystem.hpp>
-#include <src/playground.h>
+#include <src/files.h>
 
 struct _lo_game_handle_int {
     public:

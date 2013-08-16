@@ -28,8 +28,6 @@
 #include "helpers.h"
 #include "error.h"
 
-#include <src/settings.h>
-
 #if _WIN32 || _WIN64
 #   ifndef UNICODE
 #       define UNICODE
@@ -62,7 +60,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data Files";
             pluginsFileName = "Morrowind.ini";
 
-            espm_settings = espm::MorrowindSettings;
+            espm::InitPredefinedSettings("Morrowind", espm_settings);
         } else if (id == LIBLO_GAME_TES4) {
             executable = "Oblivion.exe";
             masterFile = "Oblivion.esm";
@@ -71,7 +69,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::OblivionSettings;
+            espm::InitPredefinedSettings("Oblivion", espm_settings);
         } else if (id == LIBLO_GAME_TES5) {
             executable = "TESV.exe";
             masterFile = "Skyrim.esm";
@@ -80,7 +78,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::SkyrimSettings;
+            espm::InitPredefinedSettings("Skyrim", espm_settings);
         } else if (id == LIBLO_GAME_FO3) {
             executable = "Fallout3.exe";
             masterFile = "Fallout3.esm";
@@ -89,7 +87,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::SkyrimSettings;
+            espm::InitPredefinedSettings("Oblivion", espm_settings);
         } else if (id == LIBLO_GAME_FNV) {
             executable = "FalloutNV.exe";
             masterFile = "FalloutNV.esm";
@@ -98,7 +96,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::SkyrimSettings;
+            espm::InitPredefinedSettings("FalloutNV", espm_settings);
         } else
             throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 
@@ -130,8 +128,6 @@ namespace fs = boost::filesystem;
             loMethod = LIBLO_METHOD_TEXTFILE;
         else
             loMethod = LIBLO_METHOD_TIMESTAMP;
-
-        espm::InitPredefinedSettings();
     }
 
     _lo_game_handle_int::~_lo_game_handle_int() {
