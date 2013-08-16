@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
+#include "../api/constants.h"
 #include "helpers.h"
-#include "libloadorder.h"
 #include "error.h"
 #include "streams.h"
 #include <cstring>

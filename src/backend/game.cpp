@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
+#include "../api/constants.h"
 #include "game.h"
-#include "libloadorder.h"
 #include "helpers.h"
 #include "error.h"
 

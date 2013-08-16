@@ -23,8 +23,8 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#include "libloadorder.h"
-#include "streams.h"
+#include "api/libloadorder.h"
+#include "backend/streams.h"
 
 #include <stdint.h>
 #include <boost/filesystem.hpp>

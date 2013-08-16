@@ -24,59 +24,23 @@
 */
 
 #include "libloadorder.h"
-#include "helpers.h"
-#include "game.h"
-#include "error.h"
+#include "../backend/helpers.h"
+#include "../backend/game.h"
+#include "../backend/error.h"
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 #include <locale>
 
 using namespace std;
 using namespace liblo;
 
+
 /*------------------------------
-   Global variables
+   Version Functions
 ------------------------------*/
 
 const unsigned int LIBLO_VERSION_MAJOR = 3;
 const unsigned int LIBLO_VERSION_MINOR = 0;
 const unsigned int LIBLO_VERSION_PATCH = 1;
-
-
-/*------------------------------
-   Constants
-------------------------------*/
-
-/* The following are the possible codes that the library can return. */
-const unsigned int LIBLO_OK                         = 0;
-const unsigned int LIBLO_WARN_BAD_FILENAME          = 1;
-const unsigned int LIBLO_WARN_LO_MISMATCH           = 2;
-const unsigned int LIBLO_ERROR_FILE_READ_FAIL       = 3;
-const unsigned int LIBLO_ERROR_FILE_WRITE_FAIL      = 4;
-const unsigned int LIBLO_ERROR_FILE_NOT_UTF8        = 5;
-const unsigned int LIBLO_ERROR_FILE_NOT_FOUND       = 6;
-const unsigned int LIBLO_ERROR_FILE_RENAME_FAIL     = 7;
-const unsigned int LIBLO_ERROR_TIMESTAMP_READ_FAIL  = 8;
-const unsigned int LIBLO_ERROR_TIMESTAMP_WRITE_FAIL = 9;
-const unsigned int LIBLO_ERROR_FILE_PARSE_FAIL      = 10;
-const unsigned int LIBLO_ERROR_NO_MEM               = 11;
-const unsigned int LIBLO_ERROR_INVALID_ARGS         = 12;
-const unsigned int LIBLO_RETURN_MAX                 = LIBLO_ERROR_INVALID_ARGS;
-
-/* The following are for signifying what load order method is being used. */
-const unsigned int LIBLO_METHOD_TIMESTAMP           = 0;
-const unsigned int LIBLO_METHOD_TEXTFILE            = 1;
-
-/* The following are the games identifiers used by the library. */
-const unsigned int LIBLO_GAME_TES3                  = 1;
-const unsigned int LIBLO_GAME_TES4                  = 2;
-const unsigned int LIBLO_GAME_TES5                  = 3;
-const unsigned int LIBLO_GAME_FO3                   = 4;
-const unsigned int LIBLO_GAME_FNV                   = 5;
-
-
-/*------------------------------
-   Version Functions
-------------------------------*/
 
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */

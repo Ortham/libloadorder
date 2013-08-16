@@ -23,10 +23,10 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#include "libloadorder.h"
-#include "game.h"
-#include "helpers.h"
-#include "error.h"
+#include "activeplugins.h"
+#include "../backend/game.h"
+#include "../backend/helpers.h"
+#include "../backend/error.h"
 
 using namespace std;
 using namespace liblo;
@@ -48,7 +48,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         gh->extStringArray = NULL;
         gh->extStringArraySize = 0;
     }
-    
+
     //Set initial outputs.
     *plugins = gh->extStringArray;
     *numPlugins = gh->extStringArraySize;

@@ -23,7 +23,7 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#include "libloadorder.h"
+#include "../api/constants.h"
 #include "error.h"
 #include "plugins.h"
 #include "game.h"

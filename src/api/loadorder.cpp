@@ -23,10 +23,10 @@
     <http://www.gnu.org/licenses/>.
 */
 
-#include "libloadorder.h"
-#include "game.h"
-#include "helpers.h"
-#include "error.h"
+#include "loadorder.h"
+#include "../backend/game.h"
+#include "../backend/helpers.h"
+#include "../backend/error.h"
 
 using namespace std;
 using namespace liblo;

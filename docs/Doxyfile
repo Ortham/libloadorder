@@ -655,9 +655,12 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = ../src/libloadorder.h \
+INPUT                  = tlos.dox \
                          index.dox \
-                         tlos.dox
+                         ../src/api/activeplugins.h \
+                         ../src/api/constants.h \
+                         ../src/api/libloadorder.h \
+                         ../src/api/loadorder.h
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 

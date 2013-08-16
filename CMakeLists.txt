@@ -11,7 +11,7 @@
 cmake_minimum_required (VERSION 2.8.9)
 project (libloadorder)
 
-set (PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/error.cpp" "${CMAKE_SOURCE_DIR}/src/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/game.cpp" "${CMAKE_SOURCE_DIR}/src/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/plugins.cpp")
+set (PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/backend/error.cpp" "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp" "${CMAKE_SOURCE_DIR}/src/backend/game.cpp" "${CMAKE_SOURCE_DIR}/src/backend/plugins.cpp" "${CMAKE_SOURCE_DIR}/src/api/libloadorder.cpp" "${CMAKE_SOURCE_DIR}/src/api/activeplugins.cpp" "${CMAKE_SOURCE_DIR}/src/api/loadorder.cpp" "${CMAKE_SOURCE_DIR}/src/api/constants.cpp")
 
 set (PROJECT_SRC ${PROJECT_SRC} "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
 
