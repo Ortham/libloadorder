@@ -67,9 +67,9 @@ namespace liblo {
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
         if (IsGhosted(parentGame))
-            return espm::File(name + ".ghost", parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
+            return espm::File((parentGame.PluginsFolder() / name).string() + ".ghost", parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
         else
-            return espm::File(name, parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
+            return espm::File((parentGame.PluginsFolder() / name).string(), parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
     }
 
     bool Plugin::IsFalseFlagged(const _lo_game_handle_int& parentGame) const {
@@ -104,9 +104,9 @@ namespace liblo {
         vector<Plugin> masters;
         vector<string> strMasters;
         if (IsGhosted(parentGame))
-            strMasters = espm::File(name + ".ghost", parentGame.espm_settings, false, true).getMasters();
+            strMasters = espm::File((parentGame.PluginsFolder() / name).string() + ".ghost", parentGame.espm_settings, false, true).getMasters();
         else
-            strMasters = espm::File(name, parentGame.espm_settings, false, true).getMasters();
+            strMasters = espm::File((parentGame.PluginsFolder() / name).string(), parentGame.espm_settings, false, true).getMasters();
 
         for (vector<string>::const_iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
             masters.push_back(Plugin(*it));
