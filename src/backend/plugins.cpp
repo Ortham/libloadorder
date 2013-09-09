@@ -32,7 +32,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
-#include <src/files.h>
+#include <src/libespm.h>
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -66,10 +66,27 @@ namespace liblo {
     }
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
+        espm::File * file;
+        string filepath = (parentGame.PluginsFolder() / name).string();
         if (IsGhosted(parentGame))
-            return espm::File((parentGame.PluginsFolder() / name).string() + ".ghost", parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
+            filepath += ".ghost";
+
+        if (parentGame.Id() == LIBLO_GAME_TES3)
+            file = new espm::tes3::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_TES4)
+            file = new espm::tes4::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_TES5)
+            file = new espm::tes5::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_FO3)
+            file = new espm::fo3::File(filepath, parentGame.espm_settings, false, true);
         else
-            return espm::File((parentGame.PluginsFolder() / name).string(), parentGame.espm_settings, false, true).isMaster(parentGame.espm_settings);
+            file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
+
+        bool ret = file->isMaster(parentGame.espm_settings);
+
+        delete file;
+
+        return ret;
     }
 
     bool Plugin::IsFalseFlagged(const _lo_game_handle_int& parentGame) const {
@@ -103,10 +120,26 @@ namespace liblo {
     std::vector<Plugin> Plugin::GetMasters(const _lo_game_handle_int& parentGame) const {
         vector<Plugin> masters;
         vector<string> strMasters;
+
+        espm::File * file;
+        string filepath = (parentGame.PluginsFolder() / name).string();
         if (IsGhosted(parentGame))
-            strMasters = espm::File((parentGame.PluginsFolder() / name).string() + ".ghost", parentGame.espm_settings, false, true).getMasters();
+            filepath += ".ghost";
+
+        if (parentGame.Id() == LIBLO_GAME_TES3)
+            file = new espm::tes3::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_TES4)
+            file = new espm::tes4::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_TES5)
+            file = new espm::tes5::File(filepath, parentGame.espm_settings, false, true);
+        else if (parentGame.Id() == LIBLO_GAME_FO3)
+            file = new espm::fo3::File(filepath, parentGame.espm_settings, false, true);
         else
-            strMasters = espm::File((parentGame.PluginsFolder() / name).string(), parentGame.espm_settings, false, true).getMasters();
+            file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
+
+        strMasters = file->getMasters();
+
+        delete file;
 
         for (vector<string>::const_iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
             masters.push_back(Plugin(*it));

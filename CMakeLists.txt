@@ -53,7 +53,7 @@ IF (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
     set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
 
     IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-        link_directories ("${PROJECT_LIBS_DIR}/boost/stage-mingw-${PROJECT_ARCH}/lib")
+        link_directories ("${PROJECT_LIBS_DIR}/boost/stage-${PROJECT_ARCH}/lib")
         set (PROJECT_LIBS version)
     ENDIF ()
 
