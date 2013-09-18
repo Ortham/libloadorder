@@ -67,7 +67,8 @@ namespace liblo {
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
         espm::File * file;
-        string filepath = (parentGame.PluginsFolder() / name).string();
+
+        fs::path filepath = parentGame.PluginsFolder() / name;
         if (IsGhosted(parentGame))
             filepath += ".ghost";
 
@@ -275,12 +276,18 @@ namespace liblo {
         } else {
             //Need to write both loadorder.txt and plugins.txt.
             try {
+                if (!fs::exists(parentGame.LoadOrderFile().parent_path()))
+                    fs::create_directory(parentGame.LoadOrderFile().parent_path());
                 liblo::ofstream outfile(parentGame.LoadOrderFile(), ios_base::trunc);
                 outfile.exceptions(std::ios_base::badbit);
 
                 for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
                     outfile << it->Name() << endl;
                 outfile.close();
+
+                //Now record new loadorder.txt mtime.
+                //Plugins.txt doesn't need its mtime updated as only the order of its contents has changed, and it is stored in memory as an unordered set.
+                mtime = fs::last_write_time(parentGame.LoadOrderFile());
             } catch (std::ios_base::failure& e) {
                 throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to. Details" + e.what());
             }
@@ -289,10 +296,6 @@ namespace liblo {
             if (parentGame.activePlugins.HasChanged(parentGame))
                 parentGame.activePlugins.Load(parentGame);
             parentGame.activePlugins.Save(parentGame);
-
-            //Now record new loadorder.txt mtime.
-            //Plugins.txt doesn't need its mtime updated as only the order of its contents has changed, and it is stored in memory as an unordered set.
-            mtime = fs::last_write_time(parentGame.LoadOrderFile());
         }
     }
 
@@ -473,13 +476,17 @@ namespace liblo {
             string contents;
             //If Morrowind, write active plugin list to Morrowind.ini, which also holds a lot of other game settings.
             //libloadorder needs to read everything up to the active plugin list in the current ini and stick that on before the first saved plugin name.
-            fileToBuffer(parentGame.ActivePluginsFile(), contents);
-            size_t pos = contents.find("[Game Files]");
-            if (pos != string::npos)
-                settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
+            if (fs::exists(parentGame.ActivePluginsFile())) {
+                fileToBuffer(parentGame.ActivePluginsFile(), contents);
+                size_t pos = contents.find("[Game Files]");
+                if (pos != string::npos)
+                    settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
+            }
         }
 
         try {
+            if (!fs::exists(parentGame.ActivePluginsFile().parent_path()))
+                    fs::create_directory(parentGame.ActivePluginsFile().parent_path());
             liblo::ofstream outfile(parentGame.ActivePluginsFile(), ios_base::trunc);
             outfile.exceptions(std::ios_base::badbit);
 
