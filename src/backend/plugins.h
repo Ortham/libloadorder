@@ -67,7 +67,7 @@ namespace liblo {
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
 
-        bool IsValid(const _lo_game_handle_int& parentGame) const;  //Game master first, masters before plugins, plugins all exist.
+        void CheckValidity(const _lo_game_handle_int& parentGame) const;  //Game master first, masters before plugins, plugins all exist.
 
         bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
 
@@ -87,7 +87,7 @@ namespace liblo {
         void Load(const _lo_game_handle_int& parentGame);
         void Save(const _lo_game_handle_int& parentGame);
 
-        bool IsValid(const _lo_game_handle_int& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
+        void CheckValidity(const _lo_game_handle_int& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
 
         bool HasChanged(const _lo_game_handle_int& parentGame) const;
     private:

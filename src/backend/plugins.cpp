@@ -299,30 +299,28 @@ namespace liblo {
         }
     }
 
-    bool LoadOrder::IsValid(const _lo_game_handle_int& parentGame) const {
+    void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) const {
         if (at(0) != Plugin(parentGame.MasterFile()))
-            return false;  //Master file is not the first plugin in load order.
+            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
 
         bool wasMaster = true;
         boost::unordered_set<Plugin> hashset;
         for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
-                return false;  //Plugin in load order is not installed.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is not installed.");
             bool isMaster = it->IsMasterFile(parentGame);
             if (isMaster && !wasMaster)
-                return false;  //Master plugin loaded after non-master plugin.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugin \"" + it->Name() + "\" loaded after a non-master plugin.");
             if (hashset.find(*it) != hashset.end())
-                return false;  //Plugin is in load order twice.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is in the load order twice.");
             vector<Plugin> masters = it->GetMasters(parentGame);
             for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
-                if (hashset.find(*jt) == hashset.end())
-                    return false;  //Plugin is loaded before one of its masters.
+                if (hashset.find(*jt) == hashset.end() && this->Find(*jt) != this->size())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
+                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is loaded before one of its masters (\"" + jt->Name() + "\").");
             }
             hashset.insert(*it);
             wasMaster = isMaster;
         }
-
-        return true;
     }
 
     bool LoadOrder::HasChanged(const _lo_game_handle_int& parentGame) const {
@@ -529,27 +527,26 @@ namespace liblo {
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename);
     }
 
-    bool ActivePlugins::IsValid(const _lo_game_handle_int& parentGame) const {
+    void ActivePlugins::CheckValidity(const _lo_game_handle_int& parentGame) const {
         for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
-                return false;  //Active plugin is not installed.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is not installed.");
             vector<Plugin> masters = it->GetMasters(parentGame);
+    /*//Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
             for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
                 if (this->find(*jt) == this->end())
-                    return false;  //Active plugin has a master which isn't active.
-            }
+                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" has a master (\"" + jt->Name() + "\") which isn't active.");
+            }*/
         }
 
         if (size() > 255)
-            return false;
+            throw error(LIBLO_ERROR_INVALID_ARGS, "More than 255 plugins are active.");
         else if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
-                return false;  //Skyrim.esm isn't active.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Skyrim.esm isn't active.");
             else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
-                return false;  //Update.esm is installed and isn't active.
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Update.esm is installed but isn't active.");
         }
-
-        return true;
     }
 
     bool ActivePlugins::HasChanged(const _lo_game_handle_int& parentGame) const {

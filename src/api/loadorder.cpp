@@ -110,9 +110,11 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, c
     }
 
     //Check to see if basic rules are being obeyed.
-    if (!gh->loadOrder.IsValid(*gh)) {
+    try {
+        gh->loadOrder.CheckValidity(*gh);
+    } catch(error& e) {
         gh->loadOrder.clear();
-        return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid load order supplied.");
+        return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid load order supplied. Details: ") + e.what());
     }
 
     //Now add any additional plugins to the load order.
@@ -195,13 +197,15 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     gh->loadOrder.Move(index, pluginObj);
 
     //Check that new load order is valid.
-    if (!gh->loadOrder.IsValid(*gh)) {
+    try {
+        gh->loadOrder.CheckValidity(*gh);
+    } catch(error& e) {
         //Undo change.
         if (pos == gh->loadOrder.size() || pos == gh->loadOrder.size() - 1)
             gh->loadOrder.erase(gh->loadOrder.begin() + index);
         else
             gh->loadOrder.Move(pos, pluginObj);
-        return c_error(LIBLO_ERROR_INVALID_ARGS, "The operation results in an invalid load order.");
+        return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid load order. Details: ") + e.what());
     }
 
     //Now save changes.
