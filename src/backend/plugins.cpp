@@ -400,7 +400,11 @@ namespace liblo {
                     line = line.substr(line.find('=')+1);
                     if (transcode)
                         line = ToUTF8(line);
-                    push_back(Plugin(line));
+
+                    //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
+                    Plugin p(line);
+                    if (p.Exists(parentGame))
+                        push_back(p);
                 }
             } else {
                 while (getline(in, line)) {
@@ -411,7 +415,10 @@ namespace liblo {
                     if (transcode)
                         line = ToUTF8(line);
 
-                    push_back(Plugin(line));
+                    //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
+                    Plugin p(line);
+                    if (p.Exists(parentGame))
+                        push_back(p);
                 }
             }
             in.close();
