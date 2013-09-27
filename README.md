@@ -13,9 +13,10 @@ Libloadorder expects all libraries' folders to be present alongside the libloado
 
 ### Requirements
 
-  * [CMake](http://cmake.org/) v2.8.9.
-  * [Boost](http://www.boost.org) v1.51.0.
-  * [UTF8-CPP](http://sourceforge.net/projects/utfcpp/) v2.3.2.
+* [CMake](http://cmake.org/) v2.8.9.
+* [Boost](http://www.boost.org) v1.51.0.
+* [Libespm](http://github.com/WrinklyNinja/libespm)
+* [UTF8-CPP](http://sourceforge.net/projects/utfcpp/) v2.3.2.
 
 
 ### Boost
@@ -26,6 +27,10 @@ echo "using gcc : 4.6.3 : i686-w64-mingw32-g++ : <rc>i686-w64-mingw32-windres <a
 ./b2 toolset=gcc-4.6.3 target-os=windows link=static variant=release address-model=32 cxxflags=-fPIC --with-filesystem --with-locale --with-regex --with-system --stagedir=stage-32
 ```
 
+### Libespm
+
+Follow the instructions in libespm's README.md to build it as a static library.
+
 ### Libloadorder
 
 ```
@@ -35,8 +40,8 @@ cmake .. -DPROJECT_LIBS_DIR=.. -DPROJECT_ARCH=32 -DPROJECT_LINK=STATIC -DCMAKE_T
 make
 ```
 
-If natively compiling, all the ```-DCMAKE_TOOLCHAIN_FILE``` arguments can be omitted, as can the ```echo``` line when building Boost.
+If natively compiling, all the `-DCMAKE_TOOLCHAIN_FILE` arguments can be omitted, as can the `echo` line when building Boost.
 
-To build a shared library, swap ```-DPROJECT_LINK=STATIC``` with ```-DPROJECT_LINK=SHARED```.
+To build a shared library, swap `-DPROJECT_LINK=STATIC` with `-DPROJECT_LINK=SHARED`.
 
-To build a 64 bit library, swap all instances of ```i686``` with ```x86_64``` and ```32``` with ```64```.
+To build a 64 bit library, swap all instances of `i686` with `x86_64` and `32` with ```64```.

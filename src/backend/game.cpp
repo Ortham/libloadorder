@@ -60,7 +60,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data Files";
             pluginsFileName = "Morrowind.ini";
 
-            espm::InitPredefinedSettings("Morrowind", espm_settings);
+            espm_settings = espm::Settings("tes3");
         } else if (id == LIBLO_GAME_TES4) {
             executable = "Oblivion.exe";
             masterFile = "Oblivion.esm";
@@ -69,7 +69,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm::InitPredefinedSettings("Oblivion", espm_settings);
+            espm_settings = espm::Settings("tes4");
         } else if (id == LIBLO_GAME_TES5) {
             executable = "TESV.exe";
             masterFile = "Skyrim.esm";
@@ -78,7 +78,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm::InitPredefinedSettings("Skyrim", espm_settings);
+            espm_settings = espm::Settings("tes5");
         } else if (id == LIBLO_GAME_FO3) {
             executable = "Fallout3.exe";
             masterFile = "Fallout3.esm";
@@ -87,7 +87,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm::InitPredefinedSettings("Oblivion", espm_settings);
+            espm_settings = espm::Settings("fo3");
         } else if (id == LIBLO_GAME_FNV) {
             executable = "FalloutNV.exe";
             masterFile = "FalloutNV.esm";
@@ -96,7 +96,7 @@ namespace fs = boost::filesystem;
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
 
-            espm::InitPredefinedSettings("FalloutNV", espm_settings);
+            espm_settings = espm::Settings("fonv");
         } else
             throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 
