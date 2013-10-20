@@ -18,21 +18,18 @@ set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/api/libloadorder.cpp"
                     "${CMAKE_SOURCE_DIR}/src/api/activeplugins.cpp"
                     "${CMAKE_SOURCE_DIR}/src/api/loadorder.cpp"
-                    "${CMAKE_SOURCE_DIR}/src/api/constants.cpp"
-                    "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp")
+                    "${CMAKE_SOURCE_DIR}/src/api/constants.cpp")
 
-set (TESTER_SRC "${PROJECT_LIBS_DIR}/boost/libs/iostreams/src/file_descriptor.cpp"
-                "${CMAKE_SOURCE_DIR}/src/tester.cpp")
+set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 
 # Include source and library directories.
-include_directories (   "${PROJECT_LIBS_DIR}/boost"
-                        "${PROJECT_LIBS_DIR}/utf8"
-                        "${CMAKE_SOURCE_DIR}/src"
-                        "${PROJECT_LIBS_DIR}/libespm"
-                        "${PROJECT_LIBS_DIR}/zlib")
+include_directories ("${PROJECT_LIBS_DIR}/boost"
+                     "${PROJECT_LIBS_DIR}/utf8"
+                     "${CMAKE_SOURCE_DIR}/src"
+                     "${PROJECT_LIBS_DIR}/libespm"
+                     "${PROJECT_LIBS_DIR}/zlib")
 
-link_directories (  "${PROJECT_LIBS_DIR}/zlib/build"
-                    "${PROJECT_LIBS_DIR}/boost/stage-${PROJECT_ARCH}/lib")
+link_directories ("${PROJECT_LIBS_DIR}/boost/stage-${PROJECT_ARCH}/lib")
 
 ##############################
 # Platform-Specific Settings
@@ -50,25 +47,32 @@ ENDIF ()
 
 # MinGW settings.
 IF (MINGW)
-    set (CMAKE_C_FLAGS  "-m${PROJECT_ARCH} -O3")
+    link_directories ("${PROJECT_LIBS_DIR}/zlib/build")
+    set (CMAKE_C_FLAGS "-m${PROJECT_ARCH} -O3")
     set (CMAKE_CXX_FLAGS "-m${PROJECT_ARCH} -O3")
     set (CMAKE_EXE_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
     set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
     set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
+    set (PROJECT_LIBS zlibstatic
+                      boost_locale
+                      boost_filesystem
+                      boost_system
+                      boost_regex
+                      boost_iostreams
+                      version)
+ELSEIF (MSVC)
+    link_directories ("${PROJECT_LIBS_DIR}/zlib/build/Release")
+	set (CMAKE_CXX_FLAGS "/EHsc /MD")
+    set (BOOST_SUFFIX "-vc120-mt-1_55")
+    set (PROJECT_LIBS zlibstatic
+                      libboost_locale${BOOST_SUFFIX}
+                      libboost_filesystem${BOOST_SUFFIX}
+                      libboost_system${BOOST_SUFFIX}
+                      libboost_regex${BOOST_SUFFIX}
+                      libboost_iostreams${BOOST_SUFFIX}
+                      version)
 ENDIF ()
 
-# MSVC settings.
-IF (MSVC)
-	set (CMAKE_CXX_FLAGS "/EHsc")
-    set (BOOST_SUFFIX "-vc110-mt-1_52")
-ENDIF ()
-
-set (PROJECT_LIBS   zlibstatic
-                    boost_locale${BOOST_SUFFIX}
-                    boost_filesystem${BOOST_SUFFIX}
-                    boost_system${BOOST_SUFFIX}
-                    boost_regex${BOOST_SUFFIX}
-                    version)
 
 
 ##############################

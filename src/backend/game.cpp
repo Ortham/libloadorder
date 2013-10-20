@@ -170,7 +170,7 @@ namespace fs = boost::filesystem;
 
     boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
 #if _WIN32 || _WIN64
-        HWND owner;
+        HWND owner = 0;
         TCHAR path[MAX_PATH];
 
         HRESULT res = SHGetFolderPath(owner, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path);

@@ -27,6 +27,7 @@
 #include "backend/streams.h"
 
 #include <stdint.h>
+#include <iostream>
 #include <boost/filesystem.hpp>
 
 using std::endl;
