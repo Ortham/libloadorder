@@ -43,7 +43,7 @@ namespace liblo {
         unsigned int _code;
     };
 
-    extern const char * extErrorString;
+    extern char * extErrorString;
 
     unsigned int c_error(const error& e);
 

@@ -27,7 +27,7 @@
 
 namespace liblo {
 
-    const char * extErrorString = NULL;
+    char * extErrorString = NULL;
 
     error::error(const unsigned int code, const std::string& what) : _code(code), _what(what) {}
 
@@ -41,9 +41,11 @@ namespace liblo {
         return _what.c_str();
     }
 
-    unsigned int c_error(const error& e) {
-        extErrorString = e.what();
-        return e.code();
+	unsigned int c_error(const error& e) {
+		delete[] extErrorString;
+		extErrorString = new char[strlen(e.what()) + 1];
+		strcpy(extErrorString, e.what());
+		return e.code();
     }
 
     unsigned int c_error(const unsigned int code, const std::string& what) {
