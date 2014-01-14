@@ -33,6 +33,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <src/libespm.h>
+#include <set>
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -261,15 +262,16 @@ namespace liblo {
     void LoadOrder::Save(_lo_game_handle_int& parentGame) {
         if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
             //Update timestamps.
-            time_t lastTime = at(0).GetModTime(parentGame);
-            for (size_t i=1, max=size(); i < max; i++) {
-                time_t thisTime = at(i).GetModTime(parentGame);
-                if (thisTime > lastTime)
-                    lastTime = thisTime;
-                else {
-                    lastTime += 60;
-                    at(i).SetModTime(parentGame, lastTime);  //Space timestamps by a minute.
-                }
+            //Want to make a minimum of changes to timestamps, so use the same timestamps as are currently set, but apply them to the plugins in the new order.
+            //First we have to read all the timestamps.
+            std::set<time_t> timestamps;
+            for (size_t i = 1, max = size(); i < max; i++) {
+                timestamps.insert(at(i).GetModTime(parentGame));
+            }
+            size_t i = 1;
+            for (std::set<time_t>::const_iterator it = timestamps.begin(); it != timestamps.end(); ++it) {
+                at(i).SetModTime(parentGame, *it);
+                ++i;
             }
             //Now record new plugins folder mtime.
             mtime = fs::last_write_time(parentGame.PluginsFolder());
