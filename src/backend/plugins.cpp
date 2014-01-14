@@ -337,7 +337,8 @@ namespace liblo {
                 else
                     return (t2 > mtime);
             } else
-                return (fs::last_write_time(parentGame.PluginsFolder()) > mtime);
+                //Checking parent folder modification time doesn't work consistently, and to check if the load order has changed would probably take as long as just assuming it's changed.
+                return true;
         } catch(fs::filesystem_error& e) {
             throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
         }
