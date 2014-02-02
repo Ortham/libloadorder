@@ -43,8 +43,12 @@ namespace liblo {
 
 	unsigned int c_error(const error& e) {
 		delete[] extErrorString;
-		extErrorString = new char[strlen(e.what()) + 1];
-		strcpy(extErrorString, e.what());
+        try {
+            extErrorString = new char[strlen(e.what()) + 1];
+            strcpy(extErrorString, e.what());
+        } catch (std::bad_alloc& e) {
+            extErrorString = NULL;
+        }
 		return e.code();
     }
 
