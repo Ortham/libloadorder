@@ -34,7 +34,7 @@ Pass `address-model=64` and `--stagedir=stage-64` instead if building 64-bit lib
 1. Set CMake up so that it builds the binaries in the `build` subdirectory of the libloadorder folder.
 2. Define `PROJECT_ARCH=32` or `PROJECT_ARCH=64` to build 32 or 64 bit executables respectively.
 3. Define `PROJECT_LINK=STATIC` to build a static API, or `PROJECT_LINK=SHARED` to build a DLL API.
-4. Define `PROEJCT_LIBS_DIR` to point to the folder holding all the required libraries' folders.
+4. Define `PROJECT_LIBS_DIR` to point to the folder holding all the required libraries' folders.
 5. Configure CMake, then generate a build system for Visual Studio 12.
 6. Open the generated solution file, and build it.
 

@@ -11,6 +11,14 @@
 cmake_minimum_required (VERSION 2.8.9)
 project (libloadorder)
 
+IF (NOT DEFINED PROJECT_LINK)
+    set (PROJECT_LINK "STATIC")
+ENDIF ()
+
+IF (NOT DEFINED PROJECT_ARCH)
+    set (PROJECT_ARCH "32")
+ENDIF ()
+
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/game.cpp"
