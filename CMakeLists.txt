@@ -19,6 +19,10 @@ IF (NOT DEFINED PROJECT_ARCH)
     set (PROJECT_ARCH "32")
 ENDIF ()
 
+IF (NOT DEFINED PROJECT_LIBS_DIR)
+    set (PROJECT_LIBS_DIR "..")
+ENDIF ()
+
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/game.cpp"
@@ -32,7 +36,6 @@ set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 
 # Include source and library directories.
 include_directories ("${PROJECT_LIBS_DIR}/boost"
-                     "${PROJECT_LIBS_DIR}/utf8"
                      "${CMAKE_SOURCE_DIR}/src"
                      "${PROJECT_LIBS_DIR}/libespm"
                      "${PROJECT_LIBS_DIR}/zlib")

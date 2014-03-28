@@ -34,9 +34,6 @@ namespace liblo {
     // std::string to null-terminated char string converter.
     char * ToNewCString(const std::string& str);
 
-    //UTF-8 file validator.
-    bool ValidateUTF8File(const boost::filesystem::path& file);
-
     //Reads an entire file into a string buffer.
     void fileToBuffer(const boost::filesystem::path& file, std::string& buffer);
 

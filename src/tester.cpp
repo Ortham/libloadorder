@@ -26,7 +26,6 @@
 #include "api/libloadorder.h"
 #include "backend/streams.h"
 
-#include <stdint.h>
 #include <iostream>
 #include <boost/filesystem.hpp>
 
@@ -36,7 +35,7 @@ int main() {
     unsigned int vMajor, vMinor, vPatch;
 
     lo_game_handle db;
-    const char * gamePath = "D:/Program Files (x86)/Steam/steamapps/common/skyrim";
+    const char * gamePath = "C:/Program Files (x86)/Steam/steamapps/common/skyrim";
     unsigned int game = LIBLO_GAME_TES5;
     unsigned int ret;
 
@@ -59,7 +58,7 @@ int main() {
     }
 
     out << "TESTING lo_is_compatible(...)" << endl;
-    bool b = lo_is_compatible(2,0,0);
+    bool b = lo_is_compatible(3,0,0);
     if (b)
         out << '\t' << "library is compatible." << endl;
     else {

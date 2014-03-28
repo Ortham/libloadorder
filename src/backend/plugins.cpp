@@ -32,6 +32,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <boost/locale.hpp>
 #include <src/libespm.h>
 #include <set>
 
@@ -387,12 +388,7 @@ namespace liblo {
     }
 
     void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
-        bool transcode = false;
-        if (file == parentGame.ActivePluginsFile())
-            transcode = true;
-
-        if (!transcode && !ValidateUTF8File(file))
-            throw error(LIBLO_ERROR_FILE_NOT_UTF8, "\"" + file.string() + "\" is not encoded in valid UTF-8.");
+        bool transcode = file == parentGame.ActivePluginsFile();
 
         //loadorder.txt is simple enough that we can avoid needing a formal parser.
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
@@ -401,38 +397,32 @@ namespace liblo {
             in.exceptions(std::ios_base::badbit);
 
             string line;
+            bool isTES3 = parentGame.Id() == LIBLO_GAME_TES3;  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
+            boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended | boost::regex::icase);
 
-            if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-                boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
-                while (getline(in, line)) {
+            while (getline(in, line)) {
 
-                    if (line.empty() || !boost::regex_match(line, reg))
-                        continue;
+                if (line.empty() || (isTES3 && !boost::regex_match(line, reg)) || (!isTES3 && line[0] == '#'))
+                    continue;
 
-                    //Now cut off everything up to and including the = sign.
-                    line = line.substr(line.find('=')+1);
-                    if (transcode)
-                        line = ToUTF8(line);
-
-                    //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
-                    Plugin p(line);
-                    if (p.Exists(parentGame))
-                        push_back(p);
+                if (isTES3)  //Now cut off everything up to and including the = sign.
+                    line = line.substr(line.find('=') + 1);
+                if (transcode)
+                    line = ToUTF8(line);
+                else {
+                    //Test that the string is UTF-8 encoded by trying to convert it to UTF-16. It should throw if an invalid byte is found.
+                    try {
+                        boost::locale::conv::utf_to_utf<wchar_t>(line, boost::locale::conv::stop);
+                    }
+                    catch (...) {
+                        throw error(LIBLO_ERROR_FILE_NOT_UTF8, "\"" + file.string() + "\" is not encoded in valid UTF-8.");
+                    }
                 }
-            } else {
-                while (getline(in, line)) {
 
-                    if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
-                        continue;
-
-                    if (transcode)
-                        line = ToUTF8(line);
-
-                    //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
-                    Plugin p(line);
-                    if (p.Exists(parentGame))
-                        push_back(p);
-                }
+                //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
+                Plugin p(line);
+                if (p.Exists(parentGame))
+                    push_back(p);
             }
             in.close();
         } catch (std::ios_base::failure& e) {

@@ -13,10 +13,8 @@ Libloadorder expects all libraries' folders to be present alongside the libloado
 
 ### Requirements
 
-* [CMake](http://cmake.org/) v2.8.9.
-* [Boost](http://www.boost.org) v1.51.0.
+* [Boost](http://www.boost.org) (tested with v1.55.0)
 * [Libespm](http://github.com/WrinklyNinja/libespm)
-* [UTF8-CPP](http://sourceforge.net/projects/utfcpp/) v2.3.2.
 
 ### Windows
 

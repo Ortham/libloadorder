@@ -29,7 +29,6 @@
 #include "streams.h"
 #include <cstring>
 #include <sstream>
-#include <source/utf8.h>
 #include <boost/spirit/include/support_istream_iterator.hpp>
 #include <boost/spirit/include/karma.hpp>
 #include <boost/regex.hpp>
@@ -53,24 +52,6 @@ namespace liblo {
     char * ToNewCString(const string& str) {
         char * p = new char[str.length() + 1];
         return strcpy(p, str.c_str());
-    }
-
-    //UTF-8 file validator.
-    bool ValidateUTF8File(const boost::filesystem::path& file) {
-        try {
-            liblo::ifstream ifs(file);
-            ifs.exceptions(std::ios_base::badbit);
-
-            istreambuf_iterator<char> it(ifs.rdbuf());
-            istreambuf_iterator<char> eos;
-
-            if (!utf8::is_valid(it, eos))
-                return false;
-            else
-                return true;
-        } catch (std::ios_base::failure& e) {
-            throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
-        }
     }
 
     //Reads an entire file into a string buffer.
