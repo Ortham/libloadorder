@@ -29,8 +29,7 @@ set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/plugins.cpp"
                     "${CMAKE_SOURCE_DIR}/src/api/libloadorder.cpp"
                     "${CMAKE_SOURCE_DIR}/src/api/activeplugins.cpp"
-                    "${CMAKE_SOURCE_DIR}/src/api/loadorder.cpp"
-                    "${CMAKE_SOURCE_DIR}/src/api/constants.cpp")
+                    "${CMAKE_SOURCE_DIR}/src/api/loadorder.cpp")
 
 set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 
