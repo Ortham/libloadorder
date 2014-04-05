@@ -73,10 +73,12 @@ IF (MINGW)
 ELSEIF (MSVC)
     IF (MSVC_VERSION EQUAL 1800)
         set (CMAKE_GENERATOR_TOOLSET "v120_xp" CACHE STRING "Platform Toolset" FORCE)
+        set (BOOST_SUFFIX "-vc120-mt-1_55")
+    ELSEIF (MSVC_VERSION EQUAL 1700)
+        set (BOOST_SUFFIX "-vc110-mt-1_55")        
     ENDIF ()
     link_directories ("${PROJECT_LIBS_DIR}/zlib/build/Release")
-	set (CMAKE_CXX_FLAGS "/EHsc /MD")
-    set (BOOST_SUFFIX "-vc120-mt-1_55")
+    set (CMAKE_CXX_FLAGS "/EHsc /MD")
     set (PROJECT_LIBS zlibstatic
                       libboost_locale${BOOST_SUFFIX}
                       libboost_filesystem${BOOST_SUFFIX}
