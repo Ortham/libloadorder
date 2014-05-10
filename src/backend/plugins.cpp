@@ -86,7 +86,7 @@ namespace liblo {
             else
                 file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
         }
-        catch (std::exception& e) {
+        catch (std::exception& /*e*/) {
             return false;
         }
 
@@ -146,7 +146,7 @@ namespace liblo {
             else
                 file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
         }
-        catch (std::exception& e) {
+        catch (std::exception& /*e*/) {
             return masters;
         }
 

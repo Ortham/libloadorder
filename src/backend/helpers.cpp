@@ -75,7 +75,7 @@ namespace liblo {
     std::string ToUTF8(const std::string& str) {
         try {
             return boost::locale::conv::to_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
-        } catch (boost::locale::conv::conversion_error& e) {
+        } catch (boost::locale::conv::conversion_error& /*e*/) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }
@@ -83,7 +83,7 @@ namespace liblo {
     std::string FromUTF8(const std::string& str) {
         try {
             return boost::locale::conv::from_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
-        } catch (boost::locale::conv::conversion_error& e) {
+        } catch (boost::locale::conv::conversion_error& /*e*/) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }

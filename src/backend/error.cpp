@@ -46,7 +46,7 @@ namespace liblo {
         try {
             extErrorString = new char[strlen(e.what()) + 1];
             strcpy(extErrorString, e.what());
-        } catch (std::bad_alloc& e) {
+        } catch (std::bad_alloc& /*e*/) {
             extErrorString = NULL;
         }
 		return e.code();
