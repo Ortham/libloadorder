@@ -12,8 +12,7 @@ Libloadorder uses [CMake](http://cmake.org) v2.8.9 or later, because it's possib
 ### Requirements
 
 * [Boost](http://www.boost.org) (tested with v1.55.0)
-* [Libespm](http://github.com/WrinklyNinja/libespm)
-* [zlib](http://zlib.net/) (tested with v1.2.8)
+* [Libespm](http://github.com/WrinklyNinja/libespm) (header-only library)
 
 ### Windows
 
@@ -37,7 +36,7 @@ Parameter | Values | Description
 `PROJECT_ARCH` | `32`, `64` | Whether to build 32 or 64 bit libloadorder binaries. Defaults to `32`.
 `LIBESPM_ROOT` | path | Path to the root of the libespm repository folder. Defaults to `../libespm`, ie. the libespm folder is next to the libloadorder folder.
 
-You may also need to define `BOOST_ROOT` and `ZLIB_ROOT` if CMake can't find them.
+You may also need to define `BOOST_ROOT` if CMake can't find Boost.
 
 1. Set CMake up so that it builds the binaries in the `build` subdirectory of the libloadorder folder.
 2. Define any necessary parameters.

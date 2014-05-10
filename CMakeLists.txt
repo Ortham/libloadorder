@@ -26,7 +26,6 @@ set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME PROJECT_STATIC_RUNTIME)
 
 find_package(Boost REQUIRED COMPONENTS locale filesystem system regex iostreams)
-find_package(ZLIB REQUIRED)
 
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp"
@@ -41,7 +40,6 @@ set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tester.cpp")
 # Include source and library directories.
 include_directories ("${CMAKE_SOURCE_DIR}/src"
                      ${LIBESPM_ROOT}
-                     ${ZLIB_INCLUDE_DIRS}
                      ${Boost_INCLUDE_DIRS})
 
 set (PROJECT_LIBS version)
@@ -96,8 +94,8 @@ ENDIF ()
 
 # Build libloadorder library.
 add_library           (loadorder${PROJECT_ARCH} ${PROJECT_SRC})
-target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${PROJECT_LIBS})
+target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS})
 
 # Build libloadorder tester.
 add_executable        (libloadorder-tester ${TESTER_SRC})
-target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${PROJECT_LIBS})
+target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS})
