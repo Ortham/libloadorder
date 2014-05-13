@@ -86,8 +86,8 @@ namespace liblo {
             else
                 file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
         }
-        catch (std::exception& /*e*/) {
-            return false;
+        catch (std::exception& e) {
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, name + " : " + e.what());
         }
 
         bool ret = file->isMaster(parentGame.espm_settings);
@@ -146,8 +146,8 @@ namespace liblo {
             else
                 file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
         }
-        catch (std::exception& /*e*/) {
-            return masters;
+        catch (std::exception& e) {
+            throw error(LIBLO_ERROR_FILE_READ_FAIL, name + " : " + e.what());
         }
 
         strMasters = file->getMasters();
