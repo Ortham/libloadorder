@@ -67,12 +67,6 @@ IF (MINGW)
     set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
     set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
 ELSEIF (MSVC)
-    IF (MSVC_VERSION EQUAL 1800)
-        set (CMAKE_GENERATOR_TOOLSET "v120_xp" CACHE STRING "Platform Toolset" FORCE)
-    ELSEIF (MSVC_VERSION EQUAL 1700)
-        set (CMAKE_GENERATOR_TOOLSET "v110_xp" CACHE STRING "Platform Toolset" FORCE)
-    ENDIF ()
-
     # Update compiler flags.
     IF (PROJECT_STATIC_RUNTIME)
         FOREACH(flag
