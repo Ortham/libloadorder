@@ -29,22 +29,16 @@
 #include "game.h"
 #include "helpers.h"
 #include "streams.h"
-#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/regex.hpp>
 #include <boost/locale.hpp>
 #include <src/libespm.h>
+#include <regex>
 #include <set>
 
 using namespace std;
 namespace fs = boost::filesystem;
 
 namespace liblo {
-
-    std::size_t hash_value(const Plugin& p) {
-        boost::hash<std::string> hasher;
-        return hasher(boost::to_lower_copy(p.Name()));
-    }
 
     //////////////////////
     // Plugin Members
@@ -317,7 +311,7 @@ namespace liblo {
             throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
 
         bool wasMaster = true;
-        boost::unordered_set<Plugin> hashset;
+        unordered_set<Plugin> hashset;
         for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
             if (!it->Exists(parentGame))
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is not installed.");
@@ -398,11 +392,11 @@ namespace liblo {
 
             string line;
             bool isTES3 = parentGame.Id() == LIBLO_GAME_TES3;  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-            boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended | boost::regex::icase);
+            regex reg = regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
 
             while (getline(in, line)) {
 
-                if (line.empty() || (isTES3 && !boost::regex_match(line, reg)) || (!isTES3 && line[0] == '#'))
+                if (line.empty() || (isTES3 && !regex_match(line, reg)) || (!isTES3 && line[0] == '#'))
                     continue;
 
                 if (isTES3)  //Now cut off everything up to and including the = sign.
@@ -444,10 +438,10 @@ namespace liblo {
                 in.exceptions(std::ios_base::badbit);
 
                 if (parentGame.Id() == LIBLO_GAME_TES3) {  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-                    boost::regex reg = boost::regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", boost::regex::extended|boost::regex::icase);
+                    regex reg = regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
                     while (getline(in, line)) {
 
-                        if (line.empty() || !boost::regex_match(line, reg))
+                        if (line.empty() || !regex_match(line, reg))
                             continue;
 
                         //Now cut off everything up to and including the = sign.
@@ -504,12 +498,12 @@ namespace liblo {
             if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
                 //Can write the active plugins in any order.
                 size_t i = 0;
-                for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
+                for (const auto &plugin: *this) {
                     if (parentGame.Id() == LIBLO_GAME_TES3) //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
                         outfile << "GameFile" << i << "=";
 
                     try {
-                        outfile << FromUTF8(it->Name()) << endl;
+                        outfile << FromUTF8(plugin.Name()) << endl;
                     } catch (error& e) {
                         badFilename = e.what();
                     }
@@ -538,10 +532,10 @@ namespace liblo {
     }
 
     void ActivePlugins::CheckValidity(const _lo_game_handle_int& parentGame) const {
-        for (boost::unordered_set<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
-            if (!it->Exists(parentGame))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is not installed.");
-            vector<Plugin> masters = it->GetMasters(parentGame);
+        for (const auto& plugin: *this) {
+            if (!plugin.Exists(parentGame))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
+            vector<Plugin> masters = plugin.GetMasters(parentGame);
     /*//Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
             for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
                 if (this->find(*jt) == this->end())

@@ -29,8 +29,9 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
-#include <boost/unordered_set.hpp>
+#include <unordered_set>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 struct _lo_game_handle_int;
 
@@ -43,16 +44,16 @@ namespace liblo {
 
         std::string Name() const;
 
-        bool    IsValid     () const;  //.Checks if plugin is a .esp or .esm file.
+        bool    IsValid() const;  //.Checks if plugin is a .esp or .esm file.
         bool    IsMasterFile(const _lo_game_handle_int& parentGame) const;         //This should be implemented using libespm.
         bool    IsFalseFlagged(const _lo_game_handle_int& parentGame) const;           //True if IsMasterFile does not match file extension.
-        bool    IsGhosted   (const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in ghosted form.
-        bool    Exists      (const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
-        time_t  GetModTime  (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
+        bool    IsGhosted(const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in ghosted form.
+        bool    Exists(const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
+        time_t  GetModTime(const _lo_game_handle_int& parentGame) const;         //Can throw exception.
         std::vector<Plugin> GetMasters(const _lo_game_handle_int& parentGame) const;
 
-        void    UnGhost     (const _lo_game_handle_int& parentGame) const;         //Can throw exception.
-        void    SetModTime  (const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
+        void    UnGhost(const _lo_game_handle_int& parentGame) const;         //Can throw exception.
+        void    SetModTime(const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
 
         bool operator == (const Plugin& rhs) const;
         bool operator != (const Plugin& rhs) const;
@@ -60,9 +61,7 @@ namespace liblo {
         std::string name;
     };
 
-    std::size_t hash_value(const Plugin& p);
-
-    class LoadOrder : public std::vector<Plugin> {
+    class LoadOrder : public std::vector < Plugin > {
     public:
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
@@ -81,8 +80,20 @@ namespace liblo {
     private:
         time_t mtime;
     };
+}
 
-    class ActivePlugins : public boost::unordered_set<Plugin> {
+namespace std {
+    template <>
+    struct hash<liblo::Plugin> {
+        size_t operator()(const liblo::Plugin& p) const {
+            return hash<std::string>()(boost::to_lower_copy(p.Name()));
+        }
+    };
+}
+
+namespace liblo {
+
+    class ActivePlugins : public std::unordered_set<Plugin> {
     public:
         void Load(const _lo_game_handle_int& parentGame);
         void Save(const _lo_game_handle_int& parentGame);

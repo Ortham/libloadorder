@@ -27,7 +27,6 @@
 #define __LIBLO_HELPERS_H__
 
 #include <string>
-#include <boost/unordered_map.hpp>
 #include <boost/filesystem.hpp>
 
 namespace liblo {
@@ -45,9 +44,6 @@ namespace liblo {
     class Version {
     private:
         std::string verString;
-
-        //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
-        std::string IntToString(const unsigned int n);
     public:
         Version();
         Version(const char * ver);

@@ -195,7 +195,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             gh->activePlugins.Load(*gh);
 
         //Now check all plugins' existences.
-        boost::unordered_set<Plugin>::iterator it = gh->activePlugins.begin();
+        auto it = gh->activePlugins.begin();
         while (it != gh->activePlugins.end()) {
             if (!it->Exists(*gh))  //Active plugin is not installed.
                 it = gh->activePlugins.erase(it);

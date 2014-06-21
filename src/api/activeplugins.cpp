@@ -70,8 +70,8 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
     try {
         gh->extStringArray = new char*[gh->extStringArraySize];
         size_t i = 0;
-        for (boost::unordered_set<Plugin>::const_iterator it = gh->activePlugins.begin(), endIt = gh->activePlugins.end(); it != endIt; ++it) {
-            gh->extStringArray[i] = ToNewCString(it->Name());
+        for (const auto &activePlugin : gh->activePlugins) {
+            gh->extStringArray[i] = ToNewCString(activePlugin.Name());
             i++;
         }
     } catch(bad_alloc& e) {
@@ -151,11 +151,13 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     }
 
     //Look for plugin in active plugins list.
-    boost::unordered_set<Plugin>::const_iterator it = gh->activePlugins.find(pluginObj);
     if (active)  //No need to check for duplication, unordered set will silently handle avoidance.
         gh->activePlugins.emplace(pluginObj);
-    else if (!active && it != gh->activePlugins.end())
-        gh->activePlugins.erase(it);
+    else {
+        auto it = gh->activePlugins.find(pluginObj);
+        if (it != gh->activePlugins.end())
+            gh->activePlugins.erase(it);
+    }
 
     //Check that active plugins list is valid.
     try {

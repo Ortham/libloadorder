@@ -31,7 +31,6 @@
 #include <sstream>
 #include <boost/spirit/include/support_istream_iterator.hpp>
 #include <boost/spirit/include/karma.hpp>
-#include <boost/regex.hpp>
 #include <boost/locale.hpp>
 
 #if _WIN32 || _WIN64
@@ -120,7 +119,7 @@ namespace liblo {
 
             delete [] point;
 
-            verString = IntToString(dwLeftMost) + '.' + IntToString(dwSecondLeft) + '.' + IntToString(dwSecondRight) + '.' + IntToString(dwRightMost);
+            verString = to_string(dwLeftMost) + '.' + to_string(dwSecondLeft) + '.' + to_string(dwSecondRight) + '.' + to_string(dwRightMost);
         }
 #else
         // ensure filename has no quote characters in it to avoid command injection attacks
@@ -190,13 +189,5 @@ namespace liblo {
 
     bool Version::operator != (const Version& rhs) const {
         return !(*this == rhs);
-    }
-
-    //Converts an integer to a string using BOOST's Spirit.Karma, which is apparently a lot faster than a stringstream conversion...
-    string Version::IntToString(const unsigned int n) {
-        string out;
-        back_insert_iterator<string> sink(out);
-        boost::spirit::karma::generate(sink,boost::spirit::karma::upper[boost::spirit::karma::uint_],n);
-        return out;
     }
 }
