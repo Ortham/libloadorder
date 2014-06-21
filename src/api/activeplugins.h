@@ -56,7 +56,7 @@ extern "C"
     @brief Gets the list of currently active plugins.
     @details Outputs an unordered list of the plugins that are currently active.  This list may be invalid if an invalid active plugins list was previously set or a valid active plugins list invalidated outside of libloadorder.
     @param gh The game handle the function operates on.
-    @param plugins A pointer to the outputted array of active plugins. "NULL" if no plugins are active.
+    @param plugins A pointer to the outputted array of active plugins. `NULL` if no plugins are active.
     @param numPlugins A pointer to the size of the outputted array. "0" if no plugins are active.
     @returns A return code.
 */

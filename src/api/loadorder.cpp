@@ -38,7 +38,7 @@ namespace fs = boost::filesystem;
 
 /* Returns which method the game uses for the load order. */
 LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * const method) {
-    if (gh == NULL || method == NULL)
+    if (gh == nullptr || method == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     *method = gh->LoadOrderMethod();
@@ -49,15 +49,15 @@ LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * co
 /* Outputs a list of the plugins installed in the data path specified when the DB was
    created in load order, with the number of plugins given by numPlugins. */
 LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
-    if (gh == NULL || plugins == NULL || numPlugins == NULL)
+    if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
-    if (gh->extStringArray != NULL) {
+    if (gh->extStringArray != nullptr) {
         for (size_t i=0; i < gh->extStringArraySize; i++)
             delete [] gh->extStringArray[i];
         delete [] gh->extStringArray;
-        gh->extStringArray = NULL;
+        gh->extStringArray = nullptr;
         gh->extStringArraySize = 0;
     }
 
@@ -94,7 +94,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
    Then scans the Data directory and appends any other plugins not included in the
    array passed to the function. */
 LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
-    if (gh == NULL || plugins == NULL)
+    if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Put input into loadOrder object.
@@ -149,7 +149,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, c
 /* Gets the load order of the specified plugin, giving it as index. The first position
    in the load order is 0. */
 LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const plugin, size_t * const index) {
-    if (gh == NULL || plugin == NULL || index == NULL)
+    if (gh == nullptr || plugin == nullptr || index == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Update cache if necessary.
@@ -176,7 +176,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
    greater than the number of plugins in the load order, the plugin will be inserted at
    the end of the load order. */
 LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, size_t index) {
-    if (gh == NULL || plugin == NULL)
+    if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Update cache if necessary.
@@ -222,12 +222,12 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
 /* Gets the plugin filename is at the specified load order position. The first position
    in the load order is 0. */
 LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, char ** const plugin) {
-    if (gh == NULL || plugin == NULL)
+    if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
     delete [] gh->extString;
-    gh->extString = NULL;
+    gh->extString = nullptr;
 
     //Update cache if necessary.
     try {

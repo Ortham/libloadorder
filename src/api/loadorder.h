@@ -64,7 +64,7 @@ LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * co
     @brief Get the current load order.
     @details Gets the current load order for the given game. This load order may be invalid if an invalid load order was previously set or a valid load order invalidated outside of libloadorder.
     @param gh The game handle the function operates on.
-    @param plugins A pointer to the outputted array of plugins in the load order. "NULL" if no plugins are in the current load order.
+    @param plugins A pointer to the outputted array of plugins in the load order. `NULL` if no plugins are in the current load order.
     @param numPlugins A pointer to the size of the outputted array of plugins. "0" if no plugins are in the current load order.
     @returns A return code.
 */

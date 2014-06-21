@@ -66,7 +66,7 @@ LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * cons
    last error or warning encountered by a function called for the given
    game handle. */
 LIBLO unsigned int lo_get_error_message(const char ** const details) {
-    if (details == NULL)
+    if (details == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     *details = extErrorString;
@@ -76,7 +76,7 @@ LIBLO unsigned int lo_get_error_message(const char ** const details) {
 
 LIBLO void lo_cleanup() {
     delete [] extErrorString;
-    extErrorString = NULL;
+    extErrorString = nullptr;
 }
 
 
@@ -88,7 +88,7 @@ LIBLO void lo_cleanup() {
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
    is case-sensitive. */
 LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned int gameId, const char * const gamePath) {
-    if (gh == NULL || gamePath == NULL) //Check for valid args.
+    if (gh == nullptr || gamePath == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
     else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
@@ -148,7 +148,7 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 /* Sets the game's master file to a given filename, eg. for use with total conversions where
    the original main master file is replaced. */
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
-    if (gh == NULL || masterFile == NULL) //Check for valid args.
+    if (gh == nullptr || masterFile == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     try {
@@ -166,7 +166,7 @@ LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const mast
 
 /* Removes any plugins that are not present in the filesystem from plugins.txt (and loadorder.txt if used). */
 LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
-    if (gh == NULL)
+    if (gh == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Only need to update loadorder.txt if it is used.

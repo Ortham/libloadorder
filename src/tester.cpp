@@ -182,7 +182,7 @@ int main() {
         }
 
         out << "TESTING lo_get_error_message(...)" << endl;
-        ret = lo_set_plugin_active(db, NULL, !active);
+        ret = lo_set_plugin_active(db, nullptr, !active);
         if (ret != LIBLO_OK) {
             ret = lo_get_error_message(&error);
             if (ret != LIBLO_OK)

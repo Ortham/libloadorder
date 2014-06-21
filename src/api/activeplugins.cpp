@@ -37,15 +37,15 @@ using namespace liblo;
 
 /* Returns the list of active plugins. */
 LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
-    if (gh == NULL || plugins == NULL || numPlugins == NULL)
+    if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
-    if (gh->extStringArray != NULL) {
+    if (gh->extStringArray != nullptr) {
         for (size_t i=0; i < gh->extStringArraySize; i++)
             delete[] gh->extStringArray[i];  //Clear all the char strings created.
         delete[] gh->extStringArray;  //Clear the string array.
-        gh->extStringArray = NULL;
+        gh->extStringArray = nullptr;
         gh->extStringArraySize = 0;
     }
 
@@ -87,7 +87,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 
 /* Replaces the current list of active plugins with the given list. */
 LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
-    if (gh == NULL || plugins == NULL)
+    if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Put input into activePlugins object.
@@ -126,7 +126,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugin
 
 /* Activates or deactivates the given plugin depending on the value of the active argument. */
 LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const plugin, const bool active) {
-    if (gh == NULL || plugin == NULL)
+    if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     Plugin pluginObj(plugin);
@@ -180,7 +180,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
 /* Checks to see if the given plugin is active. */
 LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const plugin, bool * const result) {
-    if (gh == NULL || plugin == NULL || result == NULL)
+    if (gh == nullptr || plugin == nullptr || result == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     Plugin pluginObj(plugin);

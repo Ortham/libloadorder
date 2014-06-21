@@ -133,7 +133,7 @@ namespace liblo {
             // read out the version string
             static const unsigned int BUFSIZE = 32;
             char buf[BUFSIZE];
-            if (NULL != fgets(buf, BUFSIZE, fp))
+            if (nullptr != fgets(buf, BUFSIZE, fp))
                 verString = string(buf);
             pclose(fp);
         }

@@ -62,7 +62,7 @@ namespace liblo {
     }
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
-        espm::File * file = NULL;
+        espm::File * file = nullptr;
 
         fs::path filepath = parentGame.PluginsFolder() / name;
         if (IsGhosted(parentGame))
@@ -123,7 +123,7 @@ namespace liblo {
         vector<Plugin> masters;
         vector<string> strMasters;
 
-        espm::File * file = NULL;
+        espm::File * file = nullptr;
         string filepath = (parentGame.PluginsFolder() / name).string();
         if (IsGhosted(parentGame))
             filepath += ".ghost";
@@ -148,8 +148,8 @@ namespace liblo {
 
         delete file;
 
-        for (vector<string>::const_iterator it=strMasters.begin(), endIt=strMasters.end(); it != endIt; ++it) {
-            masters.push_back(Plugin(*it));
+        for (const auto &master: masters) {
+            masters.push_back(Plugin(master));
         }
         return masters;
     }
@@ -274,8 +274,8 @@ namespace liblo {
                 timestamps.insert(at(i).GetModTime(parentGame));
             }
             size_t i = 1;
-            for (std::set<time_t>::const_iterator it = timestamps.begin(); it != timestamps.end(); ++it) {
-                at(i).SetModTime(parentGame, *it);
+            for (const auto &timestamp: timestamps) {
+                at(i).SetModTime(parentGame, timestamp);
                 ++i;
             }
             //Now record new plugins folder mtime.
@@ -288,8 +288,8 @@ namespace liblo {
                 liblo::ofstream outfile(parentGame.LoadOrderFile(), ios_base::trunc);
                 outfile.exceptions(std::ios_base::badbit);
 
-                for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it)
-                    outfile << it->Name() << endl;
+                for (const auto &plugin: *this)
+                    outfile << plugin.Name() << endl;
                 outfile.close();
 
                 //Now record new loadorder.txt mtime.
@@ -312,20 +312,20 @@ namespace liblo {
 
         bool wasMaster = true;
         unordered_set<Plugin> hashset;
-        for (vector<Plugin>::const_iterator it=begin(), endIt=end(); it != endIt; ++it) {
-            if (!it->Exists(parentGame))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is not installed.");
-            bool isMaster = it->IsMasterFile(parentGame);
+        for (const auto plugin: *this) {
+            if (!plugin.Exists(parentGame))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
+            bool isMaster = plugin.IsMasterFile(parentGame);
             if (isMaster && !wasMaster)
-                throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugin \"" + it->Name() + "\" loaded after a non-master plugin.");
-            if (hashset.find(*it) != hashset.end())
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is in the load order twice.");
-            vector<Plugin> masters = it->GetMasters(parentGame);
-            for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
-                if (hashset.find(*jt) == hashset.end() && this->Find(*jt) != this->size())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
-                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" is loaded before one of its masters (\"" + jt->Name() + "\").");
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
+            if (hashset.find(plugin) != hashset.end())
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is in the load order twice.");
+            vector<Plugin> masters(plugin.GetMasters(parentGame));
+            for (const auto &master: masters) {
+                if (hashset.find(master) == hashset.end() && this->Find(master) != this->size())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
+                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
             }
-            hashset.insert(*it);
+            hashset.insert(plugin);
             wasMaster = isMaster;
         }
     }
@@ -511,12 +511,12 @@ namespace liblo {
                 }
             } else {
                 //Need to write the active plugins in load order.
-                for (vector<Plugin>::const_iterator it=parentGame.loadOrder.begin(), endIt=parentGame.loadOrder.end(); it != endIt; ++it) {
-                    if (find(*it) == end() || parentGame.Id() == LIBLO_GAME_TES5 && it->Name() == parentGame.MasterFile())
+                for (const auto &plugin: parentGame.loadOrder) {
+                    if (find(plugin) == end() || parentGame.Id() == LIBLO_GAME_TES5 && plugin.Name() == parentGame.MasterFile())
                         continue;
 
                     try {
-                        outfile << FromUTF8(it->Name()) << endl;
+                        outfile << FromUTF8(plugin.Name()) << endl;
                     } catch (error& e) {
                         badFilename = e.what();
                     }
@@ -537,9 +537,9 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
             vector<Plugin> masters = plugin.GetMasters(parentGame);
     /*//Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
-            for (vector<Plugin>::const_iterator jt=masters.begin(), endJt=masters.end(); jt != endJt; ++jt) {
-                if (this->find(*jt) == this->end())
-                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + it->Name() + "\" has a master (\"" + jt->Name() + "\") which isn't active.");
+            for (const auto& master: masters) {
+                if (this->find(master) == this->end())
+                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" has a master (\"" + master.Name() + "\") which isn't active.");
             }*/
         }
 

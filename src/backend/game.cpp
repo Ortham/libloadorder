@@ -47,8 +47,8 @@ namespace fs = boost::filesystem;
     _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path)
         : id(gameId),
         gamePath(fs::path(path)),
-        extString(NULL),
-        extStringArray(NULL),
+        extString(nullptr),
+        extStringArray(nullptr),
         extStringArraySize(0)
     {
         //Set game-specific data.
@@ -133,7 +133,7 @@ namespace fs = boost::filesystem;
     _lo_game_handle_int::~_lo_game_handle_int() {
         delete[] extString;
 
-        if (extStringArray != NULL) {
+        if (extStringArray != nullptr) {
             for (size_t i=0; i < extStringArraySize; i++)
                 delete[] extStringArray[i];  //Clear all the char strings created.
             delete[] extStringArray;  //Clear the string array.
