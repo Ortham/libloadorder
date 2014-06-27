@@ -53,7 +53,7 @@ namespace fs = boost::filesystem;
     {
         //Set game-specific data.
         if (id == LIBLO_GAME_TES3) {
-            executable = "Morrwind.exe";
+            loMethod = LIBLO_METHOD_TIMESTAMP;
             masterFile = "Morrowind.esm";
 
             appdataFolderName = "";
@@ -61,8 +61,9 @@ namespace fs = boost::filesystem;
             pluginsFileName = "Morrowind.ini";
 
             espm_settings = espm::Settings("tes3");
-        } else if (id == LIBLO_GAME_TES4) {
-            executable = "Oblivion.exe";
+        }
+        else if (id == LIBLO_GAME_TES4) {
+            loMethod = LIBLO_METHOD_TIMESTAMP;
             masterFile = "Oblivion.esm";
 
             appdataFolderName = "Oblivion";
@@ -70,8 +71,9 @@ namespace fs = boost::filesystem;
             pluginsFileName = "plugins.txt";
 
             espm_settings = espm::Settings("tes4");
-        } else if (id == LIBLO_GAME_TES5) {
-            executable = "TESV.exe";
+        }
+        else if (id == LIBLO_GAME_TES5) {
+            loMethod = LIBLO_METHOD_TEXTFILE;
             masterFile = "Skyrim.esm";
 
             appdataFolderName = "Skyrim";
@@ -79,8 +81,9 @@ namespace fs = boost::filesystem;
             pluginsFileName = "plugins.txt";
 
             espm_settings = espm::Settings("tes5");
-        } else if (id == LIBLO_GAME_FO3) {
-            executable = "Fallout3.exe";
+        }
+        else if (id == LIBLO_GAME_FO3) {
+            loMethod = LIBLO_METHOD_TIMESTAMP;
             masterFile = "Fallout3.esm";
 
             appdataFolderName = "Fallout3";
@@ -88,8 +91,9 @@ namespace fs = boost::filesystem;
             pluginsFileName = "plugins.txt";
 
             espm_settings = espm::Settings("fo3");
-        } else if (id == LIBLO_GAME_FNV) {
-            executable = "FalloutNV.exe";
+        }
+        else if (id == LIBLO_GAME_FNV) {
+            loMethod = LIBLO_METHOD_TIMESTAMP;
             masterFile = "FalloutNV.esm";
 
             appdataFolderName = "FalloutNV";
@@ -122,12 +126,6 @@ namespace fs = boost::filesystem;
             pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
             loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
         }
-
-        //Set load order method.
-        if (id == LIBLO_GAME_TES5 && Version(gamePath / executable) >= Version("1.4.26.0"))
-            loMethod = LIBLO_METHOD_TEXTFILE;
-        else
-            loMethod = LIBLO_METHOD_TIMESTAMP;
     }
 
     _lo_game_handle_int::~_lo_game_handle_int() {

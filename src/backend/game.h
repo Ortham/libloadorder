@@ -61,7 +61,6 @@ struct _lo_game_handle_int {
         unsigned int id;
         unsigned int loMethod;
 
-        std::string executable;
         std::string masterFile;
 
         std::string appdataFolderName;
