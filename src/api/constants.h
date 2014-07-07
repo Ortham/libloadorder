@@ -80,29 +80,29 @@ typedef struct _lo_game_handle_int * lo_game_handle;
 *************************/
 ///@{
 
-LIBLO const unsigned int LIBLO_OK = 0;  ///< The function completed successfully.
-LIBLO const unsigned int LIBLO_WARN_BAD_FILENAME = 1;  ///< A plugin filename contains characters that do not have Windows-1252 code points. The plugin cannot be activated.
+LIBLO extern const unsigned int LIBLO_OK;  ///< The function completed successfully.
+LIBLO extern const unsigned int LIBLO_WARN_BAD_FILENAME;  ///< A plugin filename contains characters that do not have Windows-1252 code points. The plugin cannot be activated.
 /**
     @brief There is a mismatch between the files used to keep track of load order.
     @details This error can only occur when using libloadorder with a game that uses the textfile-based load order system. The load order in the active plugins list file (`plugins.txt`) does not match the load order in the full load order file (`loadorder.txt`). Synchronisation between the two is automatic when load order is managed through libloadorder. It is left to the client to decide how best to restore synchronisation.
 */
-LIBLO const unsigned int LIBLO_WARN_LO_MISMATCH = 2;
-LIBLO const unsigned int LIBLO_ERROR_FILE_READ_FAIL = 3;  ///< A file could not be read.
-LIBLO const unsigned int LIBLO_ERROR_FILE_WRITE_FAIL = 4;  ///< A file could not be written to.
-LIBLO const unsigned int LIBLO_ERROR_FILE_NOT_UTF8 = 5;  ///< The specified file is not encoded in UTF-8.
-LIBLO const unsigned int LIBLO_ERROR_FILE_NOT_FOUND = 6;  ///< The specified file could not be found.
-LIBLO const unsigned int LIBLO_ERROR_FILE_RENAME_FAIL = 7;  ///< A file could not be renamed.
-LIBLO const unsigned int LIBLO_ERROR_TIMESTAMP_READ_FAIL = 8;  ///< The modification date of a file could not be read.
-LIBLO const unsigned int LIBLO_ERROR_TIMESTAMP_WRITE_FAIL = 9;  ///< The modification date of a file could not be set.
-LIBLO const unsigned int LIBLO_ERROR_FILE_PARSE_FAIL = 10;  ///< There was an error parsing the file.
-LIBLO const unsigned int LIBLO_ERROR_NO_MEM = 11;  ///< The library was unable to allocate the required memory.
-LIBLO const unsigned int LIBLO_ERROR_INVALID_ARGS = 12;  ///< Invalid arguments were given for the function.
+LIBLO extern const unsigned int LIBLO_WARN_LO_MISMATCH;
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_READ_FAIL;  ///< A file could not be read.
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_WRITE_FAIL;  ///< A file could not be written to.
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_NOT_UTF8;  ///< The specified file is not encoded in UTF-8.
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_NOT_FOUND;  ///< The specified file could not be found.
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_RENAME_FAIL;  ///< A file could not be renamed.
+LIBLO extern const unsigned int LIBLO_ERROR_TIMESTAMP_READ_FAIL;  ///< The modification date of a file could not be read.
+LIBLO extern const unsigned int LIBLO_ERROR_TIMESTAMP_WRITE_FAIL;  ///< The modification date of a file could not be set.
+LIBLO extern const unsigned int LIBLO_ERROR_FILE_PARSE_FAIL;  ///< There was an error parsing the file.
+LIBLO extern const unsigned int LIBLO_ERROR_NO_MEM;  ///< The library was unable to allocate the required memory.
+LIBLO extern const unsigned int LIBLO_ERROR_INVALID_ARGS;  ///< Invalid arguments were given for the function.
 
 /**
     @brief Matches the value of the highest-numbered return code.
     @details Provided in case clients wish to incorporate additional return codes in their implementation and desire some method of avoiding value conflicts.
 */
-LIBLO const unsigned int LIBLO_RETURN_MAX = LIBLO_ERROR_INVALID_ARGS;
+LIBLO extern const unsigned int LIBLO_RETURN_MAX;
 
 ///@}
 
@@ -111,8 +111,8 @@ LIBLO const unsigned int LIBLO_RETURN_MAX = LIBLO_ERROR_INVALID_ARGS;
 ************************************/
 ///@{
 
-LIBLO const unsigned int LIBLO_METHOD_TIMESTAMP = 0;  ///< The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas all use this system, as does pre-v1.4.26 Skyrim.
-LIBLO const unsigned int LIBLO_METHOD_TEXTFILE  = 1;   ///< The game handle is using the textfile-based load order system. Skyrim v1.4.26+ uses this system.
+LIBLO extern const unsigned int LIBLO_METHOD_TIMESTAMP;  ///< The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas all use this system, as does pre-v1.4.26 Skyrim.
+LIBLO extern const unsigned int LIBLO_METHOD_TEXTFILE;   ///< The game handle is using the textfile-based load order system. Skyrim v1.4.26+ uses this system.
 
 ///@}
 
@@ -121,11 +121,11 @@ LIBLO const unsigned int LIBLO_METHOD_TEXTFILE  = 1;   ///< The game handle is u
 ***********************/
 ///@{
 
-LIBLO const unsigned int LIBLO_GAME_TES3 = 1;  ///< Game code for The Elder Scrolls III: Morrowind.
-LIBLO const unsigned int LIBLO_GAME_TES4 = 2;  ///< Game code for The Elder Scrolls IV: Oblivion.
-LIBLO const unsigned int LIBLO_GAME_TES5 = 3;  ///< Game code for The Elder Scrolls V: Skyrim.
-LIBLO const unsigned int LIBLO_GAME_FO3  = 4;  ///< Game code for Fallout 3.
-LIBLO const unsigned int LIBLO_GAME_FNV  = 5;  ///< Game code for Fallout: New Vegas.
+LIBLO extern const unsigned int LIBLO_GAME_TES3;  ///< Game code for The Elder Scrolls III: Morrowind.
+LIBLO extern const unsigned int LIBLO_GAME_TES4;  ///< Game code for The Elder Scrolls IV: Oblivion.
+LIBLO extern const unsigned int LIBLO_GAME_TES5;  ///< Game code for The Elder Scrolls V: Skyrim.
+LIBLO extern const unsigned int LIBLO_GAME_FO3;  ///< Game code for Fallout 3.
+LIBLO extern const unsigned int LIBLO_GAME_FNV;  ///< Game code for Fallout: New Vegas.
 
 ///@}
 
