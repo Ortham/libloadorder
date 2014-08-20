@@ -1,17 +1,15 @@
 # Libloadorder
 
-Libloadorder is a free software library for manipulating the load order and
-active status of plugins for TES III: Morrowind, TES IV: Oblivion,
-TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
+Libloadorder is a free software library for manipulating the load order and active status of plugins for TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
 
 
 ## Build Instructions
 
-Libloadorder uses [CMake](http://cmake.org) v2.8.9 or later, because it's possible to cross-compile it, though Linux instructions are no longer provided as they have become outdated.
+Libloadorder uses [CMake](http://cmake.org), because it's possible to cross-compile it, though Linux instructions are no longer provided as they have become outdated.
 
 ### Requirements
 
-* [Boost](http://www.boost.org) (tested with v1.55.0)
+* [Boost](http://www.boost.org) (tested with v1.56.0)
 * [Libespm](http://github.com/WrinklyNinja/libespm) (header-only library)
 
 ### Windows
