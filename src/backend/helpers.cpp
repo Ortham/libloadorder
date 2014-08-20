@@ -28,20 +28,7 @@
 #include "error.h"
 #include "streams.h"
 #include <cstring>
-#include <sstream>
-#include <boost/spirit/include/support_istream_iterator.hpp>
-#include <boost/spirit/include/karma.hpp>
 #include <boost/locale.hpp>
-
-#if _WIN32 || _WIN64
-#   ifndef UNICODE
-#       define UNICODE
-#   endif
-#   ifndef _UNICODE
-#      define _UNICODE
-#   endif
-#   include "windows.h"
-#endif
 
 using namespace std;
 

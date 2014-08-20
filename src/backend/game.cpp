@@ -28,7 +28,7 @@
 #include "helpers.h"
 #include "error.h"
 
-#if _WIN32 || _WIN64
+#ifdef _WIN32
 #   ifndef UNICODE
 #       define UNICODE
 #   endif
@@ -167,7 +167,7 @@ namespace fs = boost::filesystem;
     }
 
     boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
-#if _WIN32 || _WIN64
+#ifdef _WIN32
         HWND owner = 0;
         TCHAR path[MAX_PATH];
 
@@ -181,7 +181,5 @@ namespace fs = boost::filesystem;
             return fs::path(narrowPath);
         else
             return fs::path("");
-#else
-        return fs::path("");
 #endif
     }

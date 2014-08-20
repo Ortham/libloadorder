@@ -32,26 +32,13 @@
 #define __LIBLO_CONSTANTS__
 
 #include <stddef.h>
-
-#if defined(_MSC_VER)
-//MSVC doesn't support C99, so do the stdbool.h definitions ourselves.
-//START OF stdbool.h DEFINITIONS.
-#   ifndef __cplusplus
-#       define bool  _Bool
-#       define true  1
-#       define false 0
-#   endif
-#   define __bool_true_false_are_defined 1
-//END OF stdbool.h DEFINITIONS.
-#else
-#   include <stdbool.h>
-#endif
+#include <stdbool.h>
 
 // set up dll import/export decorators
 // when compiling the dll on windows, ensure LIBLO_EXPORT is defined.  clients
 // that use this header do not need to define anything to import the symbols
 // properly.
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #   ifdef LIBLO_STATIC
 #       define LIBLO
 #   elif defined LIBLO_EXPORT

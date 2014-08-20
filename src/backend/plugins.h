@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <unordered_set>
 #include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
+#include <boost/locale.hpp>
 
 struct _lo_game_handle_int;
 
@@ -86,7 +86,7 @@ namespace std {
     template <>
     struct hash<liblo::Plugin> {
         size_t operator()(const liblo::Plugin& p) const {
-            return hash<std::string>()(boost::to_lower_copy(p.Name()));
+            return hash<std::string>()(boost::locale::to_lower(p.Name()));
         }
     };
 }
