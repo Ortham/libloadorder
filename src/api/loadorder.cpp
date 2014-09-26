@@ -93,7 +93,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
 /* Sets the load order to the given plugins list of length numPlugins.
    Then scans the Data directory and appends any other plugins not included in the
    array passed to the function. */
-LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
+LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * const plugins, const size_t numPlugins) {
     if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 

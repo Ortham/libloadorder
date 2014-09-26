@@ -86,7 +86,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 }
 
 /* Replaces the current list of active plugins with the given list. */
-LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugins, const size_t numPlugins) {
+LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const * const plugins, const size_t numPlugins) {
     if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 

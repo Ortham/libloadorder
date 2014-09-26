@@ -70,7 +70,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
     @param numPlugins The size of the inputted array.
     @returns A return code.
 */
-LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, char ** const plugins, const size_t numPlugins);
+LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const * const plugins, const size_t numPlugins);
 
 /**
     @brief Activates or deactivates a given plugin.

@@ -78,7 +78,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     @param numPlugins The size of the inputted array.
     @returns A return code.
 */
-LIBLO unsigned int lo_set_load_order(lo_game_handle gh, char ** const plugins, const size_t numPlugins);
+LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * const plugins, const size_t numPlugins);
 
 /**
     @brief Get the load order position of a plugin.
