@@ -148,7 +148,7 @@ namespace liblo {
 
         delete file;
 
-        for (const auto &master : masters) {
+        for (const auto &master : strMasters) {
             masters.push_back(Plugin(master));
         }
         return masters;
@@ -193,7 +193,7 @@ namespace liblo {
         const _lo_game_handle_int& parentGame;
         pluginComparator(const _lo_game_handle_int& game) : parentGame(game) {}
 
-        bool    operator () (const Plugin plugin1, const Plugin plugin2) {
+        bool    operator () (const Plugin& plugin1, const Plugin& plugin2) {
             //Return true if plugin1 goes before plugin2, false otherwise.
             //Master files should go before other files.
             //Earlier stamped plugins should go before later stamped plugins.
@@ -545,8 +545,8 @@ namespace liblo {
         for (const auto& plugin : *this) {
             if (!plugin.Exists(parentGame))
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
-            vector<Plugin> masters = plugin.GetMasters(parentGame);
-            /*//Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
+            /*vector<Plugin> masters = plugin.GetMasters(parentGame);
+            //Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
                     for (const auto& master: masters) {
                     if (this->find(master) == this->end())
                     throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" has a master (\"" + master.Name() + "\") which isn't active.");

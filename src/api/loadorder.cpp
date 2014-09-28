@@ -199,9 +199,12 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     size_t pos = gh->loadOrder.Find(pluginObj);
 
     //Change plugin position.
+    size_t newPos;
     if (index >= gh->loadOrder.size())
-        index = gh->loadOrder.size();
-    gh->loadOrder.Move(index, pluginObj);
+        newPos = gh->loadOrder.size();
+    else
+        newPos = index;
+    gh->loadOrder.Move(newPos, pluginObj);
 
     //Check that new load order is valid.
     try {
@@ -210,7 +213,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     catch (error& e) {
         //Undo change.
         if (pos == gh->loadOrder.size() || pos == gh->loadOrder.size() - 1)
-            gh->loadOrder.erase(gh->loadOrder.begin() + index);
+            gh->loadOrder.erase(gh->loadOrder.begin() + newPos);
         else
             gh->loadOrder.Move(pos, pluginObj);
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid load order. Details: ") + e.what());
