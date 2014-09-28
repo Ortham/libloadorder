@@ -143,7 +143,7 @@ extern "C"
      */
     LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh,
                                               const char * const plugin,
-                                              size_t index);
+                                              const size_t index);
 
     /**
      *  @brief Get filename of the plugin at a specific load order position.

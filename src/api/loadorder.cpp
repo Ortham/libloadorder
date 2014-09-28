@@ -181,7 +181,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
    if it has one. The first position in the load order is 0. If the index specified is
    greater than the number of plugins in the load order, the plugin will be inserted at
    the end of the load order. */
-LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, size_t index) {
+LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, const size_t index) {
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
