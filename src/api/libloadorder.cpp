@@ -37,9 +37,9 @@ using namespace liblo;
    Version Functions
    ------------------------------*/
 
-const unsigned int LIBLO_VERSION_MAJOR = 4;
+const unsigned int LIBLO_VERSION_MAJOR = 5;
 const unsigned int LIBLO_VERSION_MINOR = 0;
-const unsigned int LIBLO_VERSION_PATCH = 1;
+const unsigned int LIBLO_VERSION_PATCH = 0;
 
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */
@@ -84,7 +84,10 @@ LIBLO void lo_cleanup() {
 /* Creates a handle for the game given by gameId, which is found at gamePath. This handle allows
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
    is case-sensitive. */
-LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned int gameId, const char * const gamePath) {
+LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
+                                    const unsigned int gameId,
+                                    const char * const gamePath,
+                                    const char * const localPath) {
     if (gh == nullptr || gamePath == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
     else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
@@ -99,6 +102,8 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned in
     //Create handle.
     try {
         *gh = new _lo_game_handle_int(gameId, gamePath);
+        if (localPath != nullptr)
+            (*gh)->SetLocalAppData(localPath);
     }
     catch (error& e) {
         return c_error(e);

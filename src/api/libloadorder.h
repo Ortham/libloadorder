@@ -115,17 +115,28 @@ extern "C"
      *           textfile-based load order system, this function also checks
      *           if the two load order files are in sync, provided they both
      *           exist.
+     *
+     *           The game's local application data folder is the one that
+     *           contains its `plugins.txt`, found within `%LOCALAPPDATA%` on
+     *           Windows. If running libloadorder on Windows, it is not
+     *           necessary to run this function, as libloadorder looks up the
+     *           location itself. However, on other operating systems, lookup
+     *           is not possible, and this function must be used to provide
+     *           the necessary path.
      *  @param gh
      *      A pointer to the handle that is created by the function.
      *  @param gameId
      *      A game code specifying which game to create the handle for.
      *  @param gamePath
      *      The relative or absolute path to the game folder.
+     *  @param localPath
+     *      The path to the game's local application data folder, or `NULL`.
      *  @returns A return code.
      */
     LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
                                         const unsigned int gameId,
-                                        const char * const gamePath);
+                                        const char * const gamePath,
+                                        const char * const localPath);
 
     /**
      *  @brief Destroy an existing game handle.
@@ -151,7 +162,6 @@ extern "C"
                                           const char * const masterFile);
 
     /**@}*/
-
     /***********************//**
      *  @name Misc Functions
      **************************/

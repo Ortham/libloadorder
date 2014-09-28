@@ -39,6 +39,7 @@ public:
     ~_lo_game_handle_int();
 
     void SetMasterFile(const std::string& file);
+    void SetLocalAppData(const boost::filesystem::path& localPath);
 
     unsigned int Id() const;
     std::string MasterFile() const;
@@ -71,7 +72,11 @@ private:
     boost::filesystem::path pluginsPath;
     boost::filesystem::path loadorderPath;
 
+#ifdef _WIN32
     boost::filesystem::path GetLocalAppDataPath() const;
+#endif
+
+    void InitPaths(const boost::filesystem::path& localPath);
 };
 
 #endif

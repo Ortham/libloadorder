@@ -101,9 +101,23 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
 
         espm_settings = espm::Settings("fonv");
     }
-    else
-        throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 
+#ifdef _WIN32
+    InitPaths(GetLocalAppDataPath() / appdataFolderName);
+#endif
+}
+
+_lo_game_handle_int::~_lo_game_handle_int() {
+    delete[] extString;
+
+    if (extStringArray != nullptr) {
+        for (size_t i = 0; i < extStringArraySize; i++)
+            delete[] extStringArray[i];  //Clear all the char strings created.
+        delete[] extStringArray;  //Clear the string array.
+    }
+}
+
+void _lo_game_handle_int::InitPaths(const boost::filesystem::path& localPath) {
     //Set active plugins and load order files.
     if (id == LIBLO_GAME_TES4 && fs::exists(gamePath / "Oblivion.ini")) {
         //Looking up bUseMyGamesDirectory, which only has effect if =0 and exists in Oblivion folder. Messy code, but one lookup hardly qualifies for a full ini parser to be included.
@@ -117,8 +131,8 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
             loadorderPath = gamePath / "loadorder.txt";
         }
         else {
-            pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
-            loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
+            pluginsPath = localPath / pluginsFileName;
+            loadorderPath = localPath / "loadorder.txt";
         }
     }
     else if (Id() == LIBLO_GAME_TES3) {
@@ -126,23 +140,17 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         loadorderPath = gamePath / "loadorder.txt";
     }
     else {
-        pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
-        loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
-    }
-}
-
-_lo_game_handle_int::~_lo_game_handle_int() {
-    delete[] extString;
-
-    if (extStringArray != nullptr) {
-        for (size_t i = 0; i < extStringArraySize; i++)
-            delete[] extStringArray[i];  //Clear all the char strings created.
-        delete[] extStringArray;  //Clear the string array.
+        pluginsPath = localPath / pluginsFileName;
+        loadorderPath = localPath / "loadorder.txt";
     }
 }
 
 void _lo_game_handle_int::SetMasterFile(const string& file) {
     masterFile = file;
+}
+
+void _lo_game_handle_int::SetLocalAppData(const boost::filesystem::path& localPath) {
+    InitPaths(localPath);
 }
 
 unsigned int _lo_game_handle_int::Id() const {
@@ -169,8 +177,8 @@ boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
     return loadorderPath;
 }
 
-boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
 #ifdef _WIN32
+boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
     HWND owner = 0;
     TCHAR path[MAX_PATH];
 
@@ -184,5 +192,5 @@ boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
         return fs::path(narrowPath);
     else
         return fs::path("");
-#endif
 }
+#endif
