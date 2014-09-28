@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "libloadorder.h"
 #include "../backend/helpers.h"
@@ -33,10 +33,9 @@
 using namespace std;
 using namespace liblo;
 
-
 /*------------------------------
    Version Functions
-------------------------------*/
+   ------------------------------*/
 
 const unsigned int LIBLO_VERSION_MAJOR = 4;
 const unsigned int LIBLO_VERSION_MINOR = 0;
@@ -57,10 +56,9 @@ LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * cons
     *versionPatch = LIBLO_VERSION_PATCH;
 }
 
-
 /*------------------------------
    Error Handling Functions
-------------------------------*/
+   ------------------------------*/
 
 /* Outputs a string giving the a message containing the details of the
    last error or warning encountered by a function called for the given
@@ -75,14 +73,13 @@ LIBLO unsigned int lo_get_error_message(const char ** const details) {
 }
 
 LIBLO void lo_cleanup() {
-    delete [] extErrorString;
+    delete[] extErrorString;
     extErrorString = nullptr;
 }
 
-
 /*----------------------------------
    Lifecycle Management Functions
-----------------------------------*/
+   ----------------------------------*/
 
 /* Creates a handle for the game given by gameId, which is found at gamePath. This handle allows
    clients to free memory when they want to. gamePath is case-sensitive if the underlying filesystem
@@ -102,9 +99,11 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned in
     //Create handle.
     try {
         *gh = new _lo_game_handle_int(gameId, gamePath);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
-    } catch (std::bad_alloc& e) {
+    }
+    catch (std::bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
 
@@ -118,13 +117,14 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh, const unsigned in
             LoadOrderFileLO.LoadFromFile(**gh, (**gh).LoadOrderFile());
             //Get load order from plugins.txt.
             PluginsFileLO.LoadFromFile(**gh, (**gh).ActivePluginsFile());
-        } catch (error& e) {
+        }
+        catch (error& e) {
             delete *gh;
             return c_error(e);
         }
 
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
-        vector<Plugin>::iterator it=LoadOrderFileLO.begin();
+        vector<Plugin>::iterator it = LoadOrderFileLO.begin();
         while (it != LoadOrderFileLO.end()) {
             if (PluginsFileLO.Find(*it) == PluginsFileLO.size())
                 it = LoadOrderFileLO.erase(it);
@@ -153,7 +153,8 @@ LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const mast
 
     try {
         gh->SetMasterFile(masterFile);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 
@@ -162,7 +163,7 @@ LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const mast
 
 /*----------------------------------
    Misc Functions
-----------------------------------*/
+   ----------------------------------*/
 
 /* Removes any plugins that are not present in the filesystem from plugins.txt (and loadorder.txt if used). */
 LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
@@ -184,7 +185,8 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
                 else
                     ++it;
             }
-        } catch (error& e) {
+        }
+        catch (error& e) {
             return c_error(e);
         }
     }
@@ -202,7 +204,8 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             else
                 ++it;
         }
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 

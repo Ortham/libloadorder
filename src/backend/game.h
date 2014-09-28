@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #ifndef __LIBLO_GAME_H__
 #define __LIBLO_GAME_H__
@@ -34,44 +34,44 @@
 #include <src/libespm.h>
 
 struct _lo_game_handle_int {
-    public:
-        _lo_game_handle_int(unsigned int id, const std::string& path);
-        ~_lo_game_handle_int();
+public:
+    _lo_game_handle_int(unsigned int id, const std::string& path);
+    ~_lo_game_handle_int();
 
-        void SetMasterFile(const std::string& file);
+    void SetMasterFile(const std::string& file);
 
-        unsigned int Id() const;
-        std::string MasterFile() const;
-        unsigned int LoadOrderMethod() const;
+    unsigned int Id() const;
+    std::string MasterFile() const;
+    unsigned int LoadOrderMethod() const;
 
-        boost::filesystem::path PluginsFolder() const;
-        boost::filesystem::path ActivePluginsFile() const;
-        boost::filesystem::path LoadOrderFile() const;
+    boost::filesystem::path PluginsFolder() const;
+    boost::filesystem::path ActivePluginsFile() const;
+    boost::filesystem::path LoadOrderFile() const;
 
-        liblo::LoadOrder loadOrder;
-        liblo::ActivePlugins activePlugins;
+    liblo::LoadOrder loadOrder;
+    liblo::ActivePlugins activePlugins;
 
-        char * extString;
-        char ** extStringArray;
+    char * extString;
+    char ** extStringArray;
 
-        size_t extStringArraySize;
+    size_t extStringArraySize;
 
-        espm::Settings espm_settings;
-    private:
-        unsigned int id;
-        unsigned int loMethod;
+    espm::Settings espm_settings;
+private:
+    unsigned int id;
+    unsigned int loMethod;
 
-        std::string masterFile;
+    std::string masterFile;
 
-        std::string appdataFolderName;
-        std::string pluginsFolderName;
-        std::string pluginsFileName;
+    std::string appdataFolderName;
+    std::string pluginsFolderName;
+    std::string pluginsFileName;
 
-        boost::filesystem::path gamePath;
-        boost::filesystem::path pluginsPath;
-        boost::filesystem::path loadorderPath;
+    boost::filesystem::path gamePath;
+    boost::filesystem::path pluginsPath;
+    boost::filesystem::path loadorderPath;
 
-        boost::filesystem::path GetLocalAppDataPath() const;
+    boost::filesystem::path GetLocalAppDataPath() const;
 };
 
 #endif

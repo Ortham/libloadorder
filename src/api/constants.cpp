@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "constants.h"
 
@@ -41,10 +41,10 @@ const unsigned int LIBLO_ERROR_INVALID_ARGS = 12;
 const unsigned int LIBLO_RETURN_MAX = LIBLO_ERROR_INVALID_ARGS;
 
 const unsigned int LIBLO_METHOD_TIMESTAMP = 0;
-const unsigned int LIBLO_METHOD_TEXTFILE  = 1;
+const unsigned int LIBLO_METHOD_TEXTFILE = 1;
 
 const unsigned int LIBLO_GAME_TES3 = 1;
 const unsigned int LIBLO_GAME_TES4 = 2;
 const unsigned int LIBLO_GAME_TES5 = 3;
-const unsigned int LIBLO_GAME_FO3  = 4;
-const unsigned int LIBLO_GAME_FNV  = 5;
+const unsigned int LIBLO_GAME_FO3 = 4;
+const unsigned int LIBLO_GAME_FNV = 5;

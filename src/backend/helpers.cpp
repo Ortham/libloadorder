@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "../api/constants.h"
 #include "helpers.h"
@@ -33,7 +33,6 @@
 using namespace std;
 
 namespace liblo {
-
     // std::string to null-terminated char string converter.
     char * ToNewCString(const string& str) {
         char * p = new char[str.length() + 1];
@@ -52,8 +51,9 @@ namespace liblo {
                 istream_iterator<char>(ifile),
                 istream_iterator<char>(),
                 back_inserter(buffer)
-            );
-        } catch (std::ios_base::failure& e) {
+                );
+        }
+        catch (std::ios_base::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
     }
@@ -61,7 +61,8 @@ namespace liblo {
     std::string ToUTF8(const std::string& str) {
         try {
             return boost::locale::conv::to_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
-        } catch (boost::locale::conv::conversion_error& /*e*/) {
+        }
+        catch (boost::locale::conv::conversion_error& /*e*/) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }
@@ -69,7 +70,8 @@ namespace liblo {
     std::string FromUTF8(const std::string& str) {
         try {
             return boost::locale::conv::from_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
-        } catch (boost::locale::conv::conversion_error& /*e*/) {
+        }
+        catch (boost::locale::conv::conversion_error& /*e*/) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }

@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #ifndef __LIBLO_PLUGINS_H__
 #define __LIBLO_PLUGINS_H__
@@ -36,7 +36,6 @@
 struct _lo_game_handle_int;
 
 namespace liblo {
-
     class Plugin {
     public:
         Plugin();
@@ -84,7 +83,7 @@ namespace liblo {
 
 namespace std {
     template <>
-    struct hash<liblo::Plugin> {
+    struct hash < liblo::Plugin > {
         size_t operator()(const liblo::Plugin& p) const {
             return hash<std::string>()(boost::locale::to_lower(p.Name()));
         }
@@ -92,8 +91,7 @@ namespace std {
 }
 
 namespace liblo {
-
-    class ActivePlugins : public std::unordered_set<Plugin> {
+    class ActivePlugins : public std::unordered_set < Plugin > {
     public:
         void Load(const _lo_game_handle_int& parentGame);
         void Save(const _lo_game_handle_int& parentGame);

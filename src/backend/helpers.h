@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #ifndef __LIBLO_HELPERS_H__
 #define __LIBLO_HELPERS_H__

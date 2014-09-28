@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "../api/constants.h"
 #include "game.h"
@@ -44,142 +44,145 @@ using namespace liblo;
 
 namespace fs = boost::filesystem;
 
-    _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path)
-        : id(gameId),
-        gamePath(fs::path(path)),
-        extString(nullptr),
-        extStringArray(nullptr),
-        extStringArraySize(0)
-    {
-        //Set game-specific data.
-        if (id == LIBLO_GAME_TES3) {
-            loMethod = LIBLO_METHOD_TIMESTAMP;
-            masterFile = "Morrowind.esm";
+_lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path)
+    : id(gameId),
+    gamePath(fs::path(path)),
+    extString(nullptr),
+    extStringArray(nullptr),
+    extStringArraySize(0) {
+    //Set game-specific data.
+    if (id == LIBLO_GAME_TES3) {
+        loMethod = LIBLO_METHOD_TIMESTAMP;
+        masterFile = "Morrowind.esm";
 
-            appdataFolderName = "";
-            pluginsFolderName = "Data Files";
-            pluginsFileName = "Morrowind.ini";
+        appdataFolderName = "";
+        pluginsFolderName = "Data Files";
+        pluginsFileName = "Morrowind.ini";
 
-            espm_settings = espm::Settings("tes3");
-        }
-        else if (id == LIBLO_GAME_TES4) {
-            loMethod = LIBLO_METHOD_TIMESTAMP;
-            masterFile = "Oblivion.esm";
+        espm_settings = espm::Settings("tes3");
+    }
+    else if (id == LIBLO_GAME_TES4) {
+        loMethod = LIBLO_METHOD_TIMESTAMP;
+        masterFile = "Oblivion.esm";
 
-            appdataFolderName = "Oblivion";
-            pluginsFolderName = "Data";
-            pluginsFileName = "plugins.txt";
+        appdataFolderName = "Oblivion";
+        pluginsFolderName = "Data";
+        pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::Settings("tes4");
-        }
-        else if (id == LIBLO_GAME_TES5) {
-            loMethod = LIBLO_METHOD_TEXTFILE;
-            masterFile = "Skyrim.esm";
+        espm_settings = espm::Settings("tes4");
+    }
+    else if (id == LIBLO_GAME_TES5) {
+        loMethod = LIBLO_METHOD_TEXTFILE;
+        masterFile = "Skyrim.esm";
 
-            appdataFolderName = "Skyrim";
-            pluginsFolderName = "Data";
-            pluginsFileName = "plugins.txt";
+        appdataFolderName = "Skyrim";
+        pluginsFolderName = "Data";
+        pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::Settings("tes5");
-        }
-        else if (id == LIBLO_GAME_FO3) {
-            loMethod = LIBLO_METHOD_TIMESTAMP;
-            masterFile = "Fallout3.esm";
+        espm_settings = espm::Settings("tes5");
+    }
+    else if (id == LIBLO_GAME_FO3) {
+        loMethod = LIBLO_METHOD_TIMESTAMP;
+        masterFile = "Fallout3.esm";
 
-            appdataFolderName = "Fallout3";
-            pluginsFolderName = "Data";
-            pluginsFileName = "plugins.txt";
+        appdataFolderName = "Fallout3";
+        pluginsFolderName = "Data";
+        pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::Settings("fo3");
-        }
-        else if (id == LIBLO_GAME_FNV) {
-            loMethod = LIBLO_METHOD_TIMESTAMP;
-            masterFile = "FalloutNV.esm";
+        espm_settings = espm::Settings("fo3");
+    }
+    else if (id == LIBLO_GAME_FNV) {
+        loMethod = LIBLO_METHOD_TIMESTAMP;
+        masterFile = "FalloutNV.esm";
 
-            appdataFolderName = "FalloutNV";
-            pluginsFolderName = "Data";
-            pluginsFileName = "plugins.txt";
+        appdataFolderName = "FalloutNV";
+        pluginsFolderName = "Data";
+        pluginsFileName = "plugins.txt";
 
-            espm_settings = espm::Settings("fonv");
-        } else
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
+        espm_settings = espm::Settings("fonv");
+    }
+    else
+        throw error(LIBLO_ERROR_INVALID_ARGS, "Invalid game ID passed.");
 
-        //Set active plugins and load order files.
-        if (id == LIBLO_GAME_TES4 && fs::exists(gamePath / "Oblivion.ini")) {
-            //Looking up bUseMyGamesDirectory, which only has effect if =0 and exists in Oblivion folder. Messy code, but one lookup hardly qualifies for a full ini parser to be included.
-            string iniContent;
-            string iniSetting = "bUseMyGamesDirectory=";
-            fileToBuffer(gamePath / "Oblivion.ini", iniContent);
+    //Set active plugins and load order files.
+    if (id == LIBLO_GAME_TES4 && fs::exists(gamePath / "Oblivion.ini")) {
+        //Looking up bUseMyGamesDirectory, which only has effect if =0 and exists in Oblivion folder. Messy code, but one lookup hardly qualifies for a full ini parser to be included.
+        string iniContent;
+        string iniSetting = "bUseMyGamesDirectory=";
+        fileToBuffer(gamePath / "Oblivion.ini", iniContent);
 
-            size_t pos = iniContent.find(iniSetting);
-            if (pos != string::npos && pos + iniSetting.length() < iniContent.length() && iniContent[pos + iniSetting.length()] == '0') {
-                pluginsPath = gamePath / pluginsFileName;
-                loadorderPath = gamePath / "loadorder.txt";
-            } else {
-                pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
-                loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
-            }
-        } else if (Id() == LIBLO_GAME_TES3) {
+        size_t pos = iniContent.find(iniSetting);
+        if (pos != string::npos && pos + iniSetting.length() < iniContent.length() && iniContent[pos + iniSetting.length()] == '0') {
             pluginsPath = gamePath / pluginsFileName;
             loadorderPath = gamePath / "loadorder.txt";
-        } else {
+        }
+        else {
             pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
             loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
         }
     }
-
-    _lo_game_handle_int::~_lo_game_handle_int() {
-        delete[] extString;
-
-        if (extStringArray != nullptr) {
-            for (size_t i=0; i < extStringArraySize; i++)
-                delete[] extStringArray[i];  //Clear all the char strings created.
-            delete[] extStringArray;  //Clear the string array.
-        }
+    else if (Id() == LIBLO_GAME_TES3) {
+        pluginsPath = gamePath / pluginsFileName;
+        loadorderPath = gamePath / "loadorder.txt";
     }
-
-    void _lo_game_handle_int::SetMasterFile(const string& file) {
-        masterFile = file;
+    else {
+        pluginsPath = GetLocalAppDataPath() / appdataFolderName / pluginsFileName;
+        loadorderPath = GetLocalAppDataPath() / appdataFolderName / "loadorder.txt";
     }
+}
 
-    unsigned int _lo_game_handle_int::Id() const {
-        return id;
+_lo_game_handle_int::~_lo_game_handle_int() {
+    delete[] extString;
+
+    if (extStringArray != nullptr) {
+        for (size_t i = 0; i < extStringArraySize; i++)
+            delete[] extStringArray[i];  //Clear all the char strings created.
+        delete[] extStringArray;  //Clear the string array.
     }
+}
 
-    string _lo_game_handle_int::MasterFile() const {
-        return masterFile;
-    }
+void _lo_game_handle_int::SetMasterFile(const string& file) {
+    masterFile = file;
+}
 
-    unsigned int _lo_game_handle_int::LoadOrderMethod() const {
-        return loMethod;
-    }
+unsigned int _lo_game_handle_int::Id() const {
+    return id;
+}
 
-    boost::filesystem::path _lo_game_handle_int::PluginsFolder() const {
-        return gamePath / pluginsFolderName;
-    }
+string _lo_game_handle_int::MasterFile() const {
+    return masterFile;
+}
 
-    boost::filesystem::path _lo_game_handle_int::ActivePluginsFile() const {
-        return pluginsPath;
-    }
+unsigned int _lo_game_handle_int::LoadOrderMethod() const {
+    return loMethod;
+}
 
-    boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
-        return loadorderPath;
-    }
+boost::filesystem::path _lo_game_handle_int::PluginsFolder() const {
+    return gamePath / pluginsFolderName;
+}
 
-    boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
+boost::filesystem::path _lo_game_handle_int::ActivePluginsFile() const {
+    return pluginsPath;
+}
+
+boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
+    return loadorderPath;
+}
+
+boost::filesystem::path _lo_game_handle_int::GetLocalAppDataPath() const {
 #ifdef _WIN32
-        HWND owner = 0;
-        TCHAR path[MAX_PATH];
+    HWND owner = 0;
+    TCHAR path[MAX_PATH];
 
-        HRESULT res = SHGetFolderPath(owner, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path);
+    HRESULT res = SHGetFolderPath(owner, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path);
 
-        const int utf8Len = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL);
-        char * narrowPath = new char[utf8Len];
-        WideCharToMultiByte(CP_UTF8, 0, path, -1, narrowPath, utf8Len, NULL, NULL);
+    const int utf8Len = WideCharToMultiByte(CP_UTF8, 0, path, -1, NULL, 0, NULL, NULL);
+    char * narrowPath = new char[utf8Len];
+    WideCharToMultiByte(CP_UTF8, 0, path, -1, narrowPath, utf8Len, NULL, NULL);
 
-        if (res == S_OK)
-            return fs::path(narrowPath);
-        else
-            return fs::path("");
+    if (res == S_OK)
+        return fs::path(narrowPath);
+    else
+        return fs::path("");
 #endif
-    }
+}

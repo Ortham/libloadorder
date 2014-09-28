@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "activeplugins.h"
 #include "../backend/game.h"
@@ -33,7 +33,7 @@ using namespace liblo;
 
 /*----------------------------------
    Plugin Active Status Functions
-----------------------------------*/
+   ----------------------------------*/
 
 /* Returns the list of active plugins. */
 LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
@@ -42,7 +42,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 
     //Free memory if in use.
     if (gh->extStringArray != nullptr) {
-        for (size_t i=0; i < gh->extStringArraySize; i++)
+        for (size_t i = 0; i < gh->extStringArraySize; i++)
             delete[] gh->extStringArray[i];  //Clear all the char strings created.
         delete[] gh->extStringArray;  //Clear the string array.
         gh->extStringArray = nullptr;
@@ -57,7 +57,8 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
     try {
         if (gh->activePlugins.HasChanged(*gh))
             gh->activePlugins.Load(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 
@@ -74,7 +75,8 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
             gh->extStringArray[i] = ToNewCString(activePlugin.Name());
             i++;
         }
-    } catch(bad_alloc& e) {
+    }
+    catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
 
@@ -92,12 +94,13 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
 
     //Put input into activePlugins object.
     gh->activePlugins.clear();
-    for (size_t i=0; i < numPlugins; i++) {
+    for (size_t i = 0; i < numPlugins; i++) {
         Plugin plugin(plugins[i]);
         if (gh->activePlugins.find(plugin) != gh->activePlugins.end()) {  //Not necessary for unordered set, but present so that invalid active plugin lists are refused.
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_INVALID_ARGS, "The supplied active plugins list is invalid.");
-        } else if (plugin.Exists(*gh))
+        }
+        else if (plugin.Exists(*gh))
             gh->activePlugins.emplace(plugin);
         else {
             gh->activePlugins.clear();
@@ -108,7 +111,8 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     //Check to see if basic rules are being obeyed.
     try {
         gh->activePlugins.CheckValidity(*gh);
-    } catch(error& e) {
+    }
+    catch (error& e) {
         gh->activePlugins.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid active plugins list supplied. Details: ") + e.what());
     }
@@ -116,7 +120,8 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     //Now save changes.
     try {
         gh->activePlugins.Save(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         gh->activePlugins.clear();
         return c_error(e);
     }
@@ -138,7 +143,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     //Unghost plugin if ghosted.
     try {
         pluginObj.UnGhost(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 
@@ -146,7 +152,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     try {
         if (gh->activePlugins.HasChanged(*gh))
             gh->activePlugins.Load(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 
@@ -162,7 +169,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     //Check that active plugins list is valid.
     try {
         gh->activePlugins.CheckValidity(*gh);
-    } catch(error& e) {
+    }
+    catch (error& e) {
         gh->activePlugins.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid active plugins list. Details: ") + e.what());
     }
@@ -170,7 +178,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     //Now save changes.
     try {
         gh->activePlugins.Save(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         gh->activePlugins.clear();
         return c_error(e);
     }
@@ -189,7 +198,8 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
     try {
         if (gh->activePlugins.HasChanged(*gh))
             gh->activePlugins.Load(*gh);
-    } catch (error& e) {
+    }
+    catch (error& e) {
         return c_error(e);
     }
 

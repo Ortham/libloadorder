@@ -21,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with libloadorder.  If not, see
     <http://www.gnu.org/licenses/>.
-*/
+    */
 
 #include "api/libloadorder.h"
 #include "backend/streams.h"
@@ -52,13 +52,13 @@ int main() {
     bool active;
 
     liblo::ofstream out(boost::filesystem::path("libloadorder-tester.txt"));
-    if (!out.good()){
+    if (!out.good()) {
         std::cout << "File could not be opened for reading.";
         return 1;
     }
 
     out << "TESTING lo_is_compatible(...)" << endl;
-    bool b = lo_is_compatible(3,0,0);
+    bool b = lo_is_compatible(3, 0, 0);
     if (b)
         out << '\t' << "library is compatible." << endl;
     else {
@@ -75,7 +75,6 @@ int main() {
     if (ret != LIBLO_OK)
         out << '\t' << "lo_create_handle(...) failed. Error: " << ret << endl;
     else {
-
         out << "TESTING lo_set_game_master(...)" << endl;
         ret = lo_set_game_master(db, master);
         if (ret != LIBLO_OK)
@@ -96,7 +95,7 @@ int main() {
             out << '\t' << "lo_get_load_order(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
-            for (size_t i=0; i<len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 out << '\t' << '\t' << i << " : " << loadOrder[i] << endl;
             }
         }
@@ -107,7 +106,7 @@ int main() {
             out << '\t' << "lo_set_load_order(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
-            for (size_t i=0; i<len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 out << '\t' << '\t' << i << " : " << loadOrder[i] << endl;
             }
         }
@@ -146,7 +145,7 @@ int main() {
             out << '\t' << "lo_get_active_plugins(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
-            for (size_t i=0; i<len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 out << '\t' << '\t' << i << " : " << activePlugins[i] << endl;
             }
         }
@@ -157,7 +156,7 @@ int main() {
             out << '\t' << "lo_set_active_plugins(...) failed. Error: " << ret << endl;
         else {
             out << '\t' << "List size: " << len << endl;
-            for (size_t i=0; i<len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 out << '\t' << '\t' << i << " : " << activePlugins[i] << endl;
             }
         }
@@ -177,7 +176,8 @@ int main() {
             if (ret != LIBLO_OK)
                 out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
             out << '\t' << "lo_set_plugin_active(...) failed. Error: " << error << endl;
-        } else {
+        }
+        else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
 
@@ -189,7 +189,8 @@ int main() {
                 out << '\t' << "lo_get_error_message(...) failed. Error: " << ret << endl;
             else
                 out << '\t' << "lo_set_plugin_active(...) failed. Error: " << error << endl;
-        } else {
+        }
+        else {
             out << '\t' << "\"" << plugin << "\" active status: " << active << endl;
         }
         lo_cleanup();
