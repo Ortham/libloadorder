@@ -27,7 +27,7 @@
 #include "../backend/helpers.h"
 #include "../backend/game.h"
 #include "../backend/error.h"
-#include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
+#include <boost/locale.hpp>
 #include <locale>
 
 using namespace std;
@@ -94,10 +94,8 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
 
     //Set the locale to get encoding conversions working correctly.
-    setlocale(LC_CTYPE, "");
-    locale global_loc = locale();
-    locale loc(global_loc, new boost::filesystem::detail::utf8_codecvt_facet());
-    boost::filesystem::path::imbue(loc);
+    std::locale::global(boost::locale::generator().generate(""));
+    boost::filesystem::path::imbue(std::locale());
 
     //Create handle.
     try {
