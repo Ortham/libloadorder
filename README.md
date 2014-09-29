@@ -79,6 +79,6 @@ make
 git clone https://github.com/WrinklyNinja/libloadorder.git libloadorder
 git clone https://github.com/WrinklyNinja/libespm.git libespm
 mkdir libloadorder/build && cd libloadorder/build
-cmake .. -DGTEST_ROOT=../gtest/build -DCMAKE_CXX_FLAGS=-std=c++0x
+cmake .. -DGTEST_ROOT=../gtest/build
 make ..
 ```
