@@ -24,6 +24,7 @@
         */
 
 #include "error.h"
+#include <cstring>
 
 namespace liblo {
     char * extErrorString = nullptr;
