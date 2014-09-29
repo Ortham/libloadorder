@@ -36,6 +36,7 @@ int main() {
 
     lo_game_handle db;
     const char * gamePath = "C:/Program Files (x86)/Steam/steamapps/common/skyrim";
+    const char * localPath = NULL;
     unsigned int game = LIBLO_GAME_TES5;
     unsigned int ret;
 
@@ -71,7 +72,7 @@ int main() {
     out << '\t' << "Version: " << vMajor << '.' << vMinor << '.' << vPatch << endl;
 
     out << "TESTING lo_create_handle(...)" << endl;
-    ret = lo_create_handle(&db, game, gamePath, NULL);
+    ret = lo_create_handle(&db, game, gamePath, localPath);
     if (ret != LIBLO_OK)
         out << '\t' << "lo_create_handle(...) failed. Error: " << ret << endl;
     else {
