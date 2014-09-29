@@ -56,8 +56,6 @@ include_directories ("${CMAKE_SOURCE_DIR}/src"
                      ${Boost_INCLUDE_DIRS}
                      ${GTEST_INCLUDE_DIRS})
 
-set (PROJECT_LIBS version)
-
 
 ##############################
 # Platform-Specific Settings
@@ -73,13 +71,21 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     ENDIF ()
 ENDIF ()
 
-# MinGW settings.
+
 IF (MINGW)
     set (CMAKE_C_FLAGS "-m${PROJECT_ARCH} -O3")
     set (CMAKE_CXX_FLAGS "-m${PROJECT_ARCH} -O3")
     set (CMAKE_EXE_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
     set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
     set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc -Wl,--subsystem,windows")
+    set (PROJECT_LIBS "")
+ELSEIF (CMAKE_COMPILER_IS_GNUCXX)
+    set (CMAKE_C_FLAGS "-m${PROJECT_ARCH} -O3")
+    set (CMAKE_CXX_FLAGS "-m${PROJECT_ARCH} -O3")
+    set (CMAKE_EXE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
+    set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
+    set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
+    set (PROJECT_LIBS "")
 ELSEIF (MSVC)
     # Update compiler flags.
     IF (PROJECT_STATIC_RUNTIME)
@@ -92,8 +98,8 @@ ELSEIF (MSVC)
             SET("${flag}" "${${flag}} /EHsc")
         ENDFOREACH()
     ENDIF ()
+    set (PROJECT_LIBS version)
 ENDIF ()
-
 
 
 ##############################
