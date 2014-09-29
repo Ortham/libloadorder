@@ -450,7 +450,7 @@ namespace liblo {
                             continue;
 
                         //Now cut off everything up to and including the = sign.
-                        emplace(Plugin(ToUTF8(line.substr(line.find('=') + 1))));
+                        insert(Plugin(ToUTF8(line.substr(line.find('=') + 1))));
                     }
                 }
                 else {
@@ -458,7 +458,7 @@ namespace liblo {
                         if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
                             continue;
 
-                        emplace(Plugin(ToUTF8(line)));
+                        insert(Plugin(ToUTF8(line)));
                     }
                 }
                 in.close();
@@ -471,9 +471,9 @@ namespace liblo {
         //Add skyrim.esm, update.esm if missing.
         if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
-                emplace(Plugin("Skyrim.esm"));
+                insert(Plugin("Skyrim.esm"));
             if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
-                emplace(Plugin("Update.esm"));
+                insert(Plugin("Update.esm"));
         }
     }
 

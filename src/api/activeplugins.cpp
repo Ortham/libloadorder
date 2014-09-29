@@ -101,7 +101,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
             return c_error(LIBLO_ERROR_INVALID_ARGS, "The supplied active plugins list is invalid.");
         }
         else if (plugin.Exists(*gh))
-            gh->activePlugins.emplace(plugin);
+            gh->activePlugins.insert(plugin);
         else {
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
@@ -159,7 +159,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
     //Look for plugin in active plugins list.
     if (active)  //No need to check for duplication, unordered set will silently handle avoidance.
-        gh->activePlugins.emplace(pluginObj);
+        gh->activePlugins.insert(pluginObj);
     else {
         auto it = gh->activePlugins.find(pluginObj);
         if (it != gh->activePlugins.end())
