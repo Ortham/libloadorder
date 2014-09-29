@@ -28,11 +28,48 @@
 
 #include <iostream>
 #include <boost/filesystem.hpp>
+#include <gtest/gtest.h>
 
 using std::endl;
 
-int main() {
+TEST(Version, HandlesNullInput) {
     unsigned int vMajor, vMinor, vPatch;
+    EXPECT_NE(LIBLO_OK, lo_get_version(&vMajor, NULL, NULL));
+    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, &vMinor, NULL));
+    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, NULL, &vPatch));
+    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, NULL, NULL));
+}
+
+TEST(Version, HandlesValidInput) {
+    unsigned int vMajor, vMinor, vPatch;
+    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+}
+
+TEST(Compatibility, HandlesCompatibleVersion) {
+    unsigned int vMajor, vMinor, vPatch;
+    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor, vPatch));
+    // Test somewhat arbitrary variations.
+    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
+    if (vMinor > 0 && vPatch > 0)
+        EXPECT_TRUE(lo_is_compatible(vMajor, vMinor - 1, vPatch - 1));
+}
+
+TEST(Compatibility, HandlesIncompatibleVersion) {
+    unsigned int vMajor, vMinor, vPatch;
+    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
+    // Test somewhat arbitrary variations.
+    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor + 1, vPatch + 1));
+    if (vMinor > 0 && vPatch > 0)
+        EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor - 1, vPatch - 1));
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 
     lo_game_handle db;
     const char * gamePath = "C:/Program Files (x86)/Steam/steamapps/common/skyrim";
@@ -57,19 +94,6 @@ int main() {
         std::cout << "File could not be opened for reading.";
         return 1;
     }
-
-    out << "TESTING lo_is_compatible(...)" << endl;
-    bool b = lo_is_compatible(5, 0, 0);
-    if (b)
-        out << '\t' << "library is compatible." << endl;
-    else {
-        out << '\t' << "library is incompatible." << endl;
-        return 0;
-    }
-
-    out << "TESTING lo_get_version(...)" << endl;
-    lo_get_version(&vMajor, &vMinor, &vPatch);
-    out << '\t' << "Version: " << vMajor << '.' << vMinor << '.' << vPatch << endl;
 
     out << "TESTING lo_create_handle(...)" << endl;
     ret = lo_create_handle(&db, game, gamePath, localPath);

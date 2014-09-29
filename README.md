@@ -10,9 +10,14 @@ Libloadorder uses [CMake](http://cmake.org), because it's possible to cross-comp
 ### Requirements
 
 * [Boost](http://www.boost.org) (tested with v1.56.0)
+* [Google Test](https://code.google.com/p/googletest/)
 * [Libespm](http://github.com/WrinklyNinja/libespm) (header-only library)
 
 ### Windows
+
+#### Google Test
+
+Just generate an MSVC solution using Google Test's CMake config, and build the `gtest-main` project.
 
 #### Boost
 
@@ -34,7 +39,7 @@ Parameter | Values | Description
 `PROJECT_ARCH` | `32`, `64` | Whether to build 32 or 64 bit libloadorder binaries. Defaults to `32`.
 `LIBESPM_ROOT` | path | Path to the root of the libespm repository folder. Defaults to `../libespm`, ie. the libespm folder is next to the libloadorder folder.
 
-You may also need to define `BOOST_ROOT` if CMake can't find Boost.
+You may also need to define `BOOST_ROOT` if CMake can't find Boost, and `GTEST_ROOT` if CMake can't find Google Test. Note that `GTEST_ROOT` should point to the directory the libraries are in, rather than the source root, for some reason.
 
 1. Set CMake up so that it builds the binaries in the `build` subdirectory of the libloadorder folder.
 2. Define any necessary parameters.
