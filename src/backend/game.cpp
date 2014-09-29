@@ -46,7 +46,7 @@ namespace fs = boost::filesystem;
 
 _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path)
     : id(gameId),
-    gamePath(fs::path(path)),
+    gamePath(path),
     extString(nullptr),
     extStringArray(nullptr),
     extStringArraySize(0) {
