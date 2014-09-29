@@ -58,7 +58,7 @@ int main() {
     }
 
     out << "TESTING lo_is_compatible(...)" << endl;
-    bool b = lo_is_compatible(3, 0, 0);
+    bool b = lo_is_compatible(5, 0, 0);
     if (b)
         out << '\t' << "library is compatible." << endl;
     else {
@@ -71,7 +71,7 @@ int main() {
     out << '\t' << "Version: " << vMajor << '.' << vMinor << '.' << vPatch << endl;
 
     out << "TESTING lo_create_handle(...)" << endl;
-    ret = lo_create_handle(&db, game, gamePath);
+    ret = lo_create_handle(&db, game, gamePath, NULL);
     if (ret != LIBLO_OK)
         out << '\t' << "lo_create_handle(...) failed. Error: " << ret << endl;
     else {
