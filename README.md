@@ -23,7 +23,7 @@ Just generate an MSVC solution using Google Test's CMake config, and build the `
 
 ```
 bootstrap.bat
-b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-log --with-date_time --with-thread --with-filesystem --with-locale --with-regex --with-system --with-iostreams
+b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-filesystem --with-locale --with-system --with-iostreams
 ```
 
 `link`, `runtime-link` and `address-model` can all be modified if shared linking or 64 bit builds are desired. Libloadorder uses statically-linked Boost libraries by default: to change this, edit [CMakeLists.txt](CMakeLists.txt).
@@ -45,3 +45,40 @@ You may also need to define `BOOST_ROOT` if CMake can't find Boost, and `GTEST_R
 2. Define any necessary parameters.
 3. Configure CMake, then generate a build system for Visual Studio 12.
 4. Open the generated solution file, and build it.
+
+### Linux (Debian)
+
+These instructions are WIP, and aren't yet functional. Also, testing is done with GCC 4.7.
+
+#### Build Tools
+
+```
+sudo apt-get install git build-essential cmake
+```
+
+#### Boost
+
+```
+sudo apt-get install libboost-filesystem-dev libboost-locale-dev libboost-iostreams-dev
+```
+
+#### Google Test
+
+```
+wget https://googletest.googlecode.com/files/gtest-1.7.0.zip
+unzip gtest-1.7.0.zip
+mv gtest-1.7.0 gtest
+mkdir gtest/build && cd gtest/build
+cmake ..
+make
+```
+
+#### Libloadorder
+
+```
+git clone https://github.com/WrinklyNinja/libloadorder.git libloadorder
+git clone https://github.com/WrinklyNinja/libespm.git libespm
+mkdir libloadorder/build && cd libloadorder/build
+cmake .. -DGTEST_ROOT=../gtest/build -DCMAKE_CXX_FLAGS=-std=c++0x
+make ..
+```
