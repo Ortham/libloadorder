@@ -74,9 +74,9 @@ extern "C"
      *  @param versionPatch
      *      A pointer to the patch version number.
      */
-    LIBLO void lo_get_version(unsigned int * const versionMajor,
-                              unsigned int * const versionMinor,
-                              unsigned int * const versionPatch);
+    LIBLO unsigned int lo_get_version(unsigned int * const versionMajor,
+                                      unsigned int * const versionMinor,
+                                      unsigned int * const versionPatch);
 
     /**@}*/
     /*********************************//**

@@ -50,10 +50,15 @@ LIBLO bool lo_is_compatible(const unsigned int versionMajor, const unsigned int 
         return false;
 }
 
-LIBLO void lo_get_version(unsigned int * const versionMajor, unsigned int * const versionMinor, unsigned int * const versionPatch) {
+LIBLO unsigned int lo_get_version(unsigned int * const versionMajor, unsigned int * const versionMinor, unsigned int * const versionPatch) {
+    if (versionMajor == nullptr || versionMinor == nullptr || versionPatch == nullptr)
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
+
     *versionMajor = LIBLO_VERSION_MAJOR;
     *versionMinor = LIBLO_VERSION_MINOR;
     *versionPatch = LIBLO_VERSION_PATCH;
+
+    return LIBLO_OK;
 }
 
 /*------------------------------
