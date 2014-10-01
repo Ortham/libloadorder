@@ -48,7 +48,7 @@ set (PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/src/backend/error.h"
 
 source_group("Header Files" FILES ${PROJECT_HEADERS})
 
-set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tester.cpp")
+set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tests/api.cpp")
 
 # Include source and library directories.
 include_directories ("${CMAKE_SOURCE_DIR}/src"
@@ -118,3 +118,6 @@ target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIB
 # Build libloadorder tester.
 add_executable        (libloadorder-tester ${TESTER_SRC})
 target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS} ${GTEST_BOTH_LIBRARIES})
+
+add_custom_command(TARGET libloadorder-tester
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/tests/plugins $<TARGET_FILE_DIR:libloadorder-tester>/game/Data)
