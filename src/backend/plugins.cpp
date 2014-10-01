@@ -311,6 +311,9 @@ namespace liblo {
     }
 
     void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) const {
+        if (empty())
+            return;
+
         if (at(0) != Plugin(parentGame.MasterFile()))
             throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
 
@@ -384,7 +387,10 @@ namespace liblo {
             if (!at(i).IsMasterFile(parentGame))
                 return i - 1;
         }
-        return max - 1;
+        if (max > 0)
+            return max - 1;
+        else
+            return 0;
     }
 
     void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
