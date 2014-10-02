@@ -46,9 +46,14 @@ set (PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/src/backend/error.h"
                     "${CMAKE_SOURCE_DIR}/src/api/activeplugins.h"
                     "${CMAKE_SOURCE_DIR}/src/api/loadorder.h")
 
-source_group("Header Files" FILES ${PROJECT_HEADERS})
+set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tests/main.cpp")
 
-set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tests/api.cpp")
+set (TESTER_HEADERS "${CMAKE_SOURCE_DIR}/src/tests/fixtures.h"
+					"${CMAKE_SOURCE_DIR}/src/tests/api/libloadorder.h"
+					"${CMAKE_SOURCE_DIR}/src/tests/api/activeplugins.h"
+					"${CMAKE_SOURCE_DIR}/src/tests/api/loadorder.h")
+
+source_group("Header Files" FILES ${PROJECT_HEADERS} ${TESTER_HEADERS})
 
 # Include source and library directories.
 include_directories ("${CMAKE_SOURCE_DIR}/src"
@@ -116,7 +121,7 @@ add_library           (loadorder${PROJECT_ARCH} ${PROJECT_SRC} ${PROJECT_HEADERS
 target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS})
 
 # Build libloadorder tester.
-add_executable        (libloadorder-tester ${TESTER_SRC})
+add_executable        (libloadorder-tester ${TESTER_SRC} ${TESTER_HEADERS})
 target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS} ${GTEST_BOTH_LIBRARIES})
 
 add_custom_command(TARGET libloadorder-tester
