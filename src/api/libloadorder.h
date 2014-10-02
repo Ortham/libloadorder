@@ -170,11 +170,23 @@ extern "C"
     /**
      *  @brief Fix up the text file(s) used by the load order and active
      *         plugins systems.
-     *  @details Removes any plugins that are not present in the filesystem
-     *           from plugins.txt (and loadorder.txt if used). This can be
-     *           useful for when plugins are uninstalled manually or by a
-     *           utility that does not also update the load order / active
-     *           plugins systems.
+     *  @details This checks that the load order and active plugin lists
+     *           conform to libloadorder's validity requirements (see
+     *           \ref valid_lo_sec and \ref valid_apl_sec respectively), and
+     *           resolves any issues encountered, then saves the fixed lists.
+     *
+     *           For the case of a plugin appearing multiple times in a load
+     *           order / active plugin list, libloadorder discards all but the
+     *           first instance of that plugin.
+     *
+     *           For the case of more than 255 plugins being active,
+     *           libloadorder deactivates as many plugins as required to bring
+     *           the number of plugins active below 256, starting from the end
+     *           of the load order and working towards the beginning.
+     *
+     *           This can be useful for when plugins are uninstalled manually
+     *           or by a utility that does not also update the load order /
+     *           active plugins systems correctly.
      *  @param gh
      *      The game handle the function operates on.
      *  @returns A return code.
