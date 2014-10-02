@@ -34,7 +34,7 @@ using std::endl;
 
 namespace fs = boost::filesystem;
 
-TEST(Version, HandlesNullInput) {
+TEST(GetVersion, HandlesNullInput) {
     unsigned int vMajor, vMinor, vPatch;
     EXPECT_NE(LIBLO_OK, lo_get_version(&vMajor, NULL, NULL));
     EXPECT_NE(LIBLO_OK, lo_get_version(NULL, &vMinor, NULL));
@@ -42,20 +42,12 @@ TEST(Version, HandlesNullInput) {
     EXPECT_NE(LIBLO_OK, lo_get_version(NULL, NULL, NULL));
 }
 
-TEST(Version, HandlesValidInput) {
+TEST(GetVersion, HandlesValidInput) {
     unsigned int vMajor, vMinor, vPatch;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 }
 
-TEST(Error, GetErrorMessage) {
-    EXPECT_NE(LIBLO_OK, lo_get_error_message(NULL));
-
-    const char * error;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_STREQ("Null pointer passed.", error);
-}
-
-TEST(Compatibility, HandlesCompatibleVersion) {
+TEST(IsCompatible, HandlesCompatibleVersion) {
     unsigned int vMajor, vMinor, vPatch;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
@@ -66,7 +58,7 @@ TEST(Compatibility, HandlesCompatibleVersion) {
         EXPECT_TRUE(lo_is_compatible(vMajor, vMinor - 1, vPatch - 1));
 }
 
-TEST(Compatibility, HandlesIncompatibleVersion) {
+TEST(IsCompatible, HandlesIncompatibleVersion) {
     unsigned int vMajor, vMinor, vPatch;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
@@ -75,6 +67,39 @@ TEST(Compatibility, HandlesIncompatibleVersion) {
     EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor + 1, vPatch + 1));
     if (vMinor > 0 && vPatch > 0)
         EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor - 1, vPatch - 1));
+}
+
+TEST(GetErrorMessage, HandlesInputCorrectly) {
+    EXPECT_NE(LIBLO_OK, lo_get_error_message(NULL));
+
+    const char * error;
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+    ASSERT_STREQ("Null pointer passed.", error);
+}
+
+TEST(Cleanup, CleansUpAfterError) {
+    // First generate an error.
+    EXPECT_NE(LIBLO_OK, lo_get_error_message(NULL));
+
+    // Check that the error message is non-null.
+    const char * error;
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+    ASSERT_STREQ("Null pointer passed.", error);
+
+    ASSERT_NO_THROW(lo_cleanup());
+
+    // Now check that the error message pointer is null.
+    const char * error = nullptr;
+    EXPECT_NE(LIBLO_OK, lo_get_error_message(&error));
+    EXPECT_EQ(nullptr, error);
+}
+
+TEST(Cleanup, HandlesNoError) {
+    ASSERT_NO_THROW(lo_cleanup());
+
+    const char * error = nullptr;
+    EXPECT_NE(LIBLO_OK, lo_get_error_message(&error));
+    EXPECT_EQ(nullptr, error);
 }
 
 class GameHandleCreationTest : public ::testing::Test {
@@ -115,6 +140,10 @@ TEST_F(GameHandleCreationTest, HandlesInvalidGamePathInput) {
 
 TEST_F(GameHandleCreationTest, HandlesInvalidLocalPathInput) {
     EXPECT_NE(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, "./game", "/\0"));
+}
+
+TEST(GameHandleDestroyTest, HandledNullInput) {
+    ASSERT_NO_THROW(lo_destroy_handle(NULL));
 }
 
 class OblivionOperationsTest : public ::testing::Test {
@@ -240,6 +269,12 @@ TEST_F(OblivionOperationsTest, GetPluginActive) {
 
 TEST_F(OblivionOperationsTest, SetPluginActive) {
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Cava Obscura - SI.esp", true));
+}
+
+TEST_F(OblivionOperationsTest, FixPluginLists) {
+    EXPECT_NE(LIBLO_OK, lo_fix_plugin_lists(NULL));
+
+    EXPECT_EQ(LIBLO_OK, lo_fix_plugin_lists(gh));
 }
 
 class SkyrimOperationsTest : public ::testing::Test {
