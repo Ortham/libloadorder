@@ -131,6 +131,14 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
             return c_error(e);
         }
 
+        try {
+            LoadOrderFileLO.CheckValidity(**gh);
+            PluginsFileLO.CheckValidity(**gh);
+        }
+        catch (error& e) {
+            return c_error(e);
+        }
+
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
         vector<Plugin>::iterator it = LoadOrderFileLO.begin();
         while (it != LoadOrderFileLO.end()) {
@@ -178,12 +186,21 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
     if (gh == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Only need to update loadorder.txt if it is used.
     if (gh->LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
         try {
             //Update cache if necessary.
-            if (gh->loadOrder.HasChanged(*gh))
+            if (gh->loadOrder.HasChanged(*gh)) {
                 gh->loadOrder.Load(*gh);
+                try {
+                    gh->activePlugins.CheckValidity(*gh);
+                }
+                catch (error& e) {
+                    successRetCode = c_error(e);
+                }
+            }
 
             // Ensure that the first plugin is the game's master file.
             if (!gh->loadOrder.empty() && boost::iequals(gh->loadOrder.begin()->Name(), gh->MasterFile())) {
@@ -236,8 +253,15 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
 
     try {
         //Update cache if necessary.
-        if (gh->activePlugins.HasChanged(*gh))
+        if (gh->activePlugins.HasChanged(*gh)) {
             gh->activePlugins.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
 
         // Check that there aren't more than 255 plugins, and remove those
         // at the end of the load order if so.
@@ -278,5 +302,5 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         return c_error(e);
     }
 
-    return LIBLO_OK;
+    return successRetCode;
 }

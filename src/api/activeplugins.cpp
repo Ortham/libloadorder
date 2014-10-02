@@ -40,6 +40,8 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
     if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Free memory if in use.
     if (gh->extStringArray != nullptr) {
         for (size_t i = 0; i < gh->extStringArraySize; i++)
@@ -55,8 +57,15 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh))
+        if (gh->activePlugins.HasChanged(*gh)) {
             gh->activePlugins.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -84,7 +93,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
     *plugins = gh->extStringArray;
     *numPlugins = gh->extStringArraySize;
 
-    return LIBLO_OK;
+    return successRetCode;
 }
 
 /* Replaces the current list of active plugins with the given list. */
@@ -134,6 +143,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     Plugin pluginObj(plugin);
 
     //Check that plugin exists if activating it.
@@ -150,8 +161,15 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh))
+        if (gh->activePlugins.HasChanged(*gh)) {
             gh->activePlugins.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -184,7 +202,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
         return c_error(e);
     }
 
-    return LIBLO_OK;
+    return successRetCode;
 }
 
 /* Checks to see if the given plugin is active. */
@@ -192,12 +210,21 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
     if (gh == nullptr || plugin == nullptr || result == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     Plugin pluginObj(plugin);
 
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh))
+        if (gh->activePlugins.HasChanged(*gh)) {
             gh->activePlugins.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -208,5 +235,5 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
     else
         *result = true;
 
-    return LIBLO_OK;
+    return successRetCode;
 }

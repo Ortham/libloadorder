@@ -52,6 +52,8 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Free memory if in use.
     if (gh->extStringArray != nullptr) {
         for (size_t i = 0; i < gh->extStringArraySize; i++)
@@ -63,8 +65,15 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh))
+        if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -89,7 +98,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     *plugins = gh->extStringArray;
     *numPlugins = gh->extStringArraySize;
 
-    return LIBLO_OK;
+    return successRetCode;
 }
 
 /* Sets the load order to the given plugins list of length numPlugins.
@@ -157,10 +166,19 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
     if (gh == nullptr || plugin == nullptr || index == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh))
+        if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -174,7 +192,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
 
     *index = pos;
 
-    return LIBLO_OK;
+    return successRetCode;
 }
 
 /* Sets the load order of the specified plugin, removing it from its current position
@@ -185,10 +203,19 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh))
+        if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -228,7 +255,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
         return c_error(e);
     }
 
-    return LIBLO_OK;
+    return successRetCode;
 }
 
 /* Gets the plugin filename is at the specified load order position. The first position
@@ -237,14 +264,23 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
+    unsigned int successRetCode = LIBLO_OK;
+
     //Free memory if in use.
     delete[] gh->extString;
     gh->extString = nullptr;
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh))
+        if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
+            try {
+                gh->activePlugins.CheckValidity(*gh);
+            }
+            catch (error& e) {
+                successRetCode = c_error(e);
+            }
+        }
     }
     catch (error& e) {
         return c_error(e);
@@ -266,5 +302,5 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     //Set output.
     *plugin = gh->extString;
 
-    return LIBLO_OK;
+    return successRetCode;
 }

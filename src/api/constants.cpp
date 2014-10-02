@@ -38,7 +38,8 @@ const unsigned int LIBLO_ERROR_TIMESTAMP_WRITE_FAIL = 9;
 const unsigned int LIBLO_ERROR_FILE_PARSE_FAIL = 10;
 const unsigned int LIBLO_ERROR_NO_MEM = 11;
 const unsigned int LIBLO_ERROR_INVALID_ARGS = 12;
-const unsigned int LIBLO_RETURN_MAX = LIBLO_ERROR_INVALID_ARGS;
+const unsigned int LIBLO_WARN_INVALID_LIST = 13;
+const unsigned int LIBLO_RETURN_MAX = LIBLO_WARN_INVALID_LIST;
 
 const unsigned int LIBLO_METHOD_TIMESTAMP = 0;
 const unsigned int LIBLO_METHOD_TEXTFILE = 1;

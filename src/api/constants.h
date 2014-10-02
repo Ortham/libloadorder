@@ -93,7 +93,7 @@ extern "C"
     /**
      *  @brief There is a mismatch between the files used to keep track of
      *         load order.
-     *  @details This error can only occur when using libloadorder with a
+     *  @details This warning can only occur when using libloadorder with a
      *           game that uses the textfile-based load order system. The
      *           load order in the active plugins list file (`plugins.txt`)
      *           does not match the load order in the full load order file
@@ -103,6 +103,14 @@ extern "C"
      *           synchronisation.
      */
     LIBLO extern const unsigned int LIBLO_WARN_LO_MISMATCH;
+    /**
+     * @brief The current load order and/or active plugins list is invalid.
+     * @details This warning occurs when libloadorder reads a load order
+     *          or active plugins list that does not conform to its validity
+     *          requirements (see \ref valid_lo_sec and \ref valid_apl_sec
+     *          respectively).
+     */
+    LIBLO extern const unsigned int LIBLO_WARN_INVALID_LIST;
     LIBLO extern const unsigned int LIBLO_ERROR_FILE_READ_FAIL;  /**< A file could not be read. */
     LIBLO extern const unsigned int LIBLO_ERROR_FILE_WRITE_FAIL;  /**< A file could not be written to. */
     LIBLO extern const unsigned int LIBLO_ERROR_FILE_NOT_UTF8;  /**< The specified file is not encoded in UTF-8. */
