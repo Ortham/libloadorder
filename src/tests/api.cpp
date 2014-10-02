@@ -89,7 +89,7 @@ TEST(Cleanup, CleansUpAfterError) {
     ASSERT_NO_THROW(lo_cleanup());
 
     // Now check that the error message pointer is null.
-    const char * error = nullptr;
+    error = nullptr;
     EXPECT_NE(LIBLO_OK, lo_get_error_message(&error));
     EXPECT_EQ(nullptr, error);
 }
