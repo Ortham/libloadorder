@@ -28,8 +28,10 @@ along with libloadorder.  If not, see
 
 #include "tests/fixtures.h"
 #include "backend/streams.h"
+#include "backend/helpers.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 TEST(GetVersion, HandlesNullInput) {
     unsigned int vMajor, vMinor, vPatch;
@@ -158,7 +160,55 @@ TEST_F(OblivionOperationsTest, SetGameMaster) {
 TEST_F(OblivionOperationsTest, FixPluginLists) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
 
-    EXPECT_EQ(LIBLO_OK, lo_fix_plugin_lists(gh));
+    // Write a broken plugins.txt.
+    ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esm.missing"));
+    ASSERT_TRUE(boost::filesystem::exists("./local"));
+    liblo::ofstream active("./local/plugins.txt");
+    active << "Cava Obscura - Cyrodiil.esp" << std::endl
+        << "Cava Obscura - Filter Patch For Mods.esp" << std::endl
+        << "Cava Obscura - SI.esp" << std::endl
+        << "Cava Obscura - Cyrodiil.esp" << std::endl  // Duplicate, should be removed.
+        << "EnhancedWeather - Darker Nights, 80.esp" << std::endl
+        << "EnhancedWeather.esm.missing" << std::endl  // Missing, should be removed.
+        << "EnhancedWeather.esp" << std::endl;
+    active.close();
+
+    // Set the load order.
+    char * plugins[] = {
+        "EnhancedWeather.esm",
+        "EnhancedWeather.esp",
+        "EnhancedWeather - Darker Nights, 80.esp",
+        "Cava Obscura - Cyrodiil.esp",
+        "Cava Obscura - SI.esp",
+        "Cava Obscura - Filter Patch For Mods.esp"
+    };
+    size_t pluginsNum = 6;
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+
+    // Now fix plugins.txt
+    ASSERT_PRED1([](unsigned int i) {
+        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
+    }, lo_fix_plugin_lists(gh));
+
+    // Read plugins.txt. Order doesn't matter, so just check content using a sorted list.
+    std::list<std::string> expectedLines = {
+        "Cava Obscura - Cyrodiil.esp",
+        "Cava Obscura - Filter Patch For Mods.esp",
+        "Cava Obscura - SI.esp",
+        "EnhancedWeather - Darker Nights, 80.esp",
+        "EnhancedWeather.esp"
+    };
+    std::list<std::string> actualLines;
+    std::string content;
+    liblo::fileToBuffer("./local/plugins.txt", content);
+    boost::split(actualLines, content, [](char c) {
+        return c == '\n';
+    });
+    actualLines.pop_back();  // Remove the trailing newline.
+    actualLines.sort();
+
+    EXPECT_EQ(expectedLines, actualLines);
 }
 
 #endif
