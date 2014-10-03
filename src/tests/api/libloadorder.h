@@ -162,6 +162,7 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
 
     // Write a broken plugins.txt.
     ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esm.missing"));
+    boost::filesystem::create_directory("./local");
     ASSERT_TRUE(boost::filesystem::exists("./local"));
     liblo::ofstream active("./local/plugins.txt");
     active << "Cava Obscura - Cyrodiil.esp" << std::endl
