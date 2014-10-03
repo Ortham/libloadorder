@@ -299,7 +299,7 @@ namespace liblo {
         }
     }
 
-    void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) const {
+    void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) {
         if (empty())
             return;
 
@@ -318,7 +318,7 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is in the load order twice.");
             vector<Plugin> masters(plugin.GetMasters(parentGame));
             for (const auto &master : masters) {
-                if (hashset.find(master) == hashset.end() && this->Find(master) != this->cend())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
+                if (hashset.find(master) == hashset.end() && this->Find(master) != this->end())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
                     throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
             }
             hashset.insert(plugin);
@@ -349,26 +349,26 @@ namespace liblo {
         }
     }
 
-    std::vector<Plugin>::iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos) {
+    std::vector<Plugin>::iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::iterator newPos) {
         // Inserting and erasing iterators invalidates later iterators, so first insert into
         // the vector.
-        auto retPos = this->insert(newPos, plugin);
+        newPos = this->insert(newPos, plugin);
 
         // Now erase any other instances of this plugin.
         auto oldPos = find(this->cbegin(), this->cend(), plugin);
         while (oldPos != this->cend()) {
-            if (oldPos != retPos)
+            if (oldPos != newPos)
                 oldPos = this->erase(oldPos);
             else
                 ++oldPos;
             oldPos = find(oldPos, this->cend(), plugin);
         }
 
-        return retPos;
+        return newPos;
     }
 
-    std::vector<Plugin>::const_iterator LoadOrder::Find(const Plugin& plugin) const {
-        return find(this->cbegin(), this->cend(), plugin);
+    std::vector<Plugin>::iterator LoadOrder::Find(const Plugin& plugin) {
+        return find(this->begin(), this->end(), plugin);
     }
 
     std::vector<Plugin>::iterator LoadOrder::FindFirstNonMaster(const _lo_game_handle_int& parentGame) {

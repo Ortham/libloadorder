@@ -191,7 +191,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
     if (pos == gh->loadOrder.cend())
         return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
 
-    *index = distance(gh->loadOrder.cbegin(), pos);
+    *index = distance(gh->loadOrder.begin(), pos);
 
     return successRetCode;
 }

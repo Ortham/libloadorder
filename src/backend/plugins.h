@@ -68,13 +68,13 @@ namespace liblo {
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
 
-        void CheckValidity(const _lo_game_handle_int& parentGame) const;  //Game master first, masters before plugins, plugins all exist.
+        void CheckValidity(const _lo_game_handle_int& parentGame);  //Game master first, masters before plugins, plugins all exist.
 
         bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
 
-        std::vector<Plugin>::iterator Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos);
+        std::vector<Plugin>::iterator Move(const Plugin& plugin, std::vector<Plugin>::iterator newPos);
 
-        std::vector<Plugin>::const_iterator Find(const Plugin& plugin) const;
+        std::vector<Plugin>::iterator Find(const Plugin& plugin);
         std::vector<Plugin>::iterator FindFirstNonMaster(const _lo_game_handle_int& parentGame);
 
         //Assumes that the content of the file is valid.
