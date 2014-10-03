@@ -35,9 +35,9 @@ TEST_F(OblivionOperationsTest, GetLoadOrderMethod) {
     EXPECT_EQ(LIBLO_OK, lo_get_load_order_method(gh, &method));
     EXPECT_EQ(LIBLO_METHOD_TIMESTAMP, method);
 
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(NULL, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(gh, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(NULL, &method));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(NULL, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(gh, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(NULL, &method));
 }
 
 TEST_F(SkyrimOperationsTest, GetLoadOrderMethod) {
@@ -45,9 +45,9 @@ TEST_F(SkyrimOperationsTest, GetLoadOrderMethod) {
     EXPECT_EQ(LIBLO_OK, lo_get_load_order_method(gh, &method));
     EXPECT_EQ(LIBLO_METHOD_TEXTFILE, method);
 
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(NULL, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(gh, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order_method(NULL, &method));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(NULL, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(gh, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(NULL, &method));
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder) {
@@ -58,13 +58,13 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
     };
     size_t pluginsNum = 1;
 
-    EXPECT_NE(LIBLO_OK, lo_set_load_order(gh, NULL, pluginsNum));
-    EXPECT_NE(LIBLO_OK, lo_set_load_order(gh, NULL, 0));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, NULL, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, NULL, 0));
 
     // Test trying to set load order with non-Oblivion.esm without
     // first setting the game master.
     EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, 0));
-    EXPECT_NE(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, plugins, pluginsNum));
 
     // Now set game master and try again.
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
@@ -85,20 +85,21 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
         "EnhancedWeather.esm",
         "EnhancedWeather.esp.missing"
     };
-    EXPECT_NE(LIBLO_OK, lo_set_load_order(gh, plugins3, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, plugins3, pluginsNum));
 }
 
 TEST_F(OblivionOperationsTest, GetLoadOrder) {
     char ** plugins;
     size_t pluginsNum;
-    EXPECT_NE(LIBLO_OK, lo_get_load_order(gh, NULL, &pluginsNum));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order(gh, &plugins, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_load_order(gh, NULL, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, &pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, &plugins, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, NULL));
 
     EXPECT_EQ(LIBLO_OK, lo_get_load_order(gh, &plugins, &pluginsNum));
 }
 
 TEST_F(OblivionOperationsTest, SetPluginPosition) {
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "EnhancedWeather.esp", 1));
 }
 

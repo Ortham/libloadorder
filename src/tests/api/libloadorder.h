@@ -32,10 +32,10 @@ along with libloadorder.  If not, see
 
 TEST(GetVersion, HandlesNullInput) {
     unsigned int vMajor, vMinor, vPatch;
-    EXPECT_NE(LIBLO_OK, lo_get_version(&vMajor, NULL, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, &vMinor, NULL));
-    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, NULL, &vPatch));
-    EXPECT_NE(LIBLO_OK, lo_get_version(NULL, NULL, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, &vPatch));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, NULL));
 }
 
 TEST(GetVersion, HandlesValidInput) {
@@ -66,7 +66,7 @@ TEST(IsCompatible, HandlesIncompatibleVersion) {
 }
 
 TEST(GetErrorMessage, HandlesInputCorrectly) {
-    EXPECT_NE(LIBLO_OK, lo_get_error_message(NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
     const char * error;
     EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
@@ -75,7 +75,7 @@ TEST(GetErrorMessage, HandlesInputCorrectly) {
 
 TEST(Cleanup, CleansUpAfterError) {
     // First generate an error.
-    EXPECT_NE(LIBLO_OK, lo_get_error_message(NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
     // Check that the error message is non-null.
     const char * error;
@@ -86,7 +86,7 @@ TEST(Cleanup, CleansUpAfterError) {
 
     // Now check that the error message pointer is null.
     error = nullptr;
-    EXPECT_NE(LIBLO_OK, lo_get_error_message(&error));
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
     EXPECT_EQ(nullptr, error);
 }
 
@@ -94,7 +94,7 @@ TEST(Cleanup, HandlesNoError) {
     ASSERT_NO_THROW(lo_cleanup());
 
     const char * error = nullptr;
-    EXPECT_NE(LIBLO_OK, lo_get_error_message(&error));
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
     EXPECT_EQ(nullptr, error);
 }
 
@@ -111,20 +111,20 @@ TEST_F(GameHandleCreationTest, HandlesValidInputs) {
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidHandleInput) {
-    EXPECT_NE(LIBLO_OK, lo_create_handle(NULL, LIBLO_GAME_TES4, "./game", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, LIBLO_GAME_TES4, "./game", "./local"));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidGameType) {
-    EXPECT_NE(LIBLO_OK, lo_create_handle(&gh, UINT_MAX, "./game", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, "./game", "./local"));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidGamePathInput) {
-    EXPECT_NE(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, "./local"));
-    EXPECT_NE(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, "/\0", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, "/\0", "./local"));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidLocalPathInput) {
-    EXPECT_NE(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, "./game", "/\0"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, "./game", "/\0"));
 }
 
 TEST(GameHandleDestroyTest, HandledNullInput) {
@@ -132,19 +132,18 @@ TEST(GameHandleDestroyTest, HandledNullInput) {
 }
 
 TEST_F(OblivionOperationsTest, SetGameMaster) {
-    EXPECT_NE(LIBLO_OK, lo_set_game_master(gh, NULL));
-    EXPECT_NE(LIBLO_OK, lo_set_game_master(gh, "Missing Plugin.esp"));
-    EXPECT_NE(LIBLO_OK, lo_set_game_master(gh, "Can't be a plugin"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin"));
 
     EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
 
     // Try setting to a master that doesn't exist.
     ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esm.missing"));
-    EXPECT_NE(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm.missing"));
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "EnhancedWeather.esm.missing"));
 }
 
 TEST_F(OblivionOperationsTest, FixPluginLists) {
-    EXPECT_NE(LIBLO_OK, lo_fix_plugin_lists(NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
 
     EXPECT_EQ(LIBLO_OK, lo_fix_plugin_lists(gh));
 }
