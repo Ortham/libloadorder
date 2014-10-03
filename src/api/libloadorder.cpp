@@ -102,6 +102,18 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
     std::locale::global(boost::locale::generator().generate(""));
     boost::filesystem::path::imbue(std::locale());
 
+    // Check for valid paths.
+    boost::filesystem::path testPath(gamePath);
+    for (const auto& name : testPath) {
+        if (!boost::filesystem::native(name.string()))
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game path specified.");
+    }
+    testPath = localPath;
+    for (const auto& name : testPath) {
+        if (!boost::filesystem::native(name.string()))
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid local data path specified.");
+    }
+
     //Create handle.
     try {
         *gh = new _lo_game_handle_int(gameId, gamePath);
