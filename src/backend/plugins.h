@@ -72,10 +72,10 @@ namespace liblo {
 
         bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
 
-        void Move(size_t newPos, const Plugin& plugin);
+        std::vector<Plugin>::const_iterator Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos);
 
-        size_t Find(const Plugin& plugin) const;
-        size_t LastMasterPos(const _lo_game_handle_int& parentGame) const;
+        std::vector<Plugin>::const_iterator Find(const Plugin& plugin) const;
+        std::vector<Plugin>::const_iterator FindFirstNonMaster(const _lo_game_handle_int& parentGame) const;
 
         //Assumes that the content of the file is valid.
         void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path& file);

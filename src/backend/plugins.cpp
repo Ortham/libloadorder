@@ -220,29 +220,30 @@ namespace liblo {
                     LoadFromFile(parentGame, parentGame.ActivePluginsFile());
                 if (parentGame.Id() == LIBLO_GAME_TES5) {
                     //Make sure that Skyrim.esm is first.
-                    Move(0, Plugin("Skyrim.esm"));
+                    Move(Plugin("Skyrim.esm"), this->begin());
                     //Add Update.esm if not already present.
-                    if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == size())
-                        Move(LastMasterPos(parentGame) + 1, Plugin("Update.esm"));
+                    if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
+                        Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
                 }
             }
         }
         if (fs::exists(parentGame.PluginsFolder()) && fs::is_directory(parentGame.PluginsFolder())) {
             //Now scan through Data folder. Add any plugins that aren't already in loadorder to loadorder, at the end.
-            size_t max = size();
-            size_t lastMasterPos = LastMasterPos(parentGame);
+            auto firstNonMaster = FindFirstNonMaster(parentGame);
             for (fs::directory_iterator itr(parentGame.PluginsFolder()); itr != fs::directory_iterator(); ++itr) {
                 if (fs::is_regular_file(itr->status())) {
                     const Plugin plugin(itr->path().filename().string());
-                    if (plugin.IsValid(parentGame) && Find(plugin) == max) {
+                    if (plugin.IsValid(parentGame) && Find(plugin) == this->cend()) {
                         //If it is a master, add it after the last master, otherwise add it at the end.
                         if (plugin.IsMasterFile(parentGame)) {
-                            insert(begin() + lastMasterPos + 1, plugin);
-                            lastMasterPos++;
+                            firstNonMaster = ++insert(firstNonMaster, plugin);
                         }
-                        else
-                            push_back(plugin);
-                        max++;
+                        else {
+                            // push_back may invalidate all current iterators, so reassign firstNonMaster in case.
+                            size_t firstNonMasterPos = distance(this->cbegin(), firstNonMaster);
+                            this->push_back(plugin);
+                            firstNonMaster = this->cbegin() + firstNonMasterPos + 1;
+                        }
                     }
                 }
             }
@@ -317,7 +318,7 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is in the load order twice.");
             vector<Plugin> masters(plugin.GetMasters(parentGame));
             for (const auto &master : masters) {
-                if (hashset.find(master) == hashset.end() && this->Find(master) != this->size())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
+                if (hashset.find(master) == hashset.end() && this->Find(master) != this->cend())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
                     throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
             }
             hashset.insert(plugin);
@@ -348,37 +349,32 @@ namespace liblo {
         }
     }
 
-    void LoadOrder::Move(size_t newPos, const Plugin& plugin) {
-        size_t pos = Find(plugin);
-        if (pos == size())
-            insert(begin() + newPos, plugin);
-        else {
-            if (pos < newPos)
-                newPos--;
-            erase(begin() + pos);
-            insert(begin() + newPos, plugin);
+    std::vector<Plugin>::const_iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos) {
+        // Inserting and erasing iterators invalidates later iterators, so first insert into
+        // the vector.
+        newPos = this->insert(newPos, plugin);
+
+        // Now erase any other instances of this plugin.
+        auto oldPos = find(this->cbegin(), this->cend(), plugin);
+        while (oldPos != this->cend()) {
+            if (oldPos != newPos)
+                oldPos = this->erase(oldPos);
+            else
+                ++oldPos;
+            oldPos = find(oldPos, this->cend(), plugin);
         }
+
+        return newPos;
     }
 
-    size_t LoadOrder::Find(const Plugin& plugin) const {
-        size_t max = size();
-        for (size_t i = 0; i < max; i++) {
-            if (plugin == at(i))
-                return i;
-        }
-        return max;
+    std::vector<Plugin>::const_iterator LoadOrder::Find(const Plugin& plugin) const {
+        return find(this->cbegin(), this->cend(), plugin);
     }
 
-    size_t LoadOrder::LastMasterPos(const _lo_game_handle_int& parentGame) const {
-        size_t max = size();
-        for (size_t i = 0; i < max; i++) {
-            if (!at(i).IsMasterFile(parentGame))
-                return i - 1;
-        }
-        if (max > 0)
-            return max - 1;
-        else
-            return 0;
+    std::vector<Plugin>::const_iterator LoadOrder::FindFirstNonMaster(const _lo_game_handle_int& parentGame) const {
+        return find_if(this->cbegin(), this->cend(), [&parentGame](const Plugin& plugin) {
+            return !plugin.IsMasterFile(parentGame);
+        });
     }
 
     void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {

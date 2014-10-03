@@ -154,7 +154,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
         vector<Plugin>::iterator it = LoadOrderFileLO.begin();
         while (it != LoadOrderFileLO.end()) {
-            if (PluginsFileLO.Find(*it) == PluginsFileLO.size())
+            if (PluginsFileLO.Find(*it) == PluginsFileLO.cend())
                 it = LoadOrderFileLO.erase(it);
             else
                 ++it;
@@ -215,22 +215,15 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             }
 
             // Ensure that the first plugin is the game's master file.
-            if (!gh->loadOrder.empty() && boost::iequals(gh->loadOrder.begin()->Name(), gh->MasterFile())) {
-                size_t pos = gh->loadOrder.Find(gh->MasterFile());
-
-                if (pos != gh->loadOrder.size()) {
-                    gh->loadOrder.Move(0, gh->loadOrder[pos]);
-                }
-                else {
-                    gh->loadOrder.insert(gh->loadOrder.begin(), gh->MasterFile());
-                }
+            if (!gh->loadOrder.empty() && !boost::iequals(gh->loadOrder.begin()->Name(), gh->MasterFile())) {
+                gh->loadOrder.Move(gh->MasterFile(), gh->loadOrder.begin());
             }
 
             // Now check all plugins' existences.
             // Also check that no plugin appears more than once.
             // Also ensure that all master files load before all plugin files.
             unordered_set<Plugin> hashset;
-            size_t lastMasterPos = gh->loadOrder.LastMasterPos(*gh);
+            auto firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
             vector<Plugin>::iterator it = gh->loadOrder.begin();
             while (it != gh->loadOrder.end()) {
                 if (!it->Exists(*gh)) {
@@ -246,12 +239,10 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
                 }
 
                 if (it->IsMasterFile(*gh)) {
-                    size_t pos = distance(gh->loadOrder.begin(), it);
-                    if (pos - lastMasterPos > 1) {
+                    if (distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.cbegin(), firstNonMaster)) {
                         // Master amongst plugins, move it after the last master.
-                        gh->loadOrder.Move(lastMasterPos + 1, *it);
+                        firstNonMaster = ++gh->loadOrder.Move(*it, firstNonMaster);
                     }
-                    lastMasterPos = pos;
                 }
             }
 

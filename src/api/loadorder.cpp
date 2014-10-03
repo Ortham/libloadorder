@@ -130,20 +130,21 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
     }
 
     //Now add any additional plugins to the load order.
-    size_t loSize = gh->loadOrder.size();
-    size_t lastMasterPos = gh->loadOrder.LastMasterPos(*gh);
+    auto firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
     for (fs::directory_iterator it(gh->PluginsFolder()); it != fs::directory_iterator(); ++it) {
         if (fs::is_regular_file(it->status())) {
             const Plugin plugin(it->path().filename().string());
-            if (plugin.IsValid(*gh) && gh->loadOrder.Find(plugin) == loSize) {  //If the plugin is not present, add it.
+            if (plugin.IsValid(*gh) && gh->loadOrder.Find(plugin) == gh->loadOrder.cend()) {  //If the plugin is not present, add it.
                 //If it is a master, add it after the last master, otherwise add it at the end.
                 if (plugin.IsMasterFile(*gh)) {
-                    gh->loadOrder.insert(gh->loadOrder.begin() + lastMasterPos, plugin);
-                    lastMasterPos++;
+                    firstNonMaster = ++gh->loadOrder.insert(firstNonMaster, plugin);
                 }
-                else
+                else {
+                    // push_back may invalidate all current iterators, so reassign firstNonMaster in case.
+                    size_t firstNonMasterPos = distance(gh->loadOrder.cbegin(), firstNonMaster);
                     gh->loadOrder.push_back(plugin);
-                loSize++;
+                    firstNonMaster = gh->loadOrder.cbegin() + firstNonMasterPos + 1;
+                }
             }
         }
     }
@@ -186,11 +187,11 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
 
     //Find plugin pos.
     const Plugin pluginObj(plugin);
-    size_t pos = gh->loadOrder.Find(pluginObj);
-    if (pos == gh->loadOrder.size())
+    auto pos = gh->loadOrder.Find(pluginObj);
+    if (pos == gh->loadOrder.cend())
         return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
 
-    *index = pos;
+    *index = distance(gh->loadOrder.cbegin(), pos);
 
     return successRetCode;
 }
@@ -223,15 +224,13 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
 
     //Get current plugin position.
     const Plugin pluginObj(plugin);
-    size_t pos = gh->loadOrder.Find(pluginObj);
+    auto pos = gh->loadOrder.Find(pluginObj);
 
     //Change plugin position.
-    size_t newPos;
     if (index >= gh->loadOrder.size())
-        newPos = gh->loadOrder.size();
+        gh->loadOrder.Move(pluginObj, gh->loadOrder.cend());
     else
-        newPos = index;
-    gh->loadOrder.Move(newPos, pluginObj);
+        gh->loadOrder.Move(pluginObj, gh->loadOrder.cbegin() + index);
 
     //Check that new load order is valid.
     try {
@@ -239,10 +238,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     }
     catch (error& e) {
         //Undo change.
-        if (pos == gh->loadOrder.size() || pos == gh->loadOrder.size() - 1)
-            gh->loadOrder.erase(gh->loadOrder.begin() + newPos);
-        else
-            gh->loadOrder.Move(pos, pluginObj);
+        gh->loadOrder.Move(pluginObj, pos);
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid load order. Details: ") + e.what());
     }
 
