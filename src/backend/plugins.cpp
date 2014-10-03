@@ -304,22 +304,22 @@ namespace liblo {
             return;
 
         if (at(0) != Plugin(parentGame.MasterFile()))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
+            throw error(LIBLO_WARN_INVALID_LIST, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
 
         bool wasMaster = true;
         unordered_set<Plugin> hashset;
         for (const auto plugin : *this) {
             if (!plugin.Exists(parentGame))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
+                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not installed.");
             bool isMaster = plugin.IsMasterFile(parentGame);
             if (isMaster && !wasMaster)
-                throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
+                throw error(LIBLO_WARN_INVALID_LIST, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
             if (hashset.find(plugin) != hashset.end())
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is in the load order twice.");
+                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is in the load order twice.");
             vector<Plugin> masters(plugin.GetMasters(parentGame));
             for (const auto &master : masters) {
                 if (hashset.find(master) == hashset.end() && this->Find(master) != this->end())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
-                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
+                    throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
             }
             hashset.insert(plugin);
             wasMaster = isMaster;
@@ -534,7 +534,7 @@ namespace liblo {
     void ActivePlugins::CheckValidity(const _lo_game_handle_int& parentGame) const {
         for (const auto& plugin : *this) {
             if (!plugin.Exists(parentGame))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not installed.");
+                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not installed.");
             /*vector<Plugin> masters = plugin.GetMasters(parentGame);
             //Disabled because it causes false positives for Filter patches. This means libloadorder doesn't check to ensure all a plugin's masters are active, but I don't think it should get mixed up with Bash Tag detection.
             for (const auto& master: masters) {
@@ -544,12 +544,12 @@ namespace liblo {
         }
 
         if (size() > 255)
-            throw error(LIBLO_ERROR_INVALID_ARGS, "More than 255 plugins are active.");
+            throw error(LIBLO_WARN_INVALID_LIST, "More than 255 plugins are active.");
         else if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin("Skyrim.esm")) == end())
-                throw error(LIBLO_ERROR_INVALID_ARGS, "Skyrim.esm isn't active.");
+                throw error(LIBLO_WARN_INVALID_LIST, "Skyrim.esm isn't active.");
             else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
-                throw error(LIBLO_ERROR_INVALID_ARGS, "Update.esm is installed but isn't active.");
+                throw error(LIBLO_WARN_INVALID_LIST, "Update.esm is installed but isn't active.");
         }
     }
 
