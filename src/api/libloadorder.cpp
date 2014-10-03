@@ -266,19 +266,6 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             }
         }
 
-        // Check that there aren't more than 255 plugins, and remove those
-        // at the end of the load order if so.
-        if (gh->activePlugins.size() > 255) {
-            size_t toRemove = gh->activePlugins.size() - 255;
-            while (toRemove > 0) {
-                for (auto rit = gh->loadOrder.crbegin(); rit != gh->loadOrder.crend(); ++rit) {
-                    auto pos = gh->activePlugins.find(*rit);
-                    if (pos != gh->activePlugins.end())
-                        gh->activePlugins.erase(pos);
-                }
-            }
-        }
-
         if (gh->Id() == LIBLO_GAME_TES5) {
             // Ensure Skyrim.esm is active.
             if (gh->activePlugins.find(Plugin("Skyrim.esm")) == gh->activePlugins.end())
@@ -296,6 +283,19 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
                 it = gh->activePlugins.erase(it);
             else
                 ++it;
+        }
+
+        // Check that there aren't more than 255 plugins, and remove those
+        // at the end of the load order if so.
+        if (gh->activePlugins.size() > 255) {
+            size_t toRemove = gh->activePlugins.size() - 255;
+            while (toRemove > 0) {
+                for (auto rit = gh->loadOrder.crbegin(); rit != gh->loadOrder.crend(); ++rit) {
+                    auto pos = gh->activePlugins.find(*rit);
+                    if (pos != gh->activePlugins.end())
+                        gh->activePlugins.erase(pos);
+                }
+            }
         }
 
         // Now write changes.
