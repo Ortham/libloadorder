@@ -355,13 +355,13 @@ namespace liblo {
         newPos = this->insert(newPos, plugin);
 
         // Now erase any other instances of this plugin.
-        auto oldPos = find(this->cbegin(), this->cend(), plugin);
-        while (oldPos != this->cend()) {
+        auto oldPos = find(this->begin(), this->end(), plugin);
+        while (oldPos != this->end()) {
             if (oldPos != newPos)
                 oldPos = this->erase(oldPos);
             else
                 ++oldPos;
-            oldPos = find(oldPos, this->cend(), plugin);
+            oldPos = find(oldPos, this->end(), plugin);
         }
 
         return newPos;
