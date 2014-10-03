@@ -27,7 +27,7 @@ along with libloadorder.  If not, see
 #define __LIBLO_TEST_API__
 
 #include "tests/fixtures.h"
-#include "backend\streams.h"
+#include "backend/streams.h"
 
 #include <boost/filesystem.hpp>
 
