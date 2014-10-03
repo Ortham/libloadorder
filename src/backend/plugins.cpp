@@ -56,8 +56,32 @@ namespace liblo {
         return name;
     }
 
-    bool Plugin::IsValid() const {
-        return (boost::iends_with(name, ".esp") || boost::iends_with(name, ".esm"));
+    bool Plugin::IsValid(const _lo_game_handle_int& parentGame) const {
+        // Rather than just checking the extension, try parsing the file, and see if it fails.
+        try {
+            espm::File * file = nullptr;
+
+            fs::path filepath = parentGame.PluginsFolder() / name;
+            if (IsGhosted(parentGame))
+                filepath = filepath.string() + ".ghost";
+
+            if (parentGame.Id() == LIBLO_GAME_TES3)
+                file = new espm::tes3::File(filepath, parentGame.espm_settings, false, true);
+            else if (parentGame.Id() == LIBLO_GAME_TES4)
+                file = new espm::tes4::File(filepath, parentGame.espm_settings, false, true);
+            else if (parentGame.Id() == LIBLO_GAME_TES5)
+                file = new espm::tes5::File(filepath, parentGame.espm_settings, false, true);
+            else if (parentGame.Id() == LIBLO_GAME_FO3)
+                file = new espm::fo3::File(filepath, parentGame.espm_settings, false, true);
+            else
+                file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
+
+            delete file;
+        }
+        catch (std::exception& /*e*/) {
+            return false;
+        }
+        return true;
     }
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
@@ -246,7 +270,7 @@ namespace liblo {
             for (fs::directory_iterator itr(parentGame.PluginsFolder()); itr != fs::directory_iterator(); ++itr) {
                 if (fs::is_regular_file(itr->status())) {
                     const Plugin plugin(itr->path().filename().string());
-                    if (plugin.IsValid() && Find(plugin) == max) {
+                    if (plugin.IsValid(parentGame) && Find(plugin) == max) {
                         //If it is a master, add it after the last master, otherwise add it at the end.
                         if (plugin.IsMasterFile(parentGame)) {
                             insert(begin() + lastMasterPos + 1, plugin);

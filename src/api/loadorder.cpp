@@ -135,7 +135,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
     for (fs::directory_iterator it(gh->PluginsFolder()); it != fs::directory_iterator(); ++it) {
         if (fs::is_regular_file(it->status())) {
             const Plugin plugin(it->path().filename().string());
-            if (plugin.IsValid() && gh->loadOrder.Find(plugin) == loSize) {  //If the plugin is not present, add it.
+            if (plugin.IsValid(*gh) && gh->loadOrder.Find(plugin) == loSize) {  //If the plugin is not present, add it.
                 //If it is a master, add it after the last master, otherwise add it at the end.
                 if (plugin.IsMasterFile(*gh)) {
                     gh->loadOrder.insert(gh->loadOrder.begin() + lastMasterPos, plugin);

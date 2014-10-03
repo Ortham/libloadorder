@@ -27,6 +27,7 @@ along with libloadorder.  If not, see
 #define __LIBLO_TEST_API__
 
 #include "tests/fixtures.h"
+#include "backend\streams.h"
 
 #include <boost/filesystem.hpp>
 
@@ -133,7 +134,19 @@ TEST(GameHandleDestroyTest, HandledNullInput) {
 
 TEST_F(OblivionOperationsTest, SetGameMaster) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin"));
+
+    // Write out an empty file.
+    liblo::ofstream out("./game/Data/Not a plugin.esm");
+    out.close();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin.esm"));
+    boost::filesystem::remove("./game/Data/Not a plugin.esm");
+
+    // Write out an non-empty, non-plugin file.
+    out.open("./game/Data/Not a plugin.esm");
+    out << "This isn't a valid plugin file.";
+    out.close();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin.esm"));
+    boost::filesystem::remove("./game/Data/Not a plugin.esm");
 
     EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
 
