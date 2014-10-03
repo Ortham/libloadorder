@@ -240,9 +240,9 @@ namespace liblo {
                         }
                         else {
                             // push_back may invalidate all current iterators, so reassign firstNonMaster in case.
-                            size_t firstNonMasterPos = distance(this->cbegin(), firstNonMaster);
+                            size_t firstNonMasterPos = distance(this->begin(), firstNonMaster);
                             this->push_back(plugin);
-                            firstNonMaster = this->cbegin() + firstNonMasterPos + 1;
+                            firstNonMaster = this->begin() + firstNonMasterPos + 1;
                         }
                     }
                 }
@@ -349,30 +349,30 @@ namespace liblo {
         }
     }
 
-    std::vector<Plugin>::const_iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos) {
+    std::vector<Plugin>::iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::const_iterator newPos) {
         // Inserting and erasing iterators invalidates later iterators, so first insert into
         // the vector.
-        newPos = this->insert(newPos, plugin);
+        auto retPos = this->insert(newPos, plugin);
 
         // Now erase any other instances of this plugin.
         auto oldPos = find(this->cbegin(), this->cend(), plugin);
         while (oldPos != this->cend()) {
-            if (oldPos != newPos)
+            if (oldPos != retPos)
                 oldPos = this->erase(oldPos);
             else
                 ++oldPos;
             oldPos = find(oldPos, this->cend(), plugin);
         }
 
-        return newPos;
+        return retPos;
     }
 
     std::vector<Plugin>::const_iterator LoadOrder::Find(const Plugin& plugin) const {
         return find(this->cbegin(), this->cend(), plugin);
     }
 
-    std::vector<Plugin>::const_iterator LoadOrder::FindFirstNonMaster(const _lo_game_handle_int& parentGame) const {
-        return find_if(this->cbegin(), this->cend(), [&parentGame](const Plugin& plugin) {
+    std::vector<Plugin>::iterator LoadOrder::FindFirstNonMaster(const _lo_game_handle_int& parentGame) {
+        return find_if(this->begin(), this->end(), [&parentGame](const Plugin& plugin) {
             return !plugin.IsMasterFile(parentGame);
         });
     }

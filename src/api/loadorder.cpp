@@ -141,9 +141,9 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
                 }
                 else {
                     // push_back may invalidate all current iterators, so reassign firstNonMaster in case.
-                    size_t firstNonMasterPos = distance(gh->loadOrder.cbegin(), firstNonMaster);
+                    size_t firstNonMasterPos = distance(gh->loadOrder.begin(), firstNonMaster);
                     gh->loadOrder.push_back(plugin);
-                    firstNonMaster = gh->loadOrder.cbegin() + firstNonMasterPos + 1;
+                    firstNonMaster = gh->loadOrder.begin() + firstNonMasterPos + 1;
                 }
             }
         }
@@ -228,9 +228,9 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
 
     //Change plugin position.
     if (index >= gh->loadOrder.size())
-        gh->loadOrder.Move(pluginObj, gh->loadOrder.cend());
+        gh->loadOrder.Move(pluginObj, gh->loadOrder.end());
     else
-        gh->loadOrder.Move(pluginObj, gh->loadOrder.cbegin() + index);
+        gh->loadOrder.Move(pluginObj, gh->loadOrder.begin() + index);
 
     //Check that new load order is valid.
     try {

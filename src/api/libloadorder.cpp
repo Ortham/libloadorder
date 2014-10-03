@@ -239,7 +239,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
                 }
 
                 if (it->IsMasterFile(*gh)) {
-                    if (distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.cbegin(), firstNonMaster)) {
+                    if (distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.begin(), firstNonMaster)) {
                         // Master amongst plugins, move it after the last master.
                         firstNonMaster = ++gh->loadOrder.Move(*it, firstNonMaster);
                     }
