@@ -76,15 +76,6 @@ namespace liblo {
         return ret;
     }
 
-    bool Plugin::IsFalseFlagged(const _lo_game_handle_int& parentGame) const {
-        string ext;
-        if (IsGhosted(parentGame))
-            ext = fs::path(name).stem().extension().string();
-        else
-            ext = fs::path(name).extension().string();
-        return ((IsMasterFile(parentGame) && !boost::iequals(ext, ".esm")) || (!IsMasterFile(parentGame) && boost::iequals(ext, ".esm")));
-    }
-
     bool Plugin::IsGhosted(const _lo_game_handle_int& parentGame) const {
         return (fs::exists(parentGame.PluginsFolder() / fs::path(name + ".ghost")));
     }
