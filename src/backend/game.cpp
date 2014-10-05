@@ -146,7 +146,9 @@ void _lo_game_handle_int::InitPaths(const boost::filesystem::path& localPath) {
 }
 
 void _lo_game_handle_int::SetMasterFile(const string& file) {
-    if (!Plugin(file).Exists(*this))
+    if (id == LIBLO_GAME_TES5)
+        throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot change Skyrim's main master file.");
+    else if (!Plugin(file).Exists(*this))
         throw error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + file + "\" cannot be found.");
     else if (!Plugin(file).IsValid(*this))
         throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + file + "\" is not a valid plugin file.");

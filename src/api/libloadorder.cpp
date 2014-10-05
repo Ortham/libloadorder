@@ -178,6 +178,8 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
     if (gh == nullptr || masterFile == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
+    if (gh->Id() == LIBLO_GAME_TES5)
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Cannot change Skyrim's main master file.");
 
     try {
         gh->SetMasterFile(masterFile);
