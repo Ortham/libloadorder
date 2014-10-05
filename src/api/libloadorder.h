@@ -152,6 +152,9 @@ extern "C"
      *  @details Sets the master file for the given game handle to the given
      *           filename, for use with total conversions that replace the
      *           vanilla game master file.
+     *           Setting the master file for Skyrim is not allowed, as the
+     *           game will crash if Skyrim.esm is replaced with a plugin with
+     *           a different name.
      *  @param gh
      *      The game handle to be operated on.
      *  @param masterFile
