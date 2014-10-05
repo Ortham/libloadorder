@@ -124,7 +124,4 @@ IF (${GTEST_FOUND})
     # Build libloadorder tester.
     add_executable        (libloadorder-tester ${TESTER_SRC} ${TESTER_HEADERS})
     target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS} ${GTEST_BOTH_LIBRARIES})
-
-    add_custom_command(TARGET libloadorder-tester
-                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/tests/plugins $<TARGET_FILE_DIR:libloadorder-tester>/game/Data)
 ENDIF ()

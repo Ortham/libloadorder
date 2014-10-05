@@ -27,10 +27,8 @@ along with libloadorder.  If not, see
 #define __LIBLO_TEST_API__
 
 #include "tests/fixtures.h"
-#include "backend/streams.h"
 #include "backend/helpers.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
 TEST(GetVersion, HandlesNullInput) {
@@ -136,24 +134,12 @@ TEST(GameHandleDestroyTest, HandledNullInput) {
 
 TEST_F(OblivionOperationsTest, SetGameMaster) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
 
-    // Write out an empty file.
-    liblo::ofstream out("./game/Data/Not a plugin.esm");
-    out.close();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin.esm"));
-    boost::filesystem::remove("./game/Data/Not a plugin.esm");
-
-    // Write out an non-empty, non-plugin file.
-    out.open("./game/Data/Not a plugin.esm");
-    out << "This isn't a valid plugin file.";
-    out.close();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Not a plugin.esm"));
-    boost::filesystem::remove("./game/Data/Not a plugin.esm");
-
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
     // Try setting to a master that doesn't exist.
-    ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esm.missing"));
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "EnhancedWeather.esm.missing"));
 }
 
@@ -161,30 +147,26 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
 
     // Write a broken plugins.txt.
-    ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esm.missing"));
-    boost::filesystem::create_directory("./local");
-    ASSERT_TRUE(boost::filesystem::exists("./local"));
-    liblo::ofstream active("./local/plugins.txt");
-    active << "Cava Obscura - Cyrodiil.esp" << std::endl
-        << "Cava Obscura - Filter Patch For Mods.esp" << std::endl
-        << "Cava Obscura - SI.esp" << std::endl
-        << "Cava Obscura - Cyrodiil.esp" << std::endl  // Duplicate, should be removed.
-        << "EnhancedWeather - Darker Nights, 80.esp" << std::endl
-        << "EnhancedWeather.esm.missing" << std::endl  // Missing, should be removed.
-        << "EnhancedWeather.esp" << std::endl;
+    liblo::ofstream active(localPath / "plugins.txt");
+    active << "Blank - Master Dependent.esp" << std::endl
+        << "Blank - Plugin Dependent.esp" << std::endl
+        << "Blank - Different Master Dependent.esp" << std::endl
+        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
+        << "Blank.esm.missing" << std::endl  // Missing, should be removed.
+        << "Blank.esp" << std::endl;
     active.close();
 
     // Set the load order.
     char * plugins[] = {
-        "EnhancedWeather.esm",
-        "EnhancedWeather.esp",
-        "EnhancedWeather - Darker Nights, 80.esp",
-        "Cava Obscura - Cyrodiil.esp",
-        "Cava Obscura - SI.esp",
-        "Cava Obscura - Filter Patch For Mods.esp"
+        "Blank.esm",
+        "Blank.esp",
+        "Blank - Different Plugin Dependent.esp",
+        "Blank - Master Dependent.esp",
+        "Blank - Different Master Dependent.esp",
+        "Blank - Plugin Dependent.esp"
     };
     size_t pluginsNum = 6;
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
 
     // Now fix plugins.txt
@@ -194,15 +176,14 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
 
     // Read plugins.txt. Order doesn't matter, so just check content using a sorted list.
     std::list<std::string> expectedLines = {
-        "Cava Obscura - Cyrodiil.esp",
-        "Cava Obscura - Filter Patch For Mods.esp",
-        "Cava Obscura - SI.esp",
-        "EnhancedWeather - Darker Nights, 80.esp",
-        "EnhancedWeather.esp"
+        "Blank - Different Master Dependent.esp",
+        "Blank - Master Dependent.esp",
+        "Blank - Plugin Dependent.esp",
+        "Blank.esp"
     };
     std::list<std::string> actualLines;
     std::string content;
-    liblo::fileToBuffer("./local/plugins.txt", content);
+    liblo::fileToBuffer(localPath / "plugins.txt", content);
     boost::split(actualLines, content, [](char c) {
         return c == '\n';
     });

@@ -37,9 +37,9 @@ TEST_F(OblivionOperationsTest, GetActivePlugins) {
 
 TEST_F(OblivionOperationsTest, SetActivePlugins) {
     char * plugins[] = {
-        "EnhancedWeather.esm",
-        "EnhancedWeather.esp",
-        "Cava Obscura - Cyrodiil.esp"
+        "Blank.esm",
+        "Blank.esp",
+        "Blank - Master Dependent.esp"
     };
     size_t pluginsNum = 3;
     EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, pluginsNum));
@@ -47,11 +47,11 @@ TEST_F(OblivionOperationsTest, SetActivePlugins) {
 
 TEST_F(OblivionOperationsTest, GetPluginActive) {
     bool isActive;
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Cava Obscura - Cyrodiil.esp", &isActive));
+    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
 }
 
 TEST_F(OblivionOperationsTest, SetPluginActive) {
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Cava Obscura - SI.esp", true));
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
 }
 
 #endif

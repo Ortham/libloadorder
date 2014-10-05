@@ -28,8 +28,6 @@ along with libloadorder.  If not, see
 
 #include "tests/fixtures.h"
 
-#include <boost/filesystem.hpp>
-
 TEST_F(OblivionOperationsTest, GetLoadOrderMethod) {
     unsigned int method;
     EXPECT_EQ(LIBLO_OK, lo_get_load_order_method(gh, &method));
@@ -53,8 +51,8 @@ TEST_F(SkyrimOperationsTest, GetLoadOrderMethod) {
 TEST_F(OblivionOperationsTest, SetLoadOrder) {
     // Can't redistribute Oblivion.esm, but Nehrim.esm can be,
     // so use that for testing.
-    char * plugins[1] = {
-        "EnhancedWeather.esm"
+    char * plugins[] = {
+        "Blank.esm"
     };
     size_t pluginsNum = 1;
 
@@ -67,23 +65,20 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, plugins, pluginsNum));
 
     // Now set game master and try again.
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
 
     // Now test with more than one plugin.
     char * plugins2[] = {
-        "EnhancedWeather.esm",
-        "EnhancedWeather.esp"
+        "Blank.esm",
+        "Blank.esp"
     };
     pluginsNum = 2;
     EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins2, pluginsNum));
 
-    // Now test with more than one plugin, where one doesn't exist.
-    ASSERT_FALSE(boost::filesystem::exists("./game/Data/EnhancedWeather.esp.missing"));
-
     char * plugins3[] = {
-        "EnhancedWeather.esm",
-        "EnhancedWeather.esp.missing"
+        "Blank.esm",
+        "Blank.esp.missing"
     };
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, plugins3, pluginsNum));
 }
@@ -98,21 +93,71 @@ TEST_F(OblivionOperationsTest, GetLoadOrder) {
     EXPECT_EQ(LIBLO_OK, lo_get_load_order(gh, &plugins, &pluginsNum));
 }
 
+TEST_F(SkyrimOperationsTest, GetLoadOrder) {
+    // Test that ghosted plugins get put into loadorder.txt correctly.
+
+    // Set load order to ensure that test ghosted plugin is loaded early.
+    char * plugins[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "Blank - Master Dependent.esm"
+    };
+    size_t pluginsNum = 1;
+    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+
+    // Now get load order.
+    std::vector<std::string> actualLines;
+    std::string content;
+    ASSERT_TRUE(boost::filesystem::exists(localPath / "loadorder.txt"));
+    liblo::fileToBuffer(localPath / "loadorder.txt", content);
+    boost::split(actualLines, content, [](char c) {
+        return c == '\n';
+    });
+
+    boost::filesystem::copy_file(localPath / "loadorder.txt", localPath / "loadorder.txt.copy");
+
+    EXPECT_EQ("Blank - Master Dependent.esm", actualLines[2]);
+}
+
 TEST_F(OblivionOperationsTest, SetPluginPosition) {
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "EnhancedWeather.esm"));
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "EnhancedWeather.esp", 1));
+    // First ensure than the game master comes first.
+    char * plugins[] = {
+        "Blank.esm"
+    };
+    size_t pluginsNum = 1;
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+
+    // Load filter patch last.
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 100));
 }
 
 TEST_F(OblivionOperationsTest, GetPluginPosition) {
+    // First ensure than the game master comes first.
+    char * plugins[] = {
+        "Blank.esm"
+    };
+    size_t pluginsNum = 1;
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+
     size_t pos;
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "EnhancedWeather.esm", &pos));
+    EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "Blank.esm", &pos));
     EXPECT_EQ(0, pos);
 }
 
 TEST_F(OblivionOperationsTest, GetIndexedPlugin) {
+    // First ensure than the game master comes first.
+    char * plugins[] = {
+        "Blank.esm"
+    };
+    size_t pluginsNum = 1;
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+
     char * plugin;
     EXPECT_EQ(LIBLO_OK, lo_get_indexed_plugin(gh, 0, &plugin));
-    EXPECT_STREQ("EnhancedWeather.esm", plugin);
+    EXPECT_STREQ("Blank.esm", plugin);
 }
 
 #endif
