@@ -99,32 +99,43 @@ TEST(Cleanup, HandlesNoError) {
 }
 
 TEST_F(GameHandleCreationTest, HandlesValidInputs) {
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES3, "./game", "./local"));
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES3, gamePath, localPath));
     ASSERT_NO_THROW(lo_destroy_handle(gh));
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, "./game", "./local"));
+    gh = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, gamePath, localPath));
     ASSERT_NO_THROW(lo_destroy_handle(gh));
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, "./game", "./local"));
+    gh = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, gamePath, localPath));
     ASSERT_NO_THROW(lo_destroy_handle(gh));
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FO3, "./game", "./local"));
+    gh = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FO3, gamePath, localPath));
     ASSERT_NO_THROW(lo_destroy_handle(gh));
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FNV, "./game", "./local"));
+    gh = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FNV, gamePath, localPath));
+    ASSERT_NO_THROW(lo_destroy_handle(gh));
+    gh = nullptr;
+
+    // Also test absolute paths.
+    boost::filesystem::path game = boost::filesystem::current_path() / gamePath;
+    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidHandleInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, LIBLO_GAME_TES4, "./game", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, LIBLO_GAME_TES4, gamePath, localPath));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidGameType) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, "./game", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, gamePath, localPath));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidGamePathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, "./local"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, "/\0", "./local"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, localPath));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, missingPath, localPath));
 }
 
 TEST_F(GameHandleCreationTest, HandlesInvalidLocalPathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, "./game", "/\0"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, gamePath, missingPath));
 }
 
 TEST(GameHandleDestroyTest, HandledNullInput) {

@@ -40,13 +40,27 @@ along with libloadorder.  If not, see
 
 class GameHandleCreationTest : public ::testing::Test {
 protected:
-    inline GameHandleCreationTest() : gh(NULL) {}
+    inline GameHandleCreationTest() : gh(nullptr), gamePath("./Oblivion"), localPath("./local/Oblivion"), missingPath("./missing") {}
+
+    inline virtual void SetUp() {
+        ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
+        ASSERT_TRUE(boost::filesystem::exists(localPath));
+
+        ASSERT_NO_THROW(boost::filesystem::create_directories(gamePath));
+        ASSERT_TRUE(boost::filesystem::exists(gamePath));
+
+        ASSERT_FALSE(boost::filesystem::exists(missingPath));
+    }
 
     inline virtual void TearDown() {
         ASSERT_NO_THROW(lo_destroy_handle(gh));
     };
 
     lo_game_handle gh;
+
+    const char * gamePath;
+    const char * localPath;
+    const char * missingPath;
 };
 
 class GameOperationsTest : public ::testing::Test {
