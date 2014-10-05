@@ -27,7 +27,6 @@ along with libloadorder.  If not, see
 #define __LIBLO_TEST_API__
 
 #include "tests/fixtures.h"
-#include "backend/helpers.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -183,10 +182,13 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
     };
     std::list<std::string> actualLines;
     std::string content;
-    liblo::fileToBuffer(localPath / "plugins.txt", content);
-    boost::split(actualLines, content, [](char c) {
-        return c == '\n';
-    });
+    liblo::ifstream in(localPath / "plugins.txt");
+    while (in.good()) {
+        std::string line;
+        std::getline(in, line);
+        actualLines.push_back(line);
+    }
+    in.close();
     actualLines.pop_back();  // Remove the trailing newline.
     actualLines.sort();
 

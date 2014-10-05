@@ -28,6 +28,8 @@ along with libloadorder.  If not, see
 
 #include "tests/fixtures.h"
 
+#include <boost/algorithm/string.hpp>
+
 TEST_F(OblivionOperationsTest, GetLoadOrderMethod) {
     unsigned int method;
     EXPECT_EQ(LIBLO_OK, lo_get_load_order_method(gh, &method));
@@ -98,10 +100,13 @@ TEST_F(SkyrimOperationsTest, GetLoadOrder) {
     std::vector<std::string> actualLines;
     std::string content;
     ASSERT_TRUE(boost::filesystem::exists(localPath / "loadorder.txt"));
-    liblo::fileToBuffer(localPath / "loadorder.txt", content);
-    boost::split(actualLines, content, [](char c) {
-        return c == '\n';
-    });
+    liblo::ifstream in(localPath / "loadorder.txt");
+    while (in.good()) {
+        std::string line;
+        std::getline(in, line);
+        actualLines.push_back(line);
+    }
+    in.close();
 
     EXPECT_EQ("Blank - Different.esm", actualLines[2]);
 }
