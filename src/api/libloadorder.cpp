@@ -105,10 +105,10 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
     try {
         // Check for valid paths.
         if (!boost::filesystem::is_directory(gamePath))
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "Given game path does not exist.");
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "Given game path \"" + string(gamePath) + "\" is not a valid directory.");
 
         if (localPath != nullptr && !boost::filesystem::is_directory(localPath))
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "Given game path does not exist.");
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "Given local data path \"" + string(localPath) + "\" is not a valid directory.");
 
         //Create handle.
         *gh = new _lo_game_handle_int(gameId, gamePath);
