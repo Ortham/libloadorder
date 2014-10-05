@@ -30,6 +30,12 @@ along with libloadorder.  If not, see
 #include "backend/streams.h"
 
 #include <gtest/gtest.h>
+
+#ifdef __GNUC__  // Workaround for GCC linking error.
+#pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+#define BOOST_NO_SCOPED_ENUMS  // For older versions.
+#endif
 #include <boost/filesystem.hpp>
 
 class GameHandleCreationTest : public ::testing::Test {
@@ -49,7 +55,7 @@ protected:
         : dataPath(gameDataPath), localPath(gameLocalPath), gh(NULL) {}
 
     inline virtual void SetUp() {
-        boost::filesystem::create_directories(localPath);
+        ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
         ASSERT_TRUE(boost::filesystem::exists(localPath));
 
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esm"));
@@ -68,7 +74,7 @@ protected:
 
         // Ghost a plugin.
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
-        boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm", dataPath / "Blank - Master Dependent.esm.ghost");
+        ASSERT_NO_THROW(boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm", dataPath / "Blank - Master Dependent.esm.ghost"));
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
 
         // Write out an empty file.
@@ -86,16 +92,16 @@ protected:
     inline virtual void TearDown() {
         // Unghost the ghosted plugin.
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
-        boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm.ghost", dataPath / "Blank - Master Dependent.esm");
+        ASSERT_NO_THROW(boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm.ghost", dataPath / "Blank - Master Dependent.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
 
         // Delete generated files.
-        boost::filesystem::remove(dataPath / "EmptyFile.esm");
-        boost::filesystem::remove(dataPath / "NotAPlugin.esm");
+        ASSERT_NO_THROW(boost::filesystem::remove(dataPath / "EmptyFile.esm"));
+        ASSERT_NO_THROW(boost::filesystem::remove(dataPath / "NotAPlugin.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "EmptyFile.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "NotAPlugin.esm"));
 
-        lo_destroy_handle(gh);
+        ASSERT_NO_THROW(lo_destroy_handle(gh));
     }
 
     const boost::filesystem::path dataPath;
@@ -148,7 +154,7 @@ protected:
         GameOperationsTest::TearDown();
 
         // Delete existing plugins.txt.
-        boost::filesystem::remove(localPath / "plugins.txt");
+        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
     };
 };
 
@@ -161,7 +167,7 @@ protected:
 
         // Can't change Skyrim's main master file, so mock it.
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
-        boost::filesystem::copy_file(dataPath / "Blank.esm", dataPath / "Skyrim.esm");
+        ASSERT_NO_THROW(boost::filesystem::copy_file(dataPath / "Blank.esm", dataPath / "Skyrim.esm"));
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
 
         // Set Skyrim's load order to a known list before running the test.
@@ -195,12 +201,12 @@ protected:
 
         // Delete the mock Skyrim.esm.
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
-        boost::filesystem::remove(dataPath / "Skyrim.esm");
+        ASSERT_NO_THROW(boost::filesystem::remove(dataPath / "Skyrim.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
 
         // Delete existing plugins.txt and loadorder.txt.
-        boost::filesystem::remove(localPath / "plugins.txt");
-        boost::filesystem::remove(localPath / "loadorder.txt");
+        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
+        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "loadorder.txt"));
     };
 };
 
