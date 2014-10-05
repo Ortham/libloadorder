@@ -31,11 +31,14 @@
 #include "streams.h"
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
-#include <regex>
+#include <boost/regex.hpp>
 #include <set>
 
 using namespace std;
 namespace fs = boost::filesystem;
+
+using boost::regex;
+using boost::regex_match;
 
 namespace liblo {
     //////////////////////
@@ -378,15 +381,19 @@ namespace liblo {
             in.exceptions(std::ios_base::badbit);
 
             string line;
-            bool isTES3 = parentGame.Id() == LIBLO_GAME_TES3;  //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-            regex reg = regex("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
-
+            regex reg("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
             while (getline(in, line)) {
-                if (line.empty() || (isTES3 && !regex_match(line, reg)) || (!isTES3 && line[0] == '#'))
+                if (line.empty() || line[0] == '#')
                     continue;
 
-                if (isTES3)  //Now cut off everything up to and including the = sign.
-                    line = line.substr(line.find('=') + 1);
+                if (parentGame.Id() == LIBLO_GAME_TES3) {
+                    //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
+                    if (regex_match(line, reg))
+                        line = line.substr(line.find('=') + 1);
+                    else
+                        continue;
+                }
+
                 if (transcode)
                     line = ToUTF8(line);
                 else {

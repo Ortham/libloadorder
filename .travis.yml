@@ -3,14 +3,16 @@ compiler:
   - gcc
 
 before_install:
+  # Add a PPA for Boost 1.55.
+  - sudo add-apt-repository ppa:boost-latest/ppa -y
   - sudo apt-get update -qq
 
 install:
   # Currently inside the cloned repo path.
   # Install libespm.
   - git clone https://github.com/WrinklyNinja/libespm.git ../libespm
-  # Install Boost & Google Test
-  - sudo apt-get install -y libboost-filesystem1.48-dev libboost-locale1.48-dev libboost-iostreams1.48-dev
+  # Install Boost.
+  - sudo apt-get install -y libboost-filesystem1.55-dev libboost-locale1.55-dev libboost-iostreams1.55-dev libboost-regex1.55-dev
   # Install Google Test
   - cd ..
   - wget https://googletest.googlecode.com/files/gtest-1.7.0.zip
