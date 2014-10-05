@@ -177,10 +177,14 @@ boost::filesystem::path _lo_game_handle_int::PluginsFolder() const {
 }
 
 boost::filesystem::path _lo_game_handle_int::ActivePluginsFile() const {
+    if (pluginsPath.empty())
+        throw error(LIBLO_ERROR_INVALID_ARGS, "No local app data path set.");
     return pluginsPath;
 }
 
 boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
+    if (loadorderPath.empty())
+        throw error(LIBLO_ERROR_INVALID_ARGS, "No local app data path set.");
     return loadorderPath;
 }
 

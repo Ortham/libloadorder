@@ -102,29 +102,36 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
     std::locale::global(boost::locale::generator().generate(""));
     boost::filesystem::path::imbue(std::locale());
 
-    // Check for valid paths.
-    boost::filesystem::path testPath(gamePath);
-    for (const auto& name : testPath) {
-        if (!boost::filesystem::native(name.string()))
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game path specified.");
-    }
-    testPath = localPath;
-    for (const auto& name : testPath) {
-        if (!boost::filesystem::native(name.string()))
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid local data path specified.");
-    }
-
-    //Create handle.
     try {
+        // Check for valid paths.
+        boost::filesystem::path testPath(gamePath);
+        for (const auto& name : testPath) {
+            if (!boost::filesystem::native(name.string()))
+                return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game path specified.");
+        }
+        testPath = localPath;
+        for (const auto& name : testPath) {
+            if (!boost::filesystem::native(name.string()))
+                return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid local data path specified.");
+        }
+
+        //Create handle.
         *gh = new _lo_game_handle_int(gameId, gamePath);
         if (localPath != nullptr)
             (*gh)->SetLocalAppData(localPath);
+#ifndef _WIN32
+        else
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "A local data path must be supplied on non-Windows platforms.");
+#endif
     }
     catch (error& e) {
         return c_error(e);
     }
     catch (std::bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
+    }
+    catch (std::exception& e) {
+        return c_error(LIBLO_ERROR_INVALID_ARGS, e.what());
     }
 
     if ((**gh).LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::filesystem::exists((**gh).ActivePluginsFile()) && boost::filesystem::exists((**gh).LoadOrderFile())) {
@@ -142,6 +149,9 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
             delete *gh;
             return c_error(e);
         }
+        catch (std::exception& e) {
+            return c_error(LIBLO_ERROR_FILE_READ_FAIL, e.what());
+        }
 
         try {
             LoadOrderFileLO.CheckValidity(**gh);
@@ -149,6 +159,9 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         }
         catch (error& e) {
             return c_error(e);
+        }
+        catch (std::exception& e) {
+            return c_error(LIBLO_ERROR_FILE_READ_FAIL, e.what());
         }
 
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.

@@ -32,7 +32,7 @@ along with libloadorder.  If not, see
 #include <gtest/gtest.h>
 
 #ifdef __GNUC__  // Workaround for GCC linking error.
-#pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
+#pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS and BOOST_NO_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #define BOOST_NO_SCOPED_ENUMS  // For older versions.
 #endif
