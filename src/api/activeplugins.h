@@ -37,6 +37,11 @@
  *  - If a Skyrim load order, contains `Skyrim.esm`.
  *  - If a Skyrim load order and `Update.esm` is installed, contains
  *    `Update.esm`.
+ *
+ *  Libloadorder is less strict when loading active plugin lists. If loading
+ *  a Skyrim list and Skyrim.esm is missing, it will be inferred to load first.
+ *  Similarly, if Update.esm is installed but not in the active list, it will
+ *  be inferred to load after all other master files.
  */
 
 #ifndef __LIBLO_ACTIVE_PLUGINS__
