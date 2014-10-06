@@ -221,7 +221,7 @@ namespace liblo {
                     Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
             }
         }
-        if (fs::exists(parentGame.PluginsFolder()) && fs::is_directory(parentGame.PluginsFolder())) {
+        if (fs::is_directory(parentGame.PluginsFolder())) {
             //Now scan through Data folder. Add any plugins that aren't already in loadorder to loadorder, at the end.
             auto firstNonMaster = FindFirstNonMaster(parentGame);
             for (fs::directory_iterator itr(parentGame.PluginsFolder()); itr != fs::directory_iterator(); ++itr) {
