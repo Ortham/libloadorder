@@ -37,7 +37,7 @@ using namespace liblo;
    Version Functions
    ------------------------------*/
 
-const unsigned int LIBLO_VERSION_MAJOR = 5;
+const unsigned int LIBLO_VERSION_MAJOR = 6;
 const unsigned int LIBLO_VERSION_MINOR = 0;
 const unsigned int LIBLO_VERSION_PATCH = 0;
 
