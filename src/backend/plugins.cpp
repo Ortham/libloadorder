@@ -59,7 +59,9 @@ namespace liblo {
     }
 
     bool Plugin::IsValid(const _lo_game_handle_int& parentGame) const {
-        // Rather than just checking the extension, try parsing the file, and see if it fails.
+        // Rather than just checking the extension, try also parsing the file, and see if it fails.
+        if (!boost::iends_with(name, ".esm") && !boost::iends_with(name, ".esp"))
+            return false;
         try {
             espm::File * file = ReadHeader(parentGame);
             delete file;
@@ -209,16 +211,14 @@ namespace liblo {
             */
             if (fs::exists(parentGame.LoadOrderFile()))  //If the loadorder.txt exists, get the load order from that.
                 LoadFromFile(parentGame, parentGame.LoadOrderFile());
-            else {
-                if (fs::exists(parentGame.ActivePluginsFile()))  //If the plugins.txt exists, get the active load order from that.
-                    LoadFromFile(parentGame, parentGame.ActivePluginsFile());
-                if (parentGame.Id() == LIBLO_GAME_TES5) {
-                    //Make sure that Skyrim.esm is first.
-                    Move(Plugin("Skyrim.esm"), this->begin());
-                    //Add Update.esm if not already present.
-                    if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
-                        Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
-                }
+            else if (fs::exists(parentGame.ActivePluginsFile()))  //If the plugins.txt exists, get the active load order from that.
+                LoadFromFile(parentGame, parentGame.ActivePluginsFile());
+            else if (parentGame.Id() == LIBLO_GAME_TES5) {
+                //Make sure that Skyrim.esm is first.
+                Move(Plugin(parentGame.MasterFile()), this->begin());
+                //Add Update.esm if not already present.
+                if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
+                    Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
             }
         }
         if (fs::exists(parentGame.PluginsFolder()) && fs::is_directory(parentGame.PluginsFolder())) {
@@ -298,7 +298,7 @@ namespace liblo {
             return;
 
         if (at(0) != Plugin(parentGame.MasterFile()))
-            throw error(LIBLO_WARN_INVALID_LIST, "\"" + parentGame.MasterFile() + "\" is not the first plugin in load order.");
+            throw error(LIBLO_WARN_INVALID_LIST, "\"" + parentGame.MasterFile() + "\" is not the first plugin in the load order. " + at(0).Name() + " is first.");
 
         bool wasMaster = true;
         unordered_set<Plugin> hashset;
@@ -344,18 +344,22 @@ namespace liblo {
     }
 
     std::vector<Plugin>::iterator LoadOrder::Move(const Plugin& plugin, std::vector<Plugin>::iterator newPos) {
+        if (distance(this->begin(), newPos) > this->size())
+            throw error(LIBLO_ERROR_INVALID_ARGS, "New plugin position is beyond end of container.");
+
+        if (newPos != this->end() && *newPos == plugin)
+            return newPos;  // No movement necessary.
+
         // Inserting and erasing iterators invalidates later iterators, so first insert into
         // the vector.
         newPos = this->insert(newPos, plugin);
 
-        // Now erase any other instances of this plugin.
-        auto oldPos = find(this->begin(), this->end(), plugin);
-        while (oldPos != this->end()) {
-            if (oldPos != newPos)
-                oldPos = this->erase(oldPos);
+        auto it = this->begin();
+        while (it != this->end()) {
+            if (it != newPos && *it == plugin)
+                it = this->erase(it);
             else
-                ++oldPos;
-            oldPos = find(oldPos, this->end(), plugin);
+                ++it;
         }
 
         return newPos;
@@ -372,7 +376,8 @@ namespace liblo {
     }
 
     void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
-        bool transcode = file == parentGame.ActivePluginsFile();
+        if (!fs::exists(file))
+            throw error(LIBLO_ERROR_FILE_NOT_FOUND, file.string() + " cannot be found.");
 
         //loadorder.txt is simple enough that we can avoid needing a formal parser.
         //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
@@ -382,6 +387,7 @@ namespace liblo {
 
             string line;
             regex reg("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
+            bool transcode = (file == parentGame.ActivePluginsFile());
             while (getline(in, line)) {
                 if (line.empty() || line[0] == '#')
                     continue;
@@ -406,15 +412,20 @@ namespace liblo {
                     }
                 }
 
-                //We need to remove plugins that are no longer installed from the load order, otherwise it'll cause problems later.
-                Plugin p(line);
-                if (p.Exists(parentGame))
-                    push_back(p);
+                this->push_back(Plugin(line));
             }
             in.close();
         }
         catch (std::ios_base::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
+        }
+
+        if (parentGame.Id() == LIBLO_GAME_TES5 && file == parentGame.ActivePluginsFile()) {
+            //Make sure that Skyrim.esm is first.
+            Move(Plugin(parentGame.MasterFile()), this->begin());
+            //Add Update.esm if not already present.
+            if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
+                Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
         }
     }
 
@@ -458,8 +469,8 @@ namespace liblo {
 
         //Add skyrim.esm, update.esm if missing.
         if (parentGame.Id() == LIBLO_GAME_TES5) {
-            if (find(Plugin("Skyrim.esm")) == end())
-                insert(Plugin("Skyrim.esm"));
+            if (find(Plugin(parentGame.MasterFile())) == end())
+                insert(Plugin(parentGame.MasterFile()));
             if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
                 insert(Plugin("Update.esm"));
         }
@@ -508,7 +519,7 @@ namespace liblo {
             else {
                 //Need to write the active plugins in load order.
                 for (const auto &plugin : parentGame.loadOrder) {
-                    if (find(plugin) == end() || parentGame.Id() == LIBLO_GAME_TES5 && plugin.Name() == parentGame.MasterFile())
+                    if (find(plugin) == end() || (parentGame.Id() == LIBLO_GAME_TES5 && plugin.Name() == parentGame.MasterFile()))
                         continue;
 
                     try {
@@ -544,8 +555,8 @@ namespace liblo {
         if (size() > 255)
             throw error(LIBLO_WARN_INVALID_LIST, "More than 255 plugins are active.");
         else if (parentGame.Id() == LIBLO_GAME_TES5) {
-            if (find(Plugin("Skyrim.esm")) == end())
-                throw error(LIBLO_WARN_INVALID_LIST, "Skyrim.esm isn't active.");
+            if (find(Plugin(parentGame.MasterFile())) == end())
+                throw error(LIBLO_WARN_INVALID_LIST, parentGame.MasterFile() + " isn't active.");
             else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
                 throw error(LIBLO_WARN_INVALID_LIST, "Update.esm is installed but isn't active.");
         }
