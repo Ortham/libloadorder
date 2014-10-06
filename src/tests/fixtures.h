@@ -38,39 +38,16 @@ along with libloadorder.  If not, see
 #endif
 #include <boost/filesystem.hpp>
 
-class GameHandleCreationTest : public ::testing::Test {
-protected:
-    inline GameHandleCreationTest() : gh(nullptr), gamePath("./Oblivion"), localPath("./local/Oblivion"), missingPath("./missing") {}
-
-    inline virtual void SetUp() {
-        ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
-        ASSERT_TRUE(boost::filesystem::exists(localPath));
-
-        ASSERT_NO_THROW(boost::filesystem::create_directories(gamePath));
-        ASSERT_TRUE(boost::filesystem::exists(gamePath));
-
-        ASSERT_FALSE(boost::filesystem::exists(missingPath));
-    }
-
-    inline virtual void TearDown() {
-        ASSERT_NO_THROW(lo_destroy_handle(gh));
-    };
-
-    lo_game_handle gh;
-
-    const char * gamePath;
-    const char * localPath;
-    const char * missingPath;
-};
-
 class GameOperationsTest : public ::testing::Test {
 protected:
     GameOperationsTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath)
-        : dataPath(gameDataPath), localPath(gameLocalPath), gh(NULL) {}
+        : dataPath(gameDataPath), localPath(gameLocalPath), missingPath("./missing"), gh(NULL) {}
 
     inline virtual void SetUp() {
         ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
         ASSERT_TRUE(boost::filesystem::exists(localPath));
+
+        ASSERT_FALSE(boost::filesystem::exists(missingPath));
 
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esm"));
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different.esm"));
@@ -120,8 +97,14 @@ protected:
 
     const boost::filesystem::path dataPath;
     const boost::filesystem::path localPath;
+    const boost::filesystem::path missingPath;
 
     lo_game_handle gh;
+};
+
+class OblivionHandleCreationTest : public GameOperationsTest {
+protected:
+    inline OblivionHandleCreationTest() : GameOperationsTest("./Oblivion/Data", "./local/Oblivion") {}
 };
 
 class OblivionOperationsTest : public GameOperationsTest {
@@ -203,7 +186,6 @@ protected:
         // Set Skyrim's active plugins to a known list before running the test.
         liblo::ofstream activePlugins(localPath / "plugins.txt");
         activePlugins
-            << "Skyrim.esm" << std::endl
             << "Blank.esm" << std::endl;
         activePlugins.close();
 
