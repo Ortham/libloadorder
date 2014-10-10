@@ -68,7 +68,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
         if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
             try {
-                gh->activePlugins.CheckValidity(*gh);
+                gh->loadOrder.CheckValidity(*gh);
             }
             catch (error& e) {
                 successRetCode = c_error(e);
@@ -174,7 +174,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
         if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
             try {
-                gh->activePlugins.CheckValidity(*gh);
+                gh->loadOrder.CheckValidity(*gh);
             }
             catch (error& e) {
                 successRetCode = c_error(e);
@@ -211,7 +211,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
         if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
             try {
-                gh->activePlugins.CheckValidity(*gh);
+                gh->loadOrder.CheckValidity(*gh);
             }
             catch (error& e) {
                 successRetCode = c_error(e);
@@ -271,7 +271,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
         if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
             try {
-                gh->activePlugins.CheckValidity(*gh);
+                gh->loadOrder.CheckValidity(*gh);
             }
             catch (error& e) {
                 successRetCode = c_error(e);

@@ -39,7 +39,7 @@ using namespace liblo;
 
 const unsigned int LIBLO_VERSION_MAJOR = 6;
 const unsigned int LIBLO_VERSION_MINOR = 0;
-const unsigned int LIBLO_VERSION_PATCH = 0;
+const unsigned int LIBLO_VERSION_PATCH = 1;
 
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */
@@ -220,7 +220,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             if (gh->loadOrder.HasChanged(*gh)) {
                 gh->loadOrder.Load(*gh);
                 try {
-                    gh->activePlugins.CheckValidity(*gh);
+                    gh->loadOrder.CheckValidity(*gh);
                 }
                 catch (error& e) {
                     successRetCode = c_error(e);
