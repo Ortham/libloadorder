@@ -92,6 +92,9 @@ TEST_F(OblivionOperationsTest, GetLoadOrder) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, &plugins, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, NULL));
 
+    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_load_order(gh, &plugins, &pluginsNum));
+
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_get_load_order(gh, &plugins, &pluginsNum));
 }
 
@@ -119,12 +122,20 @@ TEST_F(OblivionOperationsTest, SetPluginPosition) {
 
 TEST_F(OblivionOperationsTest, GetPluginPosition) {
     size_t pos;
+    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_plugin_position(gh, "Blank.esm", &pos));
+    EXPECT_EQ(0, pos);
+
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "Blank.esm", &pos));
     EXPECT_EQ(0, pos);
 }
 
 TEST_F(OblivionOperationsTest, GetIndexedPlugin) {
     char * plugin;
+    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_indexed_plugin(gh, 0, &plugin));
+    EXPECT_STREQ("Blank.esm", plugin);
+
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_get_indexed_plugin(gh, 0, &plugin));
     EXPECT_STREQ("Blank.esm", plugin);
 }
