@@ -73,12 +73,17 @@ namespace liblo {
     }
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
-        espm::File * file = ReadHeader(parentGame);
+        try {
+            espm::File * file = ReadHeader(parentGame);
 
-        bool ret = file->isMaster(parentGame.espm_settings);
+            bool ret = file->isMaster(parentGame.espm_settings);
 
-        delete file;
-        return ret;
+            delete file;
+            return ret;
+        }
+        catch (std::exception&) {
+            return false;
+        }
     }
 
     bool Plugin::IsGhosted(const _lo_game_handle_int& parentGame) const {
@@ -310,8 +315,7 @@ namespace liblo {
                 throw error(LIBLO_WARN_INVALID_LIST, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
             if (hashset.find(plugin) != hashset.end())
                 throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is in the load order twice.");
-            vector<Plugin> masters(plugin.GetMasters(parentGame));
-            for (const auto &master : masters) {
+            for (const auto &master : plugin.GetMasters(parentGame)) {
                 if (hashset.find(master) == hashset.end() && this->Find(master) != this->end())  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
                     throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
             }
