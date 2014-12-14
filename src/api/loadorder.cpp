@@ -210,12 +210,6 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     try {
         if (gh->loadOrder.HasChanged(*gh)) {
             gh->loadOrder.Load(*gh);
-            try {
-                gh->loadOrder.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
         }
     }
     catch (error& e) {
@@ -251,7 +245,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
         return c_error(e);
     }
 
-    return successRetCode;
+    return LIBLO_OK;
 }
 
 /* Gets the plugin filename is at the specified load order position. The first position

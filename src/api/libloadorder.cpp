@@ -211,20 +211,12 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
     if (gh == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    unsigned int successRetCode = LIBLO_OK;
-
     //Only need to update loadorder.txt if it is used.
     if (gh->LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
         try {
             //Update cache if necessary.
             if (gh->loadOrder.HasChanged(*gh)) {
                 gh->loadOrder.Load(*gh);
-                try {
-                    gh->loadOrder.CheckValidity(*gh);
-                }
-                catch (error& e) {
-                    successRetCode = c_error(e);
-                }
             }
 
             // Ensure that the first plugin is the game's master file.
@@ -269,12 +261,6 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         //Update cache if necessary.
         if (gh->activePlugins.HasChanged(*gh)) {
             gh->activePlugins.Load(*gh);
-            try {
-                gh->activePlugins.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
         }
 
         if (gh->Id() == LIBLO_GAME_TES5) {
@@ -316,5 +302,5 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         return c_error(e);
     }
 
-    return successRetCode;
+    return LIBLO_OK;
 }
