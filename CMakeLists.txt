@@ -69,11 +69,6 @@ include_directories ("${CMAKE_SOURCE_DIR}/src"
 # Settings when compiling for Windows.
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions (-DUNICODE -D_UNICODE)
-    IF (BUILD_SHARED_LIBS)
-        add_definitions (-DLIBLO_EXPORT)
-    ELSE ()
-        add_definitions (-DLIBLO_STATIC)
-    ENDIF ()
 ENDIF ()
 
 
@@ -113,7 +108,7 @@ ENDIF ()
 
 
 ##############################
-# Actual Building
+# Define Targets
 ##############################
 
 # Build libloadorder library.
@@ -124,4 +119,17 @@ IF (${GTEST_FOUND})
     # Build libloadorder tester.
     add_executable        (libloadorder-tester ${TESTER_SRC} ${TESTER_HEADERS})
     target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES})
+ENDIF ()
+
+
+##############################
+# Set Target-Specific Flags
+##############################
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    IF (BUILD_SHARED_LIBS)
+        set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_EXPORT")
+    ELSE ()
+        set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
+    ENDIF ()
 ENDIF ()
