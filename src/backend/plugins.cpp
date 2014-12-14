@@ -393,7 +393,8 @@ namespace liblo {
             regex reg("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
             bool transcode = (file == parentGame.ActivePluginsFile());
             while (getline(in, line)) {
-                if (line.empty() || line[0] == '#')
+                // Check if it's a valid plugin line. The stream doesn't filter out '\r' line endings, hence the check.
+                if (line.empty() || line[0] == '#' || line[0] == '\r')
                     continue;
 
                 if (parentGame.Id() == LIBLO_GAME_TES3) {
@@ -458,7 +459,8 @@ namespace liblo {
                 }
                 else {
                     while (getline(in, line)) {
-                        if (line.empty() || line[0] == '#')  //Character comparison is OK because it's ASCII.
+                        // Check if it's a valid plugin line. The stream doesn't filter out '\r' line endings, hence the check.
+                        if (line.empty() || line[0] == '#' || line[0] == '\r')
                             continue;
 
                         insert(Plugin(ToUTF8(line)));
