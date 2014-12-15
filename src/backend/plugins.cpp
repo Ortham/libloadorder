@@ -293,8 +293,14 @@ namespace liblo {
             //Want to make a minimum of changes to timestamps, so use the same timestamps as are currently set, but apply them to the plugins in the new order.
             //First we have to read all the timestamps.
             std::set<time_t> timestamps;
-            for (size_t i = 0, max = size(); i < max; i++) {
-                timestamps.insert(at(i).GetModTime(parentGame));
+            for (const auto &plugin : *this) {
+                timestamps.insert(plugin.GetModTime(parentGame));
+            }
+            // It may be that two plugins currently share the same timestamp,
+            // which will result in fewer timestamps in the set than there are
+            // plugins, so pad the set if necessary.
+            for (size_t i = 0, max = size() - timestamps.size(); i < max; ++i) {
+                timestamps.insert(*timestamps.crbegin() + 60);
             }
             size_t i = 0;
             for (const auto &timestamp : timestamps) {
