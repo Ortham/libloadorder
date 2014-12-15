@@ -33,6 +33,7 @@
 #include <boost/locale.hpp>
 #include <boost/regex.hpp>
 #include <set>
+#include <unordered_map>
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -178,8 +179,16 @@ namespace liblo {
     // LoadOrder Members
     /////////////////////////
 
+    struct PluginSortInfo {
+        PluginSortInfo() : isMasterFile(false), modTime(0) {}
+        bool isMasterFile;
+        time_t modTime;
+    };
+
     struct pluginComparator {
         const _lo_game_handle_int& parentGame;
+        std::unordered_map <std::string, PluginSortInfo> pluginCache;
+
         pluginComparator(const _lo_game_handle_int& game) : parentGame(game) {}
 
         bool    operator () (const Plugin& plugin1, const Plugin& plugin2) {
@@ -187,15 +196,39 @@ namespace liblo {
             //Master files should go before other files.
             //Earlier stamped plugins should go before later stamped plugins.
 
-            bool isPlugin1MasterFile = plugin1.IsMasterFile(parentGame);
-            bool isPlugin2MasterFile = plugin2.IsMasterFile(parentGame);
+            auto p1It = pluginCache.find(plugin1.Name());
+            auto p2It = pluginCache.find(plugin2.Name());
 
-            if (isPlugin1MasterFile && !isPlugin2MasterFile)
+            // If either of the plugins haven't been cached, cache them now,
+            // but defer reading timestamps, since it's not always necessary.
+            if (p1It == pluginCache.end()) {
+                PluginSortInfo psi;
+                psi.isMasterFile = plugin1.IsMasterFile(parentGame);
+                p1It = pluginCache.insert(std::pair<std::string, PluginSortInfo>(plugin1.Name(), psi)).first;
+            }
+
+            if (p2It == pluginCache.end()) {
+                PluginSortInfo psi;
+                psi.isMasterFile = plugin2.IsMasterFile(parentGame);
+                p2It = pluginCache.insert(std::pair<std::string, PluginSortInfo>(plugin2.Name(), psi)).first;
+            }
+
+            if (p1It->second.isMasterFile && !p2It->second.isMasterFile)
                 return true;
-            else if (!isPlugin1MasterFile && isPlugin2MasterFile)
+            else if (!p1It->second.isMasterFile && p2It->second.isMasterFile)
                 return false;
-            else
-                return (difftime(plugin1.GetModTime(parentGame), plugin2.GetModTime(parentGame)) < 0);
+            else {
+                // Need to compare timestamps to decide. If either cached
+                // timestamp is zero, read and cache the actual timestamp.
+                if (p1It->second.modTime == 0) {
+                    p1It->second.modTime = plugin1.GetModTime(parentGame);
+                }
+                if (p2It->second.modTime == 0) {
+                    p2It->second.modTime = plugin2.GetModTime(parentGame);
+                }
+
+                return (difftime(p1It->second.modTime, p2It->second.modTime) < 0);
+            }
         }
     };
 
