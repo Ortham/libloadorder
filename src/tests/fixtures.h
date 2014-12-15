@@ -139,8 +139,11 @@ protected:
         }
 
         // Set Oblivion's active plugins to a known list before running the test.
+        // Insert a blank line with a Windows line ending to ensure that the \r
+        // doesn't break anything.
         liblo::ofstream activePlugins(localPath / "plugins.txt");
         activePlugins
+            << "\r\n"
             << "Blank.esm" << std::endl;
         activePlugins.close();
 
@@ -168,11 +171,14 @@ protected:
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
 
         // Set Skyrim's load order to a known list before running the test.
+        // Insert a blank line with a Windows line ending to ensure that the \r
+        // doesn't break anything.
         liblo::ofstream loadOrder(localPath / "loadorder.txt");
         loadOrder
             << "Skyrim.esm" << std::endl
             << "Blank.esm" << std::endl
             << "Blank - Different.esm" << std::endl
+            << "\r\n"
             << "Blank - Master Dependent.esm" << std::endl  // Ghosted
             << "Blank - Different Master Dependent.esm" << std::endl
             << "Blank.esp" << std::endl
@@ -184,8 +190,11 @@ protected:
         loadOrder.close();
 
         // Set Skyrim's active plugins to a known list before running the test.
+        // Insert a blank line with a Windows line ending to ensure that the \r
+        // doesn't break anything.
         liblo::ofstream activePlugins(localPath / "plugins.txt");
         activePlugins
+            << "\r\n"
             << "Blank.esm" << std::endl;
         activePlugins.close();
 

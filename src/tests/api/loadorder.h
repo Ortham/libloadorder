@@ -51,8 +51,7 @@ TEST_F(SkyrimOperationsTest, GetLoadOrderMethod) {
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder) {
-    // Can't redistribute Oblivion.esm, but Nehrim.esm can be,
-    // so use that for testing.
+    size_t pos;
     char * plugins[] = {
         "Blank.esm"
     };
@@ -70,13 +69,33 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
 
+    // Check that load order was actually applied. Because a partial load order
+    // was applied, the full load order may be invalid, so take that into
+    // account.
+    ASSERT_PRED1([](unsigned int i) {
+        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
+    }, lo_get_plugin_position(gh, "Blank.esm", &pos));
+    EXPECT_EQ(0, pos);
+
     // Now test with more than one plugin.
     char * plugins2[] = {
         "Blank.esm",
-        "Blank.esp"
+        "Blank - Different.esm"
     };
     pluginsNum = 2;
     EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins2, pluginsNum));
+
+    // Check that load order was actually applied. Because a partial load order
+    // was applied, the full load order may be invalid, so take that into
+    // account.
+    ASSERT_PRED1([](unsigned int i) {
+        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
+    }, lo_get_plugin_position(gh, "Blank.esm", &pos));
+    EXPECT_EQ(0, pos);
+    ASSERT_PRED1([](unsigned int i) {
+        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
+    }, lo_get_plugin_position(gh, "Blank - Different.esm", &pos));
+    EXPECT_EQ(1, pos);
 
     char * plugins3[] = {
         "Blank.esm",
@@ -99,6 +118,14 @@ TEST_F(OblivionOperationsTest, GetLoadOrder) {
 }
 
 TEST_F(SkyrimOperationsTest, GetLoadOrder) {
+    char ** plugins;
+    size_t pluginsNum;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, &pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, &plugins, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, NULL));
+
+    EXPECT_EQ(LIBLO_OK, lo_get_load_order(gh, &plugins, &pluginsNum));
+
     // Test that ghosted plugins get put into loadorder.txt correctly.
     std::vector<std::string> actualLines;
     std::string content;
