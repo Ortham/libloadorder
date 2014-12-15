@@ -36,7 +36,14 @@
  *  - The first plugin in the load order must be the game's main master file.
  *  - Loads all master files before all plugin files. Master bit flag value,
  *    rather than file extension, is checked.
+ *  - Loads each plugin after all its masters.
  *
+ *  Note that due to the complexity of satisfying the final condition above,
+ *  libloadorder does not attempt to satisfy it when lo_fix_plugin_lists() is
+ *  run. In addition, if the load order passed to lo_set_load_order() does
+ *  not contain an entry for all installed plugins, then libloadorder must
+ *  provide load order positions for any missing plugins itself, and these
+ *  positions may not satisfy the final condition above.
  */
 
 #ifndef __LIBLO_LOAD_ORDER__
@@ -89,11 +96,15 @@ extern "C"
      *  @brief Set the load order.
      *  @details Sets the load order to the passed plugin array, then scans the
      *           plugins directory and inserts any plugins not included in the
-     *           passed array. Plugin files are inserted at the end of the load
-     *           order, and master files are inserted after the last master
-     *           file in the load order. The order of plugin insertion is
-     *           undefined besides the distinction made between master files
-     *           and plugin files.
+     *           passed array.
+     *
+     *           Plugin files are inserted at the end of the load order, and
+     *           master files are inserted after the last master file in the
+     *           load order. The order of plugin insertion is undefined besides
+     *           the distinction made between master files and plugin files.
+     *           This may result in an invalid load order being set, so it is
+     *           advised that all installed plugins are present in the passed
+     *           plugin array.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins
