@@ -327,7 +327,7 @@ namespace liblo {
                 mtime = fs::last_write_time(parentGame.LoadOrderFile());
             }
             catch (std::ios_base::failure& e) {
-                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to. Details" + e.what());
+                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to. Details: " + e.what());
             }
 
             //Now write plugins.txt. Update cache if necessary.
