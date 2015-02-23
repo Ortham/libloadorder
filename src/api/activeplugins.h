@@ -107,8 +107,8 @@ extern "C"
      *  @param plugin
      *      The plugin to be activated or deactivated.
      *  @param active
-     *      If \active is true, the given plugin is activated. If \active is
-     *      false, the given plugin is deactivated.
+     *      If true, the given plugin is activated. If false, the given plugin
+     *      is deactivated.
      *  @returns A return code.
      */
     LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh,
