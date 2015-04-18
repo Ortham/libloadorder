@@ -149,14 +149,6 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     if (active && !pluginObj.Exists(*gh))
         return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
 
-    //Unghost plugin if ghosted.
-    try {
-        pluginObj.UnGhost(*gh);
-    }
-    catch (error& e) {
-        return c_error(e);
-    }
-
     //Update cache if necessary.
     try {
         if (gh->activePlugins.HasChanged(*gh)) {
@@ -168,8 +160,16 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     }
 
     //Look for plugin in active plugins list.
-    if (active)  //No need to check for duplication, unordered set will silently handle avoidance.
+    if (active) {  //No need to check for duplication, unordered set will silently handle avoidance.
+        //Unghost plugin if ghosted.
+        try {
+            pluginObj.UnGhost(*gh);
+        }
+        catch (error& e) {
+            return c_error(e);
+        }
         gh->activePlugins.insert(pluginObj);
+    }
     else {
         auto it = gh->activePlugins.find(pluginObj);
         if (it != gh->activePlugins.end())
