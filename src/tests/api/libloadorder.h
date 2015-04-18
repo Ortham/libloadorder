@@ -178,18 +178,6 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
         << "Blank.esp" << std::endl;
     active.close();
 
-    // Set the load order.
-    char * plugins[] = {
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Different Plugin Dependent.esp",
-        "Blank - Master Dependent.esp",
-        "Blank - Different Master Dependent.esp",
-        "Blank - Plugin Dependent.esp"
-    };
-    size_t pluginsNum = 6;
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
-    ASSERT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
 
     // Now fix plugins.txt
     ASSERT_PRED1([](unsigned int i) {
