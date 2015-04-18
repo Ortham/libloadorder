@@ -229,24 +229,26 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             auto firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
             vector<Plugin>::iterator it = gh->loadOrder.begin();
             while (it != gh->loadOrder.end()) {
-                if (!it->Exists(*gh)) {
-                    //Active plugin is not installed.
+                if (hashset.find(*it) != hashset.end() || !it->Exists(*gh)) {
+                    // Plugin is a duplicate or is not installed.
+                    bool refindFirstNonMaster = distance(gh->loadOrder.begin(), it) <= distance(gh->loadOrder.begin(), firstNonMaster);
                     it = gh->loadOrder.erase(it);
+                    if (refindFirstNonMaster)
+                        firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
                     continue;
                 }
 
-                if (hashset.find(*it) != hashset.end()) {
-                    // Plugin has already appeared, remove this appearance.
-                    it = gh->loadOrder.erase(it);
+                hashset.insert(*it);
+
+                if (it->IsMasterFile(*gh)
+                    && distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.begin(), firstNonMaster)) {
+                    // Master amongst plugins, move it after the last master.
+                    firstNonMaster = ++gh->loadOrder.Move(*it, firstNonMaster);
+                    it = firstNonMaster;
                     continue;
                 }
 
-                if (it->IsMasterFile(*gh)) {
-                    if (distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.begin(), firstNonMaster)) {
-                        // Master amongst plugins, move it after the last master.
-                        firstNonMaster = ++gh->loadOrder.Move(*it, firstNonMaster);
-                    }
-                }
+                ++it;
             }
 
             // Now write changes.
