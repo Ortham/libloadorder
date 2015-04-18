@@ -395,11 +395,15 @@ namespace liblo {
 
         // Inserting and erasing iterators invalidates later iterators, so first insert into
         // the vector.
+        bool moveToEnd = (newPos == this->end());
+
         newPos = this->insert(newPos, plugin);
 
         auto it = this->begin();
         while (it != this->end()) {
-            if (it != newPos && *it == plugin)
+            if (it != newPos
+                && (!moveToEnd || it != --this->end())
+                && *it == plugin)
                 it = this->erase(it);
             else
                 ++it;
