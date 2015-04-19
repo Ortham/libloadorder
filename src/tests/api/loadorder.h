@@ -87,6 +87,29 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, plugins3, pluginsNum));
 }
 
+TEST_F(SkyrimOperationsTest, SetLoadOrder) {
+    char * plugins[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "Blank - Different.esm"
+    };
+    size_t pluginsNum = 3;
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, NULL, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, NULL, 0));
+
+    EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
+    EXPECT_EQ(1, CheckPluginPosition("Blank.esm"));
+    EXPECT_EQ(2, CheckPluginPosition("Blank - Different.esm"));
+
+    char * plugins2[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "Blank.missing.esp"
+    };
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, plugins2, pluginsNum));
+}
+
 TEST_F(OblivionOperationsTest, GetLoadOrder) {
     char ** plugins = {0};
     size_t pluginsNum;
@@ -131,10 +154,22 @@ TEST_F(OblivionOperationsTest, SetPluginPosition) {
     EXPECT_EQ(9, CheckPluginPosition("Blank - Plugin Dependent.esp"));
 }
 
+TEST_F(SkyrimOperationsTest, SetPluginPosition) {
+    // Load a plugin last.
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 100));
+    EXPECT_EQ(10, CheckPluginPosition("Blank - Plugin Dependent.esp"));
+}
+
 TEST_F(OblivionOperationsTest, GetPluginPosition) {
     size_t pos = 0;
     EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_plugin_position(gh, "Blank.esp", &pos));
     EXPECT_EQ(4, pos);
+}
+
+TEST_F(SkyrimOperationsTest, GetPluginPosition) {
+    size_t pos = 0;
+    EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "Blank.esp", &pos));
+    EXPECT_EQ(5, pos);
 }
 
 TEST_F(OblivionOperationsTest, GetIndexedPlugin) {
@@ -149,6 +184,16 @@ TEST_F(OblivionOperationsTest, GetIndexedPlugin) {
 
     plugin = nullptr;
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(gh, 100, &plugin));
+    EXPECT_EQ(nullptr, plugin);
+}
+
+TEST_F(SkyrimOperationsTest, GetIndexedPlugin) {
+    char * plugin = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_get_indexed_plugin(gh, 0, &plugin));
+    EXPECT_STREQ("Skyrim.esm", plugin);
+
+    plugin = nullptr;
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(gh, 100, &plugin));
     EXPECT_EQ(nullptr, plugin);
 }

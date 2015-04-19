@@ -165,6 +165,18 @@ TEST_F(OblivionOperationsTest, SetGameMaster) {
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "Blank.missing.esm"));
 }
 
+TEST_F(SkyrimOperationsTest, SetGameMaster) {
+    // Skyrim's game master cannot be set, these should all fail.
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Blank.esm"));
+
+    // Try setting to a master that doesn't exist.
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EnhancedWeather.missing.esm"));
+}
+
 TEST_F(OblivionOperationsTest, FixPluginLists) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
 
@@ -178,6 +190,31 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
         << "Blank.esp" << std::endl;
     active.close();
 
+    // Now fix plugins.txt
+    ASSERT_PRED1([](unsigned int i) {
+        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
+    }, lo_fix_plugin_lists(gh));
+
+    // Check that fix worked.
+    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
+    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
+}
+
+TEST_F(SkyrimOperationsTest, FixPluginLists) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
+
+    // Write a broken plugins.txt.
+    liblo::ofstream active(localPath / "plugins.txt");
+    active << "Blank - Master Dependent.esp" << std::endl
+        << "Blank - Plugin Dependent.esp" << std::endl
+        << "Blank - Different Master Dependent.esp" << std::endl
+        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
+        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
+        << "Blank.esp" << std::endl;
+    active.close();
 
     // Now fix plugins.txt
     ASSERT_PRED1([](unsigned int i) {
