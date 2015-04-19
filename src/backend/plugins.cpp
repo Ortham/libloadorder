@@ -299,7 +299,7 @@ namespace liblo {
             // It may be that two plugins currently share the same timestamp,
             // which will result in fewer timestamps in the set than there are
             // plugins, so pad the set if necessary.
-            for (size_t i = 0, max = size() - timestamps.size(); i < max; ++i) {
+            while (timestamps.size() < size()) {
                 timestamps.insert(*timestamps.crbegin() + 60);
             }
             size_t i = 0;
