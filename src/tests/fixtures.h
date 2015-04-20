@@ -243,7 +243,7 @@ protected:
             << "Blank.esm" << std::endl
             << "Blank - Different.esm" << std::endl
             << "\r\n"
-            << "Blank - Master Dependent.esm" << std::endl  // Ghosted
+            //<< "Blank - Master Dependent.esm" << std::endl  // Ghosted
             << "Blank - Different Master Dependent.esm" << std::endl
             << "Blank.esp" << std::endl
             << "Blank - Different.esp" << std::endl
