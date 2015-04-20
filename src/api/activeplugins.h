@@ -82,7 +82,11 @@ extern "C"
     /**
      *  @brief Sets the list of currently active plugins.
      *  @details Replaces the current active plugins list with the plugins in
-     *           the given array. The replacement list must be valid.
+     *           the given array. The replacement list must be valid. If, for
+     *           Skyrim, a plugin to be activated does not have a defined load
+     *           order position, this function will append it to the load order.
+     *           If multiple such plugins exist, the order in which they are
+     *           appended is undefined.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins
