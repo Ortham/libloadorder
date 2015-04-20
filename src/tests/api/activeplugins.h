@@ -32,6 +32,10 @@ TEST_F(OblivionOperationsTest, GetActivePlugins) {
     char ** plugins = {0};
     size_t numPlugins = 0;
 
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, NULL, &numPlugins));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, &plugins, NULL));
+
     EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
     EXPECT_EQ(1, numPlugins);
     EXPECT_STREQ("Blank.esm", plugins[0]);
@@ -40,6 +44,10 @@ TEST_F(OblivionOperationsTest, GetActivePlugins) {
 TEST_F(SkyrimOperationsTest, GetActivePlugins) {
     char ** plugins = {0};
     size_t numPlugins = 0;
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, NULL, &numPlugins));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, &plugins, NULL));
 
     EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
     EXPECT_EQ(2, numPlugins);
@@ -56,20 +64,78 @@ TEST_F(SkyrimOperationsTest, GetActivePlugins) {
     EXPECT_PRED2(pred, "Skyrim.esm", plugins);
 }
 
-TEST_F(OblivionOperationsTest, SetActivePlugins) {
+TEST_F(OblivionOperationsTest, SetActivePlugins_NullInputs) {
     char * plugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank - Master Dependent.esp"
     };
     size_t pluginsNum = 3;
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins, pluginsNum));
+    AssertInitialState();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, NULL, pluginsNum));
+    AssertInitialState();
+
+    EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, 0));
+    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
+}
+
+TEST_F(OblivionOperationsTest, SetActivePlugins_MissingPlugin) {
+    char * plugins[] = {
+        "Blank.esm",
+        "Blank.missing.esp",
+        "Blank - Master Dependent.esp"
+    };
+    size_t pluginsNum = 3;
+
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_active_plugins(gh, plugins, pluginsNum));
+    AssertInitialState();
+}
+
+TEST_F(OblivionOperationsTest, SetActivePlugins_Valid) {
+    char * plugins[] = {
+        "Blank.esm",
+        "Blank.esp",
+        "Blank - Master Dependent.esp"
+    };
+    size_t pluginsNum = 3;
+
     EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, pluginsNum));
     EXPECT_TRUE(CheckPluginActive("Blank.esm"));
     EXPECT_TRUE(CheckPluginActive("Blank.esp"));
     EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
 }
 
-TEST_F(SkyrimOperationsTest, SetActivePlugins) {
+TEST_F(SkyrimOperationsTest, SetActivePlugins_NullInputs) {
+    char * plugins[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "Blank.esp",
+        "Blank - Master Dependent.esp"
+    };
+    size_t pluginsNum = 4;
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins, pluginsNum));
+    AssertInitialState();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, NULL, pluginsNum));
+    AssertInitialState();
+}
+
+TEST_F(SkyrimOperationsTest, SetActivePlugins_MissingPlugin) {
+    char * plugins[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "Blank.missing.esp",
+        "Blank - Master Dependent.esp"
+    };
+    size_t pluginsNum = 4;
+
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_active_plugins(gh, plugins, pluginsNum));
+    AssertInitialState();
+}
+
+TEST_F(SkyrimOperationsTest, SetActivePlugins_Valid) {
     char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
@@ -85,24 +151,58 @@ TEST_F(SkyrimOperationsTest, SetActivePlugins) {
 
 TEST_F(OblivionOperationsTest, GetPluginActive) {
     bool isActive = true;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, "Blank - Master Dependent.esp", &isActive));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, NULL, &isActive));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", NULL));
+
     EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
     EXPECT_FALSE(isActive);
 }
 
 TEST_F(SkyrimOperationsTest, GetPluginActive) {
     bool isActive = true;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, "Blank - Master Dependent.esp", &isActive));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, NULL, &isActive));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", NULL));
+
     EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
     EXPECT_FALSE(isActive);
 }
 
 TEST_F(OblivionOperationsTest, SetPluginActive) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, "Blank - Different Master Dependent.esp", true));
+    AssertInitialState();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, NULL, true));
+    AssertInitialState();
+
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_plugin_active(gh, "Blank.missing.esp", true));
+    AssertInitialState();
+
+    EXPECT_FALSE(CheckPluginActive("Blank - Different Master Dependent.esp"));
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
     EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
+
+    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank.esm", false));
+    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
 }
 
 TEST_F(SkyrimOperationsTest, SetPluginActive) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, "Blank - Different Master Dependent.esp", true));
+    AssertInitialState();
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, NULL, true));
+    AssertInitialState();
+
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_plugin_active(gh, "Blank.missing.esp", true));
+    AssertInitialState();
+
+    EXPECT_FALSE(CheckPluginActive("Blank - Different Master Dependent.esp"));
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
     EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
+
+    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank.esm", false));
+    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
 }
 
 #endif

@@ -155,6 +155,7 @@ TEST(GameHandleDestroyTest, HandledNullInput) {
 }
 
 TEST_F(OblivionOperationsTest, SetGameMaster) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
@@ -167,6 +168,7 @@ TEST_F(OblivionOperationsTest, SetGameMaster) {
 
 TEST_F(SkyrimOperationsTest, SetGameMaster) {
     // Skyrim's game master cannot be set, these should all fail.
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
@@ -179,6 +181,7 @@ TEST_F(SkyrimOperationsTest, SetGameMaster) {
 
 TEST_F(OblivionOperationsTest, FixPluginLists) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
+    AssertInitialState();
 
     // Write a broken plugins.txt.
     liblo::ofstream active(localPath / "plugins.txt");
@@ -205,6 +208,7 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
 
 TEST_F(SkyrimOperationsTest, FixPluginLists) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
+    AssertInitialState();
 
     // Write a broken plugins.txt.
     liblo::ofstream active(localPath / "plugins.txt");
