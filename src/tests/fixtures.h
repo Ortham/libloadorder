@@ -26,21 +26,24 @@ along with libloadorder.  If not, see
 #ifndef __LIBLO_TEST_FIXTURES__
 #define __LIBLO_TEST_FIXTURES__
 
-#include "../api/libloadorder.h"
-#include "backend/streams.h"
-
-#include <gtest/gtest.h>
-
 #ifdef __GNUC__  // Workaround for GCC linking error.
 #pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS and BOOST_NO_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #define BOOST_NO_SCOPED_ENUMS  // For older versions.
 #endif
-#include <boost/filesystem.hpp>
 
-class GameOperationsTest : public ::testing::Test {
+#include "../api/libloadorder.h"
+#include "backend/streams.h"
+#include "backend/plugins.h"
+
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <gtest/gtest.h>
+#include <map>
+
+class GameTest : public ::testing::Test {
 protected:
-    GameOperationsTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath)
+    GameTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath)
         : dataPath(gameDataPath), localPath(gameLocalPath), missingPath("./missing"), gh(NULL) {}
 
     inline virtual void SetUp() {
@@ -95,6 +98,10 @@ protected:
         ASSERT_NO_THROW(lo_destroy_handle(gh));
     }
 
+    inline virtual bool CheckPluginActive(const std::string& filename) const = 0;
+
+    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const = 0;
+
     const boost::filesystem::path dataPath;
     const boost::filesystem::path localPath;
     const boost::filesystem::path missingPath;
@@ -102,17 +109,74 @@ protected:
     lo_game_handle gh;
 };
 
-class OblivionHandleCreationTest : public GameOperationsTest {
+class NonTes3GameTest : public GameTest {
 protected:
-    inline OblivionHandleCreationTest() : GameOperationsTest("./Oblivion/Data", "./local/Oblivion") {}
+    NonTes3GameTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath) :
+        GameTest(gameDataPath, gameLocalPath) {}
+
+    inline virtual bool CheckPluginActive(const std::string& filename) const {
+        liblo::ifstream activePlugins(localPath / "plugins.txt");
+
+        bool found = false;
+        while (activePlugins.good()) {
+            std::string line;
+            std::getline(activePlugins, line);
+
+            if (boost::iequals(line, filename)) {
+                if (found)
+                    throw std::runtime_error(filename + " is listed twice in plugins.txt.");
+                found = true;
+            }
+        }
+        activePlugins.close();
+        return found;
+    }
 };
 
-class OblivionOperationsTest : public GameOperationsTest {
+class OblivionTest : public NonTes3GameTest {
 protected:
-    OblivionOperationsTest() : GameOperationsTest("./Oblivion/Data", "./local/Oblivion") {}
+    OblivionTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath) :
+        NonTes3GameTest(gameDataPath, gameLocalPath) {}
+
+    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const {
+        // Read the modification times of the plugins in the data folder.
+        std::map<time_t, std::string> plugins;
+        if (boost::filesystem::is_directory(dataPath)) {
+            for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
+                if (boost::filesystem::is_regular_file(itr->status())) {
+                    std::string file = itr->path().filename().string();
+                    if (liblo::Plugin(file).IsValid(*gh)) {
+                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), file));
+                        if (!result.second) {
+                            throw std::runtime_error(filename + " has the same timestamp as " + result.first->second);
+                        }
+                    }
+                }
+            }
+        }
+
+        size_t i = 0;
+        for (auto it = plugins.begin(); it != plugins.end(); ++it) {
+            if (boost::iequals(it->second, filename))
+                return std::distance(plugins.begin(), it);
+            ++i;
+        }
+
+        throw std::runtime_error(filename + " has no load order position.");
+    }
+};
+
+class OblivionHandleCreationTest : public OblivionTest {
+protected:
+    inline OblivionHandleCreationTest() : OblivionTest("./Oblivion/Data", "./local/Oblivion") {}
+};
+
+class OblivionOperationsTest : public OblivionTest {
+protected:
+    OblivionOperationsTest() : OblivionTest("./Oblivion/Data", "./local/Oblivion") {}
 
     inline virtual void SetUp() {
-        GameOperationsTest::SetUp();
+        GameTest::SetUp();
 
         // Oblivion's load order is decided through timestamps, so reset them to a known order before each test.
         std::list<std::string> loadOrder = {
@@ -151,19 +215,19 @@ protected:
     }
 
     inline virtual void TearDown() {
-        GameOperationsTest::TearDown();
+        GameTest::TearDown();
 
         // Delete existing plugins.txt.
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
     };
 };
 
-class SkyrimOperationsTest : public GameOperationsTest {
+class SkyrimOperationsTest : public NonTes3GameTest {
 protected:
-    SkyrimOperationsTest() : GameOperationsTest("./Skyrim/Data", "./local/Skyrim") {}
+    SkyrimOperationsTest() : NonTes3GameTest("./Skyrim/Data", "./local/Skyrim") {}
 
     inline virtual void SetUp() {
-        GameOperationsTest::SetUp();
+        GameTest::SetUp();
 
         // Can't change Skyrim's main master file, so mock it.
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
@@ -202,7 +266,7 @@ protected:
     }
 
     inline virtual void TearDown() {
-        GameOperationsTest::TearDown();
+        GameTest::TearDown();
 
         // Delete the mock Skyrim.esm.
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
@@ -213,6 +277,25 @@ protected:
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "loadorder.txt"));
     };
+
+    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const {
+        liblo::ifstream activePlugins(localPath / "loadorder.txt");
+
+        size_t i = 0;
+        while (activePlugins.good()) {
+            std::string line;
+            std::getline(activePlugins, line);
+
+            if (boost::iequals(line, filename)) {
+                activePlugins.close();
+                return i;
+            }
+            ++i;
+        }
+        activePlugins.close();
+
+        throw std::runtime_error(filename + " does not have a load order position defined.");
+    }
 };
 
 #endif
