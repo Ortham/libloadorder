@@ -157,7 +157,7 @@ TEST_F(OblivionOperationsTest, SetGameMaster) {
     EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
     // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "EnhancedWeather.esm.missing"));
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "Blank.missing.esm"));
 }
 
 TEST_F(OblivionOperationsTest, FixPluginLists) {
@@ -169,7 +169,7 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
         << "Blank - Plugin Dependent.esp" << std::endl
         << "Blank - Different Master Dependent.esp" << std::endl
         << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
-        << "Blank.esm.missing" << std::endl  // Missing, should be removed.
+        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
         << "Blank.esp" << std::endl;
     active.close();
 

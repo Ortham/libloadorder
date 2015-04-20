@@ -99,7 +99,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder) {
 
     char * plugins3[] = {
         "Blank.esm",
-        "Blank.esp.missing"
+        "Blank.missing.esp"
     };
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, plugins3, pluginsNum));
 }
