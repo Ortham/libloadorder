@@ -48,43 +48,27 @@ protected:
 
     inline virtual void SetUp() {
         ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
-        ASSERT_TRUE(boost::filesystem::exists(localPath));
-
-        ASSERT_FALSE(boost::filesystem::exists(missingPath));
-
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esm"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different.esm"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Master Dependent.esm"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esp"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different.esp"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esp"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Master Dependent.esp"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Plugin Dependent.esp"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Plugin Dependent.esp"));
-
-        ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank.missing.esm"));
-        ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank.missing.esp"));
 
         // Ghost a plugin.
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
         ASSERT_NO_THROW(boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm", dataPath / "Blank - Master Dependent.esm.ghost"));
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
 
         // Write out an empty file.
         liblo::ofstream out(dataPath / "EmptyFile.esm");
         out.close();
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "EmptyFile.esm"));
 
         // Write out an non-empty, non-plugin file.
         out.open(dataPath / "NotAPlugin.esm");
         out << "This isn't a valid plugin file.";
         out.close();
-        ASSERT_TRUE(boost::filesystem::exists(dataPath / "NotAPlugin.esm"));
+
+        GameTest::AssertInitialState();
     }
 
     inline virtual void TearDown() {
         // Unghost the ghosted plugin.
+        ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm"));
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
         ASSERT_NO_THROW(boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm.ghost", dataPath / "Blank - Master Dependent.esm"));
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
@@ -101,6 +85,42 @@ protected:
     inline virtual bool CheckPluginActive(const std::string& filename) const = 0;
 
     inline virtual unsigned int CheckPluginPosition(const std::string& filename) const = 0;
+
+    inline virtual void AssertInitialState() const {
+        ASSERT_TRUE(boost::filesystem::exists(localPath));
+        ASSERT_FALSE(boost::filesystem::exists(missingPath));
+
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esm"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different.esm"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Master Dependent.esm"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank.esp"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different.esp"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esp"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Master Dependent.esp"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Plugin Dependent.esp"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Different Plugin Dependent.esp"));
+
+        ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank.missing.esm"));
+        ASSERT_FALSE(boost::filesystem::exists(dataPath / "Blank.missing.esp"));
+
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "Blank - Master Dependent.esm.ghost"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "EmptyFile.esm"));
+        ASSERT_TRUE(boost::filesystem::exists(dataPath / "NotAPlugin.esm"));
+    }
+
+    inline static std::string GetFileContents(const boost::filesystem::path& filepath) {
+        liblo::ifstream in(filepath.string().c_str(), std::ios::binary);
+        if (in.good()) {
+            std::string contents;
+            in.seekg(0, std::ios::end);
+            contents.resize(in.tellg());
+            in.seekg(0, std::ios::beg);
+            in.read(&contents[0], contents.size());
+            in.close();
+            return(contents);
+        }
+        throw std::runtime_error("Could not open file " + filepath.string());
+    }
 
     const boost::filesystem::path dataPath;
     const boost::filesystem::path localPath;
@@ -220,6 +240,50 @@ protected:
         // Delete existing plugins.txt.
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
     };
+
+    inline virtual void AssertInitialState() const {
+        GameTest::AssertInitialState();
+
+        // Check that active plugins list is in its initial state.
+        std::stringstream ss;
+        ss << "\r\n"
+            << "Blank.esm" << std::endl;
+        ASSERT_EQ(ss.str(), GetFileContents(localPath / "plugins.txt"));
+
+        std::map<time_t, std::string> plugins;
+        if (boost::filesystem::is_directory(dataPath)) {
+            for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
+                if (boost::filesystem::is_regular_file(itr->status())) {
+                    liblo::Plugin plugin(itr->path().filename().string());
+                    if (plugin.IsValid(*gh)) {
+                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), plugin.Name()));
+                        if (!result.second) {
+                            throw std::runtime_error(plugin.Name() + " has the same timestamp as " + result.first->second);
+                        }
+                    }
+                }
+            }
+        }
+
+        std::vector<std::string> loadOrder = {
+            "Blank.esm",
+            "Blank - Different.esm",
+            "Blank - Master Dependent.esm",  // Ghosted
+            "Blank - Different Master Dependent.esm",
+            "Blank.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different Master Dependent.esp",
+            "Blank - Plugin Dependent.esp",
+            "Blank - Different Plugin Dependent.esp"
+        };
+
+        size_t i = 0;
+        for (const auto &plugin : plugins) {
+            ASSERT_EQ(loadOrder[i], plugin.second);
+            ++i;
+        }
+    }
 };
 
 class SkyrimOperationsTest : public NonTes3GameTest {
@@ -295,6 +359,32 @@ protected:
         activePlugins.close();
 
         throw std::runtime_error(filename + " does not have a load order position defined.");
+    }
+
+    inline virtual void AssertInitialState() const {
+        GameTest::AssertInitialState();
+
+        // Check that active plugins list is in its initial state.
+        std::stringstream apss;
+        apss << "\r\n"
+            << "Blank.esm" << std::endl;
+        ASSERT_EQ(apss.str(), GetFileContents(localPath / "plugins.txt"));
+
+        // Check that the load order is in its initial state.
+        std::stringstream loss;
+        loss << "Skyrim.esm" << std::endl
+            << "Blank.esm" << std::endl
+            << "Blank - Different.esm" << std::endl
+            << "\r\n"
+            //<< "Blank - Master Dependent.esm" << std::endl  // Ghosted
+            << "Blank - Different Master Dependent.esm" << std::endl
+            << "Blank.esp" << std::endl
+            << "Blank - Different.esp" << std::endl
+            << "Blank - Master Dependent.esp" << std::endl
+            << "Blank - Different Master Dependent.esp" << std::endl
+            << "Blank - Plugin Dependent.esp" << std::endl
+            << "Blank - Different Plugin Dependent.esp" << std::endl;
+        ASSERT_EQ(loss.str(), GetFileContents(localPath / "loadorder.txt"));
     }
 };
 
