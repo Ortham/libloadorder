@@ -114,8 +114,8 @@ target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIB
 
 IF (${GTEST_FOUND})
     # Build libloadorder tester.
-    add_executable        (libloadorder-tester ${TESTER_SRC} ${TESTER_HEADERS})
-    target_link_libraries (libloadorder-tester loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES})
+    add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
+    target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES})
 ENDIF ()
 
 
@@ -129,7 +129,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     ELSE ()
         set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
         IF (${GTEST_FOUND})
-            set_target_properties (libloadorder-tester PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
+            set_target_properties (tests PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
         ENDIF ()
     ENDIF ()
 ENDIF ()

@@ -33,4 +33,4 @@ before_script:
   # Travis machines are 64 bit, and the deps use dynamic linking.
   - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF -DGTEST_ROOT=../gtest-1.7.0
 
-script: make && ./libloadorder-tester
+script: make && ./tests

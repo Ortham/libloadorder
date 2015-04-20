@@ -13,7 +13,7 @@ Instructions for other platforms are not provided, but the process for building 
 
 ### Requirements
 
-* [Boost](http://www.boost.org): tested with v1.48.0 and v1.56.0.
+* [Boost](http://www.boost.org): tested with v1.55.0 and v1.58.0.
 * [Google Test](https://code.google.com/p/googletest/): Required to build libloadorder's tests, but not the library itself.
 * [Libespm](http://github.com/WrinklyNinja/libespm): A header-only library.
 
