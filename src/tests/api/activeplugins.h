@@ -33,6 +33,8 @@ TEST_F(OblivionOperationsTest, GetActivePlugins) {
     size_t numPlugins = 0;
 
     EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
+    EXPECT_EQ(1, numPlugins);
+    EXPECT_STREQ("Blank.esm", plugins[0]);
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins) {
@@ -43,15 +45,20 @@ TEST_F(OblivionOperationsTest, SetActivePlugins) {
     };
     size_t pluginsNum = 3;
     EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, pluginsNum));
+    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
+    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
 }
 
 TEST_F(OblivionOperationsTest, GetPluginActive) {
     bool isActive;
     EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
+    EXPECT_FALSE(isActive);
 }
 
 TEST_F(OblivionOperationsTest, SetPluginActive) {
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
+    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
 }
 
 #endif

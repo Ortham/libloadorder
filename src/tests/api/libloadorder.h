@@ -128,20 +128,25 @@ TEST_F(OblivionHandleCreationTest, HandlesInvalidHandleInput) {
 
 TEST_F(OblivionHandleCreationTest, HandlesInvalidGameType) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
+    EXPECT_EQ(NULL, gh);
 }
 
 TEST_F(OblivionHandleCreationTest, HandlesInvalidGamePathInput) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, localPath.string().c_str()));
+    EXPECT_EQ(NULL, gh);
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, missingPath.string().c_str(), localPath.string().c_str()));
+    EXPECT_EQ(NULL, gh);
 }
 
 TEST_F(OblivionHandleCreationTest, HandlesInvalidLocalPathInput) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), missingPath.string().c_str()));
+    EXPECT_EQ(NULL, gh);
 }
 
 #ifdef _WIN32
 TEST_F(OblivionHandleCreationTest, HandlesNullLocalPath) {
     EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), NULL));
+    EXPECT_NE(nullptr, gh);
 }
 #endif
 
@@ -191,26 +196,12 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
         return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
     }, lo_fix_plugin_lists(gh));
 
-    // Read plugins.txt. Order doesn't matter, so just check content using a sorted list.
-    std::list<std::string> expectedLines = {
-        "Blank - Different Master Dependent.esp",
-        "Blank - Master Dependent.esp",
-        "Blank - Plugin Dependent.esp",
-        "Blank.esp"
-    };
-    std::list<std::string> actualLines;
-    std::string content;
-    liblo::ifstream in(localPath / "plugins.txt");
-    while (in.good()) {
-        std::string line;
-        std::getline(in, line);
-        actualLines.push_back(line);
-    }
-    in.close();
-    actualLines.pop_back();  // Remove the trailing newline.
-    actualLines.sort();
-
-    EXPECT_EQ(expectedLines, actualLines);
+    // Check that fix worked.
+    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
+    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
+    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
 }
 
 #endif
