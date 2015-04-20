@@ -29,8 +29,8 @@ along with libloadorder.  If not, see
 #include "tests/fixtures.h"
 
 TEST_F(OblivionOperationsTest, GetActivePlugins) {
-    char ** plugins;
-    size_t numPlugins;
+    char ** plugins = {0};
+    size_t numPlugins = 0;
 
     EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
 }

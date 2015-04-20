@@ -31,7 +31,7 @@ along with libloadorder.  If not, see
 #include <boost/algorithm/string.hpp>
 
 TEST(GetVersion, HandlesNullInput) {
-    unsigned int vMajor, vMinor, vPatch;
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, &vPatch));
@@ -39,12 +39,12 @@ TEST(GetVersion, HandlesNullInput) {
 }
 
 TEST(GetVersion, HandlesValidInput) {
-    unsigned int vMajor, vMinor, vPatch;
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 }
 
 TEST(IsCompatible, HandlesCompatibleVersion) {
-    unsigned int vMajor, vMinor, vPatch;
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
     EXPECT_TRUE(lo_is_compatible(vMajor, vMinor, vPatch));
@@ -55,7 +55,7 @@ TEST(IsCompatible, HandlesCompatibleVersion) {
 }
 
 TEST(IsCompatible, HandlesIncompatibleVersion) {
-    unsigned int vMajor, vMinor, vPatch;
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
     EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
     EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
@@ -68,7 +68,7 @@ TEST(IsCompatible, HandlesIncompatibleVersion) {
 TEST(GetErrorMessage, HandlesInputCorrectly) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
-    const char * error;
+    const char * error = nullptr;
     EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
     ASSERT_STREQ("Null pointer passed.", error);
 }
@@ -78,7 +78,7 @@ TEST(Cleanup, CleansUpAfterError) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
     // Check that the error message is non-null.
-    const char * error;
+    const char * error = nullptr;
     EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
     ASSERT_STREQ("Null pointer passed.", error);
 
