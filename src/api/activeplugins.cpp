@@ -103,6 +103,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
 
     //Put input into activePlugins object.
     gh->activePlugins.clear();
+    bool pluginsMissingLO = false;
     for (size_t i = 0; i < numPlugins; i++) {
         Plugin plugin(plugins[i]);
         if (gh->activePlugins.find(plugin) != gh->activePlugins.end()) {  //Not necessary for unordered set, but present so that invalid active plugin lists are refused.
@@ -118,11 +119,20 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
                 return c_error(e);
             }
             gh->activePlugins.insert(plugin);
+            if (gh->loadOrder.Find(plugin) == gh->loadOrder.end()) {
+                pluginsMissingLO = true;
+            }
         }
         else {
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
         }
+    }
+
+    // If plugins aren't in the load order, make sure they are added.
+    if (pluginsMissingLO) {
+        gh->loadOrder.Load(*gh);
+        gh->loadOrder.Save(*gh);
     }
 
     //Check to see if basic rules are being obeyed.
@@ -169,13 +179,19 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
     //Look for plugin in active plugins list.
     if (active) {  //No need to check for duplication, unordered set will silently handle avoidance.
-        //Unghost plugin if ghosted.
         try {
+            //Unghost plugin if ghosted.
             pluginObj.UnGhost(*gh);
+            // If the plugin isn't in the load order, make sure it is added.
+            if (gh->loadOrder.Find(pluginObj) == gh->loadOrder.end()) {
+                gh->loadOrder.Load(*gh);
+                gh->loadOrder.Save(*gh);
+            }
         }
         catch (error& e) {
             return c_error(e);
         }
+        // Define the plugin's load order position if it doesn't
         gh->activePlugins.insert(pluginObj);
     }
     else {
