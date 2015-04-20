@@ -107,6 +107,8 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
 LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * const plugins, const size_t numPlugins) {
     if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
+    if (numPlugins == 0)
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
 
     //Put input into loadOrder object.
     gh->loadOrder.clear();
