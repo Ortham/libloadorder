@@ -110,7 +110,15 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_INVALID_ARGS, "The supplied active plugins list is invalid.");
         }
-        else if (plugin.Exists(*gh)) {
+        else if (!plugin.Exists(*gh)) {
+            gh->activePlugins.clear();
+            return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
+        }
+        else if (!plugin.IsValid(*gh)) {
+            gh->activePlugins.clear();
+            return c_error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not a valid plugin file.");
+        }
+        else {
             //Unghost plugin if ghosted.
             try {
                 plugin.UnGhost(*gh);
@@ -122,10 +130,6 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
             if (gh->loadOrder.Find(plugin) == gh->loadOrder.end()) {
                 pluginsMissingLO = true;
             }
-        }
-        else {
-            gh->activePlugins.clear();
-            return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
         }
     }
 
@@ -166,6 +170,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     //Check that plugin exists if activating it.
     if (active && !pluginObj.Exists(*gh))
         return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
+    else if (!pluginObj.IsValid(*gh))
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginObj.Name() + "\" is not a valid plugin file.");
 
     //Update cache if necessary.
     try {
