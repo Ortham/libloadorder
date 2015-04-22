@@ -130,6 +130,18 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_NullInputs) {
     AssertInitialState();
 }
 
+TEST_F(OblivionOperationsTest, SetLoadOrder_NonPluginFile) {
+    char * plugins[] = {
+        "Blank.esm",
+        "NotAPlugin.esm"
+    };
+    size_t pluginsNum = 2;
+
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, plugins, pluginsNum));
+    AssertInitialState();
+}
+
 TEST_F(OblivionOperationsTest, SetLoadOrder_Valid) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
@@ -222,6 +234,18 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_NullInputs) {
     AssertInitialState();
 }
 
+TEST_F(SkyrimOperationsTest, SetLoadOrder_NonPluginFile) {
+    char * plugins[] = {
+        "Skyrim.esm",
+        "Blank.esm",
+        "NotAPlugin.esm"
+    };
+    size_t pluginsNum = 3;
+
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, plugins, pluginsNum));
+    AssertInitialState();
+}
+
 TEST_F(SkyrimOperationsTest, SetLoadOrder_Valid) {
     char * plugins[] = {
         "Skyrim.esm",
@@ -299,6 +323,12 @@ TEST_F(OblivionOperationsTest, SetPluginPosition_PluginBeforeItsMaster) {
     AssertInitialState();
 }
 
+TEST_F(OblivionOperationsTest, SetPluginPosition_NonPluginFile) {
+    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(gh, "NotAPlugin.esm", 100));
+    AssertInitialState();
+}
+
 TEST_F(OblivionOperationsTest, SetPluginPosition_Valid) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
@@ -336,6 +366,11 @@ TEST_F(SkyrimOperationsTest, SetPluginPosition_PluginBeforeItsMaster) {
     AssertInitialState();
 }
 
+TEST_F(SkyrimOperationsTest, SetPluginPosition_NonPluginFile) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(gh, "NotAPlugin.esm", 100));
+    AssertInitialState();
+}
+
 TEST_F(SkyrimOperationsTest, SetPluginPosition_Valid) {
     // Set a specific position.
     EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 6));
@@ -351,6 +386,7 @@ TEST_F(OblivionOperationsTest, GetPluginPosition) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(NULL, "Blank.esp", &pos));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(gh, NULL, &pos));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(gh, "Blank.esp", NULL));
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_get_plugin_position(gh, "NotAPlugin.esm", &pos));
 
     EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_plugin_position(gh, "Blank.esp", &pos));
     EXPECT_EQ(4, pos);
@@ -361,6 +397,7 @@ TEST_F(SkyrimOperationsTest, GetPluginPosition) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(NULL, "Blank.esp", &pos));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(gh, NULL, &pos));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(gh, "Blank.esp", NULL));
+    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_get_plugin_position(gh, "NotAPlugin.esm", &pos));
 
     EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "Blank.esp", &pos));
     EXPECT_EQ(5, pos);
