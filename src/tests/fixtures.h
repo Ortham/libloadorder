@@ -84,7 +84,7 @@ protected:
 
     inline virtual bool CheckPluginActive(const std::string& filename) const = 0;
 
-    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const = 0;
+    inline virtual size_t CheckPluginPosition(const std::string& filename) const = 0;
 
     inline virtual void AssertInitialState() const {
         ASSERT_TRUE(boost::filesystem::exists(localPath));
@@ -158,7 +158,7 @@ protected:
     OblivionTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath) :
         NonTes3GameTest(gameDataPath, gameLocalPath) {}
 
-    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const {
+    inline virtual size_t CheckPluginPosition(const std::string& filename) const {
         // Read the modification times of the plugins in the data folder.
         std::map<time_t, std::string> plugins;
         if (boost::filesystem::is_directory(dataPath)) {
@@ -342,7 +342,7 @@ protected:
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "loadorder.txt"));
     };
 
-    inline virtual unsigned int CheckPluginPosition(const std::string& filename) const {
+    inline virtual size_t CheckPluginPosition(const std::string& filename) const {
         liblo::ifstream activePlugins(localPath / "loadorder.txt");
 
         size_t i = 0;
