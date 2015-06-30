@@ -1,18 +1,23 @@
+sudo: false
 language: cpp
 compiler:
   - gcc
 
-before_install:
-  # Add a PPA for Boost 1.55.
-  - sudo add-apt-repository ppa:boost-latest/ppa -y
-  - sudo apt-get update -qq
+# Need Boost 1.54+, which isn't in the 12.04 repositories - install from a PPA.
+# Also need the OpenSSL dev package, for git clone from HTTPS URLs support.
+addons:
+  apt:
+    sources:
+      - boost-latest
+    packages:
+      - libboost-filesystem1.55-dev
+      - libboost-locale1.55-dev
+      - libboost-iostreams1.55-dev
 
 install:
   # Currently inside the cloned repo path.
   # Install libespm.
   - git clone https://github.com/WrinklyNinja/libespm.git ../libespm
-  # Install Boost.
-  - sudo apt-get install -y libboost-filesystem1.55-dev libboost-locale1.55-dev libboost-iostreams1.55-dev libboost-regex1.55-dev
   # Install Google Test
   - cd ..
   - wget https://googletest.googlecode.com/files/gtest-1.7.0.zip
