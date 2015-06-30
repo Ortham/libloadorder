@@ -9,12 +9,17 @@ addons:
   apt:
     sources:
       - boost-latest
+      - ubuntu-toolchain-r-test
     packages:
       - libboost-filesystem1.55-dev
       - libboost-locale1.55-dev
       - libboost-iostreams1.55-dev
+      - gcc-5
+      - g++-5
 
 install:
+  # Use GCC 5.
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
   # Currently inside the cloned repo path.
   # Install libespm.
   - git clone https://github.com/WrinklyNinja/libespm.git ../libespm
