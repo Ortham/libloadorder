@@ -54,7 +54,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_MissingPlugin) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
     // Try setting the load order with a missing plugin.
-    char * missingPlugins[] = {
+    const char * missingPlugins[] = {
         "Blank.esm",
         "Blank.missing.esp"
     };
@@ -69,7 +69,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_DuplicatePlugin) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
     // Try setting the load order with a duplicate entry.
-    char * dupPlugins[] = {
+    const char * dupPlugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank.esp"
@@ -82,7 +82,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_DuplicatePlugin) {
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder_WrongGameMaster) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm"
     };
     size_t pluginsNum = 1;
@@ -96,7 +96,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_WrongGameMaster) {
 TEST_F(OblivionOperationsTest, SetLoadOrder_BadMasterOrder) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
-    char * badMasterOrderPlugins[] = {
+    const char * badMasterOrderPlugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank - Different.esm"
@@ -105,7 +105,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_BadMasterOrder) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, badMasterOrderPlugins, pluginsNum));
     AssertInitialState();
 
-    char * badMasterOrderPlugins2[] = {
+    const char * badMasterOrderPlugins2[] = {
         "Blank.esm",
         "Blank - Different Master Dependent.esm",
         "Blank - Different.esm",
@@ -115,7 +115,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_BadMasterOrder) {
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder_NullInputs) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm"
     };
     size_t pluginsNum = 1;
@@ -131,7 +131,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_NullInputs) {
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder_NonPluginFile) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm",
         "NotAPlugin.esm"
     };
@@ -145,7 +145,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_NonPluginFile) {
 TEST_F(OblivionOperationsTest, SetLoadOrder_Valid) {
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm"
     };
     size_t pluginsNum = 1;
@@ -154,7 +154,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_Valid) {
     EXPECT_EQ(0, CheckPluginPosition("Blank.esm"));
 
     // Now test with more than one plugin.
-    char * plugins2[] = {
+    const char * plugins2[] = {
         "Blank.esm",
         "Blank - Different.esm"
     };
@@ -165,7 +165,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_Valid) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_MissingPlugin) {
-    char * missingPlugins[] = {
+    const char * missingPlugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.missing.esp"
@@ -177,7 +177,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_MissingPlugin) {
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_DuplicatePlugin) {
     // Try setting the load order with a duplicate entry.
-    char * dupPlugins[] = {
+    const char * dupPlugins[] = {
         "Skyrim.esm",
         "Blank.esp",
         "Blank.esp"
@@ -188,7 +188,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_DuplicatePlugin) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_NoGameMaster) {
-    char * noGameMasterPlugins[] = {
+    const char * noGameMasterPlugins[] = {
         "Blank.esm",
         "Blank - Different.esm"
     };
@@ -198,7 +198,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_NoGameMaster) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_BadMasterOrder) {
-    char * badMasterOrderPlugins[] = {
+    const char * badMasterOrderPlugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.esp",
@@ -208,7 +208,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_BadMasterOrder) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, badMasterOrderPlugins, pluginsNum));
     AssertInitialState();
 
-    char * badMasterOrderPlugins2[] = {
+    const char * badMasterOrderPlugins2[] = {
         "Skyrim.esm",
         "Blank - Master Dependent.esm",
         "Blank.esm",
@@ -219,7 +219,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_BadMasterOrder) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_NullInputs) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank - Different.esm"
@@ -235,7 +235,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_NullInputs) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_NonPluginFile) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "NotAPlugin.esm"
@@ -247,7 +247,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_NonPluginFile) {
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_Valid) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank - Different.esm"

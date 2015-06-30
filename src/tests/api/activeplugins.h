@@ -65,7 +65,7 @@ TEST_F(SkyrimOperationsTest, GetActivePlugins) {
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins_NullInputs) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank - Master Dependent.esp"
@@ -82,7 +82,7 @@ TEST_F(OblivionOperationsTest, SetActivePlugins_NullInputs) {
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins_NonPluginFile) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank - Master Dependent.esp",
@@ -95,7 +95,7 @@ TEST_F(OblivionOperationsTest, SetActivePlugins_NonPluginFile) {
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins_MissingPlugin) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm",
         "Blank.missing.esp",
         "Blank - Master Dependent.esp"
@@ -107,7 +107,7 @@ TEST_F(OblivionOperationsTest, SetActivePlugins_MissingPlugin) {
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins_Valid) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Blank.esm",
         "Blank.esp",
         "Blank - Master Dependent.esp"
@@ -121,7 +121,7 @@ TEST_F(OblivionOperationsTest, SetActivePlugins_Valid) {
 }
 
 TEST_F(SkyrimOperationsTest, SetActivePlugins_NullInputs) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.esp",
@@ -136,7 +136,7 @@ TEST_F(SkyrimOperationsTest, SetActivePlugins_NullInputs) {
 }
 
 TEST_F(SkyrimOperationsTest, SetActivePlugins_MissingPlugin) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.missing.esp",
@@ -149,7 +149,7 @@ TEST_F(SkyrimOperationsTest, SetActivePlugins_MissingPlugin) {
 }
 
 TEST_F(SkyrimOperationsTest, SetActivePlugins_NonPluginFile) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.esp",
@@ -163,7 +163,7 @@ TEST_F(SkyrimOperationsTest, SetActivePlugins_NonPluginFile) {
 }
 
 TEST_F(SkyrimOperationsTest, SetActivePlugins_Valid) {
-    char * plugins[] = {
+    const char * plugins[] = {
         "Skyrim.esm",
         "Blank.esm",
         "Blank.esp",
