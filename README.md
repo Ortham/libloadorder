@@ -27,7 +27,7 @@ Just generate an MSVC solution using Google Test's CMake config, and build the `
 
 ```
 bootstrap.bat
-b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-filesystem --with-locale --with-regex --with-system --with-iostreams
+b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-filesystem --with-locale --with-system --with-iostreams
 ```
 
 `link`, `runtime-link` and `address-model` can all be modified if shared linking or 64 bit builds are desired. Libloadorder uses statically-linked Boost libraries by default: to change this, edit [CMakeLists.txt](CMakeLists.txt).

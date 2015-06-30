@@ -31,15 +31,12 @@
 #include "streams.h"
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 #include <set>
 #include <unordered_map>
 
 using namespace std;
 namespace fs = boost::filesystem;
-
-using boost::regex;
-using boost::regex_match;
 
 namespace liblo {
     //////////////////////
