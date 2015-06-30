@@ -101,9 +101,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    //Put input into activePlugins object.
-    gh->activePlugins.clear();
-    bool pluginsMissingLO = false;
+    // Input validity checks.
     for (size_t i = 0; i < numPlugins; i++) {
         Plugin plugin(plugins[i]);
         if (gh->activePlugins.find(plugin) != gh->activePlugins.end()) {  //Not necessary for unordered set, but present so that invalid active plugin lists are refused.
@@ -118,25 +116,26 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
             gh->activePlugins.clear();
             return c_error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not a valid plugin file.");
         }
-        else {
-            //Unghost plugin if ghosted.
-            try {
-                plugin.UnGhost(*gh);
-            }
-            catch (error& e) {
-                return c_error(e);
-            }
-            gh->activePlugins.insert(plugin);
-            if (gh->loadOrder.Find(plugin) == gh->loadOrder.end()) {
-                pluginsMissingLO = true;
-            }
-        }
     }
 
-    // If plugins aren't in the load order, make sure they are added.
-    if (pluginsMissingLO) {
+    // Reload the load order if it has changed.
+    if (gh->loadOrder.HasChanged(*gh)) {
         gh->loadOrder.Load(*gh);
         gh->loadOrder.Save(*gh);
+    }
+
+    //Put input into activePlugins object.
+    gh->activePlugins.clear();
+    for (size_t i = 0; i < numPlugins; i++) {
+        Plugin plugin(plugins[i]);
+        //Unghost plugin if ghosted.
+        try {
+            plugin.UnGhost(*gh);
+        }
+        catch (error& e) {
+            return c_error(e);
+        }
+        gh->activePlugins.insert(plugin);
     }
 
     //Check to see if basic rules are being obeyed.
