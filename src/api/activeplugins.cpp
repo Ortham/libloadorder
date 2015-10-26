@@ -23,7 +23,7 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#include "activeplugins.h"
+#include "../../include/libloadorder/activeplugins.h"
 #include "../backend/game.h"
 #include "../backend/helpers.h"
 #include "../backend/error.h"

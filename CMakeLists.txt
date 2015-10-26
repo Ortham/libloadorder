@@ -52,10 +52,10 @@ set (PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/src/backend/error.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/game.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/plugins.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/streams.h"
-                    "${CMAKE_SOURCE_DIR}/src/api/constants.h"
-                    "${CMAKE_SOURCE_DIR}/src/api/libloadorder.h"
-                    "${CMAKE_SOURCE_DIR}/src/api/activeplugins.h"
-                    "${CMAKE_SOURCE_DIR}/src/api/loadorder.h")
+                    "${CMAKE_SOURCE_DIR}/include/libloadorder/constants.h"
+                    "${CMAKE_SOURCE_DIR}/include/libloadorder/libloadorder.h"
+                    "${CMAKE_SOURCE_DIR}/include/libloadorder/activeplugins.h"
+                    "${CMAKE_SOURCE_DIR}/include/libloadorder/loadorder.h")
 
 set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tests/main.cpp")
 

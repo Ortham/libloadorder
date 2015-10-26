@@ -23,7 +23,7 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#include "constants.h"
+#include "../../include/libloadorder/constants.h"
 
 const unsigned int LIBLO_OK = 0;
 const unsigned int LIBLO_WARN_BAD_FILENAME = 1;
