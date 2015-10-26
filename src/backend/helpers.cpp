@@ -23,7 +23,7 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#include "../../include/libloadorder/constants.h"
+#include "libloadorder/constants.h"
 #include "helpers.h"
 #include "error.h"
 #include "streams.h"

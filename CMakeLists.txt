@@ -68,6 +68,7 @@ source_group("Header Files" FILES ${PROJECT_HEADERS} ${TESTER_HEADERS})
 
 # Include source and library directories.
 include_directories ("${CMAKE_SOURCE_DIR}/src"
+                     "${CMAKE_SOURCE_DIR}/include"
                      "${LIBESPM_ROOT}/include"
                      ${Boost_INCLUDE_DIRS}
                      ${GTEST_INCLUDE_DIRS})

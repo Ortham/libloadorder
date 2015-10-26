@@ -23,7 +23,7 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#include "../../include/libloadorder/loadorder.h"
+#include "libloadorder/loadorder.h"
 #include "../backend/game.h"
 #include "../backend/helpers.h"
 #include "../backend/error.h"

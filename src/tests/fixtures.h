@@ -32,7 +32,7 @@ along with libloadorder.  If not, see
 #define BOOST_NO_SCOPED_ENUMS  // For older versions.
 #endif
 
-#include "../../include/libloadorder/libloadorder.h"
+#include "libloadorder/libloadorder.h"
 #include "backend/streams.h"
 #include "backend/plugins.h"
 
