@@ -31,7 +31,7 @@
 #include <vector>
 #include <stdint.h>
 #include <boost/filesystem.hpp>
-#include <src/libespm.h>
+#include <libespm/libespm.h>
 
 struct _lo_game_handle_int {
 public:

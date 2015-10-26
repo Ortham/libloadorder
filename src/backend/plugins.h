@@ -32,7 +32,7 @@
 #include <unordered_set>
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
-#include <src/libespm.h>
+#include <libespm/libespm.h>
 
 struct _lo_game_handle_int;
 
