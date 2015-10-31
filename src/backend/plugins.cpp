@@ -462,7 +462,10 @@ namespace liblo {
                     }
                 }
 
-                this->push_back(Plugin(line));
+
+                Plugin plugin(line);
+                if (plugin.IsValid(parentGame))
+                    this->push_back(plugin);
             }
             in.close();
         }
