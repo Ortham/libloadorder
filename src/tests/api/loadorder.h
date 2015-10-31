@@ -61,7 +61,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_MissingPlugin) {
     size_t pluginsNum = 2;
 
     ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
-    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, missingPlugins, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, missingPlugins, pluginsNum));
     AssertInitialState();
 }
 
@@ -171,7 +171,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_MissingPlugin) {
         "Blank.missing.esp"
     };
     size_t pluginsNum = 3;
-    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_load_order(gh, missingPlugins, pluginsNum));
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, missingPlugins, pluginsNum));
     AssertInitialState();
 }
 
