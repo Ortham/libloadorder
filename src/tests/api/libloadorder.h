@@ -150,6 +150,17 @@ TEST_F(OblivionHandleCreationTest, HandlesNullLocalPath) {
 }
 #endif
 
+TEST_F(SkyrimHandleCreationTest, HandlesValidInputs) {
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
+    ASSERT_NO_THROW(lo_destroy_handle(gh));
+    gh = nullptr;
+
+    // Also test absolute paths.
+    boost::filesystem::path game = boost::filesystem::current_path() / dataPath.parent_path();
+    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
+    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
+}
+
 TEST(GameHandleDestroyTest, HandledNullInput) {
     ASSERT_NO_THROW(lo_destroy_handle(NULL));
 }

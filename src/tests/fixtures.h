@@ -134,6 +134,28 @@ protected:
     NonTes3GameTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath) :
         GameTest(gameDataPath, gameLocalPath) {}
 
+    inline virtual void SetUp() {
+        GameTest::SetUp();
+
+        // Set the active plugins to a known list before running the test.
+        // Insert a blank line with a Windows line ending to ensure that the \r
+        // doesn't break anything.
+        liblo::ofstream activePlugins(localPath / "plugins.txt");
+        activePlugins
+            << "\r\n"
+            << "Blank.esm" << std::endl
+            << "EmptyFile.esm" << std::endl
+            << "NotAPlugin.esm" << std::endl;
+        activePlugins.close();
+    }
+
+    inline virtual void TearDown() {
+        GameTest::TearDown();
+
+        // Delete existing plugins.txt.
+        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
+    };
+
     inline virtual bool CheckPluginActive(const std::string& filename) const {
         liblo::ifstream activePlugins(localPath / "plugins.txt");
 
@@ -155,48 +177,10 @@ protected:
 
 class OblivionTest : public NonTes3GameTest {
 protected:
-    OblivionTest(const boost::filesystem::path& gameDataPath, const boost::filesystem::path& gameLocalPath) :
-        NonTes3GameTest(gameDataPath, gameLocalPath) {}
-
-    inline virtual size_t CheckPluginPosition(const std::string& filename) const {
-        // Read the modification times of the plugins in the data folder.
-        std::map<time_t, std::string> plugins;
-        if (boost::filesystem::is_directory(dataPath)) {
-            for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
-                if (boost::filesystem::is_regular_file(itr->status())) {
-                    std::string file = itr->path().filename().string();
-                    if (liblo::Plugin(file).IsValid(*gh)) {
-                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), file));
-                        if (!result.second) {
-                            throw std::runtime_error(filename + " has the same timestamp as " + result.first->second);
-                        }
-                    }
-                }
-            }
-        }
-
-        size_t i = 0;
-        for (auto it = plugins.begin(); it != plugins.end(); ++it) {
-            if (boost::iequals(it->second, filename))
-                return std::distance(plugins.begin(), it);
-            ++i;
-        }
-
-        throw std::runtime_error(filename + " has no load order position.");
-    }
-};
-
-class OblivionHandleCreationTest : public OblivionTest {
-protected:
-    inline OblivionHandleCreationTest() : OblivionTest("./Oblivion/Data", "./local/Oblivion") {}
-};
-
-class OblivionOperationsTest : public OblivionTest {
-protected:
-    OblivionOperationsTest() : OblivionTest("./Oblivion/Data", "./local/Oblivion") {}
+    OblivionTest() : NonTes3GameTest("./Oblivion/Data", "./local/Oblivion") {}
 
     inline virtual void SetUp() {
-        GameTest::SetUp();
+        NonTes3GameTest::SetUp();
 
         // Oblivion's load order is decided through timestamps, so reset them to a known order before each test.
         std::list<std::string> loadOrder = {
@@ -221,25 +205,7 @@ protected:
             }
             modificationTime += 60;
         }
-
-        // Set Oblivion's active plugins to a known list before running the test.
-        // Insert a blank line with a Windows line ending to ensure that the \r
-        // doesn't break anything.
-        liblo::ofstream activePlugins(localPath / "plugins.txt");
-        activePlugins
-            << "\r\n"
-            << "Blank.esm" << std::endl;
-        activePlugins.close();
-
-        ASSERT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
     }
-
-    inline virtual void TearDown() {
-        GameTest::TearDown();
-
-        // Delete existing plugins.txt.
-        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
-    };
 
     inline virtual void AssertInitialState() const {
         GameTest::AssertInitialState();
@@ -247,7 +213,9 @@ protected:
         // Check that active plugins list is in its initial state.
         std::stringstream ss;
         ss << "\r\n"
-            << "Blank.esm" << std::endl;
+            << "Blank.esm" << std::endl
+            << "EmptyFile.esm" << std::endl
+            << "NotAPlugin.esm" << std::endl;
         ASSERT_EQ(ss.str(), GetFileContents(localPath / "plugins.txt"));
 
         std::map<time_t, std::string> plugins;
@@ -284,14 +252,52 @@ protected:
             ++i;
         }
     }
+
+    inline virtual size_t CheckPluginPosition(const std::string& filename) const {
+        // Read the modification times of the plugins in the data folder.
+        std::map<time_t, std::string> plugins;
+        if (boost::filesystem::is_directory(dataPath)) {
+            for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
+                if (boost::filesystem::is_regular_file(itr->status())) {
+                    std::string file = itr->path().filename().string();
+                    if (liblo::Plugin(file).IsValid(*gh)) {
+                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), file));
+                        if (!result.second) {
+                            throw std::runtime_error(filename + " has the same timestamp as " + result.first->second);
+                        }
+                    }
+                }
+            }
+        }
+
+        size_t i = 0;
+        for (auto it = plugins.begin(); it != plugins.end(); ++it) {
+            if (boost::iequals(it->second, filename))
+                return std::distance(plugins.begin(), it);
+            ++i;
+        }
+
+        throw std::runtime_error(filename + " has no load order position.");
+    }
 };
 
-class SkyrimOperationsTest : public NonTes3GameTest {
+class OblivionHandleCreationTest : public OblivionTest {};
+
+class OblivionOperationsTest : public OblivionTest {
 protected:
-    SkyrimOperationsTest() : NonTes3GameTest("./Skyrim/Data", "./local/Skyrim") {}
+    inline virtual void SetUp() {
+        OblivionTest::SetUp();
+
+        ASSERT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
+    }
+};
+
+class SkyrimTest : public NonTes3GameTest {
+protected:
+    SkyrimTest() : NonTes3GameTest("./Skyrim/Data", "./local/Skyrim") {}
 
     inline virtual void SetUp() {
-        GameTest::SetUp();
+        NonTes3GameTest::SetUp();
 
         // Can't change Skyrim's main master file, so mock it.
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
@@ -316,21 +322,10 @@ protected:
             << "Blank - Plugin Dependent.esp" << std::endl
             << "Blank - Different Plugin Dependent.esp" << std::endl;
         loadOrder.close();
-
-        // Set Skyrim's active plugins to a known list before running the test.
-        // Insert a blank line with a Windows line ending to ensure that the \r
-        // doesn't break anything.
-        liblo::ofstream activePlugins(localPath / "plugins.txt");
-        activePlugins
-            << "\r\n"
-            << "Blank.esm" << std::endl;
-        activePlugins.close();
-
-        ASSERT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
     }
 
     inline virtual void TearDown() {
-        GameTest::TearDown();
+        NonTes3GameTest::TearDown();
 
         // Delete the mock Skyrim.esm.
         ASSERT_TRUE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
@@ -338,7 +333,6 @@ protected:
         ASSERT_FALSE(boost::filesystem::exists(dataPath / "Skyrim.esm"));
 
         // Delete existing plugins.txt and loadorder.txt.
-        ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "loadorder.txt"));
     };
 
@@ -367,7 +361,9 @@ protected:
         // Check that active plugins list is in its initial state.
         std::stringstream apss;
         apss << "\r\n"
-            << "Blank.esm" << std::endl;
+            << "Blank.esm" << std::endl
+            << "EmptyFile.esm" << std::endl
+            << "NotAPlugin.esm" << std::endl;
         ASSERT_EQ(apss.str(), GetFileContents(localPath / "plugins.txt"));
 
         // Check that the load order is in its initial state.
@@ -385,6 +381,17 @@ protected:
             << "Blank - Plugin Dependent.esp" << std::endl
             << "Blank - Different Plugin Dependent.esp" << std::endl;
         ASSERT_EQ(loss.str(), GetFileContents(localPath / "loadorder.txt"));
+    }
+};
+
+class SkyrimHandleCreationTest : public SkyrimTest {};
+
+class SkyrimOperationsTest : public SkyrimTest {
+protected:
+    inline virtual void SetUp() {
+        SkyrimTest::SetUp();
+
+        ASSERT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
     }
 };
 
