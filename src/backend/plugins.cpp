@@ -148,6 +148,9 @@ namespace liblo {
     }
 
     espm::File * Plugin::ReadHeader(const _lo_game_handle_int& parentGame) const {
+        if (!Exists(parentGame))
+            throw error(LIBLO_ERROR_FILE_NOT_FOUND, name.c_str());
+
         try {
             string filepath = (parentGame.PluginsFolder() / name).string();
             if (IsGhosted(parentGame))
