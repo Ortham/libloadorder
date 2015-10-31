@@ -349,6 +349,8 @@ namespace liblo {
         for (const auto plugin : *this) {
             if (!plugin.Exists(parentGame))
                 throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not installed.");
+            else if (!plugin.IsValid(parentGame))
+                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not a valid plugin file.");
             bool isMaster = plugin.IsMasterFile(parentGame);
             if (isMaster && !wasMaster)
                 throw error(LIBLO_WARN_INVALID_LIST, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
