@@ -499,7 +499,9 @@ namespace liblo {
                             continue;
 
                         //Now cut off everything up to and including the = sign.
-                        insert(Plugin(ToUTF8(line.substr(line.find('=') + 1))));
+                        Plugin plugin(ToUTF8(line.substr(line.find('=') + 1)));
+                        if (plugin.IsValid(parentGame))
+                            insert(plugin);
                     }
                 }
                 else {
@@ -508,7 +510,9 @@ namespace liblo {
                         if (line.empty() || line[0] == '#' || line[0] == '\r')
                             continue;
 
-                        insert(Plugin(ToUTF8(line)));
+                        Plugin plugin(ToUTF8(line));
+                        if (plugin.IsValid(parentGame))
+                            insert(plugin);
                     }
                 }
                 in.close();
