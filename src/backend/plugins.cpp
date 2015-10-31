@@ -255,7 +255,7 @@ namespace liblo {
                 //Make sure that Skyrim.esm is first.
                 Move(Plugin(parentGame.MasterFile()), this->begin());
                 //Add Update.esm if not already present.
-                if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
+                if (Plugin("Update.esm").IsValid(parentGame) && Find(Plugin("Update.esm")) == this->cend())
                     Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
             }
         }
@@ -472,7 +472,7 @@ namespace liblo {
             //Make sure that Skyrim.esm is first.
             Move(Plugin(parentGame.MasterFile()), this->begin());
             //Add Update.esm if not already present.
-            if (Plugin("Update.esm").Exists(parentGame) && Find(Plugin("Update.esm")) == this->cend())
+            if (Plugin("Update.esm").IsValid(parentGame) && Find(Plugin("Update.esm")) == this->cend())
                 Move(Plugin("Update.esm"), FindFirstNonMaster(parentGame));
         }
     }
@@ -520,7 +520,7 @@ namespace liblo {
         if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin(parentGame.MasterFile())) == end())
                 insert(Plugin(parentGame.MasterFile()));
-            if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
+            if (Plugin("Update.esm").IsValid(parentGame) && find(Plugin("Update.esm")) == end())
                 insert(Plugin("Update.esm"));
         }
     }
@@ -606,7 +606,7 @@ namespace liblo {
         else if (parentGame.Id() == LIBLO_GAME_TES5) {
             if (find(Plugin(parentGame.MasterFile())) == end())
                 throw error(LIBLO_WARN_INVALID_LIST, parentGame.MasterFile() + " isn't active.");
-            else if (Plugin("Update.esm").Exists(parentGame) && find(Plugin("Update.esm")) == end())
+            else if (Plugin("Update.esm").IsValid(parentGame) && find(Plugin("Update.esm")) == end())
                 throw error(LIBLO_WARN_INVALID_LIST, "Update.esm is installed but isn't active.");
         }
     }

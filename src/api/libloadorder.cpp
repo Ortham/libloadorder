@@ -271,14 +271,14 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
                 gh->activePlugins.insert(Plugin(gh->MasterFile()));
 
             // Ensure Update.esm is active, if it is installed.
-            if (Plugin("Update.esm").Exists(*gh) && gh->activePlugins.find(Plugin("Update.esm")) == gh->activePlugins.end())
+            if (Plugin("Update.esm").IsValid(*gh) && gh->activePlugins.find(Plugin("Update.esm")) == gh->activePlugins.end())
                 gh->activePlugins.insert(Plugin("Update.esm"));
         }
 
         //Now check all plugins' existences.
         auto it = gh->activePlugins.begin();
         while (it != gh->activePlugins.end()) {
-            if (!it->Exists(*gh))  //Active plugin is not installed.
+            if (!it->IsValid(*gh))  //Active plugin is not installed.
                 it = gh->activePlugins.erase(it);
             else
                 ++it;

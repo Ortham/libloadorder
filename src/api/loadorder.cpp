@@ -114,7 +114,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
     gh->loadOrder.clear();
     for (size_t i = 0; i < numPlugins; i++) {
         Plugin plugin(plugins[i]);
-        if (plugin.Exists(*gh))
+        if (plugin.IsValid(*gh))
             gh->loadOrder.push_back(plugin);
         else {
             gh->loadOrder.clear();
