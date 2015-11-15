@@ -27,7 +27,7 @@ along with libloadorder.  If not, see
 
 #include "libloadorder/constants.h"
 #include "backend/game.h"
-#include "backend/plugins.h"
+#include "backend/LoadOrder.h"
 
 namespace liblo {
     namespace test {

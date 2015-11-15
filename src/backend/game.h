@@ -26,7 +26,7 @@
 #ifndef __LIBLO_GAME_H__
 #define __LIBLO_GAME_H__
 
-#include "plugins.h"
+#include "LoadOrder.h"
 #include <string>
 #include <vector>
 #include <stdint.h>

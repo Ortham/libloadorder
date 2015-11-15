@@ -33,7 +33,7 @@ along with libloadorder.  If not, see
 #endif
 
 #include "libloadorder/libloadorder.h"
-#include "backend/plugins.h"
+#include "backend/Plugin.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
