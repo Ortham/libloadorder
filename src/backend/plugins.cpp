@@ -341,6 +341,10 @@ namespace liblo {
                         pluginName));
     }
 
+    std::string LoadOrder::getPluginAtPosition(size_t index) const {
+        return this->at(index).Name();
+    }
+
     void LoadOrder::setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle) {
         // For textfile-based load order games, check that the game's master file loads first.
         if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && (pluginNames.empty() || !boost::iequals(pluginNames[0], gameHandle.MasterFile())))

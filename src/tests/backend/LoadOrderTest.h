@@ -207,5 +207,20 @@ namespace liblo {
 
             EXPECT_EQ(1, loadOrder.getPosition(blankEsm));
         }
+
+        TEST_P(LoadOrderTest, gettingPluginAtAPositionGreaterThanTheHighestIndexShouldThrow) {
+            EXPECT_ANY_THROW(loadOrder.getPluginAtPosition(0));
+        }
+
+        TEST_P(LoadOrderTest, gettingPluginAtAValidPositionShouldReturnItsLoadOrderIndex) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
+        }
     }
 }

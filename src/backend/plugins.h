@@ -70,6 +70,7 @@ namespace liblo {
 
         std::vector<std::string> getLoadOrder() const;
         size_t getPosition(const std::string& pluginName) const;
+        std::string getPluginAtPosition(size_t index) const;
 
         void setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
 
