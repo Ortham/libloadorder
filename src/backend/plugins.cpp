@@ -31,6 +31,7 @@
 #include "streams.h"
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
+#include <boost/algorithm/string.hpp>
 #include <regex>
 #include <set>
 #include <unordered_map>
@@ -61,8 +62,7 @@ namespace liblo {
         if (!boost::iends_with(name, ".esm") && !boost::iends_with(name, ".esp"))
             return false;
         try {
-            espm::File * file = ReadHeader(parentGame);
-            delete file;
+            libespm::Plugin plugin = ReadHeader(parentGame);
         }
         catch (std::exception& /*e*/) {
             return false;
@@ -72,12 +72,9 @@ namespace liblo {
 
     bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
         try {
-            espm::File * file = ReadHeader(parentGame);
+            libespm::Plugin plugin = ReadHeader(parentGame);
 
-            bool ret = file->isMaster(parentGame.espm_settings);
-
-            delete file;
-            return ret;
+            return plugin.isMasterFile();
         }
         catch (std::exception&) {
             return false;
@@ -105,14 +102,13 @@ namespace liblo {
     }
 
     std::vector<Plugin> Plugin::GetMasters(const _lo_game_handle_int& parentGame) const {
-        espm::File * file = ReadHeader(parentGame);
+        libespm::Plugin plugin = ReadHeader(parentGame);
 
         vector<Plugin> masters;
-        for (const auto &master : file->getMasters()) {
+        for (const auto &master : plugin.getMasters()) {
             masters.push_back(Plugin(master));
         }
 
-        delete file;
         return masters;
     }
 
@@ -147,7 +143,7 @@ namespace liblo {
         return !(*this == rhs);
     }
 
-    espm::File * Plugin::ReadHeader(const _lo_game_handle_int& parentGame) const {
+    libespm::Plugin Plugin::ReadHeader(const _lo_game_handle_int& parentGame) const {
         if (!Exists(parentGame))
             throw error(LIBLO_ERROR_FILE_NOT_FOUND, name.c_str());
 
@@ -156,19 +152,10 @@ namespace liblo {
             if (IsGhosted(parentGame))
                 filepath += ".ghost";
 
-            espm::File * file = nullptr;
-            if (parentGame.Id() == LIBLO_GAME_TES3)
-                file = new espm::tes3::File(filepath, parentGame.espm_settings, false, true);
-            else if (parentGame.Id() == LIBLO_GAME_TES4)
-                file = new espm::tes4::File(filepath, parentGame.espm_settings, false, true);
-            else if (parentGame.Id() == LIBLO_GAME_TES5)
-                file = new espm::tes5::File(filepath, parentGame.espm_settings, false, true);
-            else if (parentGame.Id() == LIBLO_GAME_FO3)
-                file = new espm::fo3::File(filepath, parentGame.espm_settings, false, true);
-            else
-                file = new espm::fonv::File(filepath, parentGame.espm_settings, false, true);
+            libespm::Plugin plugin(parentGame.getLibespmId());
+            plugin.load(filepath, true);
 
-            return file;
+            return plugin;
         }
         catch (std::exception& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, name + " : " + e.what());

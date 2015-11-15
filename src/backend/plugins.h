@@ -32,7 +32,8 @@
 #include <unordered_set>
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
-#include <libespm/libespm.h>
+
+#include <libespm/Plugin.h>
 
 struct _lo_game_handle_int;
 
@@ -59,7 +60,7 @@ namespace liblo {
     private:
         std::string name;
 
-        espm::File * ReadHeader(const _lo_game_handle_int& parentGame) const;
+        libespm::Plugin ReadHeader(const _lo_game_handle_int& parentGame) const;
     };
 
     class LoadOrder : public std::vector < Plugin > {

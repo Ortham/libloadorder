@@ -58,8 +58,6 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         appdataFolderName = "";
         pluginsFolderName = "Data Files";
         pluginsFileName = "Morrowind.ini";
-
-        espm_settings = espm::Settings("tes3");
     }
     else if (id == LIBLO_GAME_TES4) {
         loMethod = LIBLO_METHOD_TIMESTAMP;
@@ -68,8 +66,6 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         appdataFolderName = "Oblivion";
         pluginsFolderName = "Data";
         pluginsFileName = "plugins.txt";
-
-        espm_settings = espm::Settings("tes4");
     }
     else if (id == LIBLO_GAME_TES5) {
         loMethod = LIBLO_METHOD_TEXTFILE;
@@ -78,8 +74,6 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         appdataFolderName = "Skyrim";
         pluginsFolderName = "Data";
         pluginsFileName = "plugins.txt";
-
-        espm_settings = espm::Settings("tes5");
     }
     else if (id == LIBLO_GAME_FO3) {
         loMethod = LIBLO_METHOD_TIMESTAMP;
@@ -88,8 +82,6 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         appdataFolderName = "Fallout3";
         pluginsFolderName = "Data";
         pluginsFileName = "plugins.txt";
-
-        espm_settings = espm::Settings("fo3");
     }
     else if (id == LIBLO_GAME_FNV) {
         loMethod = LIBLO_METHOD_TIMESTAMP;
@@ -98,8 +90,6 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int gameId, const string& path
         appdataFolderName = "FalloutNV";
         pluginsFolderName = "Data";
         pluginsFileName = "plugins.txt";
-
-        espm_settings = espm::Settings("fonv");
     }
 
 #ifdef _WIN32
@@ -162,6 +152,15 @@ void _lo_game_handle_int::SetLocalAppData(const boost::filesystem::path& localPa
 
 unsigned int _lo_game_handle_int::Id() const {
     return id;
+}
+
+libespm::GameId _lo_game_handle_int::getLibespmId() const {
+    if (Id() == LIBLO_GAME_TES3)
+        return libespm::GameId::MORROWIND;
+    else if (Id() == LIBLO_GAME_TES4)
+        return libespm::GameId::OBLIVION;
+    else
+        return libespm::GameId::SKYRIM;
 }
 
 string _lo_game_handle_int::MasterFile() const {

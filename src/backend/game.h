@@ -31,7 +31,8 @@
 #include <vector>
 #include <stdint.h>
 #include <boost/filesystem.hpp>
-#include <libespm/libespm.h>
+
+#include <libespm/GameId.h>
 
 struct _lo_game_handle_int {
 public:
@@ -42,6 +43,7 @@ public:
     void SetLocalAppData(const boost::filesystem::path& localPath);
 
     unsigned int Id() const;
+    libespm::GameId getLibespmId() const;
     std::string MasterFile() const;
     unsigned int LoadOrderMethod() const;
 
@@ -56,8 +58,6 @@ public:
     char ** extStringArray;
 
     size_t extStringArraySize;
-
-    espm::Settings espm_settings;
 private:
     unsigned int id;
     unsigned int loMethod;
