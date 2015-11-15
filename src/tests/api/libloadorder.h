@@ -195,7 +195,7 @@ TEST_F(OblivionOperationsTest, FixPluginLists) {
     AssertInitialState();
 
     // Write a broken plugins.txt.
-    liblo::ofstream active(localPath / "plugins.txt");
+    boost::filesystem::ofstream active(localPath / "plugins.txt");
     active << "Blank - Master Dependent.esp" << std::endl
         << "Blank - Plugin Dependent.esp" << std::endl
         << "Blank - Different Master Dependent.esp" << std::endl
@@ -222,7 +222,7 @@ TEST_F(SkyrimOperationsTest, FixPluginLists) {
     AssertInitialState();
 
     // Write a broken plugins.txt.
-    liblo::ofstream active(localPath / "plugins.txt");
+    boost::filesystem::ofstream active(localPath / "plugins.txt");
     active << "Blank - Master Dependent.esp" << std::endl
         << "Blank - Plugin Dependent.esp" << std::endl
         << "Blank - Different Master Dependent.esp" << std::endl

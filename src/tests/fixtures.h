@@ -33,11 +33,11 @@ along with libloadorder.  If not, see
 #endif
 
 #include "libloadorder/libloadorder.h"
-#include "backend/streams.h"
 #include "backend/plugins.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <gtest/gtest.h>
 #include <map>
 
@@ -55,7 +55,7 @@ protected:
         ASSERT_NO_THROW(boost::filesystem::rename(dataPath / "Blank - Master Dependent.esm", dataPath / "Blank - Master Dependent.esm.ghost"));
 
         // Write out an empty file.
-        liblo::ofstream out(dataPath / "EmptyFile.esm");
+        boost::filesystem::ofstream out(dataPath / "EmptyFile.esm");
         out.close();
 
         // Write out an non-empty, non-plugin file.
@@ -109,7 +109,7 @@ protected:
     }
 
     inline static std::string GetFileContents(const boost::filesystem::path& filepath) {
-        liblo::ifstream in(filepath.string().c_str(), std::ios::binary);
+        boost::filesystem::ifstream in(filepath.string().c_str(), std::ios::binary);
         if (in.good()) {
             std::string contents;
             in.seekg(0, std::ios::end);
@@ -140,13 +140,15 @@ protected:
         // Set the active plugins to a known list before running the test.
         // Insert a blank line with a Windows line ending to ensure that the \r
         // doesn't break anything.
-        liblo::ofstream activePlugins(localPath / "plugins.txt");
+        boost::filesystem::ofstream activePlugins(localPath / "plugins.txt");
         activePlugins
-            << "\r\n"
+            << std::endl
             << "Blank.esm" << std::endl
             << "EmptyFile.esm" << std::endl
             << "NotAPlugin.esm" << std::endl;
         activePlugins.close();
+
+        activePluginsInitialState = GetFileContents(localPath / "plugins.txt");
     }
 
     inline virtual void TearDown() {
@@ -154,10 +156,10 @@ protected:
 
         // Delete existing plugins.txt.
         ASSERT_NO_THROW(boost::filesystem::remove(localPath / "plugins.txt"));
-    };
+    }
 
     inline virtual bool CheckPluginActive(const std::string& filename) const {
-        liblo::ifstream activePlugins(localPath / "plugins.txt");
+        boost::filesystem::ifstream activePlugins(localPath / "plugins.txt");
 
         bool found = false;
         while (activePlugins.good()) {
@@ -173,6 +175,14 @@ protected:
         activePlugins.close();
         return found;
     }
+
+    inline virtual void AssertInitialState() const {
+        GameTest::AssertInitialState();
+
+        ASSERT_EQ(activePluginsInitialState, GetFileContents(localPath / "plugins.txt"));
+    }
+
+    std::string activePluginsInitialState;
 };
 
 class OblivionTest : public NonTes3GameTest {
@@ -208,15 +218,7 @@ protected:
     }
 
     inline virtual void AssertInitialState() const {
-        GameTest::AssertInitialState();
-
-        // Check that active plugins list is in its initial state.
-        std::stringstream ss;
-        ss << "\r\n"
-            << "Blank.esm" << std::endl
-            << "EmptyFile.esm" << std::endl
-            << "NotAPlugin.esm" << std::endl;
-        ASSERT_EQ(ss.str(), GetFileContents(localPath / "plugins.txt"));
+        NonTes3GameTest::AssertInitialState();
 
         std::map<time_t, std::string> plugins;
         if (boost::filesystem::is_directory(dataPath)) {
@@ -307,12 +309,12 @@ protected:
         // Set Skyrim's load order to a known list before running the test.
         // Insert a blank line with a Windows line ending to ensure that the \r
         // doesn't break anything.
-        liblo::ofstream loadOrder(localPath / "loadorder.txt");
+        boost::filesystem::ofstream loadOrder(localPath / "loadorder.txt");
         loadOrder
             << "Skyrim.esm" << std::endl
             << "Blank.esm" << std::endl
             << "Blank - Different.esm" << std::endl
-            << "\r\n"
+            << std::endl
             //<< "Blank - Master Dependent.esm" << std::endl  // Ghosted
             << "Blank - Different Master Dependent.esm" << std::endl
             << "Blank.esp" << std::endl
@@ -322,6 +324,8 @@ protected:
             << "Blank - Plugin Dependent.esp" << std::endl
             << "Blank - Different Plugin Dependent.esp" << std::endl;
         loadOrder.close();
+
+        loadorderInitialState = GetFileContents(localPath / "plugins.txt");
     }
 
     inline virtual void TearDown() {
@@ -337,7 +341,7 @@ protected:
     };
 
     inline virtual size_t CheckPluginPosition(const std::string& filename) const {
-        liblo::ifstream activePlugins(localPath / "loadorder.txt");
+        boost::filesystem::ifstream activePlugins(localPath / "loadorder.txt");
 
         size_t i = 0;
         while (activePlugins.good()) {
@@ -356,32 +360,13 @@ protected:
     }
 
     inline virtual void AssertInitialState() const {
-        GameTest::AssertInitialState();
-
-        // Check that active plugins list is in its initial state.
-        std::stringstream apss;
-        apss << "\r\n"
-            << "Blank.esm" << std::endl
-            << "EmptyFile.esm" << std::endl
-            << "NotAPlugin.esm" << std::endl;
-        ASSERT_EQ(apss.str(), GetFileContents(localPath / "plugins.txt"));
+        NonTes3GameTest::AssertInitialState();
 
         // Check that the load order is in its initial state.
-        std::stringstream loss;
-        loss << "Skyrim.esm" << std::endl
-            << "Blank.esm" << std::endl
-            << "Blank - Different.esm" << std::endl
-            << "\r\n"
-            //<< "Blank - Master Dependent.esm" << std::endl  // Ghosted
-            << "Blank - Different Master Dependent.esm" << std::endl
-            << "Blank.esp" << std::endl
-            << "Blank - Different.esp" << std::endl
-            << "Blank - Master Dependent.esp" << std::endl
-            << "Blank - Different Master Dependent.esp" << std::endl
-            << "Blank - Plugin Dependent.esp" << std::endl
-            << "Blank - Different Plugin Dependent.esp" << std::endl;
-        ASSERT_EQ(loss.str(), GetFileContents(localPath / "loadorder.txt"));
+        ASSERT_EQ(loadorderInitialState, GetFileContents(localPath / "plugins.txt"));
     }
+
+    std::string loadorderInitialState;
 };
 
 class SkyrimHandleCreationTest : public SkyrimTest {};

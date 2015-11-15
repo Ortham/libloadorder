@@ -26,9 +26,9 @@
 #include "libloadorder/constants.h"
 #include "helpers.h"
 #include "error.h"
-#include "streams.h"
 #include <cstring>
 #include <boost/locale.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 using namespace std;
 
@@ -42,7 +42,7 @@ namespace liblo {
     //Reads an entire file into a string buffer.
     void fileToBuffer(const boost::filesystem::path& file, string& buffer) {
         try {
-            liblo::ifstream ifile(file);
+            boost::filesystem::ifstream ifile(file);
             ifile.exceptions(std::ios_base::badbit);
             if (ifile.fail())
                 return;

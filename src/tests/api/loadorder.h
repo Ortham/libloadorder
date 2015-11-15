@@ -287,7 +287,7 @@ TEST_F(SkyrimOperationsTest, GetLoadOrder) {
     std::vector<std::string> actualLines;
     std::string content;
     ASSERT_TRUE(boost::filesystem::exists(localPath / "loadorder.txt"));
-    liblo::ifstream in(localPath / "loadorder.txt");
+    boost::filesystem::ifstream in(localPath / "loadorder.txt");
     while (in.good()) {
         std::string line;
         std::getline(in, line);

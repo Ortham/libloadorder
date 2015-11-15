@@ -35,7 +35,7 @@ set (Boost_USE_STATIC_LIBS ${PROJECT_STATIC_RUNTIME})
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME ${PROJECT_STATIC_RUNTIME})
 
-find_package(Boost REQUIRED COMPONENTS locale filesystem system iostreams)
+find_package(Boost REQUIRED COMPONENTS locale filesystem system)
 find_package(GTest)
 
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
@@ -51,7 +51,6 @@ set (PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/src/backend/error.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/game.h"
                     "${CMAKE_SOURCE_DIR}/src/backend/plugins.h"
-                    "${CMAKE_SOURCE_DIR}/src/backend/streams.h"
                     "${CMAKE_SOURCE_DIR}/include/libloadorder/constants.h"
                     "${CMAKE_SOURCE_DIR}/include/libloadorder/libloadorder.h"
                     "${CMAKE_SOURCE_DIR}/include/libloadorder/activeplugins.h"
