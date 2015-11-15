@@ -323,6 +323,52 @@ namespace liblo {
         }
     }
 
+    std::vector<std::string> LoadOrder::getLoadOrder() const {
+        std::vector<std::string> pluginNames;
+        transform(std::begin(*this),
+                  std::end(*this),
+                  back_inserter(pluginNames),
+                  [](const Plugin& plugin) {
+            return plugin.Name();
+        });
+        return pluginNames;
+    }
+
+    void LoadOrder::setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle) {
+        // For textfile-based load order games, check that the game's master file loads first.
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && (pluginNames.empty() || !boost::iequals(pluginNames[0], gameHandle.MasterFile())))
+            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + gameHandle.MasterFile() + "\" must load first.");
+
+        // Check that all masters load before non-masters.
+        if (!is_partitioned(std::begin(pluginNames),
+            std::end(pluginNames),
+            [&](const std::string& pluginName) {
+            return Plugin(pluginName).IsMasterFile(gameHandle);
+        })) {
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugins must load before all non-master plugins.");
+        }
+
+        // Check all plugins are valid and unique.
+        unordered_set<string> hashset;
+        for_each(std::begin(pluginNames), std::end(pluginNames), [&](const std::string& pluginName) {
+            if (hashset.find(boost::to_lower_copy(pluginName)) != hashset.end())
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is a duplicate entry.");
+
+            if (!Plugin(pluginName).IsValid(gameHandle))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+
+            hashset.insert(boost::to_lower_copy(pluginName));
+        });
+
+        this->clear();
+        transform(std::begin(pluginNames),
+                  std::end(pluginNames),
+                  back_inserter(*this),
+                  [](const std::string& pluginName) {
+            return Plugin(pluginName);
+        });
+    }
+
     void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) {
         if (empty())
             return;

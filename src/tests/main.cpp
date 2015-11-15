@@ -28,6 +28,7 @@
 #include "api/activeplugins.h"
 #include "api/loadorder.h"
 #include "backend/GameHandleTest.h"
+#include "backend/LoadOrderTest.h"
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
