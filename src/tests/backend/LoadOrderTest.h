@@ -38,12 +38,14 @@ namespace liblo {
                 blankDifferentEsm("Blank - Different.esm"),
                 blankEsp("Blank.esp"),
                 invalidPlugin("NotAPlugin.esm"),
+                missingPlugin("missing.esm"),
                 gameHandle(GetParam(), getGamePath(GetParam())) {}
 
             inline virtual void SetUp() {
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankEsm));
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentEsm));
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankEsp));
+                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / missingPlugin));
 
                 // Write out an non-empty, non-plugin file.
                 boost::filesystem::ofstream out(gameHandle.PluginsFolder() / invalidPlugin);
@@ -78,6 +80,7 @@ namespace liblo {
             std::string blankDifferentEsm;
             std::string blankEsp;
             std::string invalidPlugin;
+            std::string missingPlugin;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -181,6 +184,28 @@ namespace liblo {
                 EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
             else
                 EXPECT_NO_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, positionOfAMissingPluginShouldEqualTheLoadOrderSize) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_EQ(validLoadOrder.size(), loadOrder.getPosition(missingPlugin));
+        }
+
+        TEST_P(LoadOrderTest, positionOfAPluginShouldBeEqualToItsLoadOrderIndex) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_EQ(1, loadOrder.getPosition(blankEsm));
         }
     }
 }
