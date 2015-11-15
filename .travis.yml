@@ -3,8 +3,8 @@ language: cpp
 compiler:
   - gcc
 
-# Need Boost 1.54+, which isn't in the 12.04 repositories - install from a PPA.
-# Also need the OpenSSL dev package, for git clone from HTTPS URLs support.
+# Need Boost 1.54+, which isn't in the 12.04 repositories, and GCC 5 - install
+# from a PPA.
 addons:
   apt:
     sources:
@@ -21,13 +21,12 @@ install:
   # Use GCC 5.
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
   # Currently inside the cloned repo path.
-  # Install libespm.
-  - git clone https://github.com/WrinklyNinja/libespm.git ../libespm
-  # Install Google Test
   - cd ..
-  - wget https://googletest.googlecode.com/files/gtest-1.7.0.zip
-  - unzip gtest-1.7.0.zip
-  - cd gtest-1.7.0
+  # Install libespm.
+  - git clone https://github.com/WrinklyNinja/libespm.git
+  # Install Google Test
+  - wget https://github.com/google/googletest/archive/release-1.7.0.tar.gz -O - | tar -xz
+  - cd googletest-release-1.7.0
   - cmake .
   - make
   # Move back into the cloned libloadorder repo path.
@@ -37,10 +36,9 @@ before_script:
   - mkdir build
   - cd build
   # Fetch plugins to test with.
-  - wget https://github.com/WrinklyNinja/testing-plugins/archive/master.zip
-  - unzip master.zip
+  - wget https://github.com/WrinklyNinja/testing-plugins/archive/master.tar.gz -O - | tar -xz
   - mv testing-plugins-master/* ./
   # Travis machines are 64 bit, and the deps use dynamic linking.
-  - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF -DGTEST_ROOT=../gtest-1.7.0
+  - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF -DGTEST_ROOT=../googletest-release-1.7.0
 
 script: make && ./tests
