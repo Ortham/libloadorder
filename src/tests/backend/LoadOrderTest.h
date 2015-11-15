@@ -34,6 +34,7 @@ namespace liblo {
         class LoadOrderTest : public ::testing::TestWithParam<unsigned int> {
         protected:
             inline LoadOrderTest() :
+                updateEsm("Update.esm"),
                 blankEsm("Blank.esm"),
                 blankDifferentEsm("Blank - Different.esm"),
                 blankEsp("Blank.esp"),
@@ -107,6 +108,7 @@ namespace liblo {
             LoadOrder loadOrder;
             _lo_game_handle_int gameHandle;
 
+            std::string updateEsm;
             std::string blankEsm;
             std::string blankDifferentEsm;
             std::string blankEsp;
@@ -412,6 +414,125 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.clear());
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
+        }
+
+        TEST_P(LoadOrderTest, checkingIfAnInactivePluginIsActiveShouldReturnFalse) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_FALSE(loadOrder.isActive(blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, checkingIfAPluginNotInTheLoadOrderIsActiveShouldReturnFalse) {
+            EXPECT_FALSE(loadOrder.isActive(blankEsp));
+        }
+
+        TEST_P(LoadOrderTest, activatingAnInvalidPluginShouldThrow) {
+            EXPECT_ANY_THROW(loadOrder.activate(invalidPlugin, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, activatingANonMasterPluginNotInTheLoadOrderShouldAppendItToTheLoadOrder) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_EQ(3, loadOrder.getLoadOrder().size());
+
+            EXPECT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+            EXPECT_EQ(3, loadOrder.getPosition(blankEsp));
+            EXPECT_TRUE(loadOrder.isActive(blankEsp));
+        }
+
+        TEST_P(LoadOrderTest, activatingAMasterPluginNotInTheLoadOrderShouldInsertItAfterAllOtherMasters) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_EQ(3, loadOrder.getLoadOrder().size());
+
+            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameHandle));
+            ASSERT_EQ(4, loadOrder.getLoadOrder().size());
+            EXPECT_EQ(2, loadOrder.getPosition(blankDifferentEsm));
+            EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
+        }
+
+        TEST_P(LoadOrderTest, activatingAPluginInTheLoadOrderShouldSetItToActive) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_FALSE(loadOrder.isActive(blankDifferentEsm));
+
+            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameHandle));
+            EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
+        }
+
+        TEST_P(LoadOrderTest, activatingAPluginWhen255AreAlreadyActiveShouldThrow) {
+            // Create 255 plugins to test active plugins limit with. Do it here
+            // because it's too expensive to do for every test.
+            for (size_t i = 0; i < 255; ++i) {
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameHandle));
+            }
+
+            EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameHandle));
+
+            for (size_t i = 0; i < 255; ++i)
+                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+        }
+
+        TEST_P(LoadOrderTest, deactivatingAPluginNotInTheLoadOrderShouldDoNothing) {
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameHandle));
+            EXPECT_FALSE(loadOrder.isActive(blankEsp));
+            EXPECT_TRUE(loadOrder.getLoadOrder().empty());
+        }
+
+        TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
+            else
+                EXPECT_NO_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldForTextfileLoadOrderGamesShouldMakeNoChanges) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
+                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
+            }
+        }
+
+        TEST_P(LoadOrderTest, forSkyrimDeactivatingUpdateEsmShouldThrow) {
+            if (gameHandle.Id() == LIBLO_GAME_TES5)
+                EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, deactivatingAnInactivePluginShouldHaveNoEffect) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_FALSE(loadOrder.isActive(blankEsm));
+
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsm, gameHandle));
+            EXPECT_FALSE(loadOrder.isActive(blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, deactivatingAnActivePluginShouldMakeItInactive) {
+            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+            ASSERT_TRUE(loadOrder.isActive(blankEsp));
+
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameHandle));
+            EXPECT_FALSE(loadOrder.isActive(blankEsp));
         }
     }
 }

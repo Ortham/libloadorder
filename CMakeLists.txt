@@ -65,7 +65,8 @@ set (TESTER_HEADERS "${CMAKE_SOURCE_DIR}/src/tests/fixtures.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/activeplugins.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/loadorder.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/GameHandleTest.h"
-                    "${CMAKE_SOURCE_DIR}/src/tests/backend/LoadOrderTest.h")
+                    "${CMAKE_SOURCE_DIR}/src/tests/backend/LoadOrderTest.h"
+                    "${CMAKE_SOURCE_DIR}/src/tests/backend/PluginTest.h")
 
 source_group("Header Files" FILES ${PROJECT_HEADERS} ${TESTER_HEADERS})
 

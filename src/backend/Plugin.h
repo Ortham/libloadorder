@@ -51,10 +51,16 @@ namespace liblo {
         void    UnGhost(const _lo_game_handle_int& parentGame) const;         //Can throw exception.
         void    SetModTime(const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
 
+        bool isActive() const;
+
+        void activate();
+        void deactivate();
+
         bool operator == (const Plugin& rhs) const;
         bool operator != (const Plugin& rhs) const;
     private:
         std::string name;
+        bool active;
 
         libespm::Plugin ReadHeader(const _lo_game_handle_int& parentGame) const;
     };

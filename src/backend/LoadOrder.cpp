@@ -287,6 +287,42 @@ namespace liblo {
         loadOrder.insert(next(begin(loadOrder), loadOrderIndex), Plugin(pluginName));
     }
 
+    bool LoadOrder::isActive(const std::string& pluginName) const {
+        return find_if(begin(loadOrder), end(loadOrder), [&](const Plugin& plugin) {
+            return plugin == pluginName && plugin.isActive();
+        }) != end(loadOrder);
+    }
+
+    void LoadOrder::activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle) {
+        if (countActivePlugins() > 254)
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate " + pluginName + " as this would mean more than 255 plugins are active.");
+
+        if (!Plugin(pluginName).IsValid(gameHandle))
+            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+
+        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+        if (it == end(loadOrder)) {
+            if (Plugin(pluginName).IsMasterFile(gameHandle))
+                it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), Plugin(pluginName));
+            else {
+                loadOrder.push_back(Plugin(pluginName));
+                it = prev(loadOrder.end());
+            }
+        }
+        it->activate();
+    }
+
+    void LoadOrder::deactivate(const std::string& pluginName, const _lo_game_handle_int& gameHandle) {
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + gameHandle.MasterFile() + ".");
+        else if (gameHandle.Id() == LIBLO_GAME_TES5 && boost::iequals(pluginName, "Update.esm"))
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate Update.esm.");
+
+        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+        if (it != end(loadOrder))
+            it->deactivate();
+    }
+
     void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) {
         if (loadOrder.empty())
             return;
@@ -428,6 +464,12 @@ namespace liblo {
                         [&](const Plugin& plugin) {
             return plugin.IsMasterFile(gameHandle);
         }));
+    }
+
+    size_t LoadOrder::countActivePlugins() const {
+        return count_if(begin(loadOrder), end(loadOrder), [&](const Plugin& plugin) {
+            return plugin.isActive();
+        });
     }
 
     ///////////////////////////

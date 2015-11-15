@@ -35,9 +35,9 @@ using namespace std;
 namespace fs = boost::filesystem;
 
 namespace liblo {
-    Plugin::Plugin() : name("") {}
+    Plugin::Plugin() : active(false) {}
 
-    Plugin::Plugin(const string& filename) : name(filename) {
+    Plugin::Plugin(const string& filename) : name(filename), active(false) {
         if (!name.empty() && name[name.length() - 1] == '\r')
             name = name.substr(0, name.length() - 1);
         if (boost::iends_with(name, ".ghost"))
@@ -124,6 +124,18 @@ namespace liblo {
         catch (fs::filesystem_error& e) {
             throw error(LIBLO_ERROR_TIMESTAMP_WRITE_FAIL, e.what());
         }
+    }
+
+    bool Plugin::isActive() const {
+        return active;
+    }
+
+    void Plugin::activate() {
+        active = true;
+    }
+
+    void Plugin::deactivate() {
+        active = false;
     }
 
     bool Plugin::operator == (const Plugin& rhs) const {
