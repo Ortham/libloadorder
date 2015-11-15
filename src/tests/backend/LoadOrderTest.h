@@ -41,7 +41,9 @@ namespace liblo {
                 missingPlugin("missing.esm"),
                 loadOrderWithDuplicatesFile("duplicates.txt"),
                 loadOrderWithPluginBeforeMasterFile("unpartitioned.txt"),
-                gameHandle(GetParam(), getGamePath(GetParam())) {}
+                gameHandle(GetParam(), getGamePath(GetParam())) {
+                gameHandle.SetLocalAppData(getLocalPath(GetParam()));
+            }
 
             inline virtual void SetUp() {
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankEsm));
@@ -91,6 +93,15 @@ namespace liblo {
                     return "./Oblivion";
                 else
                     return "./Skyrim";
+            }
+
+            inline boost::filesystem::path getLocalPath(unsigned int gameId) const {
+                if (gameId == LIBLO_GAME_TES3)
+                    return "./local/Morrowind";
+                else if (gameId == LIBLO_GAME_TES4)
+                    return "./local/Oblivion";
+                else
+                    return "./local/Skyrim";
             }
 
             LoadOrder loadOrder;
