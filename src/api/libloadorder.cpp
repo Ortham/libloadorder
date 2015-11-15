@@ -163,16 +163,17 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         }
 
         //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
-        vector<Plugin>::iterator it = LoadOrderFileLO.begin();
-        while (it != LoadOrderFileLO.end()) {
-            if (PluginsFileLO.Find(*it) == PluginsFileLO.cend())
-                it = LoadOrderFileLO.erase(it);
-            else
-                ++it;
-        }
+        vector<string> loadOrderFileLoadOrder = LoadOrderFileLO.getLoadOrder();
+        loadOrderFileLoadOrder.erase(remove_if(
+            begin(loadOrderFileLoadOrder),
+            end(loadOrderFileLoadOrder),
+            [&](const string& plugin) {
+            return PluginsFileLO.getPosition(plugin) == PluginsFileLO.getLoadOrder().size();
+        }),
+            end(loadOrderFileLoadOrder));
 
         //Compare the two LoadOrder objects: they should be identical (since mtimes for each have not been touched).
-        if (PluginsFileLO != LoadOrderFileLO)
+        if (PluginsFileLO.getLoadOrder() != loadOrderFileLoadOrder)
             return c_error(LIBLO_WARN_LO_MISMATCH, "The order of plugins present in both loadorder.txt and plugins.txt differs between the two files.");
     }
 
@@ -220,36 +221,13 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             }
 
             // Ensure that the first plugin is the game's master file.
-            gh->loadOrder.Move(gh->MasterFile(), gh->loadOrder.begin());
+            gh->loadOrder.setPosition(gh->MasterFile(), 0, *gh);
 
-            // Now check all plugins' existences.
-            // Also check that no plugin appears more than once.
-            // Also ensure that all master files load before all plugin files.
-            unordered_set<Plugin> hashset;
-            auto firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
-            vector<Plugin>::iterator it = gh->loadOrder.begin();
-            while (it != gh->loadOrder.end()) {
-                if (hashset.find(*it) != hashset.end() || !it->Exists(*gh)) {
-                    // Plugin is a duplicate or is not installed.
-                    bool refindFirstNonMaster = distance(gh->loadOrder.begin(), it) <= distance(gh->loadOrder.begin(), firstNonMaster);
-                    it = gh->loadOrder.erase(it);
-                    if (refindFirstNonMaster)
-                        firstNonMaster = gh->loadOrder.FindFirstNonMaster(*gh);
-                    continue;
-                }
+            // Ensure that no plugin appears more than once.
+            gh->loadOrder.unique();
 
-                hashset.insert(*it);
-
-                if (it->IsMasterFile(*gh)
-                    && distance(gh->loadOrder.begin(), it) > distance(gh->loadOrder.begin(), firstNonMaster)) {
-                    // Master amongst plugins, move it after the last master.
-                    firstNonMaster = ++gh->loadOrder.Move(*it, firstNonMaster);
-                    it = firstNonMaster;
-                    continue;
-                }
-
-                ++it;
-            }
+            // Ensure that all master files load before all plugin files.
+            gh->loadOrder.partitionMasters(*gh);
 
             // Now write changes.
             gh->loadOrder.Save(*gh);
@@ -287,9 +265,10 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         // Check that there aren't more than 255 plugins, and remove those
         // at the end of the load order if so.
         if (gh->activePlugins.size() > 255) {
+            vector<string> loadOrder(gh->loadOrder.getLoadOrder());
             size_t toRemove = gh->activePlugins.size() - 255;
             while (toRemove > 0) {
-                for (auto rit = gh->loadOrder.crbegin(); rit != gh->loadOrder.crend(); ++rit) {
+                for (auto rit = rbegin(loadOrder); rit != rend(loadOrder); ++rit) {
                     auto pos = gh->activePlugins.find(*rit);
                     if (pos != gh->activePlugins.end())
                         gh->activePlugins.erase(pos);

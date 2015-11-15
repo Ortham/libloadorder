@@ -63,7 +63,7 @@ namespace liblo {
         libespm::Plugin ReadHeader(const _lo_game_handle_int& parentGame) const;
     };
 
-    class LoadOrder : public std::vector < Plugin > {
+    class LoadOrder {
     public:
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
@@ -79,15 +79,15 @@ namespace liblo {
 
         bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
 
-        std::vector<Plugin>::iterator Move(const Plugin& plugin, std::vector<Plugin>::iterator newPos);
-
-        std::vector<Plugin>::iterator Find(const Plugin& plugin);
-        std::vector<Plugin>::iterator FindFirstNonMaster(const _lo_game_handle_int& parentGame);
+        void clear();
+        void unique();
+        void partitionMasters(const _lo_game_handle_int& gameHandle);
 
         //Assumes that the content of the file is valid.
         void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path& file);
     private:
         time_t mtime;
+        std::vector<Plugin> loadOrder;
 
         size_t getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const;
     };

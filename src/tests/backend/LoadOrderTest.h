@@ -39,6 +39,8 @@ namespace liblo {
                 blankEsp("Blank.esp"),
                 invalidPlugin("NotAPlugin.esm"),
                 missingPlugin("missing.esm"),
+                loadOrderWithDuplicatesFile("duplicates.txt"),
+                loadOrderWithPluginBeforeMasterFile("unpartitioned.txt"),
                 gameHandle(GetParam(), getGamePath(GetParam())) {}
 
             inline virtual void SetUp() {
@@ -57,11 +59,29 @@ namespace liblo {
                 ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
                 ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / gameHandle.MasterFile()));
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
+
+                // Write out a load order file containing duplicates.
+                out.open(loadOrderWithDuplicatesFile);
+                out << gameHandle.MasterFile() << std::endl
+                    << blankEsm << std::endl
+                    << blankDifferentEsm << std::endl
+                    << blankEsm << std::endl
+                    << invalidPlugin << std::endl;
+                out.close();
+
+                // Write out a load order file containing a plugin before a master
+                out.open(loadOrderWithPluginBeforeMasterFile);
+                out << gameHandle.MasterFile() << std::endl
+                    << blankEsp << std::endl
+                    << blankDifferentEsm << std::endl;
+                out.close();
             }
 
             inline virtual void TearDown() {
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / invalidPlugin));
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
+
+                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderWithDuplicatesFile));
             }
 
             inline std::string getGamePath(unsigned int gameId) const {
@@ -81,6 +101,9 @@ namespace liblo {
             std::string blankEsp;
             std::string invalidPlugin;
             std::string missingPlugin;
+
+            boost::filesystem::path loadOrderWithDuplicatesFile;
+            boost::filesystem::path loadOrderWithPluginBeforeMasterFile;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -330,6 +353,54 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
 
             EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, loadingFromFileShouldLoadAllEntriesForValidPlugins) {
+            std::vector<std::string> expectedLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+                blankEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile));
+
+            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, removingDuplicatePluginsShouldKeepTheLastOfTheDuplicates) {
+            std::vector<std::string> expectedLoadOrder({
+                gameHandle.MasterFile(),
+                blankDifferentEsm,
+                blankEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile));
+
+            EXPECT_NO_THROW(loadOrder.unique());
+            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, partitioningMastersShouldMoveAllMastersBeforeAllNonMasters) {
+            std::vector<std::string> expectedLoadOrder({
+                gameHandle.MasterFile(),
+                blankDifferentEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithPluginBeforeMasterFile));
+
+            EXPECT_NO_THROW(loadOrder.partitionMasters(gameHandle));
+            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, clearingLoadOrderShouldRemoveAllPluginsFromTheLoadOrder) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_NO_THROW(loadOrder.clear());
+            EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
     }
 }

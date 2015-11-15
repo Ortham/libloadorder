@@ -188,7 +188,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
             //Unghost plugin if ghosted.
             pluginObj.UnGhost(*gh);
             // If the plugin isn't in the load order, make sure it is added.
-            if (gh->loadOrder.Find(pluginObj) == gh->loadOrder.end()) {
+            if (gh->loadOrder.getPosition(pluginObj.Name()) == gh->loadOrder.getLoadOrder().size()) {
                 gh->loadOrder.Load(*gh);
                 gh->loadOrder.Save(*gh);
             }
