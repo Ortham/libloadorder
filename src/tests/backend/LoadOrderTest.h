@@ -222,5 +222,114 @@ namespace liblo {
 
             EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
         }
+
+        TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+            else {
+                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATextfileBasedGameShouldMakeNoChanges) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+                EXPECT_TRUE(loadOrder.getLoadOrder().empty());
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATimestampBasedGameShouldSucceed) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+                EXPECT_FALSE(loadOrder.getLoadOrder().empty());
+                EXPECT_EQ(0, loadOrder.getPosition(blankEsm));
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+            else
+                EXPECT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginForATextfileBasedGameShouldMakeNoChanges) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                ASSERT_ANY_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+                EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginForATimestampBasedGameShouldSucceed) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+                ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+                EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(0));
+                EXPECT_EQ(gameHandle.MasterFile(), loadOrder.getPluginAtPosition(1));
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingThePositionOfAnInvalidPluginShouldThrow) {
+            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+
+            EXPECT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingThePositionOfAnInvalidPluginShouldMakeNoChanges) {
+            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+
+            ASSERT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameHandle));
+            EXPECT_EQ(1, loadOrder.getLoadOrder().size());
+        }
+
+        TEST_P(LoadOrderTest, settingThePositionOfAPluginToGreaterThanTheLoadOrderSizeShouldPutThePluginAtTheEnd) {
+            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+
+            EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+            EXPECT_EQ(2, loadOrder.getLoadOrder().size());
+            EXPECT_EQ(1, loadOrder.getPosition(blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, settingANonMasterPluginToLoadBeforeAMasterPluginShouldThrow) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingAMasterToLoadAfterAPluginShouldThrow) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+        }
     }
 }

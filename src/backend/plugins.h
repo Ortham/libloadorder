@@ -73,6 +73,7 @@ namespace liblo {
         std::string getPluginAtPosition(size_t index) const;
 
         void setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
+        void setPosition(const std::string& pluginName, size_t loadOrderIndex, const _lo_game_handle_int& gameHandle);
 
         void CheckValidity(const _lo_game_handle_int& parentGame);  //Game master first, masters before plugins, plugins all exist.
 
@@ -87,6 +88,8 @@ namespace liblo {
         void LoadFromFile(const _lo_game_handle_int& parentGame, const boost::filesystem::path& file);
     private:
         time_t mtime;
+
+        size_t getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const;
     };
 }
 
