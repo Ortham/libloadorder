@@ -315,17 +315,18 @@ namespace liblo {
         if (countActivePlugins() > 254)
             throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate " + pluginName + " as this would mean more than 255 plugins are active.");
 
-        if (!Plugin(pluginName).IsValid(gameHandle))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
-
         auto it = find(begin(loadOrder), end(loadOrder), pluginName);
         if (it == end(loadOrder)) {
+            Plugin plugin(pluginName);
+            if (!plugin.IsValid(gameHandle))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+
             if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
-                it = loadOrder.insert(begin(loadOrder), Plugin(pluginName));
-            else if (Plugin(pluginName).IsMasterFile(gameHandle))
-                it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), Plugin(pluginName));
+                it = loadOrder.insert(begin(loadOrder), plugin);
+            else if (plugin.IsMasterFile(gameHandle))
+                it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), plugin);
             else {
-                loadOrder.push_back(Plugin(pluginName));
+                loadOrder.push_back(plugin);
                 it = prev(loadOrder.end());
             }
         }
