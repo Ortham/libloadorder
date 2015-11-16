@@ -417,6 +417,14 @@ namespace liblo {
             EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
         }
 
+        TEST_P(LoadOrderTest, loadingFromFileShouldActivateTheGameMasterForTextfileBasedGamesAndNotOtherwise) {
+            ASSERT_NO_THROW(loadDuplicatesFromFile());
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_TRUE(loadOrder.isActive(gameHandle.MasterFile()));
+            else
+                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
+        }
+
         TEST_P(LoadOrderTest, removingDuplicatePluginsShouldKeepTheLastOfTheDuplicates) {
             std::vector<std::string> expectedLoadOrder({
                 gameHandle.MasterFile(),
@@ -569,6 +577,64 @@ namespace liblo {
             ASSERT_TRUE(loadOrder.isActive(blankEsp));
 
             EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameHandle));
+            EXPECT_FALSE(loadOrder.isActive(blankEsp));
+        }
+
+        TEST_P(LoadOrderTest, settingThePositionOfAnActivePluginShouldKeepItActive) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+
+            loadOrder.setPosition(blankEsm, 2, gameHandle);
+            EXPECT_TRUE(loadOrder.isActive(blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, settingThePositionOfAnInactivePluginShouldKeepItInactive) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+
+            loadOrder.setPosition(blankEsm, 2, gameHandle);
+            EXPECT_FALSE(loadOrder.isActive(blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, settingLoadOrderShouldActivateTheGameMasterForTextfileBasedGamesAndNotOtherwise) {
+            std::vector<std::string> firstLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameHandle));
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_TRUE(loadOrder.isActive(gameHandle.MasterFile()));
+            else
+                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
+        }
+
+        TEST_P(LoadOrderTest, settingANewLoadOrderShouldRetainTheActiveStateOfPluginsInTheOldLoadOrder) {
+            std::vector<std::string> firstLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankDifferentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+
+            std::vector<std::string> secondLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder, gameHandle));
+
+            EXPECT_TRUE(loadOrder.isActive(blankEsm));
             EXPECT_FALSE(loadOrder.isActive(blankEsp));
         }
     }

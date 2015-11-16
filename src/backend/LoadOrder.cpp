@@ -225,34 +225,43 @@ namespace liblo {
         if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && (pluginNames.empty() || !boost::iequals(pluginNames[0], gameHandle.MasterFile())))
             throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + gameHandle.MasterFile() + "\" must load first.");
 
-        // Check that all masters load before non-masters.
-        if (!is_partitioned(begin(pluginNames),
-            end(pluginNames),
-            [&](const std::string& pluginName) {
-            return Plugin(pluginName).IsMasterFile(gameHandle);
-        })) {
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugins must load before all non-master plugins.");
-        }
-
-        // Check all plugins are valid and unique.
+        // Create vector of Plugin objects, reusing existing objects
+        // where possible. Also check for duplicate entries, that new
+        // plugins are valid,
+        vector<Plugin> plugins;
         unordered_set<string> hashset;
         for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
             if (hashset.find(boost::to_lower_copy(pluginName)) != hashset.end())
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is a duplicate entry.");
 
-            if (!Plugin(pluginName).IsValid(gameHandle))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
-
             hashset.insert(boost::to_lower_copy(pluginName));
+
+            auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+            if (it != end(loadOrder))
+                plugins.push_back(*it);
+            else {
+                plugins.push_back(Plugin(pluginName));
+                if (!plugins.back().IsValid(gameHandle))
+                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+            }
         });
 
-        loadOrder.clear();
-        transform(begin(pluginNames),
-                  end(pluginNames),
-                  back_inserter(loadOrder),
-                  [](const std::string& pluginName) {
-            return Plugin(pluginName);
-        });
+        // Check that all masters load before non-masters.
+        if (!is_partitioned(begin(plugins),
+            end(plugins),
+            [&](const Plugin& plugin) {
+            return plugin.IsMasterFile(gameHandle);
+        })) {
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Master plugins must load before all non-master plugins.");
+        }
+
+        // Swap load order for the new one.
+        loadOrder.swap(plugins);
+
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            // Make sure that game master is active.
+            loadOrder.front().activate();
+        }
     }
 
     void LoadOrder::setPosition(const std::string& pluginName, size_t loadOrderIndex, const _lo_game_handle_int& gameHandle) {
@@ -264,15 +273,24 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" must load first.");
         }
 
-        // Check that the plugin is valid.
-        if (!Plugin(pluginName).IsValid(gameHandle))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+        // If the plugin is already in the load order, use its existing
+        // object.
+        Plugin plugin;
+        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+        if (it != end(loadOrder))
+            plugin = *it;
+        else {
+            plugin = Plugin(pluginName);
+            // Check that the plugin is valid.
+            if (!plugin.IsValid(gameHandle))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+        }
 
         // Check that a master isn't being moved before a non-master or the inverse.
         size_t masterPartitionPoint(getMasterPartitionPoint(gameHandle));
-        if (!Plugin(pluginName).IsMasterFile(gameHandle) && loadOrderIndex < masterPartitionPoint)
+        if (!plugin.IsMasterFile(gameHandle) && loadOrderIndex < masterPartitionPoint)
             throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot move a non-master plugin before master files.");
-        else if (Plugin(pluginName).IsMasterFile(gameHandle)
+        else if (plugin.IsMasterFile(gameHandle)
                  && ((loadOrderIndex > masterPartitionPoint && masterPartitionPoint != loadOrder.size())
                  || (getPosition(pluginName) < masterPartitionPoint && loadOrderIndex == masterPartitionPoint)))
                  throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot move a master file after non-master plugins.");
@@ -284,7 +302,7 @@ namespace liblo {
         if (loadOrderIndex > loadOrder.size())
             loadOrderIndex = loadOrder.size();
 
-        loadOrder.insert(next(begin(loadOrder), loadOrderIndex), Plugin(pluginName));
+        loadOrder.insert(next(begin(loadOrder), loadOrderIndex), plugin);
     }
 
     bool LoadOrder::isActive(const std::string& pluginName) const {
@@ -448,12 +466,16 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
 
-        if (parentGame.Id() == LIBLO_GAME_TES5 && file == parentGame.ActivePluginsFile()) {
-            //Make sure that Skyrim.esm is first.
+        if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            // Make sure that game master is first and active.
             setPosition(parentGame.MasterFile(), 0, parentGame);
-            //Add Update.esm if not already present.
-            if (Plugin("Update.esm").IsValid(parentGame) && count(begin(loadOrder), end(loadOrder), Plugin("Update.esm")) == 0)
-                loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(parentGame)), Plugin("Update.esm"));
+            loadOrder.front().activate();
+
+            if (parentGame.Id() == LIBLO_GAME_TES5) {
+                //Add Update.esm if not already present.
+                if (Plugin("Update.esm").IsValid(parentGame) && count(begin(loadOrder), end(loadOrder), Plugin("Update.esm")) == 0)
+                    loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(parentGame)), Plugin("Update.esm"));
+            }
         }
     }
 
