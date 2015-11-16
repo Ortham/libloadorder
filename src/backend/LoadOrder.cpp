@@ -305,10 +305,78 @@ namespace liblo {
         loadOrder.insert(next(begin(loadOrder), loadOrderIndex), plugin);
     }
 
+    std::unordered_set<std::string> LoadOrder::getActivePlugins() const {
+        unordered_set<string> activePlugins;
+        for_each(begin(loadOrder),
+                 end(loadOrder),
+                 [&](const Plugin& plugin) {
+            if (plugin.isActive())
+                activePlugins.insert(plugin.Name());
+        });
+        return activePlugins;
+    }
+
     bool LoadOrder::isActive(const std::string& pluginName) const {
         return find_if(begin(loadOrder), end(loadOrder), [&](const Plugin& plugin) {
             return plugin == pluginName && plugin.isActive();
         }) != end(loadOrder);
+    }
+
+    void LoadOrder::setActivePlugins(const std::unordered_set<std::string>& pluginNames, const _lo_game_handle_int& gameHandle) {
+        if (pluginNames.size() > 255)
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate more than 255 plugins.");
+
+        // Check all plugins are valid.
+        for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
+            if (count(begin(loadOrder), end(loadOrder), pluginName) == 0
+                && !Plugin(pluginName).IsValid(gameHandle))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+        });
+
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            // Check that the game master file is active.
+            // Need to first lowercase all plugin names for comparison.
+            unordered_set<string> lowercasedPluginNames;
+            transform(begin(pluginNames),
+                      end(pluginNames),
+                      inserter(lowercasedPluginNames, begin(lowercasedPluginNames)),
+                      [&](const std::string& pluginName) {
+                return boost::to_lower_copy(pluginName);
+            });
+
+            // Now do the check.
+            if (lowercasedPluginNames.count(boost::to_lower_copy(gameHandle.MasterFile())) == 0)
+                throw error(LIBLO_ERROR_INVALID_ARGS, gameHandle.MasterFile() + " must be active.");
+
+            // Also check for Skyrim if Update.esm exists.
+            if (gameHandle.Id() == LIBLO_GAME_TES5
+                && Plugin("Update.esm").IsValid(gameHandle)
+                && lowercasedPluginNames.count("update.esm") == 0)
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Update.esm must be active.");
+        }
+
+        // Deactivate all existing plugins.
+        for_each(begin(loadOrder), end(loadOrder), [&](Plugin& plugin) {
+            plugin.deactivate();
+        });
+
+        // Now activate the plugins. If a plugin isn't in the load order,
+        // append it.
+        for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
+            auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+            if (it == end(loadOrder)) {
+                Plugin plugin(pluginName);
+                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
+                    it = loadOrder.insert(begin(loadOrder), plugin);
+                else if (plugin.IsMasterFile(gameHandle))
+                    it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), plugin);
+                else {
+                    loadOrder.push_back(plugin);
+                    it = prev(loadOrder.end());
+                }
+            }
+            it->activate();
+        });
     }
 
     void LoadOrder::activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle) {

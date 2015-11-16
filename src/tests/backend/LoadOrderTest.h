@@ -823,5 +823,161 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.isActive(blankEsm));
             EXPECT_FALSE(loadOrder.isActive(blankEsp));
         }
+
+        TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldThrow) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                invalidPlugin,
+            });
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldMakeNoChanges) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                invalidPlugin,
+            });
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+        }
+
+        TEST_P(LoadOrderTest, settingMoreThan255ActivePluginsShouldThrow) {
+            // Create 255 plugins to test active plugins limit with. Do it here
+            // because it's too expensive to do for every test.
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+            });
+            for (size_t i = 0; i < 254; ++i) {
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                activePlugins.insert(std::to_string(i) + ".esp");
+            }
+
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+
+            for (size_t i = 0; i < 254; ++i)
+                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+        }
+
+        TEST_P(LoadOrderTest, settingMoreThan255ActivePluginsShouldMakeNoChanges) {
+            // Create 255 plugins to test active plugins limit with. Do it here
+            // because it's too expensive to do for every test.
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+            });
+            for (size_t i = 0; i < 254; ++i) {
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                activePlugins.insert(std::to_string(i) + ".esp");
+            }
+
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+
+            for (size_t i = 0; i < 254; ++i)
+                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldThrowForTextfileBasedGamesAndNotOtherwise) {
+            std::unordered_set<std::string> activePlugins({
+                updateEsm,
+                blankEsm,
+            });
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            else
+                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldMakeNoChangesForTextfileBasedGames) {
+            std::unordered_set<std::string> activePlugins({
+                updateEsm,
+                blankEsm,
+            });
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+                EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldThrowForSkyrimAndNotOtherwise) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                blankEsm,
+            });
+            if (gameHandle.Id() == LIBLO_GAME_TES5)
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            else
+                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldMakeNoChangesForSkyrim) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                blankEsm,
+            });
+            if (gameHandle.Id() == LIBLO_GAME_TES5) {
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+                EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+            }
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItDoesNotExistShouldNotThrow) {
+            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / updateEsm));
+
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                blankEsm,
+            });
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsShouldDeactivateAnyOthersInLoadOrderCaseInsensitively) {
+            std::vector<std::string> validLoadOrder({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankEsp,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                boost::to_lower_copy(blankEsm),
+            });
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+
+            std::unordered_set<std::string> expectedActivePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                blankEsm,
+            });
+            EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsNotInLoadOrderShouldAddThem) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                blankEsm,
+            });
+            std::vector<std::string> expectedLoadOrder({
+                gameHandle.MasterFile(),
+                updateEsm,
+                blankEsm,
+            });
+            ASSERT_TRUE(loadOrder.getLoadOrder().empty());
+
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+
+            std::vector<std::string> newLoadOrder(loadOrder.getLoadOrder());
+            EXPECT_EQ(3, newLoadOrder.size());
+            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), gameHandle.MasterFile()));
+            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), updateEsm));
+            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), blankEsm));
+        }
     }
 }

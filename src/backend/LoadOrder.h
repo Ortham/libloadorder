@@ -50,8 +50,10 @@ namespace liblo {
         void setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
         void setPosition(const std::string& pluginName, size_t loadOrderIndex, const _lo_game_handle_int& gameHandle);
 
+        std::unordered_set<std::string> getActivePlugins() const;
         bool isActive(const std::string& pluginName) const;
 
+        void setActivePlugins(const std::unordered_set<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
         void activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
         void deactivate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
 
