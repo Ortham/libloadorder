@@ -41,7 +41,9 @@ namespace liblo {
                 invalidPlugin("NotAPlugin.esm"),
                 missingPlugin("missing.esm"),
                 loadOrderWithDuplicatesFile("duplicates.txt"),
+                morrowindLoadOrderWithDuplicatesFile("mwduplicates.ini"),
                 loadOrderWithPluginBeforeMasterFile("unpartitioned.txt"),
+                morrowindLoadOrderWithPluginBeforeMasterFile("mwunpartitioned.ini"),
                 gameHandle(GetParam(), getGamePath(GetParam())) {
                 gameHandle.SetLocalAppData(getLocalPath(GetParam()));
             }
@@ -72,11 +74,27 @@ namespace liblo {
                     << invalidPlugin << std::endl;
                 out.close();
 
+                // Do the same again, but for Morrowind's load order file format.
+                out.open(morrowindLoadOrderWithDuplicatesFile);
+                out << "GameFile0=" << gameHandle.MasterFile() << std::endl
+                    << "GameFile1=" << blankEsm << std::endl
+                    << "GameFile2=" << blankDifferentEsm << std::endl
+                    << "GameFile3=" << blankEsm << std::endl
+                    << "GameFile4=" << invalidPlugin << std::endl;
+                out.close();
+
                 // Write out a load order file containing a plugin before a master
                 out.open(loadOrderWithPluginBeforeMasterFile);
                 out << gameHandle.MasterFile() << std::endl
                     << blankEsp << std::endl
                     << blankDifferentEsm << std::endl;
+                out.close();
+
+                // Do the same again, but for Morrowind's load order file format.
+                out.open(morrowindLoadOrderWithPluginBeforeMasterFile);
+                out << "GameFile0=" << gameHandle.MasterFile() << std::endl
+                    << "GameFile1=" << blankEsp << std::endl
+                    << "GameFile2=" << blankDifferentEsm << std::endl;
                 out.close();
             }
 
@@ -85,6 +103,9 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
 
                 ASSERT_NO_THROW(boost::filesystem::remove(loadOrderWithDuplicatesFile));
+                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderWithPluginBeforeMasterFile));
+                ASSERT_NO_THROW(boost::filesystem::remove(morrowindLoadOrderWithDuplicatesFile));
+                ASSERT_NO_THROW(boost::filesystem::remove(morrowindLoadOrderWithPluginBeforeMasterFile));
             }
 
             inline std::string getGamePath(unsigned int gameId) const {
@@ -105,6 +126,20 @@ namespace liblo {
                     return "./local/Skyrim";
             }
 
+            inline void loadDuplicatesFromFile() {
+                if (gameHandle.Id() == LIBLO_GAME_TES3)
+                    loadOrder.LoadFromFile(gameHandle, morrowindLoadOrderWithDuplicatesFile);
+                else
+                    loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile);
+            }
+
+            inline void loadPluginBeforeMasterFromFile() {
+                if (gameHandle.Id() == LIBLO_GAME_TES3)
+                    loadOrder.LoadFromFile(gameHandle, morrowindLoadOrderWithPluginBeforeMasterFile);
+                else
+                    loadOrder.LoadFromFile(gameHandle, loadOrderWithPluginBeforeMasterFile);
+            }
+
             LoadOrder loadOrder;
             _lo_game_handle_int gameHandle;
 
@@ -117,6 +152,8 @@ namespace liblo {
 
             boost::filesystem::path loadOrderWithDuplicatesFile;
             boost::filesystem::path loadOrderWithPluginBeforeMasterFile;
+            boost::filesystem::path morrowindLoadOrderWithDuplicatesFile;
+            boost::filesystem::path morrowindLoadOrderWithPluginBeforeMasterFile;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -124,7 +161,7 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 LoadOrderTest,
                                 ::testing::Values(
-                                //LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES3,
                                 LIBLO_GAME_TES4,
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
@@ -375,7 +412,7 @@ namespace liblo {
                 blankDifferentEsm,
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile));
+            ASSERT_NO_THROW(loadDuplicatesFromFile());
 
             EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
         }
@@ -386,7 +423,7 @@ namespace liblo {
                 blankDifferentEsm,
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile));
+            ASSERT_NO_THROW(loadDuplicatesFromFile());
 
             EXPECT_NO_THROW(loadOrder.unique());
             EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
@@ -398,7 +435,7 @@ namespace liblo {
                 blankDifferentEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.LoadFromFile(gameHandle, loadOrderWithPluginBeforeMasterFile));
+            ASSERT_NO_THROW(loadPluginBeforeMasterFromFile());
 
             EXPECT_NO_THROW(loadOrder.partitionMasters(gameHandle));
             EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
