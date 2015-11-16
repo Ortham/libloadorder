@@ -508,6 +508,16 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
         }
 
+        TEST_P(LoadOrderTest, activatingTheGameMasterFileNotInTheLoadOrderShouldInsertItAtTheBeginningForTextfileBasedGamesAndAfterAllOtherMastersOtherwise) {
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+
+            EXPECT_NO_THROW(loadOrder.activate(gameHandle.MasterFile(), gameHandle));
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_EQ(0, loadOrder.getPosition(gameHandle.MasterFile()));
+            else
+                EXPECT_EQ(1, loadOrder.getPosition(gameHandle.MasterFile()));
+        }
+
         TEST_P(LoadOrderTest, activatingAPluginInTheLoadOrderShouldSetItToActive) {
             std::vector<std::string> validLoadOrder({
                 gameHandle.MasterFile(),

@@ -320,7 +320,9 @@ namespace liblo {
 
         auto it = find(begin(loadOrder), end(loadOrder), pluginName);
         if (it == end(loadOrder)) {
-            if (Plugin(pluginName).IsMasterFile(gameHandle))
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
+                it = loadOrder.insert(begin(loadOrder), Plugin(pluginName));
+            else if (Plugin(pluginName).IsMasterFile(gameHandle))
                 it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), Plugin(pluginName));
             else {
                 loadOrder.push_back(Plugin(pluginName));
