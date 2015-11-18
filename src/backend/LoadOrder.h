@@ -40,6 +40,8 @@ struct _lo_game_handle_int;
 namespace liblo {
     class LoadOrder {
     public:
+        static const unsigned int maxActivePlugins = 255;
+
         void Load(const _lo_game_handle_int& parentGame);
         void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
 

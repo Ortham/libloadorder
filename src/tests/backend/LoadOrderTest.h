@@ -678,24 +678,24 @@ namespace liblo {
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
         }
 
-        TEST_P(LoadOrderTest, activatingAPluginWhen255AreAlreadyActiveShouldThrow) {
-            // Create 255 plugins to test active plugins limit with. Do it here
-            // because it's too expensive to do for every test.
-            for (size_t i = 0; i < 255; ++i) {
+        TEST_P(LoadOrderTest, activatingAPluginWhenMaxNumberAreAlreadyActiveShouldThrow) {
+            // Create plugins to test active plugins limit with. Do it
+            // here because it's too expensive to do for every test.
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
                 EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameHandle));
             }
 
             EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameHandle));
 
-            for (size_t i = 0; i < 255; ++i)
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
                 EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
-        TEST_P(LoadOrderTest, activatingAPluginWhen255AreAlreadyActiveShouldMakeNoChanges) {
-            // Create 255 plugins to test active plugins limit with. Do it here
-            // because it's too expensive to do for every test.
-            for (size_t i = 0; i < 255; ++i) {
+        TEST_P(LoadOrderTest, activatingAPluginWhenMaxNumberAreAlreadyActiveShouldMakeNoChanges) {
+            // Create plugins to test active plugins limit with. Do it
+            // here because it's too expensive to do for every test.
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
                 EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameHandle));
             }
@@ -703,7 +703,7 @@ namespace liblo {
             EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameHandle));
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
 
-            for (size_t i = 0; i < 255; ++i)
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
                 EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
@@ -843,32 +843,32 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
         }
 
-        TEST_P(LoadOrderTest, settingMoreThan255ActivePluginsShouldThrow) {
-            // Create 255 plugins to test active plugins limit with. Do it here
-            // because it's too expensive to do for every test.
+        TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldThrow) {
+            // Create plugins to test active plugins limit with. Do it
+            // here because it's too expensive to do for every test.
             std::unordered_set<std::string> activePlugins({
                 gameHandle.MasterFile(),
                 updateEsm,
             });
-            for (size_t i = 0; i < 254; ++i) {
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
 
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
 
-            for (size_t i = 0; i < 254; ++i)
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
                 EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
-        TEST_P(LoadOrderTest, settingMoreThan255ActivePluginsShouldMakeNoChanges) {
-            // Create 255 plugins to test active plugins limit with. Do it here
-            // because it's too expensive to do for every test.
+        TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldMakeNoChanges) {
+            // Create plugins to test active plugins limit with. Do it
+            // here because it's too expensive to do for every test.
             std::unordered_set<std::string> activePlugins({
                 gameHandle.MasterFile(),
                 updateEsm,
             });
-            for (size_t i = 0; i < 254; ++i) {
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
@@ -876,7 +876,7 @@ namespace liblo {
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
 
-            for (size_t i = 0; i < 254; ++i)
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
                 EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
         }
 

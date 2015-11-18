@@ -306,8 +306,8 @@ namespace liblo {
     }
 
     void LoadOrder::setActivePlugins(const std::unordered_set<std::string>& pluginNames, const _lo_game_handle_int& gameHandle) {
-        if (pluginNames.size() > 255)
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate more than 255 plugins.");
+        if (pluginNames.size() > maxActivePlugins)
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate more than " + to_string(maxActivePlugins) + " plugins.");
 
         // Check all plugins are valid.
         for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
@@ -354,8 +354,8 @@ namespace liblo {
     }
 
     void LoadOrder::activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle) {
-        if (countActivePlugins() > 254)
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate " + pluginName + " as this would mean more than 255 plugins are active.");
+        if (countActivePlugins() >= maxActivePlugins)
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate " + pluginName + " as this would mean more than " + to_string(maxActivePlugins) + " plugins are active.");
 
         auto it = find(begin(loadOrder), end(loadOrder), pluginName);
         if (it == end(loadOrder)) {
