@@ -235,15 +235,7 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is a duplicate entry.");
 
             hashset.insert(boost::to_lower_copy(pluginName));
-
-            auto it = find(begin(loadOrder), end(loadOrder), pluginName);
-            if (it != end(loadOrder))
-                plugins.push_back(*it);
-            else {
-                plugins.push_back(Plugin(pluginName));
-                if (!plugins.back().IsValid(gameHandle))
-                    throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
-            }
+            plugins.push_back(getPluginObject(pluginName, gameHandle));
         });
 
         // Check that all masters load before non-masters.
@@ -275,16 +267,7 @@ namespace liblo {
 
         // If the plugin is already in the load order, use its existing
         // object.
-        Plugin plugin;
-        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
-        if (it != end(loadOrder))
-            plugin = *it;
-        else {
-            plugin = Plugin(pluginName);
-            // Check that the plugin is valid.
-            if (!plugin.IsValid(gameHandle))
-                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
-        }
+        Plugin plugin = getPluginObject(pluginName, gameHandle);
 
         // Check that a master isn't being moved before a non-master or the inverse.
         size_t masterPartitionPoint(getMasterPartitionPoint(gameHandle));
@@ -364,17 +347,8 @@ namespace liblo {
         // append it.
         for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
             auto it = find(begin(loadOrder), end(loadOrder), pluginName);
-            if (it == end(loadOrder)) {
-                Plugin plugin(pluginName);
-                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
-                    it = loadOrder.insert(begin(loadOrder), plugin);
-                else if (plugin.IsMasterFile(gameHandle))
-                    it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), plugin);
-                else {
-                    loadOrder.push_back(plugin);
-                    it = prev(loadOrder.end());
-                }
-            }
+            if (it == end(loadOrder))
+                it = addToLoadOrder(pluginName, gameHandle);
             it->activate();
         });
     }
@@ -389,14 +363,7 @@ namespace liblo {
             if (!plugin.IsValid(gameHandle))
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
-                it = loadOrder.insert(begin(loadOrder), plugin);
-            else if (plugin.IsMasterFile(gameHandle))
-                it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), plugin);
-            else {
-                loadOrder.push_back(plugin);
-                it = prev(loadOrder.end());
-            }
+            it = addToLoadOrder(pluginName, gameHandle);
         }
         it->activate();
     }
@@ -563,6 +530,32 @@ namespace liblo {
         return count_if(begin(loadOrder), end(loadOrder), [&](const Plugin& plugin) {
             return plugin.isActive();
         });
+    }
+
+    Plugin LoadOrder::getPluginObject(const std::string& pluginName, const _lo_game_handle_int& gameHandle) const {
+        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+        if (it != end(loadOrder))
+            return *it;
+        else {
+            Plugin plugin(pluginName);
+            if (!plugin.IsValid(gameHandle))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
+            return plugin;
+        }
+    }
+
+    std::vector<Plugin>::iterator LoadOrder::addToLoadOrder(const std::string& pluginName, const _lo_game_handle_int& gameHandle) {
+        std::vector<Plugin>::iterator it;
+        Plugin plugin(pluginName);
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameHandle.MasterFile()))
+            it = loadOrder.insert(begin(loadOrder), plugin);
+        else if (plugin.IsMasterFile(gameHandle))
+            it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(gameHandle)), plugin);
+        else {
+            loadOrder.push_back(plugin);
+            it = prev(loadOrder.end());
+        }
+        return it;
     }
 
     ///////////////////////////

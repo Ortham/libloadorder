@@ -73,6 +73,8 @@ namespace liblo {
 
         size_t getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const;
         size_t countActivePlugins() const;
+        Plugin getPluginObject(const std::string& pluginName, const _lo_game_handle_int& gameHandle) const;
+        std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
     };
 }
 
