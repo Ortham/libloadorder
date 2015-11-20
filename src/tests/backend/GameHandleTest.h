@@ -32,39 +32,39 @@ along with libloadorder.  If not, see
 
 namespace liblo {
     namespace test {
-        class GameHandleTest : public ::testing::Test {
+        class GameHandleTest : public ::testing::TestWithParam<unsigned int> {
         protected:
-            boost::filesystem::path gamePath;
+            GameHandleTest() : gameHandle(GetParam(), "") {}
+
+            inline libespm::GameId getExpectedLibespmId() {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return libespm::GameId::MORROWIND;
+                else if (GetParam() == LIBLO_GAME_TES4)
+                    return libespm::GameId::OBLIVION;
+                else if (GetParam() == LIBLO_GAME_TES5)
+                    return libespm::GameId::SKYRIM;
+                else if (GetParam() == LIBLO_GAME_FO3)
+                    return libespm::GameId::FALLOUT3;
+                else
+                    return libespm::GameId::FALLOUTNV;
+            }
+
+            _lo_game_handle_int gameHandle;
         };
 
-        TEST_F(GameHandleTest, morrowindIdShouldMapToLibespmsMorrowindId) {
-            _lo_game_handle_int gameHandle(LIBLO_GAME_TES3, gamePath.string());
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                GameHandleTest,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV));
 
-            EXPECT_EQ(libespm::GameId::MORROWIND, gameHandle.getLibespmId());
-        }
-
-        TEST_F(GameHandleTest, oblivionIdShouldMapToLibespmsOblivionId) {
-            _lo_game_handle_int gameHandle(LIBLO_GAME_TES4, gamePath.string());
-
-            EXPECT_EQ(libespm::GameId::OBLIVION, gameHandle.getLibespmId());
-        }
-
-        TEST_F(GameHandleTest, skyrimIdShouldMapToLibespmsSkyrimId) {
-            _lo_game_handle_int gameHandle(LIBLO_GAME_TES5, gamePath.string());
-
-            EXPECT_EQ(libespm::GameId::SKYRIM, gameHandle.getLibespmId());
-        }
-
-        TEST_F(GameHandleTest, fallout3IdShouldMapToLibespmsFallout3Id) {
-            _lo_game_handle_int gameHandle(LIBLO_GAME_FO3, gamePath.string());
-
-            EXPECT_EQ(libespm::GameId::FALLOUT3, gameHandle.getLibespmId());
-        }
-
-        TEST_F(GameHandleTest, falloutnvIdShouldMapToLibespmsFalloutnvId) {
-            _lo_game_handle_int gameHandle(LIBLO_GAME_FNV, gamePath.string());
-
-            EXPECT_EQ(libespm::GameId::FALLOUTNV, gameHandle.getLibespmId());
+        TEST_P(GameHandleTest, gettingLibespmIdShouldReturnExpectedValueForGame) {
+            EXPECT_EQ(getExpectedLibespmId(), gameHandle.getLibespmId());
         }
     }
 }
