@@ -184,6 +184,9 @@ boost::filesystem::path _lo_game_handle_int::ActivePluginsFile() const {
 boost::filesystem::path _lo_game_handle_int::LoadOrderFile() const {
     if (loadorderPath.empty())
         throw error(LIBLO_ERROR_INVALID_ARGS, "No local app data path set.");
+    if (LoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+        throw error(LIBLO_ERROR_INVALID_ARGS, "This game has no load order file.");
+
     return loadorderPath;
 }
 

@@ -66,5 +66,12 @@ namespace liblo {
         TEST_P(GameHandleTest, gettingLibespmIdShouldReturnExpectedValueForGame) {
             EXPECT_EQ(getExpectedLibespmId(), gameHandle.getLibespmId());
         }
+
+        TEST_P(GameHandleTest, gettingLoadOrderFilePathShouldThrowForTimestampBasedGamesAndNotOtherwise) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                EXPECT_ANY_THROW(gameHandle.LoadOrderFile());
+            else
+                EXPECT_NO_THROW(gameHandle.LoadOrderFile());
+        }
     }
 }
