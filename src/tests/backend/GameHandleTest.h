@@ -34,7 +34,9 @@ namespace liblo {
     namespace test {
         class GameHandleTest : public ::testing::TestWithParam<unsigned int> {
         protected:
-            GameHandleTest() : gameHandle(GetParam(), "") {}
+            GameHandleTest() : gameHandle(GetParam(), "") {
+                gameHandle.SetLocalAppData(getLocalPath(GetParam()));
+            }
 
             inline libespm::GameId getExpectedLibespmId() {
                 if (GetParam() == LIBLO_GAME_TES3)
@@ -47,6 +49,15 @@ namespace liblo {
                     return libespm::GameId::FALLOUT3;
                 else
                     return libespm::GameId::FALLOUTNV;
+            }
+
+            inline boost::filesystem::path getLocalPath(unsigned int gameId) const {
+                if (gameId == LIBLO_GAME_TES3)
+                    return "./local/Morrowind";
+                else if (gameId == LIBLO_GAME_TES4)
+                    return "./local/Oblivion";
+                else
+                    return "./local/Skyrim";
             }
 
             _lo_game_handle_int gameHandle;
