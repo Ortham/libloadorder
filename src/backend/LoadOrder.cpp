@@ -72,54 +72,12 @@ namespace liblo {
             loadActivePlugins(gameHandle);
     }
 
-    void LoadOrder::Save(_lo_game_handle_int& parentGame) {
-        if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
-            //Update timestamps.
-            //Want to make a minimum of changes to timestamps, so use the same timestamps as are currently set, but apply them to the plugins in the new order.
-            //First we have to read all the timestamps.
-            std::set<time_t> timestamps;
-            for (const auto &plugin : loadOrder) {
-                timestamps.insert(plugin.GetModTime(parentGame));
-            }
-            // It may be that two plugins currently share the same timestamp,
-            // which will result in fewer timestamps in the set than there are
-            // plugins, so pad the set if necessary.
-            while (timestamps.size() < loadOrder.size()) {
-                timestamps.insert(*timestamps.crbegin() + 60);
-            }
-            size_t i = 0;
-            for (const auto &timestamp : timestamps) {
-                loadOrder.at(i).SetModTime(parentGame, timestamp);
-                ++i;
-            }
-            //Now record new plugins folder mtime.
-            mtime = fs::last_write_time(parentGame.PluginsFolder());
-        }
-        else {
-            //Need to write both loadorder.txt and plugins.txt.
-            try {
-                if (!fs::exists(parentGame.LoadOrderFile().parent_path()))
-                    fs::create_directory(parentGame.LoadOrderFile().parent_path());
-                fs::ofstream outfile(parentGame.LoadOrderFile(), ios_base::trunc);
-                outfile.exceptions(std::ios_base::badbit);
-
-                for (const auto &plugin : loadOrder)
-                    outfile << plugin.Name() << endl;
-                outfile.close();
-
-                //Now record new loadorder.txt mtime.
-                //Plugins.txt doesn't need its mtime updated as only the order of its contents has changed, and it is stored in memory as an unordered set.
-                mtime = fs::last_write_time(parentGame.LoadOrderFile());
-            }
-            catch (std::ios_base::failure& e) {
-                throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + parentGame.LoadOrderFile().string() + "\" cannot be written to. Details: " + e.what());
-            }
-
-            //Now write plugins.txt. Update cache if necessary.
-            if (parentGame.activePlugins.HasChanged(parentGame))
-                parentGame.activePlugins.Load(parentGame);
-            parentGame.activePlugins.Save(parentGame);
-        }
+    void LoadOrder::save(const _lo_game_handle_int& gameHandle) {
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            saveTimestampLoadOrder(gameHandle);
+        else
+            saveTextfileLoadOrder(gameHandle);
+        saveActivePlugins(gameHandle);
     }
 
     std::vector<std::string> LoadOrder::getLoadOrder() const {
@@ -464,6 +422,113 @@ namespace liblo {
                 --numActivePlugins;
             }
         }
+    }
+
+    void LoadOrder::saveTimestampLoadOrder(const _lo_game_handle_int& gameHandle) {
+        // Want to make a minimum of changes to timestamps, so use the same
+        // timestamps as are currently set, but apply them to the plugins
+        // in the new order.
+
+        //First we have to read all the timestamps.
+        std::set<time_t> timestamps;
+        transform(begin(loadOrder),
+                  end(loadOrder),
+                  inserter(timestamps, begin(timestamps)),
+                  [&](const Plugin& plugin) {
+            return plugin.GetModTime(gameHandle);
+        });
+        // It may be that two plugins currently share the same timestamp,
+        // which will result in fewer timestamps in the set than there are
+        // plugins, so pad the set if necessary.
+        generate_n(inserter(timestamps, begin(timestamps)),
+                   loadOrder.size() - timestamps.size(),
+                   [&]() {
+            return *rbegin(timestamps) + 60;
+        });
+        size_t i = 0;
+        for (const auto &timestamp : timestamps) {
+            loadOrder.at(i).SetModTime(gameHandle, timestamp);
+            ++i;
+        }
+        //Now record new plugins folder mtime.
+        mtime = fs::last_write_time(gameHandle.PluginsFolder());
+    }
+
+    void LoadOrder::saveTextfileLoadOrder(const _lo_game_handle_int& gameHandle) {
+        //Need to write both loadorder.txt and plugins.txt.
+        try {
+            if (!fs::exists(gameHandle.LoadOrderFile().parent_path()))
+                fs::create_directory(gameHandle.LoadOrderFile().parent_path());
+
+            fs::ofstream outfile(gameHandle.LoadOrderFile(), ios_base::trunc);
+            outfile.exceptions(std::ios_base::badbit);
+
+            for (const auto &plugin : loadOrder)
+                outfile << plugin.Name() << endl;
+            outfile.close();
+
+            //Now record new loadorder.txt mtime.
+            //Plugins.txt doesn't need its mtime updated as only the order of its contents has changed, and it is stored in memory as an unordered set.
+            mtime = fs::last_write_time(gameHandle.LoadOrderFile());
+        }
+        catch (std::ios_base::failure& e) {
+            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameHandle.LoadOrderFile().string() + "\" cannot be written to. Details: " + e.what());
+        }
+    }
+
+    void LoadOrder::saveActivePlugins(const _lo_game_handle_int& gameHandle) {
+        string settings, badFilename;
+
+        if (gameHandle.Id() == LIBLO_GAME_TES3) {
+            string contents;
+            // If Morrowind, write active plugin list to Morrowind.ini, which
+            // also holds a lot of other game settings. libloadorder needs to
+            // read everything up to the active plugin list in the current ini
+            // and stick that on before the first saved plugin name.
+            if (fs::exists(gameHandle.ActivePluginsFile())) {
+                fileToBuffer(gameHandle.ActivePluginsFile(), contents);
+                size_t pos = contents.find("[Game Files]");
+                if (pos != string::npos)
+                    settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
+            }
+        }
+
+        try {
+            if (!fs::exists(gameHandle.ActivePluginsFile().parent_path()))
+                fs::create_directory(gameHandle.ActivePluginsFile().parent_path());
+
+            fs::ofstream outfile(gameHandle.ActivePluginsFile(), ios_base::trunc);
+            outfile.exceptions(std::ios_base::badbit);
+
+            if (!settings.empty())
+                outfile << settings << endl;  //Get those Morrowind settings back in.
+
+            size_t i = 0;
+            for (const auto &plugin : loadOrder) {
+                if (!plugin.isActive() || (gameHandle.Id() == LIBLO_GAME_TES5 && plugin == gameHandle.MasterFile()))
+                    continue;
+
+                if (gameHandle.Id() == LIBLO_GAME_TES3) { //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
+                    outfile << "GameFile" << i << "=";
+                    ++i;
+                }
+
+                try {
+                    outfile << FromUTF8(plugin.Name()) << endl;
+                }
+                catch (error& e) {
+                    badFilename = e.what();
+                }
+            }
+        }
+        catch (std::ios_base::failure& e) {
+            throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameHandle.ActivePluginsFile().string() + "\" could not be written. Details: " + e.what());
+        }
+
+        mtime = fs::last_write_time(gameHandle.ActivePluginsFile());
+
+        if (!badFilename.empty())
+            throw error(LIBLO_WARN_BAD_FILENAME, badFilename);
     }
 
     size_t LoadOrder::getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const {

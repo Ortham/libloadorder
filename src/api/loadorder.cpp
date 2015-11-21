@@ -122,7 +122,7 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
 
     //Now save changes.
     try {
-        gh->loadOrder.Save(*gh);
+        gh->loadOrder.save(*gh);
     }
     catch (error& e) {
         gh->loadOrder.clear();
@@ -189,7 +189,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
 
     //Now save changes.
     try {
-        gh->loadOrder.Save(*gh);
+        gh->loadOrder.save(*gh);
     }
     catch (error& e) {
         gh->loadOrder.clear();

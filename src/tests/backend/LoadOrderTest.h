@@ -1208,5 +1208,37 @@ namespace liblo {
 
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
         }
+
+        TEST_P(LoadOrderTest, savingShouldSetTimestampsForTimestampBasedGamesAndWriteToLoadOrderAndActivePluginsFilesOtherwise) {
+            std::vector<std::string> plugins({
+                gameHandle.MasterFile(),
+                blankEsm,
+                blankMasterDependentEsm,
+                blankDifferentEsm,
+                blankDifferentMasterDependentEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+
+            EXPECT_NO_THROW(loadOrder.save(gameHandle));
+
+            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+
+            EXPECT_TRUE(equal(begin(plugins), end(plugins), begin(loadOrder.getLoadOrder())));
+        }
+
+        TEST_P(LoadOrderTest, savingShouldWriteActivePluginsToActivePluginsFile) {
+            std::unordered_set<std::string> activePlugins({
+                gameHandle.MasterFile(),
+                updateEsm,
+                blankEsm,
+            });
+            ASSERT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+
+            EXPECT_NO_THROW(loadOrder.save(gameHandle));
+
+            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+
+            EXPECT_EQ(activePlugins, loadOrder.getActivePlugins());
+        }
     }
 }

@@ -190,7 +190,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             }
 
             // Now write changes.
-            gh->loadOrder.Save(*gh);
+            gh->loadOrder.save(*gh);
         }
         catch (error& e) {
             return c_error(e);

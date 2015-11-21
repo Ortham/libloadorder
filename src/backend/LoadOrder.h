@@ -43,7 +43,7 @@ namespace liblo {
         static const unsigned int maxActivePlugins = 255;
 
         void load(const _lo_game_handle_int& gameHandle);
-        void Save(_lo_game_handle_int& parentGame);  //Also updates mtime and active plugins list.
+        void save(const _lo_game_handle_int& gameHandle);  //Also updates mtime and active plugins list.
 
         std::vector<std::string> getLoadOrder() const;
         size_t getPosition(const std::string& pluginName) const;
@@ -69,6 +69,10 @@ namespace liblo {
 
         void loadFromFile(const boost::filesystem::path& file, const _lo_game_handle_int& gameHandle);
         void loadActivePlugins(const _lo_game_handle_int& gameHandle);
+
+        void saveTimestampLoadOrder(const _lo_game_handle_int& gameHandle);
+        void saveTextfileLoadOrder(const _lo_game_handle_int& gameHandle);
+        void saveActivePlugins(const _lo_game_handle_int& gameHandle);
 
         size_t getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const;
         size_t countActivePlugins() const;
