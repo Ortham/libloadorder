@@ -112,9 +112,9 @@ namespace liblo {
             for though.
             */
             if (fs::exists(parentGame.LoadOrderFile()))  //If the loadorder.txt exists, get the load order from that.
-                LoadFromFile(parentGame, parentGame.LoadOrderFile());
+                loadFromFile(parentGame.LoadOrderFile(), parentGame);
             else if (fs::exists(parentGame.ActivePluginsFile()))  //If the plugins.txt exists, get the active load order from that.
-                LoadFromFile(parentGame, parentGame.ActivePluginsFile());
+                loadFromFile(parentGame.ActivePluginsFile(), parentGame);
             else if (parentGame.Id() == LIBLO_GAME_TES5) {
                 //Make sure that Skyrim.esm is first.
                 loadOrder.insert(begin(loadOrder), Plugin(parentGame.MasterFile()));
@@ -430,6 +430,34 @@ namespace liblo {
         }
     }
 
+    bool LoadOrder::isSynchronised(const _lo_game_handle_int& gameHandle) {
+        if (gameHandle.LoadOrderMethod() != LIBLO_METHOD_TEXTFILE
+            || !boost::filesystem::exists(gameHandle.ActivePluginsFile())
+            || !boost::filesystem::exists(gameHandle.LoadOrderFile()))
+            return true;
+
+        //First get load order according to loadorder.txt.
+        LoadOrder LoadOrderFileLO;
+        LoadOrderFileLO.loadFromFile(gameHandle.LoadOrderFile(), gameHandle);
+
+        //Get load order from plugins.txt.
+        LoadOrder PluginsFileLO;
+        PluginsFileLO.loadFromFile(gameHandle.ActivePluginsFile(), gameHandle);
+
+        //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
+        vector<string> loadOrderFileLoadOrder = LoadOrderFileLO.getLoadOrder();
+        loadOrderFileLoadOrder.erase(remove_if(
+            begin(loadOrderFileLoadOrder),
+            end(loadOrderFileLoadOrder),
+            [&](const string& plugin) {
+            return PluginsFileLO.getPosition(plugin) == PluginsFileLO.getLoadOrder().size();
+        }),
+            end(loadOrderFileLoadOrder));
+
+        //Compare the two LoadOrder objects: they should be identical (since mtimes for each have not been touched).
+        return PluginsFileLO.getLoadOrder() == loadOrderFileLoadOrder;
+    }
+
     void LoadOrder::clear() {
         loadOrder.clear();
     }
@@ -456,63 +484,46 @@ namespace liblo {
         });
     }
 
-    void LoadOrder::LoadFromFile(const _lo_game_handle_int& parentGame, const fs::path& file) {
-        if (!fs::exists(file))
-            throw error(LIBLO_ERROR_FILE_NOT_FOUND, file.string() + " cannot be found.");
-
-        //loadorder.txt is simple enough that we can avoid needing a formal parser.
-        //It's just a text file with a plugin filename on each line. Skip lines which are blank or start with '#'.
+    void LoadOrder::loadFromFile(const boost::filesystem::path& file, const _lo_game_handle_int& gameHandle) {
         try {
             fs::ifstream in(file);
             in.exceptions(std::ios_base::badbit);
 
             string line;
-            regex reg("GameFile[0-9]{1,3}=.+\\.es(m|p)", regex::ECMAScript | regex::icase);
-            bool transcode = (file == parentGame.ActivePluginsFile());
+            bool transcode = file == gameHandle.ActivePluginsFile();
             while (getline(in, line)) {
-                // Check if it's a valid plugin line. The stream doesn't filter out '\r' line endings, hence the check.
-                if (line.empty() || line[0] == '#' || line[0] == '\r')
+                if (line.empty() || line[0] == '#')
                     continue;
-
-                if (parentGame.Id() == LIBLO_GAME_TES3) {
-                    //Morrowind's active file list is stored in Morrowind.ini, and that has a different format from plugins.txt.
-                    if (regex_match(line, reg))
-                        line = line.substr(line.find('=') + 1);
-                    else
-                        continue;
-                }
 
                 if (transcode)
                     line = ToUTF8(line);
-                else {
-                    //Test that the string is UTF-8 encoded by trying to convert it to UTF-16. It should throw if an invalid byte is found.
-                    try {
-                        boost::locale::conv::utf_to_utf<wchar_t>(line, boost::locale::conv::stop);
-                    }
-                    catch (...) {
-                        throw error(LIBLO_ERROR_FILE_NOT_UTF8, "\"" + file.string() + "\" is not encoded in valid UTF-8.");
-                    }
-                }
 
                 Plugin plugin(line);
-                if (plugin.IsValid(parentGame))
-                    loadOrder.push_back(plugin);
+                if (plugin.IsValid(gameHandle)) {
+                    // Erase the entry if it already exists.
+                    auto it = find(begin(loadOrder), end(loadOrder), line);
+                    if (it != end(loadOrder))
+                        loadOrder.erase(it);
+
+                    // Add the entry to the appropriate place in the
+                    // load order (eg. masters before plugins).
+                    it = addToLoadOrder(line, gameHandle);
+                }
             }
-            in.close();
         }
-        catch (std::ios_base::failure& e) {
+        catch (std::ifstream::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
 
-        if (parentGame.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-            // Make sure that game master is first and active.
-            setPosition(parentGame.MasterFile(), 0, parentGame);
-            loadOrder.front().activate();
+        if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            // Add the game master file if it hasn't already been loaded.
+            if (count(begin(loadOrder), end(loadOrder), gameHandle.MasterFile()) == 0)
+                addToLoadOrder(gameHandle.MasterFile(), gameHandle);
 
-            if (parentGame.Id() == LIBLO_GAME_TES5) {
-                //Add Update.esm if not already present.
-                if (Plugin("Update.esm").IsValid(parentGame) && count(begin(loadOrder), end(loadOrder), Plugin("Update.esm")) == 0)
-                    loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint(parentGame)), Plugin("Update.esm"));
+            // Add Update.esm if it exists and hasn't already been loaded.
+            if (gameHandle.Id() == LIBLO_GAME_TES5 && Plugin("Update.esm").IsValid(gameHandle)
+                && count(begin(loadOrder), end(loadOrder), string("Update.esm")) == 0) {
+                addToLoadOrder("Update.esm", gameHandle);
             }
         }
     }

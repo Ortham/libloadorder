@@ -129,52 +129,21 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         return c_error(LIBLO_ERROR_INVALID_ARGS, e.what());
     }
 
-    if ((**gh).LoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::filesystem::exists((**gh).ActivePluginsFile()) && boost::filesystem::exists((**gh).LoadOrderFile())) {
-        //Check for desync.
-        LoadOrder PluginsFileLO;
-        LoadOrder LoadOrderFileLO;
-
-        try {
-            //First get load order according to loadorder.txt.
-            LoadOrderFileLO.LoadFromFile(**gh, (**gh).LoadOrderFile());
-            //Get load order from plugins.txt.
-            PluginsFileLO.LoadFromFile(**gh, (**gh).ActivePluginsFile());
-        }
-        catch (error& e) {
-            delete *gh;
-            *gh = nullptr;
-            return c_error(e);
-        }
-        catch (std::exception& e) {
-            delete *gh;
-            *gh = nullptr;
-            return c_error(LIBLO_ERROR_FILE_READ_FAIL, e.what());
-        }
-
-        try {
-            LoadOrderFileLO.CheckValidity(**gh);
-            PluginsFileLO.CheckValidity(**gh);
-        }
-        catch (error& e) {
-            return c_error(e);
-        }
-        catch (std::exception& e) {
-            return c_error(LIBLO_ERROR_FILE_READ_FAIL, e.what());
-        }
-
-        //Remove any plugins from LoadOrderFileLO that are not in PluginsFileLO.
-        vector<string> loadOrderFileLoadOrder = LoadOrderFileLO.getLoadOrder();
-        loadOrderFileLoadOrder.erase(remove_if(
-            begin(loadOrderFileLoadOrder),
-            end(loadOrderFileLoadOrder),
-            [&](const string& plugin) {
-            return PluginsFileLO.getPosition(plugin) == PluginsFileLO.getLoadOrder().size();
-        }),
-            end(loadOrderFileLoadOrder));
-
-        //Compare the two LoadOrder objects: they should be identical (since mtimes for each have not been touched).
-        if (PluginsFileLO.getLoadOrder() != loadOrderFileLoadOrder)
+    try {
+        // Check for desync. This is a textfile-specific issue, but the checking
+        // function will handle that distinction.
+        if (!(**gh).loadOrder.isSynchronised(**gh))
             return c_error(LIBLO_WARN_LO_MISMATCH, "The order of plugins present in both loadorder.txt and plugins.txt differs between the two files.");
+    }
+    catch (error& e) {
+        delete *gh;
+        *gh = nullptr;
+        return c_error(e);
+    }
+    catch (std::exception& e) {
+        delete *gh;
+        *gh = nullptr;
+        return c_error(LIBLO_ERROR_FILE_READ_FAIL, e.what());
     }
 
     return LIBLO_OK;

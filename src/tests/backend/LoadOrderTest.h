@@ -28,6 +28,7 @@ along with libloadorder.  If not, see
 #include "libloadorder/constants.h"
 #include "backend/game.h"
 #include "backend/LoadOrder.h"
+#include "backend/helpers.h"
 
 namespace liblo {
     namespace test {
@@ -40,10 +41,7 @@ namespace liblo {
                 blankEsp("Blank.esp"),
                 invalidPlugin("NotAPlugin.esm"),
                 missingPlugin("missing.esm"),
-                loadOrderWithDuplicatesFile("duplicates.txt"),
-                morrowindLoadOrderWithDuplicatesFile("mwduplicates.ini"),
-                loadOrderWithPluginBeforeMasterFile("unpartitioned.txt"),
-                morrowindLoadOrderWithPluginBeforeMasterFile("mwunpartitioned.ini"),
+                nonAsciiEsm("Blàñk.esm"),
                 gameHandle(GetParam(), getGamePath(GetParam())) {
                 gameHandle.SetLocalAppData(getLocalPath(GetParam()));
             }
@@ -70,48 +68,51 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / updateEsm));
                 ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / updateEsm));
 
-                // Write out a load order file containing duplicates.
-                out.open(loadOrderWithDuplicatesFile);
-                out << gameHandle.MasterFile() << std::endl
-                    << blankEsm << std::endl
-                    << blankDifferentEsm << std::endl
-                    << blankEsm << std::endl
-                    << invalidPlugin << std::endl;
+                // Make sure the non-ASCII plugin exists.
+                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / nonAsciiEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / nonAsciiEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / nonAsciiEsm));
+
+                // Morrowind load order files have a slightly different
+                // format and a prefix is necessary.
+                std::string linePrefix = getActivePluginsFileLinePrefix(GetParam());
+
+                // Write out an active plugins file, making it as invalid as
+                // possible for the game to still fix.
+                out.open(gameHandle.ActivePluginsFile());
+                out << std::endl
+                    << '#' << FromUTF8(blankDifferentEsm) << std::endl
+                    << linePrefix << FromUTF8(blankEsm) << std::endl
+                    << linePrefix << FromUTF8(blankEsp) << std::endl
+                    << linePrefix << FromUTF8(nonAsciiEsm) << std::endl
+                    << linePrefix << FromUTF8(blankEsm) << std::endl
+                    << linePrefix << FromUTF8(invalidPlugin) << std::endl;
                 out.close();
 
-                // Do the same again, but for Morrowind's load order file format.
-                out.open(morrowindLoadOrderWithDuplicatesFile);
-                out << "GameFile0=" << gameHandle.MasterFile() << std::endl
-                    << "GameFile1=" << blankEsm << std::endl
-                    << "GameFile2=" << blankDifferentEsm << std::endl
-                    << "GameFile3=" << blankEsm << std::endl
-                    << "GameFile4=" << invalidPlugin << std::endl;
-                out.close();
-
-                // Write out a load order file containing a plugin before a master
-                out.open(loadOrderWithPluginBeforeMasterFile);
-                out << gameHandle.MasterFile() << std::endl
-                    << blankEsp << std::endl
-                    << blankDifferentEsm << std::endl;
-                out.close();
-
-                // Do the same again, but for Morrowind's load order file format.
-                out.open(morrowindLoadOrderWithPluginBeforeMasterFile);
-                out << "GameFile0=" << gameHandle.MasterFile() << std::endl
-                    << "GameFile1=" << blankEsp << std::endl
-                    << "GameFile2=" << blankDifferentEsm << std::endl;
-                out.close();
+                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                    // Write out the game's load order file, using the valid
+                    // version of what's in the active plugins file, plus
+                    // additional plugins.
+                    out.open(gameHandle.LoadOrderFile());
+                    out << gameHandle.MasterFile() << std::endl
+                        << nonAsciiEsm << std::endl
+                        << blankEsm << std::endl
+                        << updateEsm << std::endl
+                        << blankDifferentEsm << std::endl
+                        << blankEsp << std::endl;
+                    out.close();
+                }
             }
 
             inline virtual void TearDown() {
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / invalidPlugin));
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
                 ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / nonAsciiEsm));
 
-                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderWithDuplicatesFile));
-                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderWithPluginBeforeMasterFile));
-                ASSERT_NO_THROW(boost::filesystem::remove(morrowindLoadOrderWithDuplicatesFile));
-                ASSERT_NO_THROW(boost::filesystem::remove(morrowindLoadOrderWithPluginBeforeMasterFile));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
+                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                    ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.LoadOrderFile()));
             }
 
             inline std::string getGamePath(unsigned int gameId) const {
@@ -132,18 +133,11 @@ namespace liblo {
                     return "./local/Skyrim";
             }
 
-            inline void loadDuplicatesFromFile() {
-                if (gameHandle.Id() == LIBLO_GAME_TES3)
-                    loadOrder.LoadFromFile(gameHandle, morrowindLoadOrderWithDuplicatesFile);
+            inline std::string getActivePluginsFileLinePrefix(unsigned int gameId) {
+                if (gameId == LIBLO_GAME_TES3)
+                    return "GameFile0=";
                 else
-                    loadOrder.LoadFromFile(gameHandle, loadOrderWithDuplicatesFile);
-            }
-
-            inline void loadPluginBeforeMasterFromFile() {
-                if (gameHandle.Id() == LIBLO_GAME_TES3)
-                    loadOrder.LoadFromFile(gameHandle, morrowindLoadOrderWithPluginBeforeMasterFile);
-                else
-                    loadOrder.LoadFromFile(gameHandle, loadOrderWithPluginBeforeMasterFile);
+                    return "";
             }
 
             LoadOrder loadOrder;
@@ -155,11 +149,7 @@ namespace liblo {
             std::string blankEsp;
             std::string invalidPlugin;
             std::string missingPlugin;
-
-            boost::filesystem::path loadOrderWithDuplicatesFile;
-            boost::filesystem::path loadOrderWithPluginBeforeMasterFile;
-            boost::filesystem::path morrowindLoadOrderWithDuplicatesFile;
-            boost::filesystem::path morrowindLoadOrderWithPluginBeforeMasterFile;
+            std::string nonAsciiEsm;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -328,7 +318,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, gettingAPluginsPositionShouldBeCaseInsensitive) {
-          std::vector<std::string> validLoadOrder({
+            std::vector<std::string> validLoadOrder({
                 gameHandle.MasterFile(),
                 blankEsm,
                 blankDifferentEsm,
@@ -516,65 +506,6 @@ namespace liblo {
 
             EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
-        }
-
-        TEST_P(LoadOrderTest, loadingFromFileShouldLoadAllEntriesForValidPlugins) {
-            std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
-                blankEsm,
-                blankDifferentEsm,
-                blankEsm,
-            });
-            // Loading from file for Skyrim will also insert Update.esm
-            // after other masters if it's not in the file.
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
-                expectedLoadOrder.push_back(updateEsm);
-
-            ASSERT_NO_THROW(loadDuplicatesFromFile());
-
-            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
-        }
-
-        TEST_P(LoadOrderTest, loadingFromFileShouldActivateTheGameMasterForTextfileBasedGamesAndNotOtherwise) {
-            ASSERT_NO_THROW(loadDuplicatesFromFile());
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_TRUE(loadOrder.isActive(gameHandle.MasterFile()));
-            else
-                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
-        }
-
-        TEST_P(LoadOrderTest, removingDuplicatePluginsShouldKeepTheLastOfTheDuplicates) {
-            std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
-                blankDifferentEsm,
-                blankEsm,
-            });
-            // Loading from file for Skyrim will also insert Update.esm
-            // after other masters if it's not in the file.
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
-                expectedLoadOrder.push_back(updateEsm);
-
-            ASSERT_NO_THROW(loadDuplicatesFromFile());
-
-            EXPECT_NO_THROW(loadOrder.unique());
-            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
-        }
-
-        TEST_P(LoadOrderTest, partitioningMastersShouldMoveAllMastersBeforeAllNonMasters) {
-            std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
-                blankDifferentEsm,
-                blankEsp,
-            });
-            // Loading from file for Skyrim will also insert Update.esm
-            // after other masters if it's not in the file.
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
-                expectedLoadOrder.insert(std::next(std::begin(expectedLoadOrder), 1), updateEsm);
-
-            ASSERT_NO_THROW(loadPluginBeforeMasterFromFile());
-
-            EXPECT_NO_THROW(loadOrder.partitionMasters(gameHandle));
-            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, clearingLoadOrderShouldRemoveAllPluginsFromTheLoadOrder) {
@@ -978,6 +909,46 @@ namespace liblo {
             EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), gameHandle.MasterFile()));
             EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), updateEsm));
             EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), blankEsm));
+        }
+
+        TEST_P(LoadOrderTest, isSynchronisedForTimestampBasedGames) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfLoadOrderFileDoesNotExist) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                return;
+
+            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.LoadOrderFile()));
+
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfActivePluginsFileDoesNotExist) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                return;
+
+            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
+
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreEquivalent) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                return;
+
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+        }
+
+        TEST_P(LoadOrderTest, isNotSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreNotEquivalent) {
+            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                return;
+
+            boost::filesystem::ofstream out(gameHandle.LoadOrderFile(), std::ios_base::app);
+            out << blankEsm << std::endl;
+
+            EXPECT_FALSE(LoadOrder::isSynchronised(gameHandle));
         }
     }
 }
