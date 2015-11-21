@@ -89,8 +89,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_WrongGameMaster) {
 
     // Test trying to set load order with non-Oblivion.esm without
     // first setting the game master.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, plugins, pluginsNum));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, plugins, pluginsNum));
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder_BadMasterOrder) {
@@ -110,8 +109,7 @@ TEST_F(OblivionOperationsTest, SetLoadOrder_BadMasterOrder) {
         "Blank - Different Master Dependent.esm",
         "Blank - Different.esm",
     };
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, badMasterOrderPlugins2, pluginsNum));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, badMasterOrderPlugins2, pluginsNum));
 }
 
 TEST_F(OblivionOperationsTest, SetLoadOrder_NullInputs) {
@@ -214,8 +212,7 @@ TEST_F(SkyrimOperationsTest, SetLoadOrder_BadMasterOrder) {
         "Blank.esm",
     };
     pluginsNum = 3;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(gh, badMasterOrderPlugins2, pluginsNum));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_load_order(gh, badMasterOrderPlugins2, pluginsNum));
 }
 
 TEST_F(SkyrimOperationsTest, SetLoadOrder_NullInputs) {
@@ -267,9 +264,6 @@ TEST_F(OblivionOperationsTest, GetLoadOrder) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, &plugins, NULL));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(gh, NULL, NULL));
 
-    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_load_order(gh, &plugins, &pluginsNum));
-
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_get_load_order(gh, &plugins, &pluginsNum));
 }
 
@@ -313,14 +307,12 @@ TEST_F(OblivionOperationsTest, SetPluginPosition_PluginAmongstMasters) {
 
 TEST_F(OblivionOperationsTest, SetPluginPosition_PluginBeforeGameMaster) {
     // Try loading a plugin first.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(gh, "Blank.esm", 0));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank.esm", 0));
 }
 
 TEST_F(OblivionOperationsTest, SetPluginPosition_PluginBeforeItsMaster) {
     // Try loading a plugin before its master.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 4));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 4));
 }
 
 TEST_F(OblivionOperationsTest, SetPluginPosition_NonPluginFile) {
@@ -362,8 +354,7 @@ TEST_F(SkyrimOperationsTest, SetPluginPosition_PluginBeforeGameMaster) {
 
 TEST_F(SkyrimOperationsTest, SetPluginPosition_PluginBeforeItsMaster) {
     // Try loading a plugin before its master.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 5));
-    AssertInitialState();
+    EXPECT_EQ(LIBLO_OK, lo_set_plugin_position(gh, "Blank - Plugin Dependent.esp", 5));
 }
 
 TEST_F(SkyrimOperationsTest, SetPluginPosition_NonPluginFile) {
@@ -388,7 +379,7 @@ TEST_F(OblivionOperationsTest, GetPluginPosition) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(gh, "Blank.esp", NULL));
     EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_get_plugin_position(gh, "NotAPlugin.esm", &pos));
 
-    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_plugin_position(gh, "Blank.esp", &pos));
+    EXPECT_EQ(LIBLO_OK, lo_get_plugin_position(gh, "Blank.esp", &pos));
     EXPECT_EQ(4, pos);
 }
 
@@ -408,16 +399,10 @@ TEST_F(OblivionOperationsTest, GetIndexedPlugin) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(NULL, 0, &plugin));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(gh, 0, NULL));
 
-    EXPECT_EQ(LIBLO_WARN_INVALID_LIST, lo_get_indexed_plugin(gh, 0, &plugin));
-    EXPECT_STREQ("Blank.esm", plugin);
-
-    plugin = nullptr;
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_OK, lo_get_indexed_plugin(gh, 0, &plugin));
     EXPECT_STREQ("Blank.esm", plugin);
 
     plugin = nullptr;
-    ASSERT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(gh, 100, &plugin));
     EXPECT_EQ(nullptr, plugin);
 }

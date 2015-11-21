@@ -360,34 +360,6 @@ namespace liblo {
             it->deactivate();
     }
 
-    void LoadOrder::CheckValidity(const _lo_game_handle_int& parentGame) {
-        if (loadOrder.empty())
-            return;
-
-        if (loadOrder.at(0) != Plugin(parentGame.MasterFile()))
-            throw error(LIBLO_WARN_INVALID_LIST, "\"" + parentGame.MasterFile() + "\" is not the first plugin in the load order. " + loadOrder.at(0).Name() + " is first.");
-
-        bool wasMaster = true;
-        unordered_set<Plugin> hashset;
-        for (const auto plugin : loadOrder) {
-            if (!plugin.Exists(parentGame))
-                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not installed.");
-            else if (!plugin.IsValid(parentGame))
-                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is not a valid plugin file.");
-            bool isMaster = plugin.IsMasterFile(parentGame);
-            if (isMaster && !wasMaster)
-                throw error(LIBLO_WARN_INVALID_LIST, "Master plugin \"" + plugin.Name() + "\" loaded after a non-master plugin.");
-            if (hashset.find(plugin) != hashset.end())
-                throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is in the load order twice.");
-            for (const auto &master : plugin.GetMasters(parentGame)) {
-                if (hashset.find(master) == hashset.end() && count(begin(loadOrder), end(loadOrder), plugin) != 0)  //Only complain about  masters loading after the plugin if the master is installed (so that Filter patches do not cause false positives). This means libloadorder doesn't check to ensure all a plugin's masters are present, but I don't think it should get mixed up with Bash Tag detection.
-                    throw error(LIBLO_WARN_INVALID_LIST, "\"" + plugin.Name() + "\" is loaded before one of its masters (\"" + master.Name() + "\").");
-            }
-            hashset.insert(plugin);
-            wasMaster = isMaster;
-        }
-    }
-
     bool LoadOrder::HasChanged(const _lo_game_handle_int& parentGame) const {
         if (loadOrder.empty())
             return true;

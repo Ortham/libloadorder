@@ -65,15 +65,8 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh)) {
+        if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.load(*gh);
-            try {
-                gh->loadOrder.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
-        }
     }
     catch (error& e) {
         return c_error(e);
@@ -121,7 +114,6 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
     //Check to see if basic rules are being obeyed.
     try {
         gh->loadOrder.setLoadOrder(loadOrder, *gh);
-        gh->loadOrder.CheckValidity(*gh);
     }
     catch (error& e) {
         gh->loadOrder.clear();
@@ -150,15 +142,8 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh)) {
+        if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.load(*gh);
-            try {
-                gh->loadOrder.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
-        }
     }
     catch (error& e) {
         return c_error(e);
@@ -197,7 +182,6 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     //Check that new load order is valid.
     try {
         gh->loadOrder.setPosition(plugin, index, *gh);
-        gh->loadOrder.CheckValidity(*gh);
     }
     catch (error& e) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid load order. Details: ") + e.what());
@@ -229,15 +213,8 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.HasChanged(*gh)) {
+        if (gh->loadOrder.HasChanged(*gh))
             gh->loadOrder.load(*gh);
-            try {
-                gh->loadOrder.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
-        }
     }
     catch (error& e) {
         return c_error(e);

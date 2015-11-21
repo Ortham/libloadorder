@@ -59,8 +59,6 @@ namespace liblo {
         void activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
         void deactivate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
 
-        void CheckValidity(const _lo_game_handle_int& parentGame);  //Game master first, masters before plugins, plugins all exist.
-
         bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
         static bool isSynchronised(const _lo_game_handle_int& gameHandle);
 
