@@ -186,17 +186,8 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         try {
             //Update cache if necessary.
             if (gh->loadOrder.HasChanged(*gh)) {
-                gh->loadOrder.Load(*gh);
+                gh->loadOrder.load(*gh);
             }
-
-            // Ensure that the first plugin is the game's master file.
-            gh->loadOrder.setPosition(gh->MasterFile(), 0, *gh);
-
-            // Ensure that no plugin appears more than once.
-            gh->loadOrder.unique();
-
-            // Ensure that all master files load before all plugin files.
-            gh->loadOrder.partitionMasters(*gh);
 
             // Now write changes.
             gh->loadOrder.Save(*gh);

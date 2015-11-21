@@ -66,7 +66,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh)) {
-            gh->loadOrder.Load(*gh);
+            gh->loadOrder.load(*gh);
             try {
                 gh->loadOrder.CheckValidity(*gh);
             }
@@ -151,7 +151,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh)) {
-            gh->loadOrder.Load(*gh);
+            gh->loadOrder.load(*gh);
             try {
                 gh->loadOrder.CheckValidity(*gh);
             }
@@ -187,7 +187,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh)) {
-            gh->loadOrder.Load(*gh);
+            gh->loadOrder.load(*gh);
         }
     }
     catch (error& e) {
@@ -230,7 +230,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     //Update cache if necessary.
     try {
         if (gh->loadOrder.HasChanged(*gh)) {
-            gh->loadOrder.Load(*gh);
+            gh->loadOrder.load(*gh);
             try {
                 gh->loadOrder.CheckValidity(*gh);
             }
