@@ -39,63 +39,6 @@ using namespace std;
 namespace fs = boost::filesystem;
 
 namespace liblo {
-    /////////////////////////
-    // LoadOrder Members
-    /////////////////////////
-
-    struct PluginSortInfo {
-        PluginSortInfo() : isMasterFile(false), modTime(0) {}
-        bool isMasterFile;
-        time_t modTime;
-    };
-
-    struct pluginComparator {
-        const _lo_game_handle_int& parentGame;
-        std::unordered_map <std::string, PluginSortInfo> pluginCache;
-
-        pluginComparator(const _lo_game_handle_int& game) : parentGame(game) {}
-
-        bool    operator () (const Plugin& plugin1, const Plugin& plugin2) {
-            //Return true if plugin1 goes before plugin2, false otherwise.
-            //Master files should go before other files.
-            //Earlier stamped plugins should go before later stamped plugins.
-
-            auto p1It = pluginCache.find(plugin1.Name());
-            auto p2It = pluginCache.find(plugin2.Name());
-
-            // If either of the plugins haven't been cached, cache them now,
-            // but defer reading timestamps, since it's not always necessary.
-            if (p1It == pluginCache.end()) {
-                PluginSortInfo psi;
-                psi.isMasterFile = plugin1.IsMasterFile(parentGame);
-                p1It = pluginCache.insert(std::pair<std::string, PluginSortInfo>(plugin1.Name(), psi)).first;
-            }
-
-            if (p2It == pluginCache.end()) {
-                PluginSortInfo psi;
-                psi.isMasterFile = plugin2.IsMasterFile(parentGame);
-                p2It = pluginCache.insert(std::pair<std::string, PluginSortInfo>(plugin2.Name(), psi)).first;
-            }
-
-            if (p1It->second.isMasterFile && !p2It->second.isMasterFile)
-                return true;
-            else if (!p1It->second.isMasterFile && p2It->second.isMasterFile)
-                return false;
-            else {
-                // Need to compare timestamps to decide. If either cached
-                // timestamp is zero, read and cache the actual timestamp.
-                if (p1It->second.modTime == 0) {
-                    p1It->second.modTime = plugin1.GetModTime(parentGame);
-                }
-                if (p2It->second.modTime == 0) {
-                    p2It->second.modTime = plugin2.GetModTime(parentGame);
-                }
-
-                return (difftime(p1It->second.modTime, p2It->second.modTime) < 0);
-            }
-        }
-    };
-
     void LoadOrder::load(const _lo_game_handle_int& gameHandle) {
         loadOrder.clear();
         if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
