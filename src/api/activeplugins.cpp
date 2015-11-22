@@ -61,6 +61,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -101,6 +102,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -114,7 +116,6 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
         gh->loadOrder.setActivePlugins(activePlugins);
     }
     catch (error& e) {
-        gh->loadOrder.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid active plugins list supplied. Details: ") + e.what());
     }
 
@@ -141,6 +142,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -152,7 +154,6 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
             gh->loadOrder.deactivate(plugin);
     }
     catch (error& e) {
-        gh->loadOrder.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid active plugins list. Details: ") + e.what());
     }
 
@@ -181,6 +182,7 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 

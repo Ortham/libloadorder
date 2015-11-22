@@ -69,6 +69,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -106,7 +107,6 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
 
     //Put input into loadOrder object.
     vector<string> loadOrder;
-    gh->loadOrder.clear();
     for (size_t i = 0; i < numPlugins; i++) {
         loadOrder.push_back(plugins[i]);
     }
@@ -116,7 +116,6 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
         gh->loadOrder.setLoadOrder(loadOrder);
     }
     catch (error& e) {
-        gh->loadOrder.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid load order supplied. Details: ") + e.what());
     }
 
@@ -146,6 +145,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -176,6 +176,7 @@ LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const 
         }
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -217,6 +218,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
             gh->loadOrder.load();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 

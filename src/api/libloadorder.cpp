@@ -192,6 +192,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         gh->loadOrder.save();
     }
     catch (error& e) {
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
