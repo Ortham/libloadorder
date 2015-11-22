@@ -62,10 +62,15 @@ namespace liblo {
 
             EXPECT_EQ(expectedUtf8, windows1252toUtf8(inputWindows1252));
         }
-
+#ifdef _WIN32
         TEST(windows1252toUtf8, shouldNotThrowIfInputStringContainsBytesThatAreInvalidInWindows1252) {
             EXPECT_NO_THROW(windows1252toUtf8("\x81\x8D\x8F\x90\x9D"));
         }
+#else
+        TEST(windows1252toUtf8, shouldThrowIfInputStringContainsBytesThatAreInvalidInWindows1252) {
+            EXPECT_ANY_THROW(windows1252toUtf8("\x81\x8D\x8F\x90\x9D"));
+        }
+#endif
 
         TEST(utf8ToWindows1252, shouldConvertUtf8EncodedTextToWindows1252EncodedTextIfAllCharactersCanBeRepresented) {
             std::string inputUtf8 = "T\xC3\xA8st";
