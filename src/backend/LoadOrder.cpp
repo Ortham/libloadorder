@@ -69,6 +69,7 @@ namespace liblo {
                 });
             }
             partitionMasters();
+            mtime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
         }
         if (fs::exists(gameSettings.getActivePluginsFile()))
             loadActivePlugins();
@@ -263,23 +264,30 @@ namespace liblo {
             it->deactivate();
     }
 
-    bool LoadOrder::HasChanged(const GameSettings& parentGame) const {
+    bool LoadOrder::hasFilesystemChanged() const {
         if (loadOrder.empty())
             return true;
 
         try {
-            if (parentGame.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && fs::exists(parentGame.getLoadOrderFile())) {
-                //Load order is stored in parentGame.getLoadOrderFile(), but load order must also be reloaded if parentGame.getPluginsFolder() has been altered.
-                time_t t1 = fs::last_write_time(parentGame.getLoadOrderFile());
-                time_t t2 = fs::last_write_time(parentGame.getPluginsFolder());
-                if (t1 > t2) //Return later time.
-                    return (t1 > mtime);
-                else
-                    return (t2 > mtime);
-            }
-            else
-                //Checking parent folder modification time doesn't work consistently, and to check if the load order has changed would probably take as long as just assuming it's changed.
+            // Has the plugins folder been modified since the load order
+            // was last read or saved?
+            if (fs::last_write_time(gameSettings.getPluginsFolder()) > mtime)
                 return true;
+
+            // Has the active plugins file been changed since it was last
+            // read or saved?
+            if (fs::exists(gameSettings.getActivePluginsFile())
+                && fs::last_write_time(gameSettings.getActivePluginsFile()) > mtime)
+                return true;
+
+            // Has the full textfile load order been changed since it was
+            // last read or saved?
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE
+                && fs::exists(gameSettings.getLoadOrderFile())
+                && fs::last_write_time(gameSettings.getLoadOrderFile()) > mtime)
+                return true;
+
+            return false;
         }
         catch (fs::filesystem_error& e) {
             throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());

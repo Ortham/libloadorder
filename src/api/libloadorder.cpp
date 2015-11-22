@@ -180,7 +180,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
     if (gh->getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
         try {
             //Update cache if necessary.
-            if (gh->loadOrder.HasChanged(*gh)) {
+            if (gh->loadOrder.hasFilesystemChanged()) {
                 gh->loadOrder.load();
             }
 

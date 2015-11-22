@@ -30,6 +30,9 @@ along with libloadorder.  If not, see
 #include "backend/LoadOrder.h"
 #include "backend/helpers.h"
 
+#include <thread>
+#include <chrono>
+
 namespace liblo {
     namespace test {
         class LoadOrderTest : public ::testing::TestWithParam<unsigned int> {
@@ -1238,6 +1241,81 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.load());
 
             EXPECT_EQ(activePlugins, loadOrder.getActivePlugins());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadOrderIsEmpty) {
+            ASSERT_TRUE(loadOrder.getLoadOrder().empty());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndPluginsFolderIsUnchanged) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndPluginsFolderIsChanged) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndActivePluginsFileIsUnchanged) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndActivePluginsFileIsChanged) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
+            out << std::endl;
+            out.close();
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndLoadOrderFileIsUnchangedForTextfileBasedGames) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileIsChangedForTextfileBasedGames) {
+            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile());
+            out << std::endl;
+            out.close();
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
     }
 }

@@ -119,7 +119,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     }
 
     // Reload the load order if it has changed.
-    if (gh->loadOrder.HasChanged(*gh)) {
+    if (gh->loadOrder.hasFilesystemChanged()) {
         gh->loadOrder.load();
         gh->loadOrder.save();
     }

@@ -63,7 +63,7 @@ namespace liblo {
         void activate(const std::string& pluginName);
         void deactivate(const std::string& pluginName);
 
-        bool HasChanged(const GameSettings& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
+        bool hasFilesystemChanged() const;
         static bool isSynchronised(const GameSettings& gameSettings);
 
         void clear();
