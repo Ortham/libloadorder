@@ -24,7 +24,7 @@
         */
 
 #include "error.h"
-#include <cstring>
+#include "helpers.h"
 
 namespace liblo {
     char * extErrorString = nullptr;
@@ -44,10 +44,9 @@ namespace liblo {
     unsigned int c_error(const error& e) {
         delete[] extErrorString;
         try {
-            extErrorString = new char[strlen(e.what()) + 1];
-            strcpy(extErrorString, e.what());
+            extErrorString = copyString(e.what());
         }
-        catch (std::bad_alloc& /*e*/) {
+        catch (std::bad_alloc&) {
             extErrorString = nullptr;
         }
         return e.code();

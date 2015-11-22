@@ -96,12 +96,12 @@ namespace liblo {
                 // possible for the game to still fix.
                 out.open(gameSettings.getActivePluginsFile());
                 out << std::endl
-                    << '#' << FromUTF8(blankDifferentEsm) << std::endl
-                    << linePrefix << FromUTF8(blankEsm) << std::endl
-                    << linePrefix << FromUTF8(blankEsp) << std::endl
-                    << linePrefix << FromUTF8(nonAsciiEsm) << std::endl
-                    << linePrefix << FromUTF8(blankEsm) << std::endl
-                    << linePrefix << FromUTF8(invalidPlugin) << std::endl;
+                    << '#' << utf8ToWindows1252(blankDifferentEsm) << std::endl
+                    << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
+                    << linePrefix << utf8ToWindows1252(blankEsp) << std::endl
+                    << linePrefix << utf8ToWindows1252(nonAsciiEsm) << std::endl
+                    << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
+                    << linePrefix << utf8ToWindows1252(invalidPlugin) << std::endl;
                 out.close();
 
                 if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
@@ -1048,11 +1048,11 @@ namespace liblo {
             boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
 
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                out << linePrefix << FromUTF8(gameSettings.getMasterFile()) << std::endl;
+                out << linePrefix << utf8ToWindows1252(gameSettings.getMasterFile()) << std::endl;
                 expectedActivePlugins.insert(gameSettings.getMasterFile());
 
                 if (gameSettings.getId() == LIBLO_GAME_TES5) {
-                    out << linePrefix << FromUTF8(updateEsm) << std::endl;
+                    out << linePrefix << utf8ToWindows1252(updateEsm) << std::endl;
                     expectedActivePlugins.insert(updateEsm);
                 }
             }
@@ -1166,7 +1166,7 @@ namespace liblo {
 
             std::string linePrefix = getActivePluginsFileLinePrefix(gameSettings.getId());
             boost::filesystem::ofstream out(gameSettings.getActivePluginsFile(), std::ios_base::trunc);
-            out << linePrefix << FromUTF8(blankEsp) << std::endl;
+            out << linePrefix << utf8ToWindows1252(blankEsp) << std::endl;
             out.close();
 
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {

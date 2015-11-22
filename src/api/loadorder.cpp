@@ -82,7 +82,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     try {
         gh->extStringArray = new char*[gh->extStringArraySize];
         for (size_t i = 0; i < gh->extStringArraySize; i++)
-            gh->extStringArray[i] = ToNewCString(loadOrder[i]);
+            gh->extStringArray[i] = copyString(loadOrder[i]);
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
@@ -222,7 +222,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
 
     //Allocate memory.
     try {
-        gh->extString = ToNewCString(gh->loadOrder.getPluginAtPosition(index));
+        gh->extString = copyString(gh->loadOrder.getPluginAtPosition(index));
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());

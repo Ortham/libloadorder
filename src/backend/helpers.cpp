@@ -34,44 +34,49 @@ using namespace std;
 
 namespace liblo {
     // std::string to null-terminated char string converter.
-    char * ToNewCString(const string& str) {
+    char * copyString(const string& str) {
         char * p = new char[str.length() + 1];
         return strcpy(p, str.c_str());
     }
 
     //Reads an entire file into a string buffer.
-    void fileToBuffer(const boost::filesystem::path& file, string& buffer) {
+    std::string fileToBuffer(const boost::filesystem::path& file) {
         try {
+            string buffer;
             boost::filesystem::ifstream ifile(file);
             ifile.exceptions(std::ios_base::badbit);
-            if (ifile.fail())
-                return;
+
+            if (!ifile.good())
+                throw error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + file.string() + "\" could not be found.");
+
             ifile.unsetf(ios::skipws); // No white space skipping!
             copy(
                 istream_iterator<char>(ifile),
                 istream_iterator<char>(),
                 back_inserter(buffer)
                 );
+
+            return buffer;
         }
         catch (std::ios_base::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
     }
 
-    std::string ToUTF8(const std::string& str) {
+    std::string windows1252toUtf8(const std::string& str) {
         try {
             return boost::locale::conv::to_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
         }
-        catch (boost::locale::conv::conversion_error& /*e*/) {
+        catch (boost::locale::conv::conversion_error&) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }
 
-    std::string FromUTF8(const std::string& str) {
+    std::string utf8ToWindows1252(const std::string& str) {
         try {
             return boost::locale::conv::from_utf<char>(str, "Windows-1252", boost::locale::conv::stop);
         }
-        catch (boost::locale::conv::conversion_error& /*e*/) {
+        catch (boost::locale::conv::conversion_error&) {
             throw error(LIBLO_WARN_BAD_FILENAME, "\"" + str + "\" cannot be encoded in Windows-1252.");
         }
     }

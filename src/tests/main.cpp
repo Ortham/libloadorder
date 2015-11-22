@@ -27,7 +27,9 @@
 #include "api/libloadorder.h"
 #include "api/activeplugins.h"
 #include "api/loadorder.h"
+#include "backend/ErrorTest.h"
 #include "backend/GameSettingsTest.h"
+#include "backend/HelpersTest.h"
 #include "backend/LoadOrderTest.h"
 #include "backend/PluginTest.h"
 

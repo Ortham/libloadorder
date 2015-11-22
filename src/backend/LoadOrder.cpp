@@ -344,7 +344,7 @@ namespace liblo {
                     continue;
 
                 if (transcode)
-                    line = ToUTF8(line);
+                    line = windows1252toUtf8(line);
 
                 if (Plugin::isValid(line, gameSettings)) {
                     // Erase the entry if it already exists.
@@ -395,7 +395,7 @@ namespace liblo {
                 if (gameSettings.getId() == LIBLO_GAME_TES3)
                     line = line.substr(line.find('=') + 1);
 
-                line = ToUTF8(line);
+                line = windows1252toUtf8(line);
 
                 if (Plugin::isValid(line, gameSettings)) {
                     // Add the entry to the appropriate place in the
@@ -495,13 +495,12 @@ namespace liblo {
         string settings, badFilename;
 
         if (gameSettings.getId() == LIBLO_GAME_TES3) {
-            string contents;
             // If Morrowind, write active plugin list to Morrowind.ini, which
             // also holds a lot of other game settings. libloadorder needs to
             // read everything up to the active plugin list in the current ini
             // and stick that on before the first saved plugin name.
             if (fs::exists(gameSettings.getActivePluginsFile())) {
-                fileToBuffer(gameSettings.getActivePluginsFile(), contents);
+                std::string contents = fileToBuffer(gameSettings.getActivePluginsFile());
                 size_t pos = contents.find("[Game Files]");
                 if (pos != string::npos)
                     settings = contents.substr(0, pos + 12); //+12 is for the characters in "[Game Files]".
@@ -529,7 +528,7 @@ namespace liblo {
                 }
 
                 try {
-                    outfile << FromUTF8(plugin.getName()) << endl;
+                    outfile << utf8ToWindows1252(plugin.getName()) << endl;
                 }
                 catch (error& e) {
                     badFilename = e.what();

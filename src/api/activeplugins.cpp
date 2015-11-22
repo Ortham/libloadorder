@@ -75,7 +75,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         gh->extStringArray = new char*[gh->extStringArraySize];
         size_t i = 0;
         for (const auto &activePlugin : loadOrder) {
-            gh->extStringArray[i] = ToNewCString(activePlugin);
+            gh->extStringArray[i] = copyString(activePlugin);
             i++;
         }
     }

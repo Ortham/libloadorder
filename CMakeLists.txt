@@ -66,7 +66,9 @@ set (TESTER_HEADERS "${CMAKE_SOURCE_DIR}/src/tests/fixtures.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/libloadorder.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/activeplugins.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/loadorder.h"
+                    "${CMAKE_SOURCE_DIR}/src/tests/backend/ErrorTest.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/GameSettingsTest.h"
+                    "${CMAKE_SOURCE_DIR}/src/tests/backend/HelpersTest.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/LoadOrderTest.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/PluginTest.h")
 

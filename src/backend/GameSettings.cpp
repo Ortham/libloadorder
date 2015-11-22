@@ -100,9 +100,8 @@ namespace liblo {
         if (id == LIBLO_GAME_TES4 && fs::exists(gamePath / "Oblivion.ini")) {
             // Looking up bUseMyGamesDirectory, which only has effect if =0 and
             // exists in Oblivion folder.
-            string iniContent;
+            string iniContent = fileToBuffer(gamePath / "Oblivion.ini");
             string iniSetting = "bUseMyGamesDirectory=";
-            fileToBuffer(gamePath / "Oblivion.ini", iniContent);
 
             size_t pos = iniContent.find(iniSetting);
             if (pos != string::npos && pos + iniSetting.length() < iniContent.length() && iniContent[pos + iniSetting.length()] == '0') {

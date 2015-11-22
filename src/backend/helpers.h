@@ -31,14 +31,15 @@
 
 namespace liblo {
     // std::string to null-terminated char string converter.
-    char * ToNewCString(const std::string& str);
+    char * copyString(const std::string& str);
 
     //Reads an entire file into a string buffer.
-    void fileToBuffer(const boost::filesystem::path& file, std::string& buffer);
+    std::string fileToBuffer(const boost::filesystem::path& file);
 
     //Only ever have to convert between UTF-8 and Windows-1252.
-    std::string ToUTF8(const std::string& str);
-    std::string FromUTF8(const std::string& str);
+    std::string windows1252toUtf8(const std::string& str);
+
+    std::string utf8ToWindows1252(const std::string& str);
 }
 
 #endif
