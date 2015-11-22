@@ -8,9 +8,8 @@
 
     libloadorder is a free software library that provides functions for manipulating plugin load order and active status. Its features are:
       - C frontend.
-      - Available as x86 and x64 static and dynamic libraries.
+      - Can be built as x86 and x64 static and dynamic libraries.
       - Supports TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
-      - Supports total conversions which replace any of the supported games' main master files (eg. Nehrim - At Fate's Edge).
       - Provides a uniform interface to the supported games' differing load order systems.
       - Supports the community standard textfile-based load order system for TES V: Skyrim.
       - Supports ghosted plugins.
@@ -45,5 +44,5 @@
 
     @section credit_sec Credits
 
-    libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of the <a href="http://utfcpp.sourceforge.net/">UTF8-CPP</a> library and some of the <a href="http://www.boost.org/">Boost</a> libraries.
+    libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of some of the <a href="http://www.boost.org/">Boost</a> libraries and the <a href="https://github.com/WrinklyNinja/libespm">libespm</a> and <a href="https://github.com/google/googletest">Google Test</a> libraries.
 */

@@ -4,7 +4,6 @@
 
 Libloadorder is a free software library for manipulating the load order and active status of plugins for TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
 
-
 ## Build Instructions
 
 Libloadorder uses [CMake](http://cmake.org) to generate build files. Instructions for Windows are given below.
@@ -13,8 +12,8 @@ Instructions for other platforms are not provided, but the process for building 
 
 ### Requirements
 
-* [Boost](http://www.boost.org): tested with v1.55.0 and v1.58.0.
-* [Google Test](https://code.google.com/p/googletest/): Required to build libloadorder's tests, but not the library itself.
+* [Boost](http://www.boost.org) Filesystem and Locale libraries: tested with v1.55.0 and v1.59.0.
+* [Google Test](https://github.com/google/googletest): Required to build libloadorder's tests, but not the library itself.
 * [Libespm](http://github.com/WrinklyNinja/libespm): A header-only library.
 
 ### Windows
@@ -27,7 +26,7 @@ Just generate an MSVC solution using Google Test's CMake config, and build the `
 
 ```
 bootstrap.bat
-b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-filesystem --with-locale --with-system --with-iostreams
+b2 toolset=msvc threadapi=win32 link=static runtime-link=static variant=release address-model=32 --with-filesystem --with-locale --with-system
 ```
 
 `link`, `runtime-link` and `address-model` can all be modified if shared linking or 64 bit builds are desired. Libloadorder uses statically-linked Boost libraries by default: to change this, edit [CMakeLists.txt](CMakeLists.txt).

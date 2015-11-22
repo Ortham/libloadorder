@@ -62,9 +62,7 @@ extern "C"
     /**
      *  @brief Gets the list of currently active plugins.
      *  @details Outputs an unordered list of the plugins that are currently
-     *           active.  This list may be invalid if an invalid active plugins
-     *           list was previously set or a valid active plugins list
-     *           invalidated outside of libloadorder.
+     *           active.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins

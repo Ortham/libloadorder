@@ -148,13 +148,12 @@ extern "C"
     LIBLO void lo_destroy_handle(lo_game_handle gh);
 
     /**
-     *  @brief Changes a game handle's associated master file.
-     *  @details Sets the master file for the given game handle to the given
-     *           filename, for use with total conversions that replace the
-     *           vanilla game master file.
-     *           Setting the master file for Skyrim is not allowed, as the
-     *           game will crash if Skyrim.esm is replaced with a plugin with
-     *           a different name.
+     *  @brief *[Deprecated]* This function has no effect.
+     *  @details In previous versions of libloadorder, this function changed
+     *           which plugin was treated as the game's main master file,
+     *           except for Skyrim, which could not have its main master file
+     *           changed. This functionality is no longer required, so the
+     *           function now has no effect.
      *  @param gh
      *      The game handle to be operated on.
      *  @param masterFile
@@ -180,7 +179,7 @@ extern "C"
      *
      *           For the case of a plugin appearing multiple times in a load
      *           order / active plugin list, libloadorder discards all but the
-     *           first instance of that plugin.
+     *           last instance of that plugin.
      *
      *           For the case of more than 255 plugins being active,
      *           libloadorder deactivates as many plugins as required to bring
