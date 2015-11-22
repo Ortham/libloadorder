@@ -44,22 +44,24 @@ namespace liblo {
     public:
         static const unsigned int maxActivePlugins = 255;
 
-        void load(const GameSettings& gameSettings);
-        void save(const GameSettings& gameSettings);  //Also updates mtime and active plugins list.
+        LoadOrder(const GameSettings& gameSettings);
+
+        void load();
+        void save();  //Also updates mtime and active plugins list.
 
         std::vector<std::string> getLoadOrder() const;
         size_t getPosition(const std::string& pluginName) const;
         std::string getPluginAtPosition(size_t index) const;
 
-        void setLoadOrder(const std::vector<std::string>& pluginNames, const GameSettings& gameSettings);
-        void setPosition(const std::string& pluginName, size_t loadOrderIndex, const GameSettings& gameSettings);
+        void setLoadOrder(const std::vector<std::string>& pluginNames);
+        void setPosition(const std::string& pluginName, size_t loadOrderIndex);
 
         std::unordered_set<std::string> getActivePlugins() const;
         bool isActive(const std::string& pluginName) const;
 
-        void setActivePlugins(const std::unordered_set<std::string>& pluginNames, const GameSettings& gameSettings);
-        void activate(const std::string& pluginName, const GameSettings& gameSettings);
-        void deactivate(const std::string& pluginName, const GameSettings& gameSettings);
+        void setActivePlugins(const std::unordered_set<std::string>& pluginNames);
+        void activate(const std::string& pluginName);
+        void deactivate(const std::string& pluginName);
 
         bool HasChanged(const GameSettings& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
         static bool isSynchronised(const GameSettings& gameSettings);
@@ -68,20 +70,21 @@ namespace liblo {
     private:
         time_t mtime;
         std::vector<Plugin> loadOrder;
+        const GameSettings& gameSettings;
 
-        void loadFromFile(const boost::filesystem::path& file, const GameSettings& gameSettings);
-        void loadActivePlugins(const GameSettings& gameSettings);
+        void loadFromFile(const boost::filesystem::path& file);
+        void loadActivePlugins();
 
-        void saveTimestampLoadOrder(const GameSettings& gameSettings);
-        void saveTextfileLoadOrder(const GameSettings& gameSettings);
-        void saveActivePlugins(const GameSettings& gameSettings);
+        void saveTimestampLoadOrder();
+        void saveTextfileLoadOrder();
+        void saveActivePlugins();
 
-        size_t getMasterPartitionPoint(const GameSettings& gameSettings) const;
+        size_t getMasterPartitionPoint() const;
         size_t countActivePlugins() const;
-        Plugin getPluginObject(const std::string& pluginName, const GameSettings& gameSettings) const;
+        Plugin getPluginObject(const std::string& pluginName) const;
 
-        std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName, const GameSettings& gameSettings);
-        void partitionMasters(const GameSettings& gameSettings);
+        std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName);
+        void partitionMasters();
     };
 }
 

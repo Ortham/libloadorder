@@ -181,11 +181,11 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         try {
             //Update cache if necessary.
             if (gh->loadOrder.HasChanged(*gh)) {
-                gh->loadOrder.load(*gh);
+                gh->loadOrder.load();
             }
 
             // Now write changes.
-            gh->loadOrder.save(*gh);
+            gh->loadOrder.save();
         }
         catch (error& e) {
             return c_error(e);

@@ -120,8 +120,8 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
 
     // Reload the load order if it has changed.
     if (gh->loadOrder.HasChanged(*gh)) {
-        gh->loadOrder.load(*gh);
-        gh->loadOrder.save(*gh);
+        gh->loadOrder.load();
+        gh->loadOrder.save();
     }
 
     //Put input into activePlugins object.
@@ -189,8 +189,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
             pluginObj.UnGhost(*gh);
             // If the plugin isn't in the load order, make sure it is added.
             if (gh->loadOrder.getPosition(pluginObj.Name()) == gh->loadOrder.getLoadOrder().size()) {
-                gh->loadOrder.load(*gh);
-                gh->loadOrder.save(*gh);
+                gh->loadOrder.load();
+                gh->loadOrder.save();
             }
         }
         catch (error& e) {

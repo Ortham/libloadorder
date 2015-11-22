@@ -29,6 +29,7 @@ using namespace liblo;
 
 _lo_game_handle_int::_lo_game_handle_int(unsigned int id, const boost::filesystem::path& gamePath, const boost::filesystem::path& localPath)
     : GameSettings(id, gamePath, localPath),
+    loadOrder(*this),
     extString(nullptr),
     extStringArray(nullptr),
     extStringArraySize(0) {}
