@@ -107,14 +107,6 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     //Put input into activePlugins object.
     unordered_set<string> activePlugins;
     for (size_t i = 0; i < numPlugins; i++) {
-        Plugin plugin(plugins[i]);
-        //Unghost plugin if ghosted.
-        try {
-            plugin.UnGhost(*gh);
-        }
-        catch (error& e) {
-            return c_error(e);
-        }
         activePlugins.insert(plugins[i]);
     }
 
@@ -154,17 +146,8 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
     //Look for plugin in active plugins list.
     try {
-        if (active) {  //No need to check for duplication, unordered set will silently handle avoidance.
-            try {
-                //Unghost plugin if ghosted.
-                Plugin(plugin).UnGhost(*gh);
-            }
-            catch (error& e) {
-                return c_error(e);
-            }
-            // Define the plugin's load order position if it doesn't
+        if (active)
             gh->loadOrder.activate(plugin);
-        }
         else
             gh->loadOrder.deactivate(plugin);
     }

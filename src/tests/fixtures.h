@@ -225,11 +225,11 @@ protected:
         if (boost::filesystem::is_directory(dataPath)) {
             for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
                 if (boost::filesystem::is_regular_file(itr->status())) {
-                    liblo::Plugin plugin(itr->path().filename().string());
-                    if (plugin.IsValid(*gh)) {
-                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), plugin.Name()));
+                    std::string filename(itr->path().filename().string());
+                    if (liblo::Plugin::isValid(filename, *gh)) {
+                        auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), filename));
                         if (!result.second) {
-                            throw std::runtime_error(plugin.Name() + " has the same timestamp as " + result.first->second);
+                            throw std::runtime_error(filename + " has the same timestamp as " + result.first->second);
                         }
                     }
                 }
@@ -239,7 +239,7 @@ protected:
         std::vector<std::string> loadOrder = {
             "Blank.esm",
             "Blank - Different.esm",
-            "Blank - Master Dependent.esm",  // Ghosted
+            "Blank - Master Dependent.esm.ghost",
             "Blank - Different Master Dependent.esm",
             "Blank.esp",
             "Blank - Different.esp",
@@ -263,7 +263,7 @@ protected:
             for (boost::filesystem::directory_iterator itr(dataPath); itr != boost::filesystem::directory_iterator(); ++itr) {
                 if (boost::filesystem::is_regular_file(itr->status())) {
                     std::string file = itr->path().filename().string();
-                    if (liblo::Plugin(file).IsValid(*gh)) {
+                    if (liblo::Plugin::isValid(file, *gh)) {
                         auto result = plugins.insert(std::pair<time_t, std::string>(boost::filesystem::last_write_time(itr->path()), file));
                         if (!result.second) {
                             throw std::runtime_error(filename + " has the same timestamp as " + result.first->second);

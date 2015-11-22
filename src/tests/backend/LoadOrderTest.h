@@ -1317,5 +1317,18 @@ namespace liblo {
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfAPluginIsEdited) {
+            ASSERT_NO_THROW(loadOrder.load());
+            // Timestamps have 1 second precision, so wait to allow them
+            // to change.
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            boost::filesystem::ofstream out(gameSettings.getPluginsFolder() / updateEsm);
+            out << std::endl;
+            out.close();
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
     }
 }

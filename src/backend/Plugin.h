@@ -34,35 +34,30 @@
 namespace liblo {
     class GameSettings;
 
-    class Plugin {
+    class Plugin : public libespm::Plugin {
     public:
-        Plugin();
-        Plugin(const std::string& filename);  //Automatically trims .ghost extension.
+        Plugin(const std::string& filename, const GameSettings& gameSettings);
 
-        std::string Name() const;
-
-        bool    IsValid(const GameSettings& parentGame) const;  // Attempts to parse the plugin header.
-        bool    IsMasterFile(const GameSettings& parentGame) const;         // Checks master flag bit.
-        bool    IsGhosted(const GameSettings& parentGame) const;         //Checks if the file exists in ghosted form.
-        bool    Exists(const GameSettings& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
-        time_t  GetModTime(const GameSettings& parentGame) const;         //Can throw exception.
-        std::vector<Plugin> GetMasters(const GameSettings& parentGame) const;
-
-        void    UnGhost(const GameSettings& parentGame) const;         //Can throw exception.
-        void    SetModTime(const GameSettings& parentGame, const time_t modificationTime) const;
-
+        std::string getName() const;
+        time_t getModTime() const;
         bool isActive() const;
+        bool hasFileChanged(const boost::filesystem::path& pluginsFolder) const;
 
-        void activate();
+        void setModTime(const time_t modificationTime, const boost::filesystem::path& pluginsFolder);
+        void activate(const boost::filesystem::path& pluginsFolder);
         void deactivate();
 
         bool operator == (const Plugin& rhs) const;
         bool operator != (const Plugin& rhs) const;
-    private:
-        std::string name;
-        bool active;
+        bool operator == (const std::string& rhs) const;
+        bool operator != (const std::string& rhs) const;
 
-        libespm::Plugin ReadHeader(const GameSettings& parentGame) const;
+        static bool isValid(const std::string& filename, const GameSettings& gameSettings);
+    private:
+        bool active;
+        time_t modTime;
+
+        static std::string trimGhostExtension(const std::string& filename);
     };
 }
 
