@@ -24,7 +24,7 @@
     */
 
 #include "libloadorder/loadorder.h"
-#include "../backend/game.h"
+#include "../api/_lo_game_handle_int.h"
 #include "../backend/helpers.h"
 #include "../backend/error.h"
 
@@ -41,7 +41,7 @@ LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * co
     if (gh == nullptr || method == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    *method = gh->LoadOrderMethod();
+    *method = gh->getLoadOrderMethod();
 
     return LIBLO_OK;
 }

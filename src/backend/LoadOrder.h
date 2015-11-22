@@ -38,48 +38,50 @@
 struct _lo_game_handle_int;
 
 namespace liblo {
+    class GameSettings;
+
     class LoadOrder {
     public:
         static const unsigned int maxActivePlugins = 255;
 
-        void load(const _lo_game_handle_int& gameHandle);
-        void save(const _lo_game_handle_int& gameHandle);  //Also updates mtime and active plugins list.
+        void load(const GameSettings& gameSettings);
+        void save(const GameSettings& gameSettings);  //Also updates mtime and active plugins list.
 
         std::vector<std::string> getLoadOrder() const;
         size_t getPosition(const std::string& pluginName) const;
         std::string getPluginAtPosition(size_t index) const;
 
-        void setLoadOrder(const std::vector<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
-        void setPosition(const std::string& pluginName, size_t loadOrderIndex, const _lo_game_handle_int& gameHandle);
+        void setLoadOrder(const std::vector<std::string>& pluginNames, const GameSettings& gameSettings);
+        void setPosition(const std::string& pluginName, size_t loadOrderIndex, const GameSettings& gameSettings);
 
         std::unordered_set<std::string> getActivePlugins() const;
         bool isActive(const std::string& pluginName) const;
 
-        void setActivePlugins(const std::unordered_set<std::string>& pluginNames, const _lo_game_handle_int& gameHandle);
-        void activate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
-        void deactivate(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
+        void setActivePlugins(const std::unordered_set<std::string>& pluginNames, const GameSettings& gameSettings);
+        void activate(const std::string& pluginName, const GameSettings& gameSettings);
+        void deactivate(const std::string& pluginName, const GameSettings& gameSettings);
 
-        bool HasChanged(const _lo_game_handle_int& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
-        static bool isSynchronised(const _lo_game_handle_int& gameHandle);
+        bool HasChanged(const GameSettings& parentGame) const;  //Checks timestamp and also if LoadOrder is empty.
+        static bool isSynchronised(const GameSettings& gameSettings);
 
         void clear();
     private:
         time_t mtime;
         std::vector<Plugin> loadOrder;
 
-        void loadFromFile(const boost::filesystem::path& file, const _lo_game_handle_int& gameHandle);
-        void loadActivePlugins(const _lo_game_handle_int& gameHandle);
+        void loadFromFile(const boost::filesystem::path& file, const GameSettings& gameSettings);
+        void loadActivePlugins(const GameSettings& gameSettings);
 
-        void saveTimestampLoadOrder(const _lo_game_handle_int& gameHandle);
-        void saveTextfileLoadOrder(const _lo_game_handle_int& gameHandle);
-        void saveActivePlugins(const _lo_game_handle_int& gameHandle);
+        void saveTimestampLoadOrder(const GameSettings& gameSettings);
+        void saveTextfileLoadOrder(const GameSettings& gameSettings);
+        void saveActivePlugins(const GameSettings& gameSettings);
 
-        size_t getMasterPartitionPoint(const _lo_game_handle_int& gameHandle) const;
+        size_t getMasterPartitionPoint(const GameSettings& gameSettings) const;
         size_t countActivePlugins() const;
-        Plugin getPluginObject(const std::string& pluginName, const _lo_game_handle_int& gameHandle) const;
+        Plugin getPluginObject(const std::string& pluginName, const GameSettings& gameSettings) const;
 
-        std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName, const _lo_game_handle_int& gameHandle);
-        void partitionMasters(const _lo_game_handle_int& gameHandle);
+        std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName, const GameSettings& gameSettings);
+        void partitionMasters(const GameSettings& gameSettings);
     };
 }
 
@@ -95,12 +97,12 @@ namespace std {
 namespace liblo {
     class ActivePlugins : public std::unordered_set < Plugin > {
     public:
-        void Load(const _lo_game_handle_int& parentGame);
+        void Load(const GameSettings& parentGame);
         void Save(const _lo_game_handle_int& parentGame);
 
-        void CheckValidity(const _lo_game_handle_int& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
+        void CheckValidity(const GameSettings& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
 
-        bool HasChanged(const _lo_game_handle_int& parentGame) const;
+        bool HasChanged(const GameSettings& parentGame) const;
     private:
         time_t mtime;
     };

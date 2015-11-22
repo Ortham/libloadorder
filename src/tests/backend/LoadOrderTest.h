@@ -26,7 +26,7 @@ along with libloadorder.  If not, see
 #include <gtest/gtest.h>
 
 #include "libloadorder/constants.h"
-#include "backend/game.h"
+#include "backend/GameSettings.h"
 #include "backend/LoadOrder.h"
 #include "backend/helpers.h"
 
@@ -49,42 +49,40 @@ namespace liblo {
                 missingPlugin("missing.esm"),
                 updateEsm("Update.esm"),
                 nonAsciiEsm("Blàñk.esm"),
-                gameHandle(GetParam(), getGamePath(GetParam())) {
-                gameHandle.SetLocalAppData(getLocalPath(GetParam()));
-            }
+                gameSettings(GetParam(), getGamePath(GetParam()), getLocalPath(GetParam())) {}
 
             inline virtual void SetUp() {
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankMasterDependentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentMasterDependentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankMasterDependentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentMasterDependentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / blankDifferentPluginDependentEsp));
-                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / missingPlugin));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankMasterDependentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentMasterDependentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankEsp));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankMasterDependentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentMasterDependentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentPluginDependentEsp));
+                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / missingPlugin));
 
                 // Write out an non-empty, non-plugin file.
-                boost::filesystem::ofstream out(gameHandle.PluginsFolder() / invalidPlugin);
+                boost::filesystem::ofstream out(gameSettings.getPluginsFolder() / invalidPlugin);
                 out << "This isn't a valid plugin file.";
                 out.close();
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / invalidPlugin));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / invalidPlugin));
 
                 // Make sure the game master file exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / gameHandle.MasterFile()));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
+                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
 
                 // Make sure Update.esm exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / updateEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / updateEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / updateEsm));
+                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / updateEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / updateEsm));
 
                 // Make sure the non-ASCII plugin exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameHandle.PluginsFolder() / nonAsciiEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsm, gameHandle.PluginsFolder() / nonAsciiEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameHandle.PluginsFolder() / nonAsciiEsm));
+                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / nonAsciiEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / nonAsciiEsm));
+                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / nonAsciiEsm));
 
                 // Morrowind load order files have a slightly different
                 // format and a prefix is necessary.
@@ -92,7 +90,7 @@ namespace liblo {
 
                 // Write out an active plugins file, making it as invalid as
                 // possible for the game to still fix.
-                out.open(gameHandle.ActivePluginsFile());
+                out.open(gameSettings.getActivePluginsFile());
                 out << std::endl
                     << '#' << FromUTF8(blankDifferentEsm) << std::endl
                     << linePrefix << FromUTF8(blankEsm) << std::endl
@@ -102,13 +100,13 @@ namespace liblo {
                     << linePrefix << FromUTF8(invalidPlugin) << std::endl;
                 out.close();
 
-                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
                     // Write out the game's load order file, using the valid
                     // version of what's in the active plugins file, plus
                     // additional plugins.
-                    out.open(gameHandle.LoadOrderFile());
+                    out.open(gameSettings.getLoadOrderFile());
                     out << nonAsciiEsm << std::endl
-                        << gameHandle.MasterFile() << std::endl
+                        << gameSettings.getMasterFile() << std::endl
                         << blankDifferentEsm << std::endl
                         << blankEsm << std::endl
                         << updateEsm << std::endl
@@ -118,7 +116,7 @@ namespace liblo {
                 else {
                     // Set load order using timestamps
                     std::vector<std::string> plugins({
-                        gameHandle.MasterFile(),
+                        gameSettings.getMasterFile(),
                         blankEsm,
                         blankDifferentEsm,
                         blankMasterDependentEsm,
@@ -134,21 +132,21 @@ namespace liblo {
                     });
                     time_t modificationTime = time(NULL);  // Current time.
                     for (const auto &plugin : plugins) {
-                        boost::filesystem::last_write_time(gameHandle.PluginsFolder() / plugin, modificationTime);
+                        boost::filesystem::last_write_time(gameSettings.getPluginsFolder() / plugin, modificationTime);
                         modificationTime += 60;
                     }
                 }
             }
 
             inline virtual void TearDown() {
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / invalidPlugin));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / gameHandle.MasterFile()));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / updateEsm));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / nonAsciiEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / invalidPlugin));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / nonAsciiEsm));
 
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
-                if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                    ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.LoadOrderFile()));
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
+                if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                    ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
             }
 
             inline std::string getGamePath(unsigned int gameId) const {
@@ -176,7 +174,7 @@ namespace liblo {
                     return "";
             }
 
-            _lo_game_handle_int gameHandle;
+            GameSettings gameSettings;
             LoadOrder loadOrder;
 
             std::string blankEsm;
@@ -209,110 +207,110 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingAValidLoadOrderShouldNotThrow) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            EXPECT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithPluginsBeforeMastersShouldThrow) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsp,
                 blankDifferentEsm,
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithPluginsBeforeMastersShouldMakeNoChanges) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsp,
                 blankDifferentEsm,
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithAnInvalidPluginShouldThrow) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 invalidPlugin,
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithAnInvalidPluginShouldMakeNoChanges) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 invalidPlugin,
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithACaseInsensitiveDuplicatePluginShouldThrow) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 boost::to_lower_copy(blankEsm),
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithACaseInsensitiveDuplicatePluginShouldMakeNoChanges) {
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 boost::to_lower_copy(blankEsm),
             });
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
 
         TEST_P(LoadOrderTest, settingThenGettingLoadOrderShouldReturnTheSetLoadOrder) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, settingTheLoadOrderTwiceShouldReplaceTheFirstLoadOrder) {
             std::vector<std::string> firstLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
             std::vector<std::string> secondLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankDifferentEsm,
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameHandle));
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameSettings));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder, gameSettings));
 
             EXPECT_EQ(secondLoadOrder, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, settingAnInvalidLoadOrderShouldMakeNoChanges) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
             std::vector<std::string> invalidLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsp,
                 blankDifferentEsm,
             });
 
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
-            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
+            EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder, gameSettings));
 
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
         }
@@ -320,54 +318,54 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingALoadOrderWithTheGameMasterNotAtTheBeginningShouldFailForTextfileLoadOrderGamesAndSucceedOtherwise) {
             std::vector<std::string> plugins({
                 blankEsm,
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins, gameSettings));
             else
-                EXPECT_NO_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+                EXPECT_NO_THROW(loadOrder.setLoadOrder(plugins, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithTheGameMasterNotAtTheBeginningShouldMakeNoChangesForTextfileLoadOrderGames) {
             std::vector<std::string> plugins({
                 blankEsm,
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins, gameSettings));
                 EXPECT_TRUE(loadOrder.getLoadOrder().empty());
             }
         }
 
         TEST_P(LoadOrderTest, positionOfAMissingPluginShouldEqualTheLoadOrderSize) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_EQ(validLoadOrder.size(), loadOrder.getPosition(missingPlugin));
         }
 
         TEST_P(LoadOrderTest, positionOfAPluginShouldBeEqualToItsLoadOrderIndex) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_EQ(1, loadOrder.getPosition(blankEsm));
         }
 
         TEST_P(LoadOrderTest, gettingAPluginsPositionShouldBeCaseInsensitive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_EQ(1, loadOrder.getPosition(boost::to_lower_copy(blankEsm)));
         }
@@ -378,33 +376,33 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, gettingPluginAtAValidPositionShouldReturnItsLoadOrderIndex) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameSettings));
             else {
-                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameSettings));
             }
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATextfileBasedGameShouldMakeNoChanges) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0, gameSettings));
                 EXPECT_TRUE(loadOrder.getLoadOrder().empty());
             }
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATimestampBasedGameShouldSucceed) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
-                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+                EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0, gameSettings));
                 EXPECT_FALSE(loadOrder.getLoadOrder().empty());
                 EXPECT_EQ(0, loadOrder.getPosition(blankEsm));
             }
@@ -412,94 +410,94 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_ANY_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 1, gameSettings));
             else
-                EXPECT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+                EXPECT_NO_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 1, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginShouldMakeNoChangesForTextfileLoadOrderGames) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                EXPECT_ANY_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
-                EXPECT_EQ(0, loadOrder.getPosition(gameHandle.MasterFile()));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 1, gameSettings));
+                EXPECT_EQ(0, loadOrder.getPosition(gameSettings.getMasterFile()));
             }
         }
 
         TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginForATextfileBasedGameShouldMakeNoChanges) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                ASSERT_ANY_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                ASSERT_ANY_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 1, gameSettings));
                 EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
             }
         }
 
         TEST_P(LoadOrderTest, settingTheGameMasterFileToLoadAfterAnotherPluginForATimestampBasedGameShouldSucceed) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
-                ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 1, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+                ASSERT_NO_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 1, gameSettings));
                 EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(0));
-                EXPECT_EQ(gameHandle.MasterFile(), loadOrder.getPluginAtPosition(1));
+                EXPECT_EQ(gameSettings.getMasterFile(), loadOrder.getPluginAtPosition(1));
             }
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAnInvalidPluginShouldThrow) {
-            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 0, gameSettings));
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAnInvalidPluginShouldMakeNoChanges) {
-            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 0, gameSettings));
 
-            ASSERT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameHandle));
+            ASSERT_ANY_THROW(loadOrder.setPosition(invalidPlugin, 1, gameSettings));
             EXPECT_EQ(1, loadOrder.getLoadOrder().size());
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAPluginToGreaterThanTheLoadOrderSizeShouldPutThePluginAtTheEnd) {
-            ASSERT_NO_THROW(loadOrder.setPosition(gameHandle.MasterFile(), 0, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setPosition(gameSettings.getMasterFile(), 0, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 2, gameSettings));
             EXPECT_EQ(2, loadOrder.getLoadOrder().size());
             EXPECT_EQ(1, loadOrder.getPosition(blankEsm));
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAPluginShouldBeCaseInsensitive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.setPosition(boost::to_lower_copy(blankEsm), 2, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setPosition(boost::to_lower_copy(blankEsm), 2, gameSettings));
 
             std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankDifferentEsm,
                 blankEsm,
             });
@@ -508,57 +506,57 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingANonMasterPluginToLoadBeforeAMasterPluginShouldThrow) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingANonMasterPluginToLoadBeforeAMasterPluginShouldMakeNoChanges) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1, gameSettings));
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, settingAMasterToLoadAfterAPluginShouldThrow) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingAMasterToLoadAfterAPluginShouldMakeNoChanges) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2, gameSettings));
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, clearingLoadOrderShouldRemoveAllPluginsFromTheLoadOrder) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_NO_THROW(loadOrder.clear());
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
@@ -566,10 +564,10 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, checkingIfAnInactivePluginIsActiveShouldReturnFalse) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
         }
@@ -579,75 +577,75 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, activatingAnInvalidPluginShouldThrow) {
-            EXPECT_ANY_THROW(loadOrder.activate(invalidPlugin, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.activate(invalidPlugin, gameSettings));
         }
 
         TEST_P(LoadOrderTest, activatingANonMasterPluginNotInTheLoadOrderShouldAppendItToTheLoadOrder) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
             ASSERT_EQ(3, loadOrder.getLoadOrder().size());
 
-            EXPECT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+            EXPECT_NO_THROW(loadOrder.activate(blankEsp, gameSettings));
             EXPECT_EQ(3, loadOrder.getPosition(blankEsp));
             EXPECT_TRUE(loadOrder.isActive(blankEsp));
         }
 
         TEST_P(LoadOrderTest, activatingAMasterPluginNotInTheLoadOrderShouldInsertItAfterAllOtherMasters) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
             ASSERT_EQ(3, loadOrder.getLoadOrder().size());
 
-            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameHandle));
+            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameSettings));
             ASSERT_EQ(4, loadOrder.getLoadOrder().size());
             EXPECT_EQ(2, loadOrder.getPosition(blankDifferentEsm));
             EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
         }
 
         TEST_P(LoadOrderTest, activatingTheGameMasterFileNotInTheLoadOrderShouldInsertItAtTheBeginningForTextfileBasedGamesAndAfterAllOtherMastersOtherwise) {
-            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.activate(gameHandle.MasterFile(), gameHandle));
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_EQ(0, loadOrder.getPosition(gameHandle.MasterFile()));
+            EXPECT_NO_THROW(loadOrder.activate(gameSettings.getMasterFile(), gameSettings));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_EQ(0, loadOrder.getPosition(gameSettings.getMasterFile()));
             else
-                EXPECT_EQ(1, loadOrder.getPosition(gameHandle.MasterFile()));
+                EXPECT_EQ(1, loadOrder.getPosition(gameSettings.getMasterFile()));
         }
 
         TEST_P(LoadOrderTest, activatingAPluginInTheLoadOrderShouldSetItToActive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
             ASSERT_FALSE(loadOrder.isActive(blankDifferentEsm));
 
-            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameHandle));
+            EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm, gameSettings));
             EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
         }
 
         TEST_P(LoadOrderTest, checkingIfAPluginIsActiveShouldBeCaseInsensitive) {
-            EXPECT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+            EXPECT_NO_THROW(loadOrder.activate(blankEsm, gameSettings));
             EXPECT_TRUE(loadOrder.isActive(boost::to_lower_copy(blankEsm)));
         }
 
         TEST_P(LoadOrderTest, activatingAPluginShouldBeCaseInsensitive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.activate(boost::to_lower_copy(blankEsm), gameHandle));
+            EXPECT_NO_THROW(loadOrder.activate(boost::to_lower_copy(blankEsm), gameSettings));
 
             EXPECT_TRUE(loadOrder.isActive(blankEsm));
             EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
@@ -657,143 +655,143 @@ namespace liblo {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
-                EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameHandle));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameSettings));
             }
 
-            EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameSettings));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, activatingAPluginWhenMaxNumberAreAlreadyActiveShouldMakeNoChanges) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
-                EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameHandle));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp", gameSettings));
             }
 
-            EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.activate(blankEsm, gameSettings));
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, deactivatingAPluginNotInTheLoadOrderShouldDoNothing) {
-            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameHandle));
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameSettings));
             EXPECT_FALSE(loadOrder.isActive(blankEsp));
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
 
         TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_ANY_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.deactivate(gameSettings.getMasterFile(), gameSettings));
             else
-                EXPECT_NO_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
+                EXPECT_NO_THROW(loadOrder.deactivate(gameSettings.getMasterFile(), gameSettings));
         }
 
         TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldForTextfileLoadOrderGamesShouldMakeNoChanges) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                EXPECT_ANY_THROW(loadOrder.deactivate(gameHandle.MasterFile(), gameHandle));
-                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.deactivate(gameSettings.getMasterFile(), gameSettings));
+                EXPECT_FALSE(loadOrder.isActive(gameSettings.getMasterFile()));
             }
         }
 
         TEST_P(LoadOrderTest, forSkyrimDeactivatingUpdateEsmShouldThrow) {
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
-                EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm, gameHandle));
+            if (gameSettings.getId() == LIBLO_GAME_TES5)
+                EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm, gameSettings));
         }
 
         TEST_P(LoadOrderTest, forSkyrimDeactivatingUpdateEsmShouldMakeNoChanges) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
-            ASSERT_NO_THROW(loadOrder.activate(updateEsm, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
+            ASSERT_NO_THROW(loadOrder.activate(updateEsm, gameSettings));
 
-            if (gameHandle.Id() == LIBLO_GAME_TES5) {
-                EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm, gameHandle));
+            if (gameSettings.getId() == LIBLO_GAME_TES5) {
+                EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm, gameSettings));
                 EXPECT_TRUE(loadOrder.isActive(updateEsm));
             }
         }
 
         TEST_P(LoadOrderTest, deactivatingAnInactivePluginShouldHaveNoEffect) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
             ASSERT_FALSE(loadOrder.isActive(blankEsm));
 
-            EXPECT_NO_THROW(loadOrder.deactivate(blankEsm, gameHandle));
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsm, gameSettings));
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
         }
 
         TEST_P(LoadOrderTest, deactivatingAnActivePluginShouldMakeItInactive) {
-            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameSettings));
             ASSERT_TRUE(loadOrder.isActive(blankEsp));
 
-            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameHandle));
+            EXPECT_NO_THROW(loadOrder.deactivate(blankEsp, gameSettings));
             EXPECT_FALSE(loadOrder.isActive(blankEsp));
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAnActivePluginShouldKeepItActive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
-            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameSettings));
 
-            loadOrder.setPosition(blankEsm, 2, gameHandle);
+            loadOrder.setPosition(blankEsm, 2, gameSettings);
             EXPECT_TRUE(loadOrder.isActive(blankEsm));
         }
 
         TEST_P(LoadOrderTest, settingThePositionOfAnInactivePluginShouldKeepItInactive) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
 
-            loadOrder.setPosition(blankEsm, 2, gameHandle);
+            loadOrder.setPosition(blankEsm, 2, gameSettings);
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
         }
 
         TEST_P(LoadOrderTest, settingLoadOrderShouldActivateTheGameMasterForTextfileBasedGamesAndNotOtherwise) {
             std::vector<std::string> firstLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameHandle));
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_TRUE(loadOrder.isActive(gameHandle.MasterFile()));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameSettings));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_TRUE(loadOrder.isActive(gameSettings.getMasterFile()));
             else
-                EXPECT_FALSE(loadOrder.isActive(gameHandle.MasterFile()));
+                EXPECT_FALSE(loadOrder.isActive(gameSettings.getMasterFile()));
         }
 
         TEST_P(LoadOrderTest, settingANewLoadOrderShouldRetainTheActiveStateOfPluginsInTheOldLoadOrder) {
             std::vector<std::string> firstLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameHandle));
-            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder, gameSettings));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsm, gameSettings));
 
             std::vector<std::string> secondLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder, gameSettings));
 
             EXPECT_TRUE(loadOrder.isActive(blankEsm));
             EXPECT_FALSE(loadOrder.isActive(blankEsp));
@@ -801,20 +799,20 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldThrow) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 invalidPlugin,
             });
-            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldMakeNoChanges) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 invalidPlugin,
             });
-            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
         }
 
@@ -822,37 +820,37 @@ namespace liblo {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
 
-            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldMakeNoChanges) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
 
-            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldThrowForTextfileBasedGamesAndNotOtherwise) {
@@ -860,10 +858,10 @@ namespace liblo {
                 updateEsm,
                 blankEsm,
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
             else
-                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldMakeNoChangesForTextfileBasedGames) {
@@ -871,62 +869,62 @@ namespace liblo {
                 updateEsm,
                 blankEsm,
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
                 EXPECT_TRUE(loadOrder.getActivePlugins().empty());
             }
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldThrowForSkyrimAndNotOtherwise) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
             });
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
-                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            if (gameSettings.getId() == LIBLO_GAME_TES5)
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
             else
-                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldMakeNoChangesForSkyrim) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
             });
-            if (gameHandle.Id() == LIBLO_GAME_TES5) {
-                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            if (gameSettings.getId() == LIBLO_GAME_TES5) {
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
                 EXPECT_TRUE(loadOrder.getActivePlugins().empty());
             }
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItDoesNotExistShouldNotThrow) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / updateEsm));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
 
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
             });
-            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsShouldDeactivateAnyOthersInLoadOrderCaseInsensitively) {
             std::vector<std::string> validLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankEsp,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameHandle));
-            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder, gameSettings));
+            ASSERT_NO_THROW(loadOrder.activate(blankEsp, gameSettings));
 
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 boost::to_lower_copy(blankEsm),
             });
-            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
 
             std::unordered_set<std::string> expectedActivePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 blankEsm,
             });
@@ -935,104 +933,104 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingActivePluginsNotInLoadOrderShouldAddThem) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 blankEsm,
             });
             std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 blankEsm,
             });
             ASSERT_TRUE(loadOrder.getLoadOrder().empty());
 
-            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
 
             std::vector<std::string> newLoadOrder(loadOrder.getLoadOrder());
             EXPECT_EQ(3, newLoadOrder.size());
-            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), gameHandle.MasterFile()));
+            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), gameSettings.getMasterFile()));
             EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), updateEsm));
             EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), blankEsm));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTimestampBasedGames) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
-                EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+                EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfLoadOrderFileDoesNotExist) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.LoadOrderFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
 
-            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfActivePluginsFileDoesNotExist) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
 
-            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreEquivalent) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            EXPECT_TRUE(LoadOrder::isSynchronised(gameHandle));
+            EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isNotSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreNotEquivalent) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            boost::filesystem::ofstream out(gameHandle.LoadOrderFile(), std::ios_base::app);
+            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile(), std::ios_base::app);
             out << blankEsm << std::endl;
 
-            EXPECT_FALSE(LoadOrder::isSynchronised(gameHandle));
+            EXPECT_FALSE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotThrowIfActivePluginsFileDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
 
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateNoPluginsIfActivePluginsFileDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.ActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
 
-            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+            ASSERT_NO_THROW(loadOrder.load(gameSettings));
 
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateTheGameMasterForTextfileBasedGamesAndNotOtherwise) {
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
-            int count = loadOrder.getActivePlugins().count(gameHandle.MasterFile());
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            int count = loadOrder.getActivePlugins().count(gameSettings.getMasterFile());
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
                 EXPECT_EQ(1, count);
             else
                 EXPECT_EQ(0, count);
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateUpdateEsmWhenItExistsForSkyrimAndNotOtherwise) {
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             int count = loadOrder.getActivePlugins().count(updateEsm);
-            if (gameHandle.Id() == LIBLO_GAME_TES5)
+            if (gameSettings.getId() == LIBLO_GAME_TES5)
                 EXPECT_EQ(1, count);
             else
                 EXPECT_EQ(0, count);
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotActivateUpdateEsmWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / updateEsm));
+            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
 
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             EXPECT_EQ(0, loadOrder.getActivePlugins().count(updateEsm));
         }
@@ -1042,14 +1040,14 @@ namespace liblo {
             // here because it's too expensive to do for every test.
             std::unordered_set<std::string> expectedActivePlugins;
 
-            std::string linePrefix = getActivePluginsFileLinePrefix(gameHandle.Id());
-            boost::filesystem::ofstream out(gameHandle.ActivePluginsFile());
+            std::string linePrefix = getActivePluginsFileLinePrefix(gameSettings.getId());
+            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                out << linePrefix << FromUTF8(gameHandle.MasterFile()) << std::endl;
-                expectedActivePlugins.insert(gameHandle.MasterFile());
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                out << linePrefix << FromUTF8(gameSettings.getMasterFile()) << std::endl;
+                expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameHandle.Id() == LIBLO_GAME_TES5) {
+                if (gameSettings.getId() == LIBLO_GAME_TES5) {
                     out << linePrefix << FromUTF8(updateEsm) << std::endl;
                     expectedActivePlugins.insert(updateEsm);
                 }
@@ -1057,45 +1055,45 @@ namespace liblo {
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins - expectedActivePlugins.size(); ++i) {
                 std::string filename = std::to_string(i) + ".esp";
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameHandle.PluginsFolder() / blankEsp, gameHandle.PluginsFolder() / filename));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / filename));
                 out << linePrefix << filename << std::endl;
                 expectedActivePlugins.insert(filename);
             }
             out.close();
 
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             EXPECT_EQ(expectedActivePlugins.size(), loadOrder.getActivePlugins().size());
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameHandle.PluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldFixInvalidDataWhenReadingActivePluginsFile) {
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             std::unordered_set<std::string> expectedActivePlugins({
                 nonAsciiEsm,
                 blankEsm,
                 blankEsp,
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                expectedActivePlugins.insert(gameHandle.MasterFile());
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameHandle.Id() == LIBLO_GAME_TES5)
+                if (gameSettings.getId() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(updateEsm);
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldPreferLoadOrderFileForTextfileBasedGamesOtherwiseUseTimestamps) {
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             std::vector<std::string> expectedLoadOrder;
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
                 expectedLoadOrder = std::vector<std::string>({
-                    gameHandle.MasterFile(),
+                    gameSettings.getMasterFile(),
                     nonAsciiEsm,
                     blankDifferentEsm,
                     blankEsm,
@@ -1105,7 +1103,7 @@ namespace liblo {
             }
             else {
                 expectedLoadOrder = std::vector<std::string>({
-                    gameHandle.MasterFile(),
+                    gameSettings.getMasterFile(),
                     blankEsm,
                     blankDifferentEsm,
                     blankMasterDependentEsm,
@@ -1124,15 +1122,15 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldFallBackToActivePluginsFileForTextfileBasedGamesOtherwiseUseTimestamps) {
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                ASSERT_NO_THROW(boost::filesystem::remove(gameHandle.LoadOrderFile()));
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
 
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             std::vector<std::string> expectedLoadOrder;
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
                 expectedLoadOrder = std::vector<std::string>({
-                    gameHandle.MasterFile(),
+                    gameSettings.getMasterFile(),
                     nonAsciiEsm,
                     blankEsm,
                     updateEsm,
@@ -1141,7 +1139,7 @@ namespace liblo {
             }
             else {
                 expectedLoadOrder = std::vector<std::string>({
-                    gameHandle.MasterFile(),
+                    gameSettings.getMasterFile(),
                     blankEsm,
                     blankDifferentEsm,
                     blankMasterDependentEsm,
@@ -1160,26 +1158,26 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataTwiceShouldDiscardTheDataRead) {
-            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+            ASSERT_NO_THROW(loadOrder.load(gameSettings));
 
-            std::string linePrefix = getActivePluginsFileLinePrefix(gameHandle.Id());
-            boost::filesystem::ofstream out(gameHandle.ActivePluginsFile(), std::ios_base::trunc);
+            std::string linePrefix = getActivePluginsFileLinePrefix(gameSettings.getId());
+            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile(), std::ios_base::trunc);
             out << linePrefix << FromUTF8(blankEsp) << std::endl;
             out.close();
 
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                out.open(gameHandle.LoadOrderFile(), std::ios_base::trunc);
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                out.open(gameSettings.getLoadOrderFile(), std::ios_base::trunc);
                 out << blankDifferentEsm << std::endl;
                 out.close();
             }
 
-            EXPECT_NO_THROW(loadOrder.load(gameHandle));
+            EXPECT_NO_THROW(loadOrder.load(gameSettings));
 
             std::unordered_set<std::string> expectedActivePlugins({
                 blankEsp,
             });
             std::vector<std::string> expectedLoadOrder({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankDifferentEsm,
                 blankMasterDependentEsm,
@@ -1193,13 +1191,13 @@ namespace liblo {
                 blankPluginDependentEsp,
                 blankDifferentPluginDependentEsp,
             });
-            if (gameHandle.LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_NE(expectedLoadOrder, loadOrder.getLoadOrder());
                 EXPECT_TRUE(is_permutation(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
 
-                expectedActivePlugins.insert(gameHandle.MasterFile());
+                expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameHandle.Id() == LIBLO_GAME_TES5)
+                if (gameSettings.getId() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(updateEsm);
             }
             else {
@@ -1211,32 +1209,32 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, savingShouldSetTimestampsForTimestampBasedGamesAndWriteToLoadOrderAndActivePluginsFilesOtherwise) {
             std::vector<std::string> plugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentEsm,
                 blankDifferentMasterDependentEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(plugins, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setLoadOrder(plugins, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.save(gameHandle));
+            EXPECT_NO_THROW(loadOrder.save(gameSettings));
 
-            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+            ASSERT_NO_THROW(loadOrder.load(gameSettings));
 
             EXPECT_TRUE(equal(begin(plugins), end(plugins), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, savingShouldWriteActivePluginsToActivePluginsFile) {
             std::unordered_set<std::string> activePlugins({
-                gameHandle.MasterFile(),
+                gameSettings.getMasterFile(),
                 updateEsm,
                 blankEsm,
             });
-            ASSERT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameHandle));
+            ASSERT_NO_THROW(loadOrder.setActivePlugins(activePlugins, gameSettings));
 
-            EXPECT_NO_THROW(loadOrder.save(gameHandle));
+            EXPECT_NO_THROW(loadOrder.save(gameSettings));
 
-            ASSERT_NO_THROW(loadOrder.load(gameHandle));
+            ASSERT_NO_THROW(loadOrder.load(gameSettings));
 
             EXPECT_EQ(activePlugins, loadOrder.getActivePlugins());
         }

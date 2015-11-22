@@ -168,13 +168,13 @@ TEST(GameHandleDestroyTest, HandledNullInput) {
 TEST_F(OblivionOperationsTest, SetGameMaster) {
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
     EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EmptyFile.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "NotAPlugin.esm"));
 
     EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
 
     // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_ERROR_FILE_NOT_FOUND, lo_set_game_master(gh, "Blank.missing.esm"));
+    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.missing.esm"));
 }
 
 TEST_F(SkyrimOperationsTest, SetGameMaster) {

@@ -34,6 +34,7 @@ along with libloadorder.  If not, see
 
 #include "libloadorder/libloadorder.h"
 #include "backend/Plugin.h"
+#include "api/_lo_game_handle_int.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>

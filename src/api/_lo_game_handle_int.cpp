@@ -1,4 +1,4 @@
-﻿/*  libloadorder
+/*  libloadorder
 
     A library for reading and writing the load order of plugin files for
     TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and
@@ -23,15 +23,22 @@
     <http://www.gnu.org/licenses/>.
     */
 
-// Including from tests/ folder.
-#include "api/libloadorder.h"
-#include "api/activeplugins.h"
-#include "api/loadorder.h"
-#include "backend/GameSettingsTest.h"
-#include "backend/LoadOrderTest.h"
-#include "backend/PluginTest.h"
+#include "_lo_game_handle_int.h"
 
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+using namespace liblo;
+
+_lo_game_handle_int::_lo_game_handle_int(unsigned int id, const boost::filesystem::path& gamePath, const boost::filesystem::path& localPath)
+    : GameSettings(id, gamePath, localPath),
+    extString(nullptr),
+    extStringArray(nullptr),
+    extStringArraySize(0) {}
+
+_lo_game_handle_int::~_lo_game_handle_int() {
+    delete[] extString;
+
+    if (extStringArray != nullptr) {
+        for (size_t i = 0; i < extStringArraySize; i++)
+            delete[] extStringArray[i];  //Clear all the char strings created.
+        delete[] extStringArray;  //Clear the string array.
+    }
 }

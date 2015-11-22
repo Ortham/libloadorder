@@ -26,7 +26,7 @@
 #include "Plugin.h"
 #include "libloadorder/constants.h"
 #include "error.h"
-#include "game.h"
+#include "GameSettings.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -48,7 +48,7 @@ namespace liblo {
         return name;
     }
 
-    bool Plugin::IsValid(const _lo_game_handle_int& parentGame) const {
+    bool Plugin::IsValid(const GameSettings& parentGame) const {
         // Rather than just checking the extension, try also parsing the file, and see if it fails.
         if (!boost::iends_with(name, ".esm") && !boost::iends_with(name, ".esp"))
             return false;
@@ -61,7 +61,7 @@ namespace liblo {
         return true;
     }
 
-    bool Plugin::IsMasterFile(const _lo_game_handle_int& parentGame) const {
+    bool Plugin::IsMasterFile(const GameSettings& parentGame) const {
         try {
             libespm::Plugin plugin = ReadHeader(parentGame);
 
@@ -72,27 +72,27 @@ namespace liblo {
         }
     }
 
-    bool Plugin::IsGhosted(const _lo_game_handle_int& parentGame) const {
-        return (fs::exists(parentGame.PluginsFolder() / fs::path(name + ".ghost")));
+    bool Plugin::IsGhosted(const GameSettings& parentGame) const {
+        return (fs::exists(parentGame.getPluginsFolder() / fs::path(name + ".ghost")));
     }
 
-    bool Plugin::Exists(const _lo_game_handle_int& parentGame) const {
-        return (fs::exists(parentGame.PluginsFolder() / name) || fs::exists(parentGame.PluginsFolder() / fs::path(name + ".ghost")));
+    bool Plugin::Exists(const GameSettings& parentGame) const {
+        return (fs::exists(parentGame.getPluginsFolder() / name) || fs::exists(parentGame.getPluginsFolder() / fs::path(name + ".ghost")));
     }
 
-    time_t Plugin::GetModTime(const _lo_game_handle_int& parentGame) const {
+    time_t Plugin::GetModTime(const GameSettings& parentGame) const {
         try {
             if (IsGhosted(parentGame))
-                return fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"));
+                return fs::last_write_time(parentGame.getPluginsFolder() / fs::path(name + ".ghost"));
             else
-                return fs::last_write_time(parentGame.PluginsFolder() / name);
+                return fs::last_write_time(parentGame.getPluginsFolder() / name);
         }
         catch (fs::filesystem_error& e) {
             throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
         }
     }
 
-    std::vector<Plugin> Plugin::GetMasters(const _lo_game_handle_int& parentGame) const {
+    std::vector<Plugin> Plugin::GetMasters(const GameSettings& parentGame) const {
         libespm::Plugin plugin = ReadHeader(parentGame);
 
         vector<Plugin> masters;
@@ -103,10 +103,10 @@ namespace liblo {
         return masters;
     }
 
-    void Plugin::UnGhost(const _lo_game_handle_int& parentGame) const {
+    void Plugin::UnGhost(const GameSettings& parentGame) const {
         if (IsGhosted(parentGame)) {
             try {
-                fs::rename(parentGame.PluginsFolder() / fs::path(name + ".ghost"), parentGame.PluginsFolder() / name);
+                fs::rename(parentGame.getPluginsFolder() / fs::path(name + ".ghost"), parentGame.getPluginsFolder() / name);
             }
             catch (fs::filesystem_error& e) {
                 throw error(LIBLO_ERROR_FILE_RENAME_FAIL, e.what());
@@ -114,12 +114,12 @@ namespace liblo {
         }
     }
 
-    void Plugin::SetModTime(const _lo_game_handle_int& parentGame, const time_t modificationTime) const {
+    void Plugin::SetModTime(const GameSettings& parentGame, const time_t modificationTime) const {
         try {
             if (IsGhosted(parentGame))
-                fs::last_write_time(parentGame.PluginsFolder() / fs::path(name + ".ghost"), modificationTime);
+                fs::last_write_time(parentGame.getPluginsFolder() / fs::path(name + ".ghost"), modificationTime);
             else
-                fs::last_write_time(parentGame.PluginsFolder() / name, modificationTime);
+                fs::last_write_time(parentGame.getPluginsFolder() / name, modificationTime);
         }
         catch (fs::filesystem_error& e) {
             throw error(LIBLO_ERROR_TIMESTAMP_WRITE_FAIL, e.what());
@@ -146,12 +146,12 @@ namespace liblo {
         return !(*this == rhs);
     }
 
-    libespm::Plugin Plugin::ReadHeader(const _lo_game_handle_int& parentGame) const {
+    libespm::Plugin Plugin::ReadHeader(const GameSettings& parentGame) const {
         if (!Exists(parentGame))
             throw error(LIBLO_ERROR_FILE_NOT_FOUND, name.c_str());
 
         try {
-            string filepath = (parentGame.PluginsFolder() / name).string();
+            string filepath = (parentGame.getPluginsFolder() / name).string();
             if (IsGhosted(parentGame))
                 filepath += ".ghost";
 

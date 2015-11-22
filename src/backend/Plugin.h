@@ -31,9 +31,9 @@
 
 #include <libespm/Plugin.h>
 
-struct _lo_game_handle_int;
-
 namespace liblo {
+    class GameSettings;
+
     class Plugin {
     public:
         Plugin();
@@ -41,15 +41,15 @@ namespace liblo {
 
         std::string Name() const;
 
-        bool    IsValid(const _lo_game_handle_int& parentGame) const;  // Attempts to parse the plugin header.
-        bool    IsMasterFile(const _lo_game_handle_int& parentGame) const;         // Checks master flag bit.
-        bool    IsGhosted(const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in ghosted form.
-        bool    Exists(const _lo_game_handle_int& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
-        time_t  GetModTime(const _lo_game_handle_int& parentGame) const;         //Can throw exception.
-        std::vector<Plugin> GetMasters(const _lo_game_handle_int& parentGame) const;
+        bool    IsValid(const GameSettings& parentGame) const;  // Attempts to parse the plugin header.
+        bool    IsMasterFile(const GameSettings& parentGame) const;         // Checks master flag bit.
+        bool    IsGhosted(const GameSettings& parentGame) const;         //Checks if the file exists in ghosted form.
+        bool    Exists(const GameSettings& parentGame) const;         //Checks if the file exists in the data folder, ghosted or not.
+        time_t  GetModTime(const GameSettings& parentGame) const;         //Can throw exception.
+        std::vector<Plugin> GetMasters(const GameSettings& parentGame) const;
 
-        void    UnGhost(const _lo_game_handle_int& parentGame) const;         //Can throw exception.
-        void    SetModTime(const _lo_game_handle_int& parentGame, const time_t modificationTime) const;
+        void    UnGhost(const GameSettings& parentGame) const;         //Can throw exception.
+        void    SetModTime(const GameSettings& parentGame, const time_t modificationTime) const;
 
         bool isActive() const;
 
@@ -62,7 +62,7 @@ namespace liblo {
         std::string name;
         bool active;
 
-        libespm::Plugin ReadHeader(const _lo_game_handle_int& parentGame) const;
+        libespm::Plugin ReadHeader(const GameSettings& parentGame) const;
     };
 }
 

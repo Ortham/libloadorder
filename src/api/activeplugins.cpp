@@ -24,7 +24,7 @@
     */
 
 #include "libloadorder/activeplugins.h"
-#include "../backend/game.h"
+#include "../api/_lo_game_handle_int.h"
 #include "../backend/helpers.h"
 #include "../backend/error.h"
 

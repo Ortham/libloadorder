@@ -24,8 +24,8 @@
     */
 
 #include "libloadorder/libloadorder.h"
+#include "../api/_lo_game_handle_int.h"
 #include "../backend/helpers.h"
-#include "../backend/game.h"
 #include "../backend/error.h"
 #include <boost/locale.hpp>
 #include <locale>
@@ -110,14 +110,16 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         if (localPath != nullptr && !boost::filesystem::is_directory(localPath))
             return c_error(LIBLO_ERROR_INVALID_ARGS, "Given local data path \"" + string(localPath) + "\" is not a valid directory.");
 
-        //Create handle.
-        *gh = new _lo_game_handle_int(gameId, gamePath);
+        string localPathString;
         if (localPath != nullptr)
-            (*gh)->SetLocalAppData(localPath);
+            localPathString = localPath;
 #ifndef _WIN32
         else
             return c_error(LIBLO_ERROR_INVALID_ARGS, "A local data path must be supplied on non-Windows platforms.");
 #endif
+
+        //Create handle.
+        *gh = new _lo_game_handle_int(gameId, gamePath, localPathString);
     }
     catch (error& e) {
         return c_error(e);
@@ -159,15 +161,8 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
     if (gh == nullptr || masterFile == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
-    if (gh->Id() == LIBLO_GAME_TES5)
+    if (gh->getId() == LIBLO_GAME_TES5)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Cannot change Skyrim's main master file.");
-
-    try {
-        gh->SetMasterFile(masterFile);
-    }
-    catch (error& e) {
-        return c_error(e);
-    }
 
     return LIBLO_OK;
 }
@@ -182,7 +177,7 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Only need to update loadorder.txt if it is used.
-    if (gh->LoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+    if (gh->getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
         try {
             //Update cache if necessary.
             if (gh->loadOrder.HasChanged(*gh)) {
@@ -203,10 +198,10 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
             gh->activePlugins.Load(*gh);
         }
 
-        if (gh->Id() == LIBLO_GAME_TES5) {
+        if (gh->getId() == LIBLO_GAME_TES5) {
             // Ensure Skyrim.esm is active.
-            if (gh->activePlugins.find(Plugin(gh->MasterFile())) == gh->activePlugins.end())
-                gh->activePlugins.insert(Plugin(gh->MasterFile()));
+            if (gh->activePlugins.find(Plugin(gh->getMasterFile())) == gh->activePlugins.end())
+                gh->activePlugins.insert(Plugin(gh->getMasterFile()));
 
             // Ensure Update.esm is active, if it is installed.
             if (Plugin("Update.esm").IsValid(*gh) && gh->activePlugins.find(Plugin("Update.esm")) == gh->activePlugins.end())
