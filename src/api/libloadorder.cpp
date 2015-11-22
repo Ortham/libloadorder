@@ -112,12 +112,13 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
         if (!boost::filesystem::is_directory(gamePath))
             return c_error(LIBLO_ERROR_INVALID_ARGS, "Given game path \"" + string(gamePath) + "\" is not a valid directory.");
 
-        if (localPath != nullptr && !boost::filesystem::is_directory(localPath))
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "Given local data path \"" + string(localPath) + "\" is not a valid directory.");
-
         string localPathString;
-        if (localPath != nullptr)
+        if (localPath != nullptr) {
+            if (!boost::filesystem::is_directory(localPath))
+                return c_error(LIBLO_ERROR_INVALID_ARGS, "Given local data path \"" + string(localPath) + "\" is not a valid directory.");
+
             localPathString = localPath;
+        }
 #ifndef _WIN32
         else
             return c_error(LIBLO_ERROR_INVALID_ARGS, "A local data path must be supplied on non-Windows platforms.");
