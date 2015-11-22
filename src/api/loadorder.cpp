@@ -24,7 +24,7 @@
     */
 
 #include "libloadorder/loadorder.h"
-#include "../api/_lo_game_handle_int.h"
+#include "_lo_game_handle_int.h"
 #include "c_helpers.h"
 #include "../backend/error.h"
 
@@ -53,13 +53,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
-    if (gh->extStringArray != nullptr) {
-        for (size_t i = 0; i < gh->extStringArraySize; i++)
-            delete[] gh->extStringArray[i];
-        delete[] gh->extStringArray;
-        gh->extStringArray = nullptr;
-        gh->extStringArraySize = 0;
-    }
+    gh->freeStringArray();
 
     //Update cache if necessary.
     try {
@@ -71,17 +65,15 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
         return c_error(e);
     }
 
-    //Exit now if load order is empty.
-    vector<string> loadOrder(gh->loadOrder.getLoadOrder());
-    if (loadOrder.empty())
-        return LIBLO_OK;
-
-    //Allocate memory.
-    gh->extStringArraySize = loadOrder.size();
     try {
-        gh->extStringArray = new char*[gh->extStringArraySize];
-        for (size_t i = 0; i < gh->extStringArraySize; i++)
-            gh->extStringArray[i] = copyString(loadOrder[i]);
+        vector<string> loadOrder = gh->loadOrder.getLoadOrder();
+
+        //Check vector size. Exit early if zero.
+        if (loadOrder.empty())
+            return LIBLO_OK;
+
+        //Allocate memory.
+        gh->copyToStringArray(loadOrder);
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());

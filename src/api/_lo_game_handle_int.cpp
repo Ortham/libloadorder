@@ -43,3 +43,13 @@ _lo_game_handle_int::~_lo_game_handle_int() {
         delete[] extStringArray;  //Clear the string array.
     }
 }
+
+void _lo_game_handle_int::freeStringArray() {
+    if (extStringArray != nullptr) {
+        for (size_t i = 0; i < extStringArraySize; i++)
+            delete[] extStringArray[i];  //Clear all the char strings created.
+        delete[] extStringArray;  //Clear the string array.
+        extStringArray = nullptr;
+        extStringArraySize = 0;
+    }
+}

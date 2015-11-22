@@ -23,10 +23,17 @@
     <http://www.gnu.org/licenses/>.
     */
 
+#ifdef __GNUC__  // Workaround for GCC linking error.
+#pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS and BOOST_NO_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+#define BOOST_NO_SCOPED_ENUMS  // For older versions.
+#endif
+
 // Including from tests/ folder.
-#include "api/libloadorder.h"
+#include "api/_lo_game_handle_intTest.h"
 #include "api/activeplugins.h"
 #include "api/CHelpersTest.h"
+#include "api/libloadorder.h"
 #include "api/loadorder.h"
 #include "backend/ErrorTest.h"
 #include "backend/GameSettingsTest.h"

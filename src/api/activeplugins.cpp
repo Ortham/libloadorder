@@ -24,7 +24,7 @@
     */
 
 #include "libloadorder/activeplugins.h"
-#include "../api/_lo_game_handle_int.h"
+#include "_lo_game_handle_int.h"
 #include "c_helpers.h"
 #include "../backend/error.h"
 
@@ -41,13 +41,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Free memory if in use.
-    if (gh->extStringArray != nullptr) {
-        for (size_t i = 0; i < gh->extStringArraySize; i++)
-            delete[] gh->extStringArray[i];  //Clear all the char strings created.
-        delete[] gh->extStringArray;  //Clear the string array.
-        gh->extStringArray = nullptr;
-        gh->extStringArraySize = 0;
-    }
+    gh->freeStringArray();
 
     //Set initial outputs.
     *plugins = gh->extStringArray;
@@ -63,20 +57,15 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         return c_error(e);
     }
 
-    //Check array size. Exit if zero.
-    unordered_set<string> loadOrder = gh->loadOrder.getActivePlugins();
-    if (loadOrder.empty())
-        return LIBLO_OK;
-
-    //Allocate memory.
-    gh->extStringArraySize = loadOrder.size();
     try {
-        gh->extStringArray = new char*[gh->extStringArraySize];
-        size_t i = 0;
-        for (const auto &activePlugin : loadOrder) {
-            gh->extStringArray[i] = copyString(activePlugin);
-            i++;
-        }
+        unordered_set<string> activePlugins = gh->loadOrder.getActivePlugins();
+
+        //Check set size. Exit early if zero.
+        if (activePlugins.empty())
+            return LIBLO_OK;
+
+        //Allocate memory.
+        gh->copyToStringArray(activePlugins);
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());

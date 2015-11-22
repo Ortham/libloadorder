@@ -28,6 +28,7 @@
 
 #include "../backend/LoadOrder.h"
 #include "../backend/GameSettings.h"
+#include "c_helpers.h"
 
 #include <boost/filesystem.hpp>
 
@@ -42,6 +43,20 @@ public:
     char ** extStringArray;
 
     size_t extStringArraySize;
+
+    void freeStringArray();
+
+    template<class T>
+    void copyToStringArray(T container) {
+        extStringArraySize = container.size();
+        extStringArray = new char*[extStringArraySize];
+
+        size_t i = 0;
+        for (const auto& element : container) {
+            extStringArray[i] = liblo::copyString(element);
+            ++i;
+        }
+    }
 };
 
 #endif

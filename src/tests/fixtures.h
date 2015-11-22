@@ -26,12 +26,6 @@ along with libloadorder.  If not, see
 #ifndef __LIBLO_TEST_FIXTURES__
 #define __LIBLO_TEST_FIXTURES__
 
-#ifdef __GNUC__  // Workaround for GCC linking error.
-#pragma message("GCC detected: Defining BOOST_NO_CXX11_SCOPED_ENUMS and BOOST_NO_SCOPED_ENUMS to avoid linking errors for boost::filesystem::copy_file().")
-#define BOOST_NO_CXX11_SCOPED_ENUMS
-#define BOOST_NO_SCOPED_ENUMS  // For older versions.
-#endif
-
 #include "libloadorder/libloadorder.h"
 #include "backend/Plugin.h"
 #include "api/_lo_game_handle_int.h"

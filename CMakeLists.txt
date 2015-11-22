@@ -65,9 +65,10 @@ set (PROJECT_HEADERS "${CMAKE_SOURCE_DIR}/src/backend/error.h"
 set (TESTER_SRC "${CMAKE_SOURCE_DIR}/src/tests/main.cpp")
 
 set (TESTER_HEADERS "${CMAKE_SOURCE_DIR}/src/tests/fixtures.h"
-					"${CMAKE_SOURCE_DIR}/src/tests/api/libloadorder.h"
+					"${CMAKE_SOURCE_DIR}/src/tests/api/_lo_game_handle_intTest.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/activeplugins.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/CHelpersTest.h"
+					"${CMAKE_SOURCE_DIR}/src/tests/api/libloadorder.h"
 					"${CMAKE_SOURCE_DIR}/src/tests/api/loadorder.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/ErrorTest.h"
                     "${CMAKE_SOURCE_DIR}/src/tests/backend/GameSettingsTest.h"
