@@ -136,8 +136,8 @@ extern "C"
      ***********************************/
     /**@{*/
 
-    LIBLO extern const unsigned int LIBLO_METHOD_TIMESTAMP;  /**< The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas all use this system, as does pre-v1.4.26 Skyrim. */
-    LIBLO extern const unsigned int LIBLO_METHOD_TEXTFILE;   /**< The game handle is using the textfile-based load order system. Skyrim v1.4.26+ uses this system. */
+    LIBLO extern const unsigned int LIBLO_METHOD_TIMESTAMP;  /**< The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas all use this system. */
+    LIBLO extern const unsigned int LIBLO_METHOD_TEXTFILE;   /**< The game handle is using the textfile-based load order system. Skyrim and Fallout 4 use this system. */
 
     /**@}*/
     /*******************//**

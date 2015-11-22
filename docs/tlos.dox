@@ -4,9 +4,9 @@
 
     @section intro An Introduction To Load Orders
 
-    This section provides a general overview of load ordering in TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas for those who are unfamiliar with the concept. For simplicity, "the game" will be used when the text refers to any of the games in the previous list.
+    This section provides a general overview of load ordering in TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 Fallout: New Vegas and Fallout 4 for those who are unfamiliar with the concept. For simplicity, "the game" will be used when the text refers to any of the games in the previous list.
 
-    Mod plugins for the game are files that end in `.esp` or `.esm`. These files are created by the game's official editing tools, or by third party modders' tools. They contain various data entries, which can either be brand new additions or changes to the entries added by another plugin, including the game's main master file (Morrowind.esm, Oblivion.esm, Skyrim.esm, Fallout3.esm or FalloutNV.esm depending on the game). These entries cover almost all aspects of what is in the game, eg. NPCs, items, races, interiors, worlds, quests, etc.
+    Mod plugins for the game are files that end in `.esp` or `.esm`. These files are created by the game's official editing tools, or by third party modders' tools. They contain various data entries, which can either be brand new additions or changes to the entries added by another plugin, including the game's main master file (Morrowind.esm, Oblivion.esm, Skyrim.esm, Fallout3.esm, FalloutNV.esm or Fallout4.esm depending on the game). These entries cover almost all aspects of what is in the game, eg. NPCs, items, races, interiors, worlds, quests, etc.
 
     When the game is run, it loads each of the plugins you have installed one by one. The order in which it loads them is, unsurprisingly, what is referred to as the load order. The load order is important for two reasons:
       - Dependency resolution.
@@ -23,32 +23,32 @@
     A plugin's position in the load order is often displayed by mod managers as a hexadecimal number, from 00 to FE (0 to 255 in decimal). The plugin with position 00 loads first, and the plugin with position FE is loaded last. Hexadecimal numbers are used to display the load order positions of plugins because these numbers form the first two digits of the code that the game uses to reference the entries that the plugin adds, so knowing the numbers allows modders and mod users to determine which plugin an entry is from.
 
     So how does the game decide on the load order to use? Well, there are currently two different methods used, depending on the game (and its version):
-      - In Morrowind, Oblivion, Fallout 3, Fallout: New Vegas and early versions (pre-1.4.26) of Skyrim, load order is decided by the relative timestamps of plugins in the game's Data directory. An installed plugin's load order is therefore an intrinsic property of that plugin. The active plugin with the earliest date loads first, with plugins being listed in descending date order (earliest to latest).
-      - In Skyrim v1.4.26+, a new textfile-based load order system was introduced, in which load order is decide by the order in which plugins are listed in `plugins.txt`. This brought with it a fundamental change, in that load order position is no longer an intrinsic property of a plugin.
+      - In Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas, load order is decided by the relative timestamps of plugins in the game's Data directory. An installed plugin's load order is therefore an intrinsic property of that plugin. The active plugin with the earliest date loads first, with plugins being listed in descending date order (earliest to latest).
+      - In Skyrim and Fallout 4, load order is decide by the order in which plugins are listed in `plugins.txt`. This brought with it a fundamental change, in that load order position is no longer an intrinsic property of a plugin.
 
     There are a few hardcoded rules that trump load order, irrespective of the method used to determine it:
       - Master plugins always load before non-master plugins. This is discussed in greater detail in @ref ffp_sec.
-      - In Skyrim, `Skyrim.esm` always loads before all other plugins.
-      - In Skyrim, if `Update.esm` is present, it is always loaded. If it has no load order position set, it loads after all other master plugins. That might sound a bit odd, but recall that in Skyrim v1.4.26+ load order position is not an intrinsic property of a plugin.
+      - In Skyrim and Fallout 4, the game's main master file (`Skyrim.esm` or `Fallout4.esm` respectively) always loads before all other plugins.
+      - In Skyrim, if `Update.esm` is present, it is always loaded. If it has no load order position set, it loads after all other master plugins. That might sound a bit odd, but recall that in Skyrim and Fallout 4 load order position is not an intrinsic property of a plugin.
 
     @section active_sec An Introduction To Active Plugins
 
     We've covered what load order is, how it is used, and how the game determines it, but we haven't covered how the game knows which plugins to load, ie. which plugins are active. Once again, there are two systems used for deciding which plugins are active, depending on the game.
       - Morrowind lists the filenames of the plugins that are currently active in its `Morrowind.ini` file, found in the game's install folder.
-      - Oblivion, Skyrim, Fallout 3 and Fallout: New Vegas list the plugins that are currently active in their `plugins.txt`, by default found in the game's `%LOCALAPPDATA%` folder, but it can be relocated to the game's install folder by toggling an option in that game's ini file.
+      - The other games list the plugins that are currently active in their `plugins.txt`, by default found in the game's `%LOCALAPPDATA%` folder, but it can be relocated to the game's install folder by toggling an option in that game's ini file.
 
     Both active plugins files are encoded in Windows-1252. This is fairly important, as it means that some plugins have filenames which cannot be represented in Windows-1252, and so cannot be activated without first renaming them.
 
     Up to 255 plugins can be active at any one time. Listing more than 255 plugins in the active plugins file will result in weirdness and broken things, as will listing a plugin more than once.
 
-    An immediate consequence of Skyrim v1.4.26+ using `plugins.txt` to store both load order and active plugin information is that inactive plugins cannot be said to have any load order position. This might not seem a problem at first, since the game only cares about the relative order of the plugins it loads, but modders have engineered methods by which inactive plugins can have their changes loaded by another active plugin (eg. Wrye Bash's Bashed Patch). When any such method is used, the load order of the inactive plugins is required to resolve any dependencies and conflicts they have, both with each other and with any active plugins. As such, it becomes necessary to re-implement a system that assigns a load order position to all installed plugins, hence the textfile-based load order standard.
+    An immediate consequence of Skyrim and Fallout 4 using `plugins.txt` to store both load order and active plugin information is that inactive plugins cannot be said to have any load order position. This might not seem a problem at first, since the game only cares about the relative order of the plugins it loads, but modders have engineered methods by which inactive plugins can have their changes loaded by another active plugin (eg. Wrye Bash's Bashed Patch). When any such method is used, the load order of the inactive plugins is required to resolve any dependencies and conflicts they have, both with each other and with any active plugins. As such, it becomes necessary to re-implement a system that assigns a load order position to all installed plugins, hence the textfile-based load order standard.
 
     @section textfile_sec The Textfile-based Load Order Standard
 
-    The textfile-based load order standard was developed by Lojack (Wrye Bash), WrinklyNinja (BOSS), Kaburke (Nexus Mod Manager) and Dark0ne (owner of the Nexus sites) to serve the community's need for the ability to assign load order positions to all installed plugins in Skyrim v1.4.26+.
+    The textfile-based load order standard was developed by Lojack (Wrye Bash), WrinklyNinja (BOSS), Kaburke (Nexus Mod Manager) and Dark0ne (owner of the Nexus sites) to serve the community's need for the ability to assign load order positions to all installed plugins in Skyrim and Fallout 4.
 
     The standard dictates that:
-      - An installed plugin is defined to be a plugin that is located at the location which Skyrim scans to detect plugins.
+      - An installed plugin is defined to be a plugin that is located at the location which the game scans to detect plugins.
       - Total load order is defined as a load order which assigns a position to every installed plugin at the time at which the load order is recorded.
       - A blank line is defined as a string that contains only a CRLF line break.
       - A comment line is defined as a string that begins with a hash character (`#`) and ends with a CRLF line break.
@@ -57,7 +57,7 @@
       - `loadorder.txt` is encoded in UTF-8, *without* a Byte Order Mark.
       - `loadorder.txt` is stored alongside the `plugins.txt`, in whichever location that is.
       - `loadorder.txt` contains only blank lines, comment lines and plugin lines.
-      - `loadorder.txt` lists `Skyrim.esm` first.
+      - `loadorder.txt` lists the game's main master file first.
       - `loadorder.txt` lists all master files before all plugin files.
       - `loadorder.txt` contains no duplicate plugin lines.
       - `plugins.txt` is encoded in Windows-1252.

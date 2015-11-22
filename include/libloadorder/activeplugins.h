@@ -34,12 +34,14 @@
  *  - Contains only installed plugins.
  *  - Contains no duplicate entries.
  *  - Contains no more than 255 plugins.
- *  - If a Skyrim load order, contains `Skyrim.esm`.
+ *  - If a Skyrim or Fallout 4 load order, contains `Skyrim.esm` or
+ *    `Fallout4.esm` respectively.
  *  - If a Skyrim load order and `Update.esm` is installed, contains
  *    `Update.esm`.
  *
  *  Libloadorder is less strict when loading active plugin lists. If loading
- *  a Skyrim list and Skyrim.esm is missing, it will be inferred to load first.
+ *  a Skyrim or Fallout 4 list and the relevant main master file is missing, it
+ *  will be inferred to load first.
  *  Similarly, if Update.esm is installed but not in the active list, it will
  *  be inferred to load after all other master files.
  */
@@ -81,10 +83,10 @@ extern "C"
      *  @brief Sets the list of currently active plugins.
      *  @details Replaces the current active plugins list with the plugins in
      *           the given array. The replacement list must be valid. If, for
-     *           Skyrim, a plugin to be activated does not have a defined load
-     *           order position, this function will append it to the load order.
-     *           If multiple such plugins exist, the order in which they are
-     *           appended is undefined.
+     *           Skyrim or Fallout 4, a plugin to be activated does not have a
+     *           defined load order position, this function will append it to
+     *           the load order. If multiple such plugins exist, the order in
+     *           which they are appended is undefined.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins

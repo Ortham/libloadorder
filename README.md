@@ -2,7 +2,14 @@
 
 [![Build Status](https://travis-ci.org/WrinklyNinja/libloadorder.svg?branch=master)](https://travis-ci.org/WrinklyNinja/libloadorder)
 
-Libloadorder is a free software library for manipulating the load order and active status of plugins for TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
+Libloadorder is a free software library for manipulating the load order and active status of plugins for the following games:
+
+* TES III: Morrowind
+* TES IV: Oblivion
+* TES V: Skyrim
+* Fallout 3
+* Fallout: New Vegas
+* Fallout 4
 
 ## Build Instructions
 

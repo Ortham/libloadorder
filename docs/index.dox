@@ -9,9 +9,9 @@
     libloadorder is a free software library that provides functions for manipulating plugin load order and active status. Its features are:
       - C frontend.
       - Can be built as x86 and x64 static and dynamic libraries.
-      - Supports TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and Fallout: New Vegas.
+      - Supports TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3, Fallout: New Vegas and Fallout 4.
       - Provides a uniform interface to the supported games' differing load order systems.
-      - Supports the community standard textfile-based load order system for TES V: Skyrim.
+      - Supports the community standard textfile-based load order system for TES V: Skyrim and Fallout 4.
       - Supports ghosted plugins.
       - Get/Set the active plugin list.
       - Get/Set the full load order.
