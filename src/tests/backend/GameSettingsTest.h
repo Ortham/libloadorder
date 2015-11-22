@@ -43,8 +43,10 @@ namespace liblo {
                     return libespm::GameId::SKYRIM;
                 else if (GetParam() == LIBLO_GAME_FO3)
                     return libespm::GameId::FALLOUT3;
-                else
+                else if (GetParam() == LIBLO_GAME_FNV)
                     return libespm::GameId::FALLOUTNV;
+                else
+                    return libespm::GameId::FALLOUT4;
             }
 
             inline boost::filesystem::path getLocalPath(unsigned int gameId) const {
@@ -68,7 +70,8 @@ namespace liblo {
                                 LIBLO_GAME_TES4,
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV));
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
 
         TEST_P(GameSettingsTest, gettingIdShouldReturnTheTestParameter) {
             EXPECT_EQ(GetParam(), gameSettings.getId());
@@ -87,12 +90,14 @@ namespace liblo {
                 EXPECT_EQ("Skyrim.esm", gameSettings.getMasterFile());
             else if (GetParam() == LIBLO_GAME_FO3)
                 EXPECT_EQ("Fallout3.esm", gameSettings.getMasterFile());
-            else
+            else if (GetParam() == LIBLO_GAME_FNV)
                 EXPECT_EQ("FalloutNV.esm", gameSettings.getMasterFile());
+            else
+                EXPECT_EQ("Fallout4.esm", gameSettings.getMasterFile());
         }
 
-        TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndTimestampOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5)
+        TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndFallout4AndTimestampOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
                 EXPECT_EQ(LIBLO_METHOD_TEXTFILE, gameSettings.getLoadOrderMethod());
             else
                 EXPECT_EQ(LIBLO_METHOD_TIMESTAMP, gameSettings.getLoadOrderMethod());

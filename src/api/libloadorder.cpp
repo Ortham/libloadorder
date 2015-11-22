@@ -95,8 +95,13 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
                                     const char * const localPath) {
     if (gh == nullptr || gamePath == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
-    else if (gameId != LIBLO_GAME_TES3 && gameId != LIBLO_GAME_TES4 && gameId != LIBLO_GAME_TES5 && gameId != LIBLO_GAME_FO3 && gameId != LIBLO_GAME_FNV)
-        return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
+    else if (gameId != LIBLO_GAME_TES3
+             && gameId != LIBLO_GAME_TES4
+             && gameId != LIBLO_GAME_TES5
+             && gameId != LIBLO_GAME_FO3
+             && gameId != LIBLO_GAME_FNV
+             && gameId != LIBLO_GAME_FO4)
+             return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
 
     //Set the locale to get encoding conversions working correctly.
     std::locale::global(boost::locale::generator().generate(""));
@@ -161,8 +166,8 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
     if (gh == nullptr || masterFile == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
-    if (gh->getId() == LIBLO_GAME_TES5)
-        return c_error(LIBLO_ERROR_INVALID_ARGS, "Cannot change Skyrim's main master file.");
+    if (gh->getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Cannot change main master file from " + gh->getMasterFile());
 
     return LIBLO_OK;
 }

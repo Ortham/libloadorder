@@ -88,6 +88,14 @@ namespace liblo {
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
         }
+        else if (id == LIBLO_GAME_FO4) {
+            loMethod = LIBLO_METHOD_TEXTFILE;
+            masterFile = "Fallout4.esm";
+
+            appdataFolderName = "Fallout4";
+            pluginsFolderName = "Data";
+            pluginsFileName = "plugins.txt";
+        }
 
         if (localPath.empty())
             initPaths(getLocalAppDataPath() / appdataFolderName);

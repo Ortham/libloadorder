@@ -207,7 +207,8 @@ namespace liblo {
                                 LIBLO_GAME_TES4,
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV));
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
 
         TEST_P(LoadOrderTest, settingAValidLoadOrderShouldNotThrow) {
             std::vector<std::string> validLoadOrder({
@@ -991,7 +992,7 @@ namespace liblo {
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile(), std::ios_base::app);
+            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile(), std::ios_base::trunc);
             out << blankEsm << std::endl;
 
             EXPECT_FALSE(LoadOrder::isSynchronised(gameSettings));
@@ -1137,8 +1138,10 @@ namespace liblo {
                     gameSettings.getMasterFile(),
                     nonAsciiEsm,
                     blankEsm,
-                    updateEsm,
                 });
+                if (gameSettings.getId() == LIBLO_GAME_TES5)
+                    expectedLoadOrder.push_back(updateEsm);
+
                 EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
             }
             else {

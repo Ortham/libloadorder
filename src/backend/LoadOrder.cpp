@@ -519,7 +519,7 @@ namespace liblo {
 
             size_t i = 0;
             for (const auto &plugin : loadOrder) {
-                if (!plugin.isActive() || (gameSettings.getId() == LIBLO_GAME_TES5 && plugin == gameSettings.getMasterFile()))
+                if (!plugin.isActive() || (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && plugin == gameSettings.getMasterFile()))
                     continue;
 
                 if (gameSettings.getId() == LIBLO_GAME_TES3) { //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.

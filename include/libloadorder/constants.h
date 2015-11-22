@@ -150,6 +150,7 @@ extern "C"
     LIBLO extern const unsigned int LIBLO_GAME_TES5;  /**< Game code for The Elder Scrolls V: Skyrim. */
     LIBLO extern const unsigned int LIBLO_GAME_FO3;  /**< Game code for Fallout 3. */
     LIBLO extern const unsigned int LIBLO_GAME_FNV;  /**< Game code for Fallout: New Vegas. */
+    LIBLO extern const unsigned int LIBLO_GAME_FO4;  /**< Game code for Fallout 4. */
 
     /**@}*/
 
