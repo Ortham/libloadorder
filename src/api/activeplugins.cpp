@@ -25,7 +25,7 @@
 
 #include "libloadorder/activeplugins.h"
 #include "../api/_lo_game_handle_int.h"
-#include "../backend/helpers.h"
+#include "c_helpers.h"
 #include "../backend/error.h"
 
 using namespace std;
@@ -104,14 +104,8 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
         return c_error(e);
     }
 
-    //Put input into activePlugins object.
-    unordered_set<string> activePlugins;
-    for (size_t i = 0; i < numPlugins; i++) {
-        activePlugins.insert(plugins[i]);
-    }
-
     try {
-        gh->loadOrder.setActivePlugins(activePlugins);
+        gh->loadOrder.setActivePlugins(copyToContainer<unordered_set<string>>(plugins, numPlugins));
     }
     catch (error& e) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid active plugins list supplied. Details: ") + e.what());

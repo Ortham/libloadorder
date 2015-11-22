@@ -40,37 +40,5 @@ namespace liblo {
 
             EXPECT_STREQ("what string", e.what());
         }
-
-        TEST(c_error, shouldReturnTheCodeWhenPassedACodeAndString) {
-            EXPECT_EQ(1, c_error(1, "what string"));
-
-            delete[] extErrorString;
-            extErrorString = nullptr;
-        }
-
-        TEST(c_error, shouldReturnTheCodeWhenPassedAnErrorObject) {
-            EXPECT_EQ(1, c_error(error(1, "what string")));
-
-            delete[] extErrorString;
-            extErrorString = nullptr;
-        }
-
-        TEST(c_error, shouldSetTheGlobalErrorStringWhenPassedACodeAndString) {
-            c_error(1, "what string");
-
-            EXPECT_STREQ("what string", extErrorString);
-
-            delete[] extErrorString;
-            extErrorString = nullptr;
-        }
-
-        TEST(c_error, shouldSetTheGlobalErrorStringWhenPassedAnErrorObject) {
-            c_error(error(1, "what string"));
-
-            EXPECT_STREQ("what string", extErrorString);
-
-            delete[] extErrorString;
-            extErrorString = nullptr;
-        }
     }
 }

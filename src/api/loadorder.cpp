@@ -25,7 +25,7 @@
 
 #include "libloadorder/loadorder.h"
 #include "../api/_lo_game_handle_int.h"
-#include "../backend/helpers.h"
+#include "c_helpers.h"
 #include "../backend/error.h"
 
 using namespace std;
@@ -104,14 +104,9 @@ LIBLO unsigned int lo_set_load_order(lo_game_handle gh, const char * const * con
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
 
     //Put input into loadOrder object.
-    vector<string> loadOrder;
-    for (size_t i = 0; i < numPlugins; i++) {
-        loadOrder.push_back(plugins[i]);
-    }
 
-    //Check to see if basic rules are being obeyed.
     try {
-        gh->loadOrder.setLoadOrder(loadOrder);
+        gh->loadOrder.setLoadOrder(copyToContainer<vector<string>>(plugins, numPlugins));
     }
     catch (error& e) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid load order supplied. Details: ") + e.what());

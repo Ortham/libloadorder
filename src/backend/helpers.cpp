@@ -33,12 +33,6 @@
 using namespace std;
 
 namespace liblo {
-    // std::string to null-terminated char string converter.
-    char * copyString(const string& str) {
-        char * p = new char[str.length() + 1];
-        return strcpy(p, str.c_str());
-    }
-
     //Reads an entire file into a string buffer.
     std::string fileToBuffer(const boost::filesystem::path& file) {
         try {

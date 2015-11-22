@@ -24,11 +24,8 @@
         */
 
 #include "error.h"
-#include "helpers.h"
 
 namespace liblo {
-    char * extErrorString = nullptr;
-
     error::error(const unsigned int code, const std::string& what) : _code(code), _what(what) {}
 
     error::~error() throw() {}
@@ -39,20 +36,5 @@ namespace liblo {
 
     const char * error::what() const throw() {
         return _what.c_str();
-    }
-
-    unsigned int c_error(const error& e) {
-        delete[] extErrorString;
-        try {
-            extErrorString = copyString(e.what());
-        }
-        catch (std::bad_alloc&) {
-            extErrorString = nullptr;
-        }
-        return e.code();
-    }
-
-    unsigned int c_error(const unsigned int code, const std::string& what) {
-        return c_error(error(code, what.c_str()));
     }
 }

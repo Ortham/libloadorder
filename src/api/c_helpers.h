@@ -23,20 +23,33 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#ifndef __LIBLO_HELPERS_H__
-#define __LIBLO_HELPERS_H__
+#ifndef LIBLO_C_HELPERS_H
+#define LIBLO_C_HELPERS_H
 
 #include <string>
+
 #include <boost/filesystem.hpp>
 
 namespace liblo {
-    //Reads an entire file into a string buffer.
-    std::string fileToBuffer(const boost::filesystem::path& file);
+    class error;
 
-    //Only ever have to convert between UTF-8 and Windows-1252.
-    std::string windows1252toUtf8(const std::string& str);
+    // std::string to null-terminated char string converter.
+    char * copyString(const std::string& str);
 
-    std::string utf8ToWindows1252(const std::string& str);
+    template<class T>
+    T copyToContainer(const char * const * const plugins, size_t numPlugins) {
+        T container;
+        for (size_t i = 0; i < numPlugins; i++)
+            container.insert(end(container), plugins[i]);
+
+        return container;
+    }
+
+    extern char * extErrorString;
+
+    unsigned int c_error(const error& e);
+
+    unsigned int c_error(const unsigned int code, const std::string& what);
 }
 
 #endif

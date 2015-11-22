@@ -41,12 +41,6 @@ namespace liblo {
         std::string _what;
         unsigned int _code;
     };
-
-    extern char * extErrorString;
-
-    unsigned int c_error(const error& e);
-
-    unsigned int c_error(const unsigned int code, const std::string& what);
 }
 
 #endif

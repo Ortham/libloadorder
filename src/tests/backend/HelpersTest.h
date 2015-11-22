@@ -29,16 +29,6 @@ along with libloadorder.  If not, see
 
 namespace liblo {
     namespace test {
-        TEST(copyString, shouldCreateACopyOfTheInputString) {
-            char * cstring = nullptr;
-
-            cstring = copyString("temporary string");
-
-            EXPECT_STREQ("temporary string", cstring);
-
-            delete[] cstring;
-        }
-
         TEST(fileToBuffer, shouldThrowIfFileDoesntExist) {
             EXPECT_ANY_THROW(fileToBuffer("missing"));
         }

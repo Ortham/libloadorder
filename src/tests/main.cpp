@@ -26,6 +26,7 @@
 // Including from tests/ folder.
 #include "api/libloadorder.h"
 #include "api/activeplugins.h"
+#include "api/CHelpersTest.h"
 #include "api/loadorder.h"
 #include "backend/ErrorTest.h"
 #include "backend/GameSettingsTest.h"
