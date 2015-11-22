@@ -44,7 +44,7 @@ namespace liblo {
         LoadOrder(const GameSettings& gameSettings);
 
         void load();
-        void save();  //Also updates mtime and active plugins list.
+        void save();
 
         std::vector<std::string> getLoadOrder() const;
         size_t getPosition(const std::string& pluginName) const;
