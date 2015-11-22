@@ -57,31 +57,25 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh)) {
-            gh->activePlugins.Load(*gh);
-            try {
-                gh->activePlugins.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
-        }
+        if (gh->loadOrder.hasFilesystemChanged())
+            gh->loadOrder.load();
     }
     catch (error& e) {
         return c_error(e);
     }
 
     //Check array size. Exit if zero.
-    if (gh->activePlugins.empty())
+    unordered_set<string> loadOrder = gh->loadOrder.getActivePlugins();
+    if (loadOrder.empty())
         return LIBLO_OK;
 
     //Allocate memory.
-    gh->extStringArraySize = gh->activePlugins.size();
+    gh->extStringArraySize = loadOrder.size();
     try {
         gh->extStringArray = new char*[gh->extStringArraySize];
         size_t i = 0;
-        for (const auto &activePlugin : gh->activePlugins) {
-            gh->extStringArray[i] = ToNewCString(activePlugin.Name());
+        for (const auto &activePlugin : loadOrder) {
+            gh->extStringArray[i] = ToNewCString(activePlugin);
             i++;
         }
     }
@@ -101,31 +95,17 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     if (gh == nullptr || plugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    // Input validity checks.
-    for (size_t i = 0; i < numPlugins; i++) {
-        Plugin plugin(plugins[i]);
-        if (gh->activePlugins.find(plugin) != gh->activePlugins.end()) {  //Not necessary for unordered set, but present so that invalid active plugin lists are refused.
-            gh->activePlugins.clear();
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "The supplied active plugins list is invalid.");
-        }
-        else if (!plugin.Exists(*gh)) {
-            gh->activePlugins.clear();
-            return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + plugin.Name() + "\" cannot be found.");
-        }
-        else if (!plugin.IsValid(*gh)) {
-            gh->activePlugins.clear();
-            return c_error(LIBLO_ERROR_INVALID_ARGS, "\"" + plugin.Name() + "\" is not a valid plugin file.");
-        }
+    //Update cache if necessary.
+    try {
+        if (gh->loadOrder.hasFilesystemChanged())
+            gh->loadOrder.load();
     }
-
-    // Reload the load order if it has changed.
-    if (gh->loadOrder.hasFilesystemChanged()) {
-        gh->loadOrder.load();
-        gh->loadOrder.save();
+    catch (error& e) {
+        return c_error(e);
     }
 
     //Put input into activePlugins object.
-    gh->activePlugins.clear();
+    unordered_set<string> activePlugins;
     for (size_t i = 0; i < numPlugins; i++) {
         Plugin plugin(plugins[i]);
         //Unghost plugin if ghosted.
@@ -135,24 +115,23 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
         catch (error& e) {
             return c_error(e);
         }
-        gh->activePlugins.insert(plugin);
+        activePlugins.insert(plugins[i]);
     }
 
-    //Check to see if basic rules are being obeyed.
     try {
-        gh->activePlugins.CheckValidity(*gh);
+        gh->loadOrder.setActivePlugins(activePlugins);
     }
     catch (error& e) {
-        gh->activePlugins.clear();
+        gh->loadOrder.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid active plugins list supplied. Details: ") + e.what());
     }
 
     //Now save changes.
     try {
-        gh->activePlugins.Save(*gh);
+        gh->loadOrder.save();
     }
     catch (error& e) {
-        gh->activePlugins.clear();
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -164,62 +143,42 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    Plugin pluginObj(plugin);
-
-    //Check that plugin exists if activating it.
-    if (active && !pluginObj.Exists(*gh))
-        return c_error(LIBLO_ERROR_FILE_NOT_FOUND, "\"" + pluginObj.Name() + "\" cannot be found.");
-    else if (!pluginObj.IsValid(*gh))
-        return c_error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginObj.Name() + "\" is not a valid plugin file.");
-
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh)) {
-            gh->activePlugins.Load(*gh);
-        }
+        if (gh->loadOrder.hasFilesystemChanged())
+            gh->loadOrder.load();
     }
     catch (error& e) {
         return c_error(e);
     }
 
     //Look for plugin in active plugins list.
-    if (active) {  //No need to check for duplication, unordered set will silently handle avoidance.
-        try {
-            //Unghost plugin if ghosted.
-            pluginObj.UnGhost(*gh);
-            // If the plugin isn't in the load order, make sure it is added.
-            if (gh->loadOrder.getPosition(pluginObj.Name()) == gh->loadOrder.getLoadOrder().size()) {
-                gh->loadOrder.load();
-                gh->loadOrder.save();
-            }
-        }
-        catch (error& e) {
-            return c_error(e);
-        }
-        // Define the plugin's load order position if it doesn't
-        gh->activePlugins.insert(pluginObj);
-    }
-    else {
-        auto it = gh->activePlugins.find(pluginObj);
-        if (it != gh->activePlugins.end())
-            gh->activePlugins.erase(it);
-    }
-
-    //Check that active plugins list is valid.
     try {
-        gh->activePlugins.CheckValidity(*gh);
+        if (active) {  //No need to check for duplication, unordered set will silently handle avoidance.
+            try {
+                //Unghost plugin if ghosted.
+                Plugin(plugin).UnGhost(*gh);
+            }
+            catch (error& e) {
+                return c_error(e);
+            }
+            // Define the plugin's load order position if it doesn't
+            gh->loadOrder.activate(plugin);
+        }
+        else
+            gh->loadOrder.deactivate(plugin);
     }
     catch (error& e) {
-        gh->activePlugins.clear();
+        gh->loadOrder.clear();
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("The operation results in an invalid active plugins list. Details: ") + e.what());
     }
 
     //Now save changes.
     try {
-        gh->activePlugins.Save(*gh);
+        gh->loadOrder.save();
     }
     catch (error& e) {
-        gh->activePlugins.clear();
+        gh->loadOrder.clear();
         return c_error(e);
     }
 
@@ -233,28 +192,16 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
 
     unsigned int successRetCode = LIBLO_OK;
 
-    Plugin pluginObj(plugin);
-
     //Update cache if necessary.
     try {
-        if (gh->activePlugins.HasChanged(*gh)) {
-            gh->activePlugins.Load(*gh);
-            try {
-                gh->activePlugins.CheckValidity(*gh);
-            }
-            catch (error& e) {
-                successRetCode = c_error(e);
-            }
-        }
+        if (gh->loadOrder.hasFilesystemChanged())
+            gh->loadOrder.load();
     }
     catch (error& e) {
         return c_error(e);
     }
 
-    if (gh->activePlugins.find(pluginObj) == gh->activePlugins.end())
-        *result = false;
-    else
-        *result = true;
+    *result = gh->loadOrder.isActive(plugin);
 
     return successRetCode;
 }

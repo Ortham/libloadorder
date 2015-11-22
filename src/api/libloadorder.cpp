@@ -177,62 +177,14 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
     //Only need to update loadorder.txt if it is used.
-    if (gh->getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-        try {
-            //Update cache if necessary.
-            if (gh->loadOrder.hasFilesystemChanged()) {
-                gh->loadOrder.load();
-            }
-
-            // Now write changes.
-            gh->loadOrder.save();
-        }
-        catch (error& e) {
-            return c_error(e);
-        }
-    }
-
     try {
         //Update cache if necessary.
-        if (gh->activePlugins.HasChanged(*gh)) {
-            gh->activePlugins.Load(*gh);
-        }
-
-        if (gh->getId() == LIBLO_GAME_TES5) {
-            // Ensure Skyrim.esm is active.
-            if (gh->activePlugins.find(Plugin(gh->getMasterFile())) == gh->activePlugins.end())
-                gh->activePlugins.insert(Plugin(gh->getMasterFile()));
-
-            // Ensure Update.esm is active, if it is installed.
-            if (Plugin("Update.esm").IsValid(*gh) && gh->activePlugins.find(Plugin("Update.esm")) == gh->activePlugins.end())
-                gh->activePlugins.insert(Plugin("Update.esm"));
-        }
-
-        //Now check all plugins' existences.
-        auto it = gh->activePlugins.begin();
-        while (it != gh->activePlugins.end()) {
-            if (!it->IsValid(*gh))  //Active plugin is not installed.
-                it = gh->activePlugins.erase(it);
-            else
-                ++it;
-        }
-
-        // Check that there aren't more than 255 plugins, and remove those
-        // at the end of the load order if so.
-        if (gh->activePlugins.size() > 255) {
-            vector<string> loadOrder(gh->loadOrder.getLoadOrder());
-            size_t toRemove = gh->activePlugins.size() - 255;
-            while (toRemove > 0) {
-                for (auto rit = rbegin(loadOrder); rit != rend(loadOrder); ++rit) {
-                    auto pos = gh->activePlugins.find(*rit);
-                    if (pos != gh->activePlugins.end())
-                        gh->activePlugins.erase(pos);
-                }
-            }
+        if (gh->loadOrder.hasFilesystemChanged()) {
+            gh->loadOrder.load();
         }
 
         // Now write changes.
-        gh->activePlugins.Save(*gh);
+        gh->loadOrder.save();
     }
     catch (error& e) {
         return c_error(e);

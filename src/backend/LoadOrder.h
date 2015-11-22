@@ -33,9 +33,6 @@
 #include <unordered_set>
 
 #include <boost/filesystem.hpp>
-#include <boost/locale.hpp>
-
-struct _lo_game_handle_int;
 
 namespace liblo {
     class GameSettings;
@@ -85,29 +82,6 @@ namespace liblo {
 
         std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName);
         void partitionMasters();
-    };
-}
-
-namespace std {
-    template <>
-    struct hash < liblo::Plugin > {
-        size_t operator()(const liblo::Plugin& p) const {
-            return hash<std::string>()(boost::locale::to_lower(p.Name()));
-        }
-    };
-}
-
-namespace liblo {
-    class ActivePlugins : public std::unordered_set < Plugin > {
-    public:
-        void Load(const GameSettings& parentGame);
-        void Save(const _lo_game_handle_int& parentGame);
-
-        void CheckValidity(const GameSettings& parentGame) const;  //not more than 255 plugins active (254 for Skyrim), plugins all exist.
-
-        bool HasChanged(const GameSettings& parentGame) const;
-    private:
-        time_t mtime;
     };
 }
 

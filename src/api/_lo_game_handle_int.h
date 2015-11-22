@@ -37,7 +37,6 @@ public:
     ~_lo_game_handle_int();
 
     liblo::LoadOrder loadOrder;
-    liblo::ActivePlugins activePlugins;
 
     char * extString;
     char ** extStringArray;
