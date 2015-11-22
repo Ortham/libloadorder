@@ -52,8 +52,6 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    unsigned int successRetCode = LIBLO_OK;
-
     //Free memory if in use.
     if (gh->extStringArray != nullptr) {
         for (size_t i = 0; i < gh->extStringArraySize; i++)
@@ -93,7 +91,7 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     *plugins = gh->extStringArray;
     *numPlugins = gh->extStringArraySize;
 
-    return successRetCode;
+    return LIBLO_OK;
 }
 
 /* Sets the load order to the given plugins list of length numPlugins.
@@ -137,8 +135,6 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
     if (gh == nullptr || plugin == nullptr || index == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    unsigned int successRetCode = LIBLO_OK;
-
     //Update cache if necessary.
     try {
         if (gh->loadOrder.hasFilesystemChanged())
@@ -156,7 +152,7 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
 
     *index = pos;
 
-    return successRetCode;
+    return LIBLO_OK;
 }
 
 /* Sets the load order of the specified plugin, removing it from its current position
@@ -166,8 +162,6 @@ LIBLO unsigned int lo_get_plugin_position(lo_game_handle gh, const char * const 
 LIBLO unsigned int lo_set_plugin_position(lo_game_handle gh, const char * const plugin, const size_t index) {
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
-
-    unsigned int successRetCode = LIBLO_OK;
 
     //Update cache if necessary.
     try {
@@ -206,8 +200,6 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    unsigned int successRetCode = LIBLO_OK;
-
     //Free memory if in use.
     delete[] gh->extString;
     gh->extString = nullptr;
@@ -236,5 +228,5 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     //Set output.
     *plugin = gh->extString;
 
-    return successRetCode;
+    return LIBLO_OK;
 }
