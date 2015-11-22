@@ -1,10 +1,10 @@
 /*      libloadorder
 
         A library for reading and writing the load order of plugin files for
-        TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3 and
-        Fallout: New Vegas.
+        TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3,
+        Fallout: New Vegas and Fallout 4.
 
-        Copyright (C) 2012    WrinklyNinja
+        Copyright (C) 2012-2015 Oliver Hamlet
 
         This file is part of libloadorder.
 
