@@ -121,6 +121,14 @@ namespace liblo {
             EXPECT_TRUE(plugin.hasFileChanged(gameSettings.getPluginsFolder()));
         }
 
+        TEST_F(PluginTest, aFileChangeShouldBeDetectedIfItIsSetToAnOlderTimestamp) {
+            Plugin plugin(blankEsmGhost, gameSettings);
+
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getPluginsFolder() / blankEsmGhost, plugin.getModTime() - 1));
+
+            EXPECT_TRUE(plugin.hasFileChanged(gameSettings.getPluginsFolder()));
+        }
+
         TEST_F(PluginTest, settingTheModificationTimeOfAPluginShouldUpdateTheFilesystem) {
             Plugin plugin(blankEsm, gameSettings);
             time_t newModTime = plugin.getModTime() + 60;

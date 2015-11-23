@@ -1274,6 +1274,15 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
 
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndPluginsFolderTimetampIsSetToOlderTime) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getPluginsFolder(), currentModTime - 1));
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
         TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndActivePluginsFileIsUnchanged) {
             ASSERT_NO_THROW(loadOrder.load());
             // Timestamps have 1 second precision, so wait to allow them
@@ -1292,6 +1301,15 @@ namespace liblo {
             boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
             out << std::endl;
             out.close();
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndActivePluginsTimetampIsSetToOlderTime) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime - 1));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
@@ -1317,6 +1335,18 @@ namespace liblo {
             boost::filesystem::ofstream out(gameSettings.getLoadOrderFile());
             out << std::endl;
             out.close();
+
+            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileTimetampIsSetToOlderTimeForTextfileBasedGames) {
+            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getLoadOrderFile());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime - 1));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
