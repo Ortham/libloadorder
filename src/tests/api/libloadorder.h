@@ -23,75 +23,105 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __LIBLO_TEST_API__
-#define __LIBLO_TEST_API__
+#ifndef LIBLO_TEST_API_LIBLOADORDER
+#define LIBLO_TEST_API_LIBLOADORDER
 
 #include "tests/fixtures.h"
 
 #include <boost/algorithm/string.hpp>
 
-TEST(GetVersion, HandlesNullInput) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, &vPatch));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, NULL));
-}
-
-TEST(GetVersion, HandlesValidInput) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-}
-
-TEST(IsCompatible, HandlesCompatibleVersion) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-
-    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor, vPatch));
-    // Test somewhat arbitrary variations.
-    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
-    if (vMinor > 0 && vPatch > 0)
-        EXPECT_TRUE(lo_is_compatible(vMajor, vMinor - 1, vPatch - 1));
-}
-
-TEST(IsCompatible, HandlesIncompatibleVersion) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-
-    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
-    // Test somewhat arbitrary variations.
-    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor + 1, vPatch + 1));
-    if (vMinor > 0 && vPatch > 0)
-        EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor - 1, vPatch - 1));
-}
-
-TEST(GetErrorMessage, HandlesInputCorrectly) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_STREQ("Null pointer passed.", error);
-}
-
-TEST(Cleanup, CleansUpAfterError) {
-    // First generate an error.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    // Check that the error message is non-null.
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_STREQ("Null pointer passed.", error);
+TEST(lo_get_version, shouldFailIfPassedNullMajorVersionParameter) {
+    unsigned int vMinor = 0;
+    unsigned int vPatch = 0;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, &vPatch));
 
     ASSERT_NO_THROW(lo_cleanup());
+}
 
-    // Now check that the error message pointer is null.
-    error = nullptr;
+TEST(lo_get_version, shouldFailIfPassedNullMinorVersionParameter) {
+    unsigned int vMajor = 0;
+    unsigned int vPatch = 0;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, &vPatch));
+
+    ASSERT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_get_version, shouldFailIfPassedNullPatchVersionParameter) {
+    unsigned int vMajor = 0;
+    unsigned int vMinor = 0;
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, &vMinor, NULL));
+
+    ASSERT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_get_version, shouldSucceedIfPassedNonNullParameters) {
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+}
+
+TEST(lo_is_compatible, shouldReturnTrueIfMajorVersionIsEqual) {
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+    ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
+}
+
+TEST(lo_is_compatible, shouldReturnFalseIfMajorVersionIsNotEqual) {
+    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+    ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
+}
+
+TEST(lo_get_error_message, shouldFailIfPassedNullPointer) {
+    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+    ASSERT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_get_error_message, shouldOutputNullPointerIfNoErrorHasOccurred) {
+    const char * error = nullptr;
     EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
     EXPECT_EQ(nullptr, error);
 }
 
-TEST(Cleanup, HandlesNoError) {
+TEST(lo_get_error_message, shouldOutputCorrectErrorMessageIfErrorHasOccurred) {
+    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+    const char * error = nullptr;
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+    EXPECT_STREQ("Null pointer passed.", error);
+
     ASSERT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_get_error_message, shouldOutputLastErrorMessageIfSuccessHasOccurredSinceLastError) {
+    const char * error = nullptr;
+    const char * lastError = nullptr;
+
+    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+    ASSERT_EQ(LIBLO_OK, lo_get_error_message(&error));
+    ASSERT_NE(nullptr, error);
+    lastError = error;
+
+    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+    ASSERT_EQ(lastError, error);
+}
+
+TEST(lo_cleanup, shouldNotThrowIfNoErrorMessageToCleanUp) {
+    EXPECT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_cleanup, shouldNotThrowIfThereIsAnErrorMessageToCleanUp) {
+    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+    EXPECT_NO_THROW(lo_cleanup());
+}
+
+TEST(lo_cleanup, shouldFreeErrorMessageIfOneExists) {
+    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+    EXPECT_NO_THROW(lo_cleanup());
 
     const char * error = nullptr;
     EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
