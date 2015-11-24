@@ -128,71 +128,131 @@ TEST(lo_cleanup, shouldFreeErrorMessageIfOneExists) {
     EXPECT_EQ(nullptr, error);
 }
 
-TEST_F(OblivionHandleCreationTest, HandlesValidInputs) {
-    // Try all the game codes, it doesn't matter for lo_create_handle what game is actually at the given paths.
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES3, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FO3, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FNV, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-
-    // Also test absolute paths.
-    boost::filesystem::path game = boost::filesystem::current_path() / dataPath.parent_path();
-    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
+TEST(lo_destroy_handle, shouldNotThrowIfGameHandleIsNotCreated) {
+    lo_game_handle gameHandle = nullptr;
+    EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
 }
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidHandleInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
+TEST(lo_destroy_handle, shouldNotThrowIfPassedNullPointer) {
+    EXPECT_NO_THROW(lo_destroy_handle(NULL));
 }
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidGameType) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+namespace liblo {
+    namespace test {
+        class lo_create_handle_test : public ::testing::TestWithParam<unsigned int> {
+        protected:
+            lo_create_handle_test() :
+                localPath(getLocalPath()),
+                pluginsPath(getPluginsPath()),
+                gamePath(pluginsPath.parent_path()),
+                invalidPath("./missing"),
+                gameHandle(nullptr) {}
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidGamePathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, missingPath.string().c_str(), localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+            inline virtual void SetUp() {
+                ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidLocalPathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), missingPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath));
+                ASSERT_FALSE(boost::filesystem::exists(invalidPath));
+            }
+
+            inline virtual void TearDown() {
+                EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
+            }
+
+            inline boost::filesystem::path getLocalPath() const {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return "./local/Morrowind";
+                else if (GetParam() == LIBLO_GAME_TES4)
+                    return "./local/Oblivion";
+                else
+                    return "./local/Skyrim";
+            }
+
+            inline boost::filesystem::path getPluginsPath() const {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return "./Morrowind/Data Files";
+                else if (GetParam() == LIBLO_GAME_TES4)
+                    return "./Oblivion/Data";
+                else
+                    return "./Skyrim/Data";
+            }
+
+            boost::filesystem::path localPath;
+            boost::filesystem::path pluginsPath;
+            boost::filesystem::path gamePath;
+            boost::filesystem::path invalidPath;
+
+            lo_game_handle gameHandle;
+        };
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_create_handle_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_create_handle_test, shouldFailIfHandleInputIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
+        }
+
+        TEST_P(lo_create_handle_test, shouldFailIfGameTypeIsInvalid) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, UINT_MAX, gamePath.string().c_str(), localPath.string().c_str()));
+        }
+
+        TEST_P(lo_create_handle_test, shouldLeaveGameHandleUnchangedIfArgumentsAreInvalid) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, UINT_MAX, gamePath.string().c_str(), localPath.string().c_str()));
+            EXPECT_EQ(nullptr, gameHandle);
+        }
+
+        TEST_P(lo_create_handle_test, shouldFailIfGamePathIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, GetParam(), NULL, localPath.string().c_str()));
+        }
+
+        TEST_P(lo_create_handle_test, shouldFailIfGamePathIsInvalid) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, GetParam(), invalidPath.string().c_str(), localPath.string().c_str()));
+        }
+
+        TEST_P(lo_create_handle_test, shouldFailIfLocalPathIsInvalid) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), invalidPath.string().c_str()));
+        }
 
 #ifdef _WIN32
-TEST_F(OblivionHandleCreationTest, HandlesNullLocalPath) {
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), NULL));
-    EXPECT_NE(nullptr, gh);
-}
+        TEST_P(lo_create_handle_test, shouldNotFailDueToInvalidArgsWithNullLocalPathForWindowsOS) {
+            // On Windows, passing a null local path causes libloadorder to
+            // look up the game's local path in the Registry, and so its
+            // success depends on external factors that should not be altered
+            // for testing.
+            EXPECT_NE(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), NULL));
+        }
+#else
+        TEST_P(lo_create_handle_test, shouldFailWithNullLocalPathForNonWindowsOS) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), NULL));
+        }
 #endif
 
-TEST_F(SkyrimHandleCreationTest, HandlesValidInputs) {
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
+        TEST_P(lo_create_handle_test, shouldSucceedWithRelativePaths) {
+            EXPECT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
+        }
 
-    // Also test absolute paths.
-    boost::filesystem::path game = boost::filesystem::current_path() / dataPath.parent_path();
-    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
-}
+        TEST_P(lo_create_handle_test, shouldSucceedWithAbsolutePaths) {
+            boost::filesystem::path game = boost::filesystem::current_path() / gamePath;
+            boost::filesystem::path local = boost::filesystem::current_path() / localPath;
+            EXPECT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), game.string().c_str(), local.string().c_str()));
+        }
 
-TEST(GameHandleDestroyTest, HandledNullInput) {
-    ASSERT_NO_THROW(lo_destroy_handle(NULL));
+        TEST_P(lo_create_handle_test, shouldSetHandleToNonNullIfItSucceeds) {
+            ASSERT_EQ(nullptr, gameHandle);
+            ASSERT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
+
+            EXPECT_NE(nullptr, gameHandle);
+        }
+    }
 }
 
 TEST_F(OblivionOperationsTest, SetGameMaster) {
