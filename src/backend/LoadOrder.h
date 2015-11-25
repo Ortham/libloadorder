@@ -65,7 +65,9 @@ namespace liblo {
 
         void clear();
     private:
-        time_t mtime;
+        time_t pluginsFolderModTime;
+        time_t activePluginsFileModTime;
+        time_t loadOrderFileModTime;
         std::vector<Plugin> loadOrder;
         const GameSettings& gameSettings;
 
