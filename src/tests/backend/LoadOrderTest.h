@@ -1363,5 +1363,39 @@ namespace liblo {
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButActivePluginsFileAndPluginsFolderTimestampsAreDifferent) {
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime  + 2));
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderFileAndPluginsFolderTimestampsAreDifferent) {
+            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime  + 2));
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
+
+        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderAndActivePluginsFilesAreDifferent) {
+            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime  + 2));
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
+        }
     }
 }

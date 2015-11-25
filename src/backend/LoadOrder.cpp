@@ -69,7 +69,7 @@ namespace liblo {
                 });
             }
             partitionMasters();
-            mtime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+            pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
         }
         if (fs::exists(gameSettings.getActivePluginsFile()))
             loadActivePlugins();
@@ -270,20 +270,20 @@ namespace liblo {
         try {
             // Has the plugins folder been modified since the load order
             // was last read or saved?
-            if (fs::last_write_time(gameSettings.getPluginsFolder()) != mtime)
+            if (fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime)
                 return true;
 
             // Has the active plugins file been changed since it was last
             // read or saved?
             if (fs::exists(gameSettings.getActivePluginsFile())
-                && fs::last_write_time(gameSettings.getActivePluginsFile()) != mtime)
+                && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
                 return true;
 
             // Has the full textfile load order been changed since it was
             // last read or saved?
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE
                 && fs::exists(gameSettings.getLoadOrderFile())
-                && fs::last_write_time(gameSettings.getLoadOrderFile()) != mtime)
+                && fs::last_write_time(gameSettings.getLoadOrderFile()) != loadOrderFileModTime)
                 return true;
 
             // Plugins folder modification time not changed if a file in it is
@@ -324,7 +324,6 @@ namespace liblo {
         }),
             end(loadOrderFileLoadOrder));
 
-        //Compare the two LoadOrder objects: they should be identical (since mtimes for each have not been touched).
         return PluginsFileLO.getLoadOrder() == loadOrderFileLoadOrder;
     }
 
@@ -357,6 +356,11 @@ namespace liblo {
                     it = addToLoadOrder(line);
                 }
             }
+
+            if (file == gameSettings.getActivePluginsFile())
+                activePluginsFileModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
+            else if (file == gameSettings.getLoadOrderFile())
+                loadOrderFileModTime = boost::filesystem::last_write_time(gameSettings.getLoadOrderFile());
         }
         catch (std::ifstream::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
@@ -408,6 +412,8 @@ namespace liblo {
                     it->activate(gameSettings.getPluginsFolder());
                 }
             }
+
+            activePluginsFileModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
         }
         catch (std::exception& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be read. Details: " + e.what());
@@ -465,8 +471,6 @@ namespace liblo {
             loadOrder.at(i).setModTime(timestamp, gameSettings.getPluginsFolder());
             ++i;
         }
-        //Now record new plugins folder mtime.
-        mtime = fs::last_write_time(gameSettings.getPluginsFolder());
     }
 
     void LoadOrder::saveTextfileLoadOrder() {
@@ -482,9 +486,7 @@ namespace liblo {
                 outfile << plugin.getName() << endl;
             outfile.close();
 
-            //Now record new loadorder.txt mtime.
-            //Plugins.txt doesn't need its mtime updated as only the order of its contents has changed, and it is stored in memory as an unordered set.
-            mtime = fs::last_write_time(gameSettings.getLoadOrderFile());
+            loadOrderFileModTime = fs::last_write_time(gameSettings.getLoadOrderFile());
         }
         catch (std::ios_base::failure& e) {
             throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameSettings.getLoadOrderFile().string() + "\" cannot be written to. Details: " + e.what());
@@ -539,7 +541,7 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be written. Details: " + e.what());
         }
 
-        mtime = fs::last_write_time(gameSettings.getActivePluginsFile());
+        activePluginsFileModTime = fs::last_write_time(gameSettings.getActivePluginsFile());
 
         if (!badFilename.empty())
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename);
