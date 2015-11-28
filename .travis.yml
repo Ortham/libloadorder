@@ -12,6 +12,7 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - libboost-filesystem1.55-dev
+      - libboost-iostreams1.55-dev
       - libboost-locale1.55-dev
       - gcc-5
       - g++-5
@@ -22,8 +23,8 @@ install:
   # Currently inside the cloned repo path.
   - cd ..
   # Install libespm.
-  - wget https://github.com/WrinklyNinja/libespm/archive/2.4.0.tar.gz -O - | tar -xz
-  - mv libespm-2.4.0 libespm
+  - wget https://github.com/WrinklyNinja/libespm/archive/2.5.0.tar.gz -O - | tar -xz
+  - mv libespm-2.5.0 libespm
   # Install Google Test
   - wget https://github.com/google/googletest/archive/release-1.7.0.tar.gz -O - | tar -xz
   - cd googletest-release-1.7.0
