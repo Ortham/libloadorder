@@ -27,6 +27,7 @@ along with libloadorder.  If not, see
 #define LIBLO_TEST_API_LIBLOADORDER
 
 #include "tests/fixtures.h"
+#include "tests/GameTest.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -139,48 +140,25 @@ TEST(lo_destroy_handle, shouldNotThrowIfPassedNullPointer) {
 
 namespace liblo {
     namespace test {
-        class lo_create_handle_test : public ::testing::TestWithParam<unsigned int> {
+        class lo_create_handle_test : public GameTest {
         protected:
             lo_create_handle_test() :
-                localPath(getLocalPath()),
-                pluginsPath(getPluginsPath()),
-                gamePath(pluginsPath.parent_path()),
                 invalidPath("./missing"),
                 gameHandle(nullptr) {}
 
             inline virtual void SetUp() {
-                ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
+                GameTest::SetUp();
 
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath));
                 ASSERT_FALSE(boost::filesystem::exists(invalidPath));
             }
 
             inline virtual void TearDown() {
+                GameTest::TearDown();
+
                 EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
             }
 
-            inline boost::filesystem::path getLocalPath() const {
-                if (GetParam() == LIBLO_GAME_TES3)
-                    return "./local/Morrowind";
-                else if (GetParam() == LIBLO_GAME_TES4)
-                    return "./local/Oblivion";
-                else
-                    return "./local/Skyrim";
-            }
-
-            inline boost::filesystem::path getPluginsPath() const {
-                if (GetParam() == LIBLO_GAME_TES3)
-                    return "./Morrowind/Data Files";
-                else if (GetParam() == LIBLO_GAME_TES4)
-                    return "./Oblivion/Data";
-                else
-                    return "./Skyrim/Data";
-            }
-
-            boost::filesystem::path localPath;
-            boost::filesystem::path pluginsPath;
-            boost::filesystem::path gamePath;
-            boost::filesystem::path invalidPath;
+            const boost::filesystem::path invalidPath;
 
             lo_game_handle gameHandle;
         };

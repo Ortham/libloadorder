@@ -23,8 +23,7 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
+#include "tests/GameTest.h"
 #include "libloadorder/constants.h"
 #include "backend/GameSettings.h"
 #include "backend/LoadOrder.h"
@@ -35,7 +34,7 @@ along with libloadorder.  If not, see
 
 namespace liblo {
     namespace test {
-        class LoadOrderTest : public ::testing::TestWithParam<unsigned int> {
+        class LoadOrderTest : public GameTest {
         protected:
             inline LoadOrderTest() :
                 blankEsm("Blank.esm"),
@@ -52,41 +51,43 @@ namespace liblo {
                 missingPlugin("missing.esm"),
                 updateEsm("Update.esm"),
                 nonAsciiEsm("Blàñk.esm"),
-                gameSettings(GetParam(), getGamePath(GetParam()), getLocalPath(GetParam())),
+                gameSettings(GetParam(), gamePath, localPath),
                 loadOrder(gameSettings) {}
 
             inline virtual void SetUp() {
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankMasterDependentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentMasterDependentEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankMasterDependentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentMasterDependentEsp));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / blankDifferentPluginDependentEsp));
-                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / missingPlugin));
+                GameTest::SetUp();
+
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankMasterDependentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentMasterDependentEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsp));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankMasterDependentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentMasterDependentEsp));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentPluginDependentEsp));
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / missingPlugin));
 
                 // Write out an non-empty, non-plugin file.
-                boost::filesystem::ofstream out(gameSettings.getPluginsFolder() / invalidPlugin);
+                boost::filesystem::ofstream out(pluginsPath / invalidPlugin);
                 out << "This isn't a valid plugin file.";
                 out.close();
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / invalidPlugin));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / invalidPlugin));
 
                 // Make sure the game master file exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / gameSettings.getMasterFile()));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / gameSettings.getMasterFile()));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / gameSettings.getMasterFile()));
 
                 // Make sure Update.esm exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / updateEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / updateEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / updateEsm));
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / updateEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / updateEsm));
 
                 // Make sure the non-ASCII plugin exists.
-                ASSERT_FALSE(boost::filesystem::exists(gameSettings.getPluginsFolder() / nonAsciiEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / nonAsciiEsm));
-                ASSERT_TRUE(boost::filesystem::exists(gameSettings.getPluginsFolder() / nonAsciiEsm));
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / nonAsciiEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / nonAsciiEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / nonAsciiEsm));
 
                 // Morrowind load order files have a slightly different
                 // format and a prefix is necessary.
@@ -136,39 +137,23 @@ namespace liblo {
                     });
                     time_t modificationTime = time(NULL);  // Current time.
                     for (const auto &plugin : plugins) {
-                        boost::filesystem::last_write_time(gameSettings.getPluginsFolder() / plugin, modificationTime);
+                        boost::filesystem::last_write_time(pluginsPath / plugin, modificationTime);
                         modificationTime += 60;
                     }
                 }
             }
 
             inline virtual void TearDown() {
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / invalidPlugin));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / gameSettings.getMasterFile()));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / nonAsciiEsm));
+                GameTest::TearDown();
+
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / invalidPlugin));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / gameSettings.getMasterFile()));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
 
                 ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
                 if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
                     ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
-            }
-
-            inline std::string getGamePath(unsigned int gameId) const {
-                if (gameId == LIBLO_GAME_TES3)
-                    return "./Morrowind";
-                else if (gameId == LIBLO_GAME_TES4)
-                    return "./Oblivion";
-                else
-                    return "./Skyrim";
-            }
-
-            inline boost::filesystem::path getLocalPath(unsigned int gameId) const {
-                if (gameId == LIBLO_GAME_TES3)
-                    return "./local/Morrowind";
-                else if (gameId == LIBLO_GAME_TES4)
-                    return "./local/Oblivion";
-                else
-                    return "./local/Skyrim";
             }
 
             inline std::string getActivePluginsFileLinePrefix(unsigned int gameId) {
@@ -178,7 +163,7 @@ namespace liblo {
                     return "";
             }
 
-            GameSettings gameSettings;
+            const GameSettings gameSettings;
             LoadOrder loadOrder;
 
             std::string blankEsm;
@@ -660,21 +645,21 @@ namespace liblo {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
                 EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp"));
             }
 
             EXPECT_ANY_THROW(loadOrder.activate(blankEsm));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(pluginsPath / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, activatingAPluginWhenMaxNumberAreAlreadyActiveShouldMakeNoChanges) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
                 EXPECT_NO_THROW(loadOrder.activate(std::to_string(i) + ".esp"));
             }
 
@@ -682,7 +667,7 @@ namespace liblo {
             EXPECT_FALSE(loadOrder.isActive(blankEsm));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(pluginsPath / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, deactivatingAPluginNotInTheLoadOrderShouldDoNothing) {
@@ -706,7 +691,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, forSkyrimDeactivatingUpdateEsmShouldThrow) {
-            if (gameSettings.getId() == LIBLO_GAME_TES5)
+            if (GetParam() == LIBLO_GAME_TES5)
                 EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm));
         }
 
@@ -718,7 +703,7 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
             ASSERT_NO_THROW(loadOrder.activate(updateEsm));
 
-            if (gameSettings.getId() == LIBLO_GAME_TES5) {
+            if (GetParam() == LIBLO_GAME_TES5) {
                 EXPECT_ANY_THROW(loadOrder.deactivate(updateEsm));
                 EXPECT_TRUE(loadOrder.isActive(updateEsm));
             }
@@ -829,14 +814,14 @@ namespace liblo {
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
 
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(pluginsPath / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldMakeNoChanges) {
@@ -847,7 +832,7 @@ namespace liblo {
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
                 activePlugins.insert(std::to_string(i) + ".esp");
             }
 
@@ -855,7 +840,7 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.getActivePlugins().empty());
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(pluginsPath / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldThrowForTextfileBasedGamesAndNotOtherwise) {
@@ -885,7 +870,7 @@ namespace liblo {
                 gameSettings.getMasterFile(),
                 blankEsm,
             });
-            if (gameSettings.getId() == LIBLO_GAME_TES5)
+            if (GetParam() == LIBLO_GAME_TES5)
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
             else
                 EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -896,14 +881,14 @@ namespace liblo {
                 gameSettings.getMasterFile(),
                 blankEsm,
             });
-            if (gameSettings.getId() == LIBLO_GAME_TES5) {
+            if (GetParam() == LIBLO_GAME_TES5) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
                 EXPECT_TRUE(loadOrder.getActivePlugins().empty());
             }
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItDoesNotExistShouldNotThrow) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
             std::unordered_set<std::string> activePlugins({
                 gameSettings.getMasterFile(),
@@ -1026,14 +1011,14 @@ namespace liblo {
             EXPECT_NO_THROW(loadOrder.load());
 
             int count = loadOrder.getActivePlugins().count(updateEsm);
-            if (gameSettings.getId() == LIBLO_GAME_TES5)
+            if (GetParam() == LIBLO_GAME_TES5)
                 EXPECT_EQ(1, count);
             else
                 EXPECT_EQ(0, count);
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotActivateUpdateEsmWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
             EXPECT_NO_THROW(loadOrder.load());
 
@@ -1052,7 +1037,7 @@ namespace liblo {
                 out << linePrefix << utf8ToWindows1252(gameSettings.getMasterFile()) << std::endl;
                 expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameSettings.getId() == LIBLO_GAME_TES5) {
+                if (GetParam() == LIBLO_GAME_TES5) {
                     out << linePrefix << utf8ToWindows1252(updateEsm) << std::endl;
                     expectedActivePlugins.insert(updateEsm);
                 }
@@ -1060,7 +1045,7 @@ namespace liblo {
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins - expectedActivePlugins.size(); ++i) {
                 std::string filename = std::to_string(i) + ".esp";
-                EXPECT_NO_THROW(boost::filesystem::copy_file(gameSettings.getPluginsFolder() / blankEsp, gameSettings.getPluginsFolder() / filename));
+                EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / filename));
                 out << linePrefix << filename << std::endl;
                 expectedActivePlugins.insert(filename);
             }
@@ -1072,7 +1057,7 @@ namespace liblo {
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
-                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / (std::to_string(i) + ".esp")));
+                EXPECT_NO_THROW(boost::filesystem::remove(pluginsPath / (std::to_string(i) + ".esp")));
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldFixInvalidDataWhenReadingActivePluginsFile) {
@@ -1086,7 +1071,7 @@ namespace liblo {
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
                 expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameSettings.getId() == LIBLO_GAME_TES5)
+                if (GetParam() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(updateEsm);
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1139,7 +1124,7 @@ namespace liblo {
                     nonAsciiEsm,
                     blankEsm,
                 });
-                if (gameSettings.getId() == LIBLO_GAME_TES5)
+                if (GetParam() == LIBLO_GAME_TES5)
                     expectedLoadOrder.push_back(updateEsm);
 
                 EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
@@ -1204,7 +1189,7 @@ namespace liblo {
 
                 expectedActivePlugins.insert(gameSettings.getMasterFile());
 
-                if (gameSettings.getId() == LIBLO_GAME_TES5)
+                if (GetParam() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(updateEsm);
             }
             else {
@@ -1269,7 +1254,7 @@ namespace liblo {
             // Timestamps have 1 second precision, so wait to allow them
             // to change.
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsm));
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
@@ -1277,8 +1262,8 @@ namespace liblo {
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndPluginsFolderTimetampIsSetToOlderTime) {
             ASSERT_NO_THROW(loadOrder.load());
 
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getPluginsFolder(), currentModTime - 1));
+            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(pluginsPath, currentModTime - 1));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
@@ -1357,7 +1342,7 @@ namespace liblo {
             // to change.
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
-            boost::filesystem::ofstream out(gameSettings.getPluginsFolder() / updateEsm);
+            boost::filesystem::ofstream out(pluginsPath / updateEsm);
             out << std::endl;
             out.close();
 
@@ -1365,9 +1350,8 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButActivePluginsFileAndPluginsFolderTimestampsAreDifferent) {
-
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime  + 2));
+            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 
@@ -1378,8 +1362,8 @@ namespace liblo {
             if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
                 return;
 
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime  + 2));
+            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 
@@ -1391,7 +1375,7 @@ namespace liblo {
                 return;
 
             time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime  + 2));
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 
