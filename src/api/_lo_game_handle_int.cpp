@@ -37,11 +37,7 @@ _lo_game_handle_int::_lo_game_handle_int(unsigned int id, const boost::filesyste
 _lo_game_handle_int::~_lo_game_handle_int() {
     delete[] extString;
 
-    if (extStringArray != nullptr) {
-        for (size_t i = 0; i < extStringArraySize; i++)
-            delete[] extStringArray[i];  //Clear all the char strings created.
-        delete[] extStringArray;  //Clear the string array.
-    }
+    freeStringArray();
 }
 
 void _lo_game_handle_int::freeStringArray() {
