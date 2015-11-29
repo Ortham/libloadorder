@@ -48,6 +48,8 @@ public:
 
     template<class T>
     void copyToStringArray(T container) {
+        freeStringArray();
+
         extStringArraySize = container.size();
         extStringArray = new char*[extStringArraySize];
 

@@ -76,5 +76,35 @@ namespace liblo {
 
             EXPECT_EQ(nullptr, gameHandle.extStringArray);
         }
+
+        TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArrayElementPointers) {
+            std::vector<std::string> vectorOfStrings({
+                "1",
+                "2",
+            });
+            gameHandle.copyToStringArray(vectorOfStrings);
+
+            char ** stringArray = gameHandle.extStringArray;
+
+            gameHandle.freeStringArray();
+
+            EXPECT_EQ(nullptr, stringArray[0]);
+            EXPECT_EQ(nullptr, stringArray[1]);
+        }
+
+        TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldFreeAnyMemoryPreviouslyAllocated) {
+            std::vector<std::string> vectorOfStrings({
+                "1",
+                "2",
+            });
+            gameHandle.copyToStringArray(vectorOfStrings);
+
+            char ** firstStringArray = gameHandle.extStringArray;
+            char * firstStringArrayElement = firstStringArray[0];
+
+            gameHandle.copyToStringArray(vectorOfStrings);
+
+            EXPECT_NE(firstStringArrayElement, firstStringArray[0]);
+        }
     }
 }
