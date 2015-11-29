@@ -121,6 +121,23 @@ namespace liblo {
             EXPECT_NO_THROW(boost::filesystem::remove("Oblivion.ini"));
         }
 
+        TEST_P(GameSettingsTest, activePluginsFileShouldBeInLocalFolderForOblivionIfItIsSetNotToUseTheGameFolder) {
+            if (GetParam() != LIBLO_GAME_TES4)
+                return;
+
+            // Set ini setting.
+            boost::filesystem::ofstream out("Oblivion.ini");
+            out << "bUseMyGamesDirectory=1";
+            out.close();
+
+            // The active plugins folder for existing game settings should be
+            // unchanged, but new objects should use the game folder.
+            EXPECT_EQ(localPath / "plugins.txt", gameSettings.getActivePluginsFile());
+            EXPECT_EQ(localPath / "plugins.txt", GameSettings(GetParam(), gamePath, localPath).getActivePluginsFile());
+
+            EXPECT_NO_THROW(boost::filesystem::remove("Oblivion.ini"));
+        }
+
         TEST_P(GameSettingsTest, gettingLoadOrderFilePathShouldThrowForTimestampBasedGamesAndNotOtherwise) {
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
                 EXPECT_ANY_THROW(gameSettings.getLoadOrderFile());
