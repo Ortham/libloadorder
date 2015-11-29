@@ -140,7 +140,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
     try {
         // Check for desync. This is a textfile-specific issue, but the checking
         // function will handle that distinction.
-        if (!(**gh).loadOrder.isSynchronised(**gh))
+        if (!LoadOrder::isSynchronised(**gh))
             return c_error(LIBLO_WARN_LO_MISMATCH, "The order of plugins present in both loadorder.txt and plugins.txt differs between the two files.");
     }
     catch (error& e) {
