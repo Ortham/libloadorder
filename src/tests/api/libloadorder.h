@@ -268,32 +268,82 @@ namespace liblo {
 
             EXPECT_EQ(LIBLO_WARN_LO_MISMATCH, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
         }
+
+        class GameOperationTest : public GameTest {
+        protected:
+            GameOperationTest() :
+                gameHandle(nullptr),
+                blankEsm("Blank.esm"),
+                invalidPlugin("NotAPlugin.esm") {}
+
+            inline virtual void SetUp() {
+                GameTest::SetUp();
+
+                ASSERT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
+            }
+
+            inline virtual void TearDown() {
+                GameTest::TearDown();
+
+                ASSERT_NO_THROW(lo_destroy_handle(gameHandle));
+            }
+
+            lo_game_handle gameHandle;
+
+            const std::string blankEsm;
+            const std::string invalidPlugin;
+        };
+
+        class lo_set_game_master_test : public GameOperationTest {};
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_set_game_master_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_set_game_master_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, blankEsm.c_str()));
+        }
+
+        TEST_P(lo_set_game_master_test, shouldFailIfPluginIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, NULL));
+        }
+
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsAnEmptyStringForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, ""));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, ""));
+        }
+
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsInvalidForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
+        }
+
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsValidForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, blankEsm.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, blankEsm.c_str()));
+        }
+
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsDefaultGameMasterForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, masterFile.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, masterFile.c_str()));
+        }
     }
-}
-
-TEST_F(OblivionOperationsTest, SetGameMaster) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EmptyFile.esm"));
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "NotAPlugin.esm"));
-
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
-
-    // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.missing.esm"));
-}
-
-TEST_F(SkyrimOperationsTest, SetGameMaster) {
-    // Skyrim's game master cannot be set, these should all fail.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Blank.esm"));
-
-    // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EnhancedWeather.missing.esm"));
 }
 
 TEST_F(OblivionOperationsTest, FixPluginLists) {
