@@ -27,41 +27,70 @@ along with libloadorder.  If not, see
 #define __LIBLO_TEST_API_ACTIVE_PLUGINS__
 
 #include "tests/fixtures.h"
+#include "tests/api/CApiGameOperationTest.h"
 
-TEST_F(OblivionOperationsTest, GetActivePlugins) {
-    char ** plugins = {0};
-    size_t numPlugins = 0;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, NULL, &numPlugins));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, &plugins, NULL));
-
-    EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
-    EXPECT_EQ(1, numPlugins);
-    EXPECT_STREQ("Blank.esm", plugins[0]);
-}
-
-TEST_F(SkyrimOperationsTest, GetActivePlugins) {
-    char ** plugins = {0};
-    size_t numPlugins = 0;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, NULL, &numPlugins));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gh, &plugins, NULL));
-
-    EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gh, &plugins, &numPlugins));
-    EXPECT_EQ(2, numPlugins);
-
-    auto pred = [numPlugins](const char * s, char ** a) {
-        for (size_t i = 0; i < numPlugins; ++i) {
-            if (strcmp(a[i], s) == 0)
-                return true;
+namespace liblo {
+    namespace test {
+        char ** begin(char ** cArray) {
+            return cArray;
         }
-        return false;
-    };
 
-    EXPECT_PRED2(pred, "Blank.esm", plugins);
-    EXPECT_PRED2(pred, "Skyrim.esm", plugins);
+        char ** end(char ** cArray, size_t cArraySize) {
+            return cArray + cArraySize;
+        }
+
+        class lo_get_active_plugins_test : public CApiGameOperationTest {
+        protected:
+            lo_get_active_plugins_test() :
+                plugins(nullptr),
+                numPlugins(0) {
+                // Write out an active plugins file.
+                boost::filesystem::ofstream out(activePluginsFilePath);
+                out << getActivePluginsFileLinePrefix() << blankEsm;
+                out.close();
+            }
+
+            char ** plugins;
+            size_t numPlugins;
+        };
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_get_active_plugins_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_get_active_plugins_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
+        }
+
+        TEST_P(lo_get_active_plugins_test, shouldFailIfPluginsPointerIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gameHandle, NULL, &numPlugins));
+        }
+
+        TEST_P(lo_get_active_plugins_test, shouldFailIfPluginsSizeIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(gameHandle, &plugins, NULL));
+        }
+
+        TEST_P(lo_get_active_plugins_test, outputShouldMatchExpectedActivePlugins) {
+            EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gameHandle, &plugins, &numPlugins));
+
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_EQ(2, numPlugins);
+                EXPECT_EQ(1, std::count(begin(plugins), end(plugins, numPlugins), masterFile));
+                EXPECT_EQ(1, std::count(begin(plugins), end(plugins, numPlugins), blankEsm));
+            }
+            else {
+                ASSERT_EQ(1, numPlugins);
+            }
+        }
+    }
 }
 
 TEST_F(OblivionOperationsTest, SetActivePlugins_NullInputs) {
