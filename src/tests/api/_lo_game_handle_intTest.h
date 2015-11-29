@@ -71,13 +71,12 @@ namespace liblo {
             ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
 
             char ** stringArray = gameHandle.extStringArray;
-            ASSERT_NE(nullptr, stringArray);
-            ASSERT_NE(nullptr, stringArray[0]);
-            ASSERT_NE(nullptr, stringArray[1]);
+            const char * element0 = gameHandle.extStringArray[0];
+            const char * element1 = gameHandle.extStringArray[1];
 
             EXPECT_NO_THROW(gameHandle.freeStringArray());
-            EXPECT_EQ(nullptr, stringArray[0]);
-            EXPECT_EQ(nullptr, stringArray[1]);
+            EXPECT_NE(element0, stringArray[0]);
+            EXPECT_NE(element1, stringArray[1]);
         }
 
         TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldFreeAnyMemoryPreviouslyAllocated) {
