@@ -24,7 +24,7 @@
     */
 
 #include "LoadOrder.h"
-#include "../api/_lo_game_handle_int.h"
+#include "GameSettings.h"
 #include "libloadorder/constants.h"
 #include "error.h"
 #include "helpers.h"
