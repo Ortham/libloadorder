@@ -23,10 +23,15 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
 #include "backend/Plugin.h"
 #include "backend/GameSettings.h"
+#include "libloadorder/constants.h"
+
+#include <boost/algorithm/string.hpp>
+#include <gtest/gtest.h>
+
+#include <chrono>
+#include <thread>
 
 namespace liblo {
     namespace test {

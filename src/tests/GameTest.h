@@ -26,6 +26,10 @@ along with libloadorder.  If not, see
 #ifndef LIBLO_TEST_GAME_TEST
 #define LIBLO_TEST_GAME_TEST
 
+#include "libloadorder/constants.h"
+
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <gtest/gtest.h>
 
 namespace liblo {
@@ -36,8 +40,7 @@ namespace liblo {
                 localPath(getLocalPath()),
                 pluginsPath(getPluginsPath()),
                 gamePath(pluginsPath.parent_path()),
-                masterFile(getMasterFile())
-            {}
+                masterFile(getMasterFile()) {}
 
             inline virtual void SetUp() {
                 ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
