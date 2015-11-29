@@ -39,7 +39,6 @@ namespace liblo {
         class LoadOrderTest : public GameTest {
         protected:
             inline LoadOrderTest() :
-                blankEsm("Blank.esm"),
                 blankDifferentEsm("Blank - Different.esm"),
                 blankMasterDependentEsm("Blank - Master Dependent.esm"),
                 blankDifferentMasterDependentEsm("Blank - Different Master Dependent.esm"),
@@ -76,11 +75,6 @@ namespace liblo {
                 out.close();
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / invalidPlugin));
 
-                // Make sure the game master file exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / masterFile));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / masterFile));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / masterFile));
-
                 // Make sure Update.esm exists.
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / updateEsm));
                 ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / updateEsm));
@@ -97,7 +91,7 @@ namespace liblo {
 
                 // Write out an active plugins file, making it as invalid as
                 // possible for the game to still fix.
-                out.open(gameSettings.getActivePluginsFile());
+                out.open(activePluginsFilePath);
                 out << std::endl
                     << '#' << utf8ToWindows1252(blankDifferentEsm) << std::endl
                     << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
@@ -107,11 +101,11 @@ namespace liblo {
                     << linePrefix << utf8ToWindows1252(invalidPlugin) << std::endl;
                 out.close();
 
-                if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+                if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                     // Write out the game's load order file, using the valid
                     // version of what's in the active plugins file, plus
                     // additional plugins.
-                    out.open(gameSettings.getLoadOrderFile());
+                    out.open(loadOrderFilePath);
                     out << nonAsciiEsm << std::endl
                         << masterFile << std::endl
                         << blankDifferentEsm << std::endl
@@ -149,26 +143,17 @@ namespace liblo {
                 GameTest::TearDown();
 
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / invalidPlugin));
-                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / masterFile));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
 
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
-                if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                    ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
-            }
-
-            inline std::string getActivePluginsFileLinePrefix() {
-                if (GetParam() == LIBLO_GAME_TES3)
-                    return "GameFile0=";
-                else
-                    return "";
+                ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
+                if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
+                    ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
             }
 
             const GameSettings gameSettings;
             LoadOrder loadOrder;
 
-            std::string blankEsm;
             std::string blankDifferentEsm;
             std::string blankMasterDependentEsm;
             std::string blankDifferentMasterDependentEsm;
@@ -312,7 +297,7 @@ namespace liblo {
                 blankEsm,
                 masterFile,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins));
             else
                 EXPECT_NO_THROW(loadOrder.setLoadOrder(plugins));
@@ -323,7 +308,7 @@ namespace liblo {
                 blankEsm,
                 masterFile,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_ANY_THROW(loadOrder.setLoadOrder(plugins));
                 EXPECT_TRUE(loadOrder.getLoadOrder().empty());
             }
@@ -378,7 +363,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0));
             else {
                 EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0));
@@ -386,14 +371,14 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATextfileBasedGameShouldMakeNoChanges) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 0));
                 EXPECT_TRUE(loadOrder.getLoadOrder().empty());
             }
         }
 
         TEST_P(LoadOrderTest, settingAPluginThatIsNotTheGameMasterFileToLoadFirstForATimestampBasedGameShouldSucceed) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP) {
                 EXPECT_NO_THROW(loadOrder.setPosition(blankEsm, 0));
                 EXPECT_FALSE(loadOrder.getLoadOrder().empty());
                 EXPECT_EQ(0, loadOrder.getPosition(blankEsm));
@@ -408,7 +393,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_ANY_THROW(loadOrder.setPosition(masterFile, 1));
             else
                 EXPECT_NO_THROW(loadOrder.setPosition(masterFile, 1));
@@ -422,7 +407,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_ANY_THROW(loadOrder.setPosition(masterFile, 1));
                 EXPECT_EQ(0, loadOrder.getPosition(masterFile));
             }
@@ -436,7 +421,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 ASSERT_ANY_THROW(loadOrder.setPosition(masterFile, 1));
                 EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(1));
             }
@@ -450,7 +435,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP) {
                 ASSERT_NO_THROW(loadOrder.setPosition(masterFile, 1));
                 EXPECT_EQ(blankEsm, loadOrder.getPluginAtPosition(0));
                 EXPECT_EQ(masterFile, loadOrder.getPluginAtPosition(1));
@@ -605,7 +590,7 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.activate(blankEsm));
 
             EXPECT_NO_THROW(loadOrder.activate(masterFile));
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_EQ(0, loadOrder.getPosition(masterFile));
             else
                 EXPECT_EQ(1, loadOrder.getPosition(masterFile));
@@ -679,14 +664,14 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldThrowForTextfileLoadOrderGamesAndNotOtherwise) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_ANY_THROW(loadOrder.deactivate(masterFile));
             else
                 EXPECT_NO_THROW(loadOrder.deactivate(masterFile));
         }
 
         TEST_P(LoadOrderTest, deactivatingTheGameMasterFileShouldForTextfileLoadOrderGamesShouldMakeNoChanges) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_ANY_THROW(loadOrder.deactivate(masterFile));
                 EXPECT_FALSE(loadOrder.isActive(masterFile));
             }
@@ -763,7 +748,7 @@ namespace liblo {
                 blankDifferentEsm,
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder));
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_TRUE(loadOrder.isActive(masterFile));
             else
                 EXPECT_FALSE(loadOrder.isActive(masterFile));
@@ -850,7 +835,7 @@ namespace liblo {
                 updateEsm,
                 blankEsm,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
             else
                 EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -861,7 +846,7 @@ namespace liblo {
                 updateEsm,
                 blankEsm,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
                 EXPECT_TRUE(loadOrder.getActivePlugins().empty());
             }
@@ -946,53 +931,53 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTimestampBasedGames) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfLoadOrderFileDoesNotExist) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
 
             EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesIfActivePluginsFileDoesNotExist) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
 
             EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreEquivalent) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 return;
 
             EXPECT_TRUE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, isNotSynchronisedForTextfileBasedGamesWhenLoadOrderAndActivePluginsFileContentsAreNotEquivalent) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 return;
 
-            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile(), std::ios_base::trunc);
+            boost::filesystem::ofstream out(loadOrderFilePath, std::ios_base::trunc);
             out << blankEsm << std::endl;
 
             EXPECT_FALSE(LoadOrder::isSynchronised(gameSettings));
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotThrowIfActivePluginsFileDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
 
             EXPECT_NO_THROW(loadOrder.load());
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateNoPluginsIfActivePluginsFileDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getActivePluginsFile()));
+            ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
 
             ASSERT_NO_THROW(loadOrder.load());
 
@@ -1003,7 +988,7 @@ namespace liblo {
             EXPECT_NO_THROW(loadOrder.load());
 
             int count = loadOrder.getActivePlugins().count(masterFile);
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                 EXPECT_EQ(1, count);
             else
                 EXPECT_EQ(0, count);
@@ -1033,9 +1018,9 @@ namespace liblo {
             std::unordered_set<std::string> expectedActivePlugins;
 
             std::string linePrefix = getActivePluginsFileLinePrefix();
-            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
+            boost::filesystem::ofstream out(activePluginsFilePath);
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 out << linePrefix << utf8ToWindows1252(masterFile) << std::endl;
                 expectedActivePlugins.insert(masterFile);
 
@@ -1070,7 +1055,7 @@ namespace liblo {
                 blankEsm,
                 blankEsp,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 expectedActivePlugins.insert(masterFile);
 
                 if (GetParam() == LIBLO_GAME_TES5)
@@ -1083,7 +1068,7 @@ namespace liblo {
             EXPECT_NO_THROW(loadOrder.load());
 
             std::vector<std::string> expectedLoadOrder;
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 expectedLoadOrder = std::vector<std::string>({
                     masterFile,
                     nonAsciiEsm,
@@ -1114,13 +1099,13 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldFallBackToActivePluginsFileForTextfileBasedGamesOtherwiseUseTimestamps) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getLoadOrderFile()));
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
+                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
 
             EXPECT_NO_THROW(loadOrder.load());
 
             std::vector<std::string> expectedLoadOrder;
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 expectedLoadOrder = std::vector<std::string>({
                     masterFile,
                     nonAsciiEsm,
@@ -1155,12 +1140,12 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.load());
 
             std::string linePrefix = getActivePluginsFileLinePrefix();
-            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile(), std::ios_base::trunc);
+            boost::filesystem::ofstream out(activePluginsFilePath, std::ios_base::trunc);
             out << linePrefix << utf8ToWindows1252(blankEsp) << std::endl;
             out.close();
 
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-                out.open(gameSettings.getLoadOrderFile(), std::ios_base::trunc);
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                out.open(loadOrderFilePath, std::ios_base::trunc);
                 out << blankDifferentEsm << std::endl;
                 out.close();
             }
@@ -1185,7 +1170,7 @@ namespace liblo {
                 blankPluginDependentEsp,
                 blankDifferentPluginDependentEsp,
             });
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_NE(expectedLoadOrder, loadOrder.getLoadOrder());
                 EXPECT_TRUE(is_permutation(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
 
@@ -1285,7 +1270,7 @@ namespace liblo {
             // to change.
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
-            boost::filesystem::ofstream out(gameSettings.getActivePluginsFile());
+            boost::filesystem::ofstream out(activePluginsFilePath);
             out << std::endl;
             out.close();
 
@@ -1295,8 +1280,8 @@ namespace liblo {
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndActivePluginsTimetampIsSetToOlderTime) {
             ASSERT_NO_THROW(loadOrder.load());
 
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime - 1));
+            time_t currentModTime = boost::filesystem::last_write_time(activePluginsFilePath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(activePluginsFilePath, currentModTime - 1));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
@@ -1311,7 +1296,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileIsChangedForTextfileBasedGames) {
-            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
                 return;
 
             ASSERT_NO_THROW(loadOrder.load());
@@ -1319,7 +1304,7 @@ namespace liblo {
             // to change.
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
-            boost::filesystem::ofstream out(gameSettings.getLoadOrderFile());
+            boost::filesystem::ofstream out(loadOrderFilePath);
             out << std::endl;
             out.close();
 
@@ -1327,13 +1312,13 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileTimetampIsSetToOlderTimeForTextfileBasedGames) {
-            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
                 return;
 
             ASSERT_NO_THROW(loadOrder.load());
 
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getLoadOrderFile());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime - 1));
+            time_t currentModTime = boost::filesystem::last_write_time(loadOrderFilePath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime - 1));
 
             EXPECT_TRUE(loadOrder.hasFilesystemChanged());
         }
@@ -1353,7 +1338,7 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButActivePluginsFileAndPluginsFolderTimestampsAreDifferent) {
             time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getActivePluginsFile(), currentModTime + 2));
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(activePluginsFilePath, currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 
@@ -1361,11 +1346,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderFileAndPluginsFolderTimestampsAreDifferent) {
-            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
                 return;
 
             time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime + 2));
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 
@@ -1373,11 +1358,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderAndActivePluginsFilesAreDifferent) {
-            if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE)
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
                 return;
 
-            time_t currentModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(gameSettings.getLoadOrderFile(), currentModTime + 2));
+            time_t currentModTime = boost::filesystem::last_write_time(activePluginsFilePath);
+            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime + 2));
 
             ASSERT_NO_THROW(loadOrder.load());
 

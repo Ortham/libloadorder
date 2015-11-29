@@ -37,22 +37,51 @@ namespace liblo {
         class GameTest : public ::testing::TestWithParam<unsigned int> {
         protected:
             GameTest() :
+                loadOrderMethod(getLoadOrderMethod()),
                 localPath(getLocalPath()),
                 pluginsPath(getPluginsPath()),
                 gamePath(pluginsPath.parent_path()),
-                masterFile(getMasterFile()) {}
+                activePluginsFilePath(getActivePluginsFilePath()),
+                loadOrderFilePath(localPath / "loadorder.txt"),
+                masterFile(getMasterFile()),
+                blankEsm("Blank.esm") {}
 
             inline virtual void SetUp() {
                 ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
 
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsm));
+
+                // Make sure the game master file exists.
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / masterFile));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / masterFile));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / masterFile));
             }
+
+            inline virtual void TearDown() {
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / masterFile));
+
+                ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
+                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
+            }
+
+            inline std::string getActivePluginsFileLinePrefix() const {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return "GameFile0=";
+                else
+                    return "";
+            }
+
+            const unsigned int loadOrderMethod;
 
             const boost::filesystem::path localPath;
             const boost::filesystem::path pluginsPath;
             const boost::filesystem::path gamePath;
 
+            const boost::filesystem::path activePluginsFilePath;
+            const boost::filesystem::path loadOrderFilePath;
+
             const std::string masterFile;
+            const std::string blankEsm;
 
         private:
             inline boost::filesystem::path getLocalPath() const {
@@ -86,6 +115,17 @@ namespace liblo {
                     return "FalloutNV.esm";
                 else
                     return "Fallout4.esm";
+            }
+
+            inline boost::filesystem::path getActivePluginsFilePath() const {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return gamePath / "Morrowind.ini";
+                else
+                    return localPath / "plugins.txt";
+            }
+
+            inline unsigned int getLoadOrderMethod() const {
+                return GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4;
             }
         };
     }

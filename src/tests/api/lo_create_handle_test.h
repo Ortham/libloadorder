@@ -35,9 +35,6 @@ namespace liblo {
         protected:
             lo_create_handle_test() :
                 invalidPath("./missing"),
-                activePluginsFilePath(localPath / "plugins.txt"),
-                loadOrderFilePath(localPath / "loadorder.txt"),
-                blankEsm("Blank.esm"),
                 blankDifferentEsm("Blank - Different.esm"),
                 gameHandle(nullptr) {}
 
@@ -46,13 +43,7 @@ namespace liblo {
 
                 ASSERT_FALSE(boost::filesystem::exists(invalidPath));
 
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsm));
-
-                // Make sure the game master file exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / masterFile));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / masterFile));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / masterFile));
             }
 
             inline virtual void TearDown() {
@@ -60,18 +51,11 @@ namespace liblo {
 
                 EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
 
-                ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
                 ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
-
-                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / masterFile));
             }
 
             const boost::filesystem::path invalidPath;
 
-            const boost::filesystem::path activePluginsFilePath;
-            const boost::filesystem::path loadOrderFilePath;
-
-            const std::string blankEsm;
             const std::string blankDifferentEsm;
 
             lo_game_handle gameHandle;
@@ -146,7 +130,7 @@ namespace liblo {
         }
 
         TEST_P(lo_create_handle_test, shouldSucceedWithWarningIfFilesAreDesynchronisedForTextfileBasedGames) {
-            if (GetParam() != LIBLO_GAME_TES5 && GetParam() != LIBLO_GAME_FO4)
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 return;
 
             boost::filesystem::ofstream out(activePluginsFilePath);
