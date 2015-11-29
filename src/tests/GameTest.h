@@ -35,7 +35,9 @@ namespace liblo {
             GameTest() :
                 localPath(getLocalPath()),
                 pluginsPath(getPluginsPath()),
-                gamePath(pluginsPath.parent_path()) {}
+                gamePath(pluginsPath.parent_path()),
+                masterFile(getMasterFile())
+            {}
 
             inline virtual void SetUp() {
                 ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
@@ -46,6 +48,8 @@ namespace liblo {
             const boost::filesystem::path localPath;
             const boost::filesystem::path pluginsPath;
             const boost::filesystem::path gamePath;
+
+            const std::string masterFile;
 
         private:
             inline boost::filesystem::path getLocalPath() const {
@@ -64,6 +68,21 @@ namespace liblo {
                     return "./Oblivion/Data";
                 else
                     return "./Skyrim/Data";
+            }
+
+            inline std::string getMasterFile() const {
+                if (GetParam() == LIBLO_GAME_TES3)
+                    return "Morrowind.esm";
+                else if (GetParam() == LIBLO_GAME_TES4)
+                    return "Oblivion.esm";
+                else if (GetParam() == LIBLO_GAME_TES5)
+                    return "Skyrim.esm";
+                else if (GetParam() == LIBLO_GAME_FO3)
+                    return "Fallout3.esm";
+                else if (GetParam() == LIBLO_GAME_FNV)
+                    return "FalloutNV.esm";
+                else
+                    return "Fallout4.esm";
             }
         };
     }

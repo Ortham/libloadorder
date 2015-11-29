@@ -72,18 +72,7 @@ namespace liblo {
         }
 
         TEST_P(GameSettingsTest, gettingMasterFileShouldReturnTheCorrectFilenameForEachGame) {
-            if (GetParam() == LIBLO_GAME_TES3)
-                EXPECT_EQ("Morrowind.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_TES4)
-                EXPECT_EQ("Oblivion.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_TES5)
-                EXPECT_EQ("Skyrim.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_FO3)
-                EXPECT_EQ("Fallout3.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_FNV)
-                EXPECT_EQ("FalloutNV.esm", gameSettings.getMasterFile());
-            else
-                EXPECT_EQ("Fallout4.esm", gameSettings.getMasterFile());
+            EXPECT_EQ(masterFile, gameSettings.getMasterFile());
         }
 
         TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndFallout4AndTimestampOtherwise) {
