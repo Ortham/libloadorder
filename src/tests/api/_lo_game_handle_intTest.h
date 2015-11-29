@@ -35,18 +35,16 @@ namespace liblo {
             _lo_game_handle_intTest() :
                 // Just use Skyrim game handle to test with as the
                 // functionality tested isn't game-specific.
-                gameHandle(LIBLO_GAME_TES5, "./Skyrim", "./local/Skyrim") {}
+                gameHandle(LIBLO_GAME_TES5, "./Skyrim", "./local/Skyrim"),
+                vectorOfStrings({"1", "2"}) {}
 
             _lo_game_handle_int gameHandle;
+
+            std::vector<std::string> vectorOfStrings;
         };
 
         TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldCopyAContainersElementsToTheObjectsStringArray) {
-            std::vector<std::string> vectorOfStrings({
-                "1",
-                "2",
-            });
-
-            gameHandle.copyToStringArray(vectorOfStrings);
+            EXPECT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
 
             EXPECT_EQ(2, gameHandle.extStringArraySize);
             EXPECT_STREQ("1", gameHandle.extStringArray[0]);
@@ -54,55 +52,41 @@ namespace liblo {
         }
 
         TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArraySize) {
-            std::vector<std::string> vectorOfStrings({
-                "1",
-                "2",
-            });
-            gameHandle.copyToStringArray(vectorOfStrings);
+            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
+            ASSERT_NE(0, gameHandle.extStringArraySize);
 
-            gameHandle.freeStringArray();
-
+            EXPECT_NO_THROW(gameHandle.freeStringArray());
             EXPECT_EQ(0, gameHandle.extStringArraySize);
         }
 
         TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArrayPointer) {
-            std::vector<std::string> vectorOfStrings({
-                "1",
-                "2",
-            });
-            gameHandle.copyToStringArray(vectorOfStrings);
+            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
+            ASSERT_NE(nullptr, gameHandle.extStringArray);
 
-            gameHandle.freeStringArray();
-
+            EXPECT_NO_THROW(gameHandle.freeStringArray());
             EXPECT_EQ(nullptr, gameHandle.extStringArray);
         }
 
         TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArrayElementPointers) {
-            std::vector<std::string> vectorOfStrings({
-                "1",
-                "2",
-            });
-            gameHandle.copyToStringArray(vectorOfStrings);
+            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
 
             char ** stringArray = gameHandle.extStringArray;
+            ASSERT_NE(nullptr, stringArray);
+            ASSERT_NE(nullptr, stringArray[0]);
+            ASSERT_NE(nullptr, stringArray[1]);
 
-            gameHandle.freeStringArray();
-
+            EXPECT_NO_THROW(gameHandle.freeStringArray());
             EXPECT_EQ(nullptr, stringArray[0]);
             EXPECT_EQ(nullptr, stringArray[1]);
         }
 
         TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldFreeAnyMemoryPreviouslyAllocated) {
-            std::vector<std::string> vectorOfStrings({
-                "1",
-                "2",
-            });
-            gameHandle.copyToStringArray(vectorOfStrings);
+            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
 
             char ** firstStringArray = gameHandle.extStringArray;
-            char * firstStringArrayElement = firstStringArray[0];
+            char * firstStringArrayElement = gameHandle.extStringArray[0];
 
-            gameHandle.copyToStringArray(vectorOfStrings);
+            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
 
             EXPECT_NE(firstStringArrayElement, firstStringArray[0]);
         }
