@@ -269,11 +269,9 @@ namespace liblo {
             EXPECT_EQ(LIBLO_WARN_LO_MISMATCH, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
         }
 
-        class GameOperationTest : public GameTest {
+        class GameApiOperationTest : public lo_create_handle_test {
         protected:
-            GameOperationTest() :
-                gameHandle(nullptr),
-                blankEsm("Blank.esm"),
+            GameApiOperationTest() :
                 invalidPlugin("NotAPlugin.esm") {}
 
             inline virtual void SetUp() {
@@ -282,19 +280,10 @@ namespace liblo {
                 ASSERT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
             }
 
-            inline virtual void TearDown() {
-                GameTest::TearDown();
-
-                ASSERT_NO_THROW(lo_destroy_handle(gameHandle));
-            }
-
-            lo_game_handle gameHandle;
-
-            const std::string blankEsm;
             const std::string invalidPlugin;
         };
 
-        class lo_set_game_master_test : public GameOperationTest {};
+        class lo_set_game_master_test : public GameApiOperationTest {};
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
         // but we only have the one so no prefix is necessary.
@@ -343,61 +332,31 @@ namespace liblo {
             else
                 EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, masterFile.c_str()));
         }
+
+        class lo_fix_plugin_lists_test : public GameApiOperationTest {};
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_fix_plugin_lists_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_fix_plugin_lists_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
+        }
+
+        TEST_P(lo_fix_plugin_lists_test, shouldSucceedIfGameHandleIsNotNull) {
+            // Don't need to check its filesystem effects as that's handled by
+            // lower-level tests.
+            EXPECT_EQ(LIBLO_OK, lo_fix_plugin_lists(gameHandle));
+        }
     }
-}
-
-TEST_F(OblivionOperationsTest, FixPluginLists) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
-    AssertInitialState();
-
-    // Write a broken plugins.txt.
-    boost::filesystem::ofstream active(localPath / "plugins.txt");
-    active << "Blank - Master Dependent.esp" << std::endl
-        << "Blank - Plugin Dependent.esp" << std::endl
-        << "Blank - Different Master Dependent.esp" << std::endl
-        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
-        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
-        << "Blank.esp" << std::endl;
-    active.close();
-
-    // Now fix plugins.txt
-    ASSERT_PRED1([](unsigned int i) {
-        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
-    }, lo_fix_plugin_lists(gh));
-
-    // Check that fix worked.
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
-}
-
-TEST_F(SkyrimOperationsTest, FixPluginLists) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
-    AssertInitialState();
-
-    // Write a broken plugins.txt.
-    boost::filesystem::ofstream active(localPath / "plugins.txt");
-    active << "Blank - Master Dependent.esp" << std::endl
-        << "Blank - Plugin Dependent.esp" << std::endl
-        << "Blank - Different Master Dependent.esp" << std::endl
-        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
-        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
-        << "Blank.esp" << std::endl;
-    active.close();
-
-    // Now fix plugins.txt
-    ASSERT_PRED1([](unsigned int i) {
-        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
-    }, lo_fix_plugin_lists(gh));
-
-    // Check that fix worked.
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
 }
 
 #endif
