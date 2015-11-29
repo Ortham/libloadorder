@@ -31,115 +31,115 @@ along with libloadorder.  If not, see
 
 #include <boost/algorithm/string.hpp>
 
-TEST(lo_get_version, shouldFailIfPassedNullMajorVersionParameter) {
-    unsigned int vMinor = 0;
-    unsigned int vPatch = 0;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, &vPatch));
-
-    ASSERT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_get_version, shouldFailIfPassedNullMinorVersionParameter) {
-    unsigned int vMajor = 0;
-    unsigned int vPatch = 0;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, &vPatch));
-
-    ASSERT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_get_version, shouldFailIfPassedNullPatchVersionParameter) {
-    unsigned int vMajor = 0;
-    unsigned int vMinor = 0;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, &vMinor, NULL));
-
-    ASSERT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_get_version, shouldSucceedIfPassedNonNullParameters) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-}
-
-TEST(lo_is_compatible, shouldReturnTrueIfMajorVersionIsEqual) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-
-    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
-}
-
-TEST(lo_is_compatible, shouldReturnFalseIfMajorVersionIsNotEqual) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-
-    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
-}
-
-TEST(lo_get_error_message, shouldFailIfPassedNullPointer) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    ASSERT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_get_error_message, shouldOutputNullPointerIfNoErrorHasOccurred) {
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    EXPECT_EQ(nullptr, error);
-}
-
-TEST(lo_get_error_message, shouldOutputCorrectErrorMessageIfErrorHasOccurred) {
-    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    EXPECT_STREQ("Null pointer passed.", error);
-
-    ASSERT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_get_error_message, shouldOutputLastErrorMessageIfSuccessHasOccurredSinceLastError) {
-    const char * error = nullptr;
-    const char * lastError = nullptr;
-
-    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-    ASSERT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_NE(nullptr, error);
-    lastError = error;
-
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_EQ(lastError, error);
-}
-
-TEST(lo_cleanup, shouldNotThrowIfNoErrorMessageToCleanUp) {
-    EXPECT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_cleanup, shouldNotThrowIfThereIsAnErrorMessageToCleanUp) {
-    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    EXPECT_NO_THROW(lo_cleanup());
-}
-
-TEST(lo_cleanup, shouldFreeErrorMessageIfOneExists) {
-    ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
-
-    EXPECT_NO_THROW(lo_cleanup());
-
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    EXPECT_EQ(nullptr, error);
-}
-
-TEST(lo_destroy_handle, shouldNotThrowIfGameHandleIsNotCreated) {
-    lo_game_handle gameHandle = nullptr;
-    EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
-}
-
-TEST(lo_destroy_handle, shouldNotThrowIfPassedNullPointer) {
-    EXPECT_NO_THROW(lo_destroy_handle(NULL));
-}
-
 namespace liblo {
     namespace test {
+        TEST(lo_get_version, shouldFailIfPassedNullMajorVersionParameter) {
+            unsigned int vMinor = 0;
+            unsigned int vPatch = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, &vPatch));
+
+            ASSERT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_get_version, shouldFailIfPassedNullMinorVersionParameter) {
+            unsigned int vMajor = 0;
+            unsigned int vPatch = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, &vPatch));
+
+            ASSERT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_get_version, shouldFailIfPassedNullPatchVersionParameter) {
+            unsigned int vMajor = 0;
+            unsigned int vMinor = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, &vMinor, NULL));
+
+            ASSERT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_get_version, shouldSucceedIfPassedNonNullParameters) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+        }
+
+        TEST(lo_is_compatible, shouldReturnTrueIfMajorVersionIsEqual) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+            EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
+        }
+
+        TEST(lo_is_compatible, shouldReturnFalseIfMajorVersionIsNotEqual) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+
+            EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
+        }
+
+        TEST(lo_get_error_message, shouldFailIfPassedNullPointer) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            ASSERT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_get_error_message, shouldOutputNullPointerIfNoErrorHasOccurred) {
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_EQ(nullptr, error);
+        }
+
+        TEST(lo_get_error_message, shouldOutputCorrectErrorMessageIfErrorHasOccurred) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_STREQ("Null pointer passed.", error);
+
+            ASSERT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_get_error_message, shouldOutputLastErrorMessageIfSuccessHasOccurredSinceLastError) {
+            const char * error = nullptr;
+            const char * lastError = nullptr;
+
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+            ASSERT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            ASSERT_NE(nullptr, error);
+            lastError = error;
+
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            ASSERT_EQ(lastError, error);
+        }
+
+        TEST(lo_cleanup, shouldNotThrowIfNoErrorMessageToCleanUp) {
+            EXPECT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_cleanup, shouldNotThrowIfThereIsAnErrorMessageToCleanUp) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            EXPECT_NO_THROW(lo_cleanup());
+        }
+
+        TEST(lo_cleanup, shouldFreeErrorMessageIfOneExists) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            EXPECT_NO_THROW(lo_cleanup());
+
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_EQ(nullptr, error);
+        }
+
+        TEST(lo_destroy_handle, shouldNotThrowIfGameHandleIsNotCreated) {
+            lo_game_handle gameHandle = nullptr;
+            EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
+        }
+
+        TEST(lo_destroy_handle, shouldNotThrowIfPassedNullPointer) {
+            EXPECT_NO_THROW(lo_destroy_handle(NULL));
+        }
+
         class lo_create_handle_test : public GameTest {
         protected:
             lo_create_handle_test() :
