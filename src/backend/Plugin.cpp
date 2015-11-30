@@ -126,8 +126,9 @@ namespace liblo {
     bool Plugin::isValid(const std::string& filename, const GameSettings& gameSettings) {
         string name = trimGhostExtension(filename);
 
-        return libespm::Plugin::isValid(gameSettings.getPluginsFolder() / name, gameSettings.getLibespmId(), true)
-            || libespm::Plugin::isValid(gameSettings.getPluginsFolder() / (name + ".ghost"), gameSettings.getLibespmId(), true);
+        return (boost::iends_with(name, ".esp") || boost::iends_with(name, ".esm"))
+            && (libespm::Plugin::isValid(gameSettings.getPluginsFolder() / name, gameSettings.getLibespmId(), true)
+            || libespm::Plugin::isValid(gameSettings.getPluginsFolder() / (name + ".ghost"), gameSettings.getLibespmId(), true));
     }
 
     std::string Plugin::trimGhostExtension(const std::string& filename) {
