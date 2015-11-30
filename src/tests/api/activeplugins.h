@@ -29,6 +29,8 @@ along with libloadorder.  If not, see
 #include "tests/fixtures.h"
 #include "tests/api/CApiGameOperationTest.h"
 
+#include <array>
+
 namespace liblo {
     namespace test {
         char ** begin(char ** cArray) {
@@ -90,119 +92,57 @@ namespace liblo {
                 ASSERT_EQ(1, numPlugins);
             }
         }
+
+        class lo_set_active_plugins_test : public CApiGameOperationTest {
+        protected:
+            lo_set_active_plugins_test() : invalidPlugin("NotAPlugin.esm") {
+                plugins[0] = masterFile.c_str();
+                plugins[1] = "Blank.esm";
+                plugins[2] = "Blank.esp";
+                plugins[3] = "Blank - Master Dependent.esp";
+            }
+
+            std::array<const char *, 4> plugins;
+
+            std::string invalidPlugin;
+        };
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_set_active_plugins_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_set_active_plugins_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins.data(), plugins.size()));
+        }
+
+        TEST_P(lo_set_active_plugins_test, shouldFailIfPluginsPointerIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gameHandle, NULL, plugins.size()));
+        }
+
+        TEST_P(lo_set_active_plugins_test, shouldFailIfPluginsSizeIsZeroForTimestampBasedGamesAndFailOtherwise) {
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
+                EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gameHandle, plugins.data(), 0));
+            else
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gameHandle, plugins.data(), 0));
+        }
+
+        TEST_P(lo_set_active_plugins_test, shouldFailIfAPluginIsInvalid) {
+            plugins[1] = invalidPlugin.c_str();
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gameHandle, plugins.data(), plugins.size()));
+        }
+
+        TEST_P(lo_set_active_plugins_test, shouldSucceedIfPluginsSizeIsNonZero) {
+            EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gameHandle, plugins.data(), plugins.size()));
+        }
     }
-}
-
-TEST_F(OblivionOperationsTest, SetActivePlugins_NullInputs) {
-    const char * plugins[] = {
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 3;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins, pluginsNum));
-    AssertInitialState();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, NULL, pluginsNum));
-    AssertInitialState();
-
-    EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, 0));
-    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
-}
-
-TEST_F(OblivionOperationsTest, SetActivePlugins_NonPluginFile) {
-    const char * plugins[] = {
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp",
-        "NotAPlugin.esm"
-    };
-    size_t pluginsNum = 4;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, plugins, pluginsNum));
-    AssertInitialState();
-}
-
-TEST_F(OblivionOperationsTest, SetActivePlugins_MissingPlugin) {
-    const char * plugins[] = {
-        "Blank.esm",
-        "Blank.missing.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 3;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, plugins, pluginsNum));
-    AssertInitialState();
-}
-
-TEST_F(OblivionOperationsTest, SetActivePlugins_Valid) {
-    const char * plugins[] = {
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 3;
-
-    EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, pluginsNum));
-    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
-}
-
-TEST_F(SkyrimOperationsTest, SetActivePlugins_NullInputs) {
-    const char * plugins[] = {
-        "Skyrim.esm",
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 4;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins, pluginsNum));
-    AssertInitialState();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, NULL, pluginsNum));
-    AssertInitialState();
-}
-
-TEST_F(SkyrimOperationsTest, SetActivePlugins_MissingPlugin) {
-    const char * plugins[] = {
-        "Skyrim.esm",
-        "Blank.esm",
-        "Blank.missing.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 4;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, plugins, pluginsNum));
-    AssertInitialState();
-}
-
-TEST_F(SkyrimOperationsTest, SetActivePlugins_NonPluginFile) {
-    const char * plugins[] = {
-        "Skyrim.esm",
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp",
-        "NotAPlugin.esm"
-    };
-    size_t pluginsNum = 5;
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(gh, plugins, pluginsNum));
-    AssertInitialState();
-}
-
-TEST_F(SkyrimOperationsTest, SetActivePlugins_Valid) {
-    const char * plugins[] = {
-        "Skyrim.esm",
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Master Dependent.esp"
-    };
-    size_t pluginsNum = 4;
-    EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gh, plugins, pluginsNum));
-    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
 }
 
 TEST_F(OblivionOperationsTest, GetPluginActive) {
