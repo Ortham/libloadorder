@@ -23,10 +23,9 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __LIBLO_TEST_API_ACTIVE_PLUGINS__
-#define __LIBLO_TEST_API_ACTIVE_PLUGINS__
+#ifndef LIBLO_TEST_API_ACTIVE_PLUGINS
+#define LIBLO_TEST_API_ACTIVE_PLUGINS
 
-#include "tests/fixtures.h"
 #include "tests/api/CApiGameOperationTest.h"
 
 #include <array>
@@ -95,16 +94,12 @@ namespace liblo {
 
         class lo_set_active_plugins_test : public CApiGameOperationTest {
         protected:
-            lo_set_active_plugins_test() : invalidPlugin("NotAPlugin.esm") {
+            lo_set_active_plugins_test() {
                 plugins[0] = masterFile.c_str();
-                plugins[1] = "Blank.esm";
-                plugins[2] = "Blank.esp";
-                plugins[3] = "Blank - Master Dependent.esp";
+                plugins[1] = blankEsm.c_str();
             }
 
-            std::array<const char *, 4> plugins;
-
-            std::string invalidPlugin;
+            std::array<const char *, 2> plugins;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -142,78 +137,91 @@ namespace liblo {
         TEST_P(lo_set_active_plugins_test, shouldSucceedIfPluginsSizeIsNonZero) {
             EXPECT_EQ(LIBLO_OK, lo_set_active_plugins(gameHandle, plugins.data(), plugins.size()));
         }
+
+        class lo_get_plugin_active_test : public CApiGameOperationTest {
+        protected:
+            lo_get_plugin_active_test() : isActive(false) {}
+
+            bool isActive;
+        };
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_get_plugin_active_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_get_plugin_active_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, blankEsm.c_str(), &isActive));
+        }
+
+        TEST_P(lo_get_plugin_active_test, shouldFailIfPluginIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gameHandle, NULL, &isActive));
+        }
+
+        TEST_P(lo_get_plugin_active_test, shouldFailIfOutputPointerIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gameHandle, blankEsm.c_str(), NULL));
+        }
+
+        TEST_P(lo_get_plugin_active_test, shouldOutputFalseForBlankEsm) {
+            EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gameHandle, blankEsm.c_str(), &isActive));
+            EXPECT_FALSE(isActive);
+        }
+
+        TEST_P(lo_get_plugin_active_test, shouldOutputTrueForBlankEsm) {
+            // Write out an active plugins file.
+            boost::filesystem::ofstream out(activePluginsFilePath);
+            out << getActivePluginsFileLinePrefix() << masterFile;
+            out.close();
+
+            EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gameHandle, masterFile.c_str(), &isActive));
+            EXPECT_TRUE(isActive);
+        }
+
+        class lo_set_plugin_active_test : public CApiGameOperationTest {};
+
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_set_plugin_active_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
+
+        TEST_P(lo_set_plugin_active_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, blankEsm.c_str(), true));
+        }
+
+        TEST_P(lo_set_plugin_active_test, shouldFailIfPluginIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gameHandle, NULL, true));
+        }
+
+        TEST_P(lo_set_plugin_active_test, shouldSucceedIfActivatingAValidPlugin) {
+            EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gameHandle, blankEsm.c_str(), true));
+        }
+
+        TEST_P(lo_set_plugin_active_test, shouldSucceedIfDeactivatingAValidPlugin) {
+            EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gameHandle, blankEsm.c_str(), false));
+        }
+
+        TEST_P(lo_set_plugin_active_test, shouldFailIfActivatingAnInvalidPlugin) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gameHandle, invalidPlugin.c_str(), true));
+        }
+
+        TEST_P(lo_set_plugin_active_test, shouldSucceedIfDeactivatingAnInvalidPlugin) {
+            EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gameHandle, blankEsm.c_str(), false));
+        }
     }
-}
-
-TEST_F(OblivionOperationsTest, GetPluginActive) {
-    bool isActive = true;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, "Blank - Master Dependent.esp", &isActive));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, NULL, &isActive));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", NULL));
-
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "NotAPlugin.esm", &isActive));
-    EXPECT_FALSE(isActive);
-
-    isActive = true;
-
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
-    EXPECT_FALSE(isActive);
-}
-
-TEST_F(SkyrimOperationsTest, GetPluginActive) {
-    bool isActive = true;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, "Blank - Master Dependent.esp", &isActive));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, NULL, &isActive));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", NULL));
-
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "NotAPlugin.esm", &isActive));
-    EXPECT_FALSE(isActive);
-
-    isActive = true;
-    EXPECT_EQ(LIBLO_OK, lo_get_plugin_active(gh, "Blank - Master Dependent.esp", &isActive));
-    EXPECT_FALSE(isActive);
-}
-
-TEST_F(OblivionOperationsTest, SetPluginActive) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, "Blank - Different Master Dependent.esp", true));
-    AssertInitialState();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, NULL, true));
-    AssertInitialState();
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, "NotAPlugin.esm", true));
-    AssertInitialState();
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, "Blank.missing.esp", true));
-    AssertInitialState();
-
-    EXPECT_FALSE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-
-    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank.esm", false));
-    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
-}
-
-TEST_F(SkyrimOperationsTest, SetPluginActive) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, "Blank - Different Master Dependent.esp", true));
-    AssertInitialState();
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, NULL, true));
-    AssertInitialState();
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, "NotAPlugin.esm", true));
-    AssertInitialState();
-
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(gh, "Blank.missing.esp", true));
-    AssertInitialState();
-
-    EXPECT_FALSE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank - Different Master Dependent.esp", true));
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-
-    EXPECT_TRUE(CheckPluginActive("Blank.esm"));
-    EXPECT_EQ(LIBLO_OK, lo_set_plugin_active(gh, "Blank.esm", false));
-    EXPECT_FALSE(CheckPluginActive("Blank.esm"));
 }
 
 #endif
