@@ -43,6 +43,16 @@ namespace liblo {
 
             const std::string invalidPlugin;
         };
+
+        // A couple of helpers for using C arrays with standard library
+        // algorithms.
+        char ** begin(char ** cArray) {
+            return cArray;
+        }
+
+        char ** end(char ** cArray, size_t cArraySize) {
+            return cArray + cArraySize;
+        }
     }
 }
 

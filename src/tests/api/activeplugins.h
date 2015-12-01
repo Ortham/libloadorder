@@ -32,14 +32,6 @@ along with libloadorder.  If not, see
 
 namespace liblo {
     namespace test {
-        char ** begin(char ** cArray) {
-            return cArray;
-        }
-
-        char ** end(char ** cArray, size_t cArraySize) {
-            return cArray + cArraySize;
-        }
-
         class lo_get_active_plugins_test : public CApiGameOperationTest {
         protected:
             lo_get_active_plugins_test() :
