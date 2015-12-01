@@ -101,42 +101,24 @@ namespace liblo {
                     << linePrefix << utf8ToWindows1252(invalidPlugin) << std::endl;
                 out.close();
 
-                if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
-                    // Write out the game's load order file, using the valid
-                    // version of what's in the active plugins file, plus
-                    // additional plugins.
-                    out.open(loadOrderFilePath);
-                    out << nonAsciiEsm << std::endl
-                        << masterFile << std::endl
-                        << blankDifferentEsm << std::endl
-                        << blankEsm << std::endl
-                        << updateEsm << std::endl
-                        << blankEsp << std::endl;
-                    out.close();
-                }
-                else {
-                    // Set load order using timestamps
-                    std::vector<std::string> plugins({
-                        masterFile,
-                        blankEsm,
-                        blankDifferentEsm,
-                        blankMasterDependentEsm,
-                        blankDifferentMasterDependentEsm,
-                        nonAsciiEsm,
-                        blankEsp,  // Put a plugin before master to test fixup.
-                        updateEsm,
-                        blankDifferentEsp,
-                        blankMasterDependentEsp,
-                        blankDifferentMasterDependentEsp,
-                        blankPluginDependentEsp,
-                        blankDifferentPluginDependentEsp,
-                    });
-                    time_t modificationTime = time(NULL);  // Current time.
-                    for (const auto &plugin : plugins) {
-                        boost::filesystem::last_write_time(pluginsPath / plugin, modificationTime);
-                        modificationTime += 60;
-                    }
-                }
+                // Write out a load order, making it as invalid as possible
+                // for the game to still fix.
+                std::vector<std::string> plugins({
+                    nonAsciiEsm,
+                    masterFile,
+                    blankDifferentEsm,
+                    blankEsm,
+                    blankMasterDependentEsm,
+                    blankDifferentMasterDependentEsm,
+                    blankEsp,  // Put a plugin before master to test fixup.
+                    updateEsm,
+                    blankDifferentEsp,
+                    blankMasterDependentEsp,
+                    blankDifferentMasterDependentEsp,
+                    blankPluginDependentEsp,
+                    blankDifferentPluginDependentEsp,
+                });
+                writeLoadOrder(plugins);
             }
 
             inline virtual void TearDown() {
@@ -149,6 +131,21 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
                 if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
                     ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
+            }
+
+            inline void writeLoadOrder(std::vector<std::string> loadOrder) const {
+                if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                    boost::filesystem::ofstream out(loadOrderFilePath);
+                    for (const auto& plugin : loadOrder)
+                        out << plugin << std::endl;
+                }
+                else {
+                    time_t modificationTime = time(NULL);  // Current time.
+                    for (const auto& plugin : loadOrder) {
+                        boost::filesystem::last_write_time(pluginsPath / plugin, modificationTime);
+                        modificationTime += 60;
+                    }
+                }
             }
 
             const GameSettings gameSettings;
@@ -254,7 +251,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
+            EXPECT_TRUE(std::equal(begin(validLoadOrder), end(validLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, settingTheLoadOrderTwiceShouldReplaceTheFirstLoadOrder) {
@@ -271,7 +268,7 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.setLoadOrder(firstLoadOrder));
             ASSERT_NO_THROW(loadOrder.setLoadOrder(secondLoadOrder));
 
-            EXPECT_EQ(secondLoadOrder, loadOrder.getLoadOrder());
+            EXPECT_TRUE(std::equal(begin(secondLoadOrder), end(secondLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, settingAnInvalidLoadOrderShouldMakeNoChanges) {
@@ -289,7 +286,7 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
             EXPECT_ANY_THROW(loadOrder.setLoadOrder(invalidLoadOrder));
 
-            EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
+            EXPECT_TRUE(std::equal(begin(validLoadOrder), end(validLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, settingALoadOrderWithTheGameMasterNotAtTheBeginningShouldFailForTextfileLoadOrderGamesAndSucceedOtherwise) {
@@ -322,7 +319,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            EXPECT_EQ(validLoadOrder.size(), loadOrder.getPosition(missingPlugin));
+            EXPECT_EQ(13, loadOrder.getPosition(missingPlugin));
         }
 
         TEST_P(LoadOrderTest, positionOfAPluginShouldBeEqualToItsLoadOrderIndex) {
@@ -478,53 +475,34 @@ namespace liblo {
                 blankDifferentEsm,
                 blankEsm,
             });
-            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+
+            EXPECT_TRUE(std::equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, settingANonMasterPluginToLoadBeforeAMasterPluginShouldThrow) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankEsp,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
+            ASSERT_NO_THROW(loadOrder.load());
 
             EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1));
         }
 
         TEST_P(LoadOrderTest, settingANonMasterPluginToLoadBeforeAMasterPluginShouldMakeNoChanges) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankEsp,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
+            ASSERT_NO_THROW(loadOrder.load());
 
             EXPECT_ANY_THROW(loadOrder.setPosition(blankEsp, 1));
-            EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
+            EXPECT_NE(1, loadOrder.getPosition(blankEsp));
         }
 
         TEST_P(LoadOrderTest, settingAMasterToLoadAfterAPluginShouldThrow) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankEsp,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
+            ASSERT_NO_THROW(loadOrder.load());
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2));
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 10));
         }
 
         TEST_P(LoadOrderTest, settingAMasterToLoadAfterAPluginShouldMakeNoChanges) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankEsp,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
+            ASSERT_NO_THROW(loadOrder.load());
 
-            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 2));
-            EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
+            EXPECT_ANY_THROW(loadOrder.setPosition(blankEsm, 10));
+            EXPECT_NE(10, loadOrder.getPosition(blankEsm));
         }
 
         TEST_P(LoadOrderTest, clearingLoadOrderShouldRemoveAllPluginsFromTheLoadOrder) {
@@ -558,31 +536,19 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, activatingANonMasterPluginNotInTheLoadOrderShouldAppendItToTheLoadOrder) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankDifferentEsm,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
-            ASSERT_EQ(3, loadOrder.getLoadOrder().size());
+            ASSERT_NO_THROW(loadOrder.setPosition(masterFile, 0));
 
             EXPECT_NO_THROW(loadOrder.activate(blankEsp));
-            EXPECT_EQ(3, loadOrder.getPosition(blankEsp));
+            EXPECT_EQ(1, loadOrder.getPosition(blankEsp));
             EXPECT_TRUE(loadOrder.isActive(blankEsp));
         }
 
         TEST_P(LoadOrderTest, activatingAMasterPluginNotInTheLoadOrderShouldInsertItAfterAllOtherMasters) {
-            std::vector<std::string> validLoadOrder({
-                masterFile,
-                blankEsm,
-                blankEsp,
-            });
-            ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
-            ASSERT_EQ(3, loadOrder.getLoadOrder().size());
+            ASSERT_NO_THROW(loadOrder.setPosition(masterFile, 0));
+            ASSERT_NO_THROW(loadOrder.setPosition(blankEsp, 1));
 
             EXPECT_NO_THROW(loadOrder.activate(blankDifferentEsm));
-            ASSERT_EQ(4, loadOrder.getLoadOrder().size());
-            EXPECT_EQ(2, loadOrder.getPosition(blankDifferentEsm));
+            EXPECT_EQ(1, loadOrder.getPosition(blankDifferentEsm));
             EXPECT_TRUE(loadOrder.isActive(blankDifferentEsm));
         }
 
@@ -618,14 +584,14 @@ namespace liblo {
             std::vector<std::string> validLoadOrder({
                 masterFile,
                 blankEsm,
-                blankEsp,
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
             EXPECT_NO_THROW(loadOrder.activate(boost::to_lower_copy(blankEsm)));
 
             EXPECT_TRUE(loadOrder.isActive(blankEsm));
-            EXPECT_EQ(validLoadOrder, loadOrder.getLoadOrder());
+
+            EXPECT_TRUE(std::equal(begin(validLoadOrder), end(validLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, activatingAPluginWhenMaxNumberAreAlreadyActiveShouldThrow) {
@@ -1074,18 +1040,20 @@ namespace liblo {
                     nonAsciiEsm,
                     blankDifferentEsm,
                     blankEsm,
+                    blankMasterDependentEsm,
+                    blankDifferentMasterDependentEsm,
                     updateEsm,
                 });
                 EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
             }
             else {
                 expectedLoadOrder = std::vector<std::string>({
+                    nonAsciiEsm,
                     masterFile,
-                    blankEsm,
                     blankDifferentEsm,
+                    blankEsm,
                     blankMasterDependentEsm,
                     blankDifferentMasterDependentEsm,
-                    nonAsciiEsm,
                     updateEsm,
                     blankEsp,
                     blankDifferentEsp,
@@ -1118,12 +1086,12 @@ namespace liblo {
             }
             else {
                 expectedLoadOrder = std::vector<std::string>({
+                    nonAsciiEsm,
                     masterFile,
-                    blankEsm,
                     blankDifferentEsm,
+                    blankEsm,
                     blankMasterDependentEsm,
                     blankDifferentMasterDependentEsm,
-                    nonAsciiEsm,
                     updateEsm,
                     blankEsp,
                     blankDifferentEsp,
@@ -1156,12 +1124,12 @@ namespace liblo {
                 blankEsp,
             });
             std::vector<std::string> expectedLoadOrder({
+                nonAsciiEsm,
                 masterFile,
-                blankEsm,
                 blankDifferentEsm,
+                blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentMasterDependentEsm,
-                nonAsciiEsm,
                 updateEsm,
                 blankEsp,
                 blankDifferentEsp,

@@ -52,7 +52,6 @@ namespace liblo {
         if (fs::is_directory(gameSettings.getPluginsFolder())) {
             // Now scan through Data folder. Add any plugins that aren't
             // already in load order.
-            auto firstNonMaster = getMasterPartitionPoint();
             for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
                 if (fs::is_regular_file(itr->status())) {
                     const std::string filename(itr->path().filename().string());
@@ -134,6 +133,16 @@ namespace liblo {
 
         // Swap load order for the new one.
         loadOrder.swap(plugins);
+
+        // Now append any plugins that are installed but aren't present in the
+        // new load order.
+        for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
+            if (fs::is_regular_file(itr->status())) {
+                const std::string filename(itr->path().filename().string());
+                if (Plugin::isValid(filename, gameSettings) && count(begin(loadOrder), end(loadOrder), filename) == 0)
+                    addToLoadOrder(filename);
+            }
+        }
 
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
             // Make sure that game master is active.
