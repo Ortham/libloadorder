@@ -23,225 +23,196 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __LIBLO_TEST_API__
-#define __LIBLO_TEST_API__
+#ifndef LIBLO_TEST_API_LIBLOADORDER
+#define LIBLO_TEST_API_LIBLOADORDER
 
-#include "tests/fixtures.h"
+#include "tests/GameTest.h"
+#include "tests/api/CApiGameOperationTest.h"
+#include "tests/api/lo_create_handle_test.h"
 
-#include <boost/algorithm/string.hpp>
+namespace liblo {
+    namespace test {
+        TEST(lo_get_version, shouldFailIfPassedNullMajorVersionParameter) {
+            unsigned int vMinor = 0;
+            unsigned int vPatch = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, &vPatch));
 
-TEST(GetVersion, HandlesNullInput) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, &vMinor, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, &vPatch));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(NULL, NULL, NULL));
-}
+            ASSERT_NO_THROW(lo_cleanup());
+        }
 
-TEST(GetVersion, HandlesValidInput) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
-}
+        TEST(lo_get_version, shouldFailIfPassedNullMinorVersionParameter) {
+            unsigned int vMajor = 0;
+            unsigned int vPatch = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, NULL, &vPatch));
 
-TEST(IsCompatible, HandlesCompatibleVersion) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+            ASSERT_NO_THROW(lo_cleanup());
+        }
 
-    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor, vPatch));
-    // Test somewhat arbitrary variations.
-    EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
-    if (vMinor > 0 && vPatch > 0)
-        EXPECT_TRUE(lo_is_compatible(vMajor, vMinor - 1, vPatch - 1));
-}
+        TEST(lo_get_version, shouldFailIfPassedNullPatchVersionParameter) {
+            unsigned int vMajor = 0;
+            unsigned int vMinor = 0;
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_version(&vMajor, &vMinor, NULL));
 
-TEST(IsCompatible, HandlesIncompatibleVersion) {
-    unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
-    EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+            ASSERT_NO_THROW(lo_cleanup());
+        }
 
-    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
-    // Test somewhat arbitrary variations.
-    EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor + 1, vPatch + 1));
-    if (vMinor > 0 && vPatch > 0)
-        EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor - 1, vPatch - 1));
-}
+        TEST(lo_get_version, shouldSucceedIfPassedNonNullParameters) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            EXPECT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
+        }
 
-TEST(GetErrorMessage, HandlesInputCorrectly) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+        TEST(lo_is_compatible, shouldReturnTrueIfMajorVersionIsEqual) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_STREQ("Null pointer passed.", error);
-}
+            EXPECT_TRUE(lo_is_compatible(vMajor, vMinor + 1, vPatch + 1));
+        }
 
-TEST(Cleanup, CleansUpAfterError) {
-    // First generate an error.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+        TEST(lo_is_compatible, shouldReturnFalseIfMajorVersionIsNotEqual) {
+            unsigned int vMajor = 0, vMinor = 0, vPatch = 0;
+            ASSERT_EQ(LIBLO_OK, lo_get_version(&vMajor, &vMinor, &vPatch));
 
-    // Check that the error message is non-null.
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    ASSERT_STREQ("Null pointer passed.", error);
+            EXPECT_FALSE(lo_is_compatible(vMajor + 1, vMinor, vPatch));
+        }
 
-    ASSERT_NO_THROW(lo_cleanup());
+        TEST(lo_get_error_message, shouldFailIfPassedNullPointer) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
-    // Now check that the error message pointer is null.
-    error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    EXPECT_EQ(nullptr, error);
-}
+            ASSERT_NO_THROW(lo_cleanup());
+        }
 
-TEST(Cleanup, HandlesNoError) {
-    ASSERT_NO_THROW(lo_cleanup());
+        TEST(lo_get_error_message, shouldOutputNullPointerIfNoErrorHasOccurred) {
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_EQ(nullptr, error);
+        }
 
-    const char * error = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
-    EXPECT_EQ(nullptr, error);
-}
+        TEST(lo_get_error_message, shouldOutputCorrectErrorMessageIfErrorHasOccurred) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
-TEST_F(OblivionHandleCreationTest, HandlesValidInputs) {
-    // Try all the game codes, it doesn't matter for lo_create_handle what game is actually at the given paths.
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES3, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FO3, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_FNV, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_STREQ("Null pointer passed.", error);
 
-    // Also test absolute paths.
-    boost::filesystem::path game = boost::filesystem::current_path() / dataPath.parent_path();
-    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
-}
+            ASSERT_NO_THROW(lo_cleanup());
+        }
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidHandleInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-}
+        TEST(lo_get_error_message, shouldOutputLastErrorMessageIfSuccessHasOccurredSinceLastError) {
+            const char * error = nullptr;
+            const char * lastError = nullptr;
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidGameType) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, UINT_MAX, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+            ASSERT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            ASSERT_NE(nullptr, error);
+            lastError = error;
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidGamePathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, NULL, localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, missingPath.string().c_str(), localPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            ASSERT_EQ(lastError, error);
+        }
 
-TEST_F(OblivionHandleCreationTest, HandlesInvalidLocalPathInput) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), missingPath.string().c_str()));
-    EXPECT_EQ(NULL, gh);
-}
+        TEST(lo_cleanup, shouldNotThrowIfNoErrorMessageToCleanUp) {
+            EXPECT_NO_THROW(lo_cleanup());
+        }
 
-#ifdef _WIN32
-TEST_F(OblivionHandleCreationTest, HandlesNullLocalPath) {
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES4, dataPath.parent_path().string().c_str(), NULL));
-    EXPECT_NE(nullptr, gh);
-}
-#endif
+        TEST(lo_cleanup, shouldNotThrowIfThereIsAnErrorMessageToCleanUp) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
-TEST_F(SkyrimHandleCreationTest, HandlesValidInputs) {
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, dataPath.parent_path().string().c_str(), localPath.string().c_str()));
-    ASSERT_NO_THROW(lo_destroy_handle(gh));
-    gh = nullptr;
+            EXPECT_NO_THROW(lo_cleanup());
+        }
 
-    // Also test absolute paths.
-    boost::filesystem::path game = boost::filesystem::current_path() / dataPath.parent_path();
-    boost::filesystem::path local = boost::filesystem::current_path() / localPath;
-    EXPECT_EQ(LIBLO_OK, lo_create_handle(&gh, LIBLO_GAME_TES5, game.string().c_str(), local.string().c_str()));
-}
+        TEST(lo_cleanup, shouldFreeErrorMessageIfOneExists) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
 
-TEST(GameHandleDestroyTest, HandledNullInput) {
-    ASSERT_NO_THROW(lo_destroy_handle(NULL));
-}
+            EXPECT_NO_THROW(lo_cleanup());
 
-TEST_F(OblivionOperationsTest, SetGameMaster) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "EmptyFile.esm"));
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "NotAPlugin.esm"));
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_EQ(nullptr, error);
+        }
 
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.esm"));
+        TEST(lo_destroy_handle, shouldNotThrowIfGameHandleIsNotCreated) {
+            lo_game_handle gameHandle = nullptr;
+            EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
+        }
 
-    // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_OK, lo_set_game_master(gh, "Blank.missing.esm"));
-}
+        TEST(lo_destroy_handle, shouldNotThrowIfPassedNullPointer) {
+            EXPECT_NO_THROW(lo_destroy_handle(NULL));
+        }
 
-TEST_F(SkyrimOperationsTest, SetGameMaster) {
-    // Skyrim's game master cannot be set, these should all fail.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, "Blank.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, NULL));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EmptyFile.esm"));
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "NotAPlugin.esm"));
+        class lo_set_game_master_test : public CApiGameOperationTest {};
 
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "Blank.esm"));
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_set_game_master_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
 
-    // Try setting to a master that doesn't exist.
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gh, "EnhancedWeather.missing.esm"));
-}
+        TEST_P(lo_set_game_master_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, blankEsm.c_str()));
+        }
 
-TEST_F(OblivionOperationsTest, FixPluginLists) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
-    AssertInitialState();
+        TEST_P(lo_set_game_master_test, shouldFailIfPluginIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, NULL));
+        }
 
-    // Write a broken plugins.txt.
-    boost::filesystem::ofstream active(localPath / "plugins.txt");
-    active << "Blank - Master Dependent.esp" << std::endl
-        << "Blank - Plugin Dependent.esp" << std::endl
-        << "Blank - Different Master Dependent.esp" << std::endl
-        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
-        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
-        << "Blank.esp" << std::endl;
-    active.close();
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsAnEmptyStringForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, ""));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, ""));
+        }
 
-    // Now fix plugins.txt
-    ASSERT_PRED1([](unsigned int i) {
-        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
-    }, lo_fix_plugin_lists(gh));
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsInvalidForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
+        }
 
-    // Check that fix worked.
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
-}
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsValidForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, blankEsm.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, blankEsm.c_str()));
+        }
 
-TEST_F(SkyrimOperationsTest, FixPluginLists) {
-    EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
-    AssertInitialState();
+        TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsDefaultGameMasterForTimestampBasedGamesAndFailOtherwise) {
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, masterFile.c_str()));
+            else
+                EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, masterFile.c_str()));
+        }
 
-    // Write a broken plugins.txt.
-    boost::filesystem::ofstream active(localPath / "plugins.txt");
-    active << "Blank - Master Dependent.esp" << std::endl
-        << "Blank - Plugin Dependent.esp" << std::endl
-        << "Blank - Different Master Dependent.esp" << std::endl
-        << "Blank - Master Dependent.esp" << std::endl  // Duplicate, should be removed.
-        << "Blank.missing.esm" << std::endl  // Missing, should be removed.
-        << "Blank.esp" << std::endl;
-    active.close();
+        class lo_fix_plugin_lists_test : public CApiGameOperationTest {};
 
-    // Now fix plugins.txt
-    ASSERT_PRED1([](unsigned int i) {
-        return i == LIBLO_OK || i == LIBLO_WARN_INVALID_LIST;
-    }, lo_fix_plugin_lists(gh));
+        // Pass an empty first argument, as it's a prefix for the test instantation,
+        // but we only have the one so no prefix is necessary.
+        INSTANTIATE_TEST_CASE_P(,
+                                lo_fix_plugin_lists_test,
+                                ::testing::Values(
+                                LIBLO_GAME_TES3,
+                                LIBLO_GAME_TES4,
+                                LIBLO_GAME_TES5,
+                                LIBLO_GAME_FO3,
+                                LIBLO_GAME_FNV,
+                                LIBLO_GAME_FO4));
 
-    // Check that fix worked.
-    EXPECT_TRUE(CheckPluginActive("Blank - Different Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Master Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank - Plugin Dependent.esp"));
-    EXPECT_TRUE(CheckPluginActive("Blank.esp"));
-    EXPECT_FALSE(CheckPluginActive("Blank.missing.esm"));
+        TEST_P(lo_fix_plugin_lists_test, shouldFailIfGameHandleIsNull) {
+            EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));
+        }
+
+        TEST_P(lo_fix_plugin_lists_test, shouldSucceedIfGameHandleIsNotNull) {
+            // Don't need to check its filesystem effects as that's handled by
+            // lower-level tests.
+            EXPECT_EQ(LIBLO_OK, lo_fix_plugin_lists(gameHandle));
+        }
+    }
 }
 
 #endif

@@ -23,10 +23,15 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
 #include "backend/Plugin.h"
 #include "backend/GameSettings.h"
+#include "libloadorder/constants.h"
+
+#include <boost/algorithm/string.hpp>
+#include <gtest/gtest.h>
+
+#include <chrono>
+#include <thread>
 
 namespace liblo {
     namespace test {
@@ -39,6 +44,7 @@ namespace liblo {
                 updateEsm("Update.esm"),
                 updateEsmGhost(updateEsm + ".ghost"),
                 invalidPlugin("NotAPlugin.esm"),
+                invalidExtensionPlugin("Blank.esm.mohidden"),
                 missingPlugin("missing.esm"),
                 // Just use Skyrim game settings to test with. The
                 // functionality only needs to get a plugins folder and libespm
@@ -61,12 +67,17 @@ namespace liblo {
 
                 // Ghost a plugin.
                 EXPECT_NO_THROW(boost::filesystem::copy(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / updateEsmGhost));
+
+                // Create an otherwise valid plugin with an extension that
+                // isn't .esp, .esm or .ghost.
+                EXPECT_NO_THROW(boost::filesystem::copy(gameSettings.getPluginsFolder() / blankEsm, gameSettings.getPluginsFolder() / invalidExtensionPlugin));
             }
 
             inline virtual void TearDown() {
                 ASSERT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / invalidPlugin));
                 EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / blankEsmGhost));
                 EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / updateEsmGhost));
+                EXPECT_NO_THROW(boost::filesystem::remove(gameSettings.getPluginsFolder() / invalidExtensionPlugin));
             }
 
             GameSettings gameSettings;
@@ -77,6 +88,7 @@ namespace liblo {
             std::string updateEsm;
             std::string updateEsmGhost;
             std::string invalidPlugin;
+            std::string invalidExtensionPlugin;
             std::string missingPlugin;
         };
 
@@ -276,6 +288,10 @@ namespace liblo {
 
         TEST_F(PluginTest, invalidPluginShouldBeRecognisedAsSuch) {
             EXPECT_FALSE(Plugin::isValid(invalidPlugin, gameSettings));
+        }
+
+        TEST_F(PluginTest, aPluginWithAnInvalidFileExtensionShouldBeTreatedAsInvalid) {
+            EXPECT_FALSE(Plugin::isValid(invalidExtensionPlugin, gameSettings));
         }
 
         TEST_F(PluginTest, missingPluginShouldBeTreatedAsInvalid) {

@@ -23,9 +23,10 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
 #include "backend/helpers.h"
+
+#include <boost/filesystem/fstream.hpp>
+#include <gtest/gtest.h>
 
 namespace liblo {
     namespace test {

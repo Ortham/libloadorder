@@ -23,16 +23,23 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
+#include "tests/GameTest.h"
 #include "libloadorder/constants.h"
 #include "backend/GameSettings.h"
 
 namespace liblo {
     namespace test {
-        class GameSettingsTest : public ::testing::TestWithParam<unsigned int> {
+        class GameSettingsTest : public GameTest {
         protected:
-            GameSettingsTest() : gameSettings(GetParam(), "", getLocalPath(GetParam())) {}
+            GameSettingsTest() :
+                gameSettings(GetParam(), gamePath, localPath),
+                oblivionIni(gamePath / "Oblivion.ini") {}
+
+            inline virtual void TearDown() {
+                GameTest::TearDown();
+
+                EXPECT_NO_THROW(boost::filesystem::remove(oblivionIni));
+            }
 
             inline libespm::GameId getExpectedLibespmId() {
                 if (GetParam() == LIBLO_GAME_TES3)
@@ -49,16 +56,9 @@ namespace liblo {
                     return libespm::GameId::FALLOUT4;
             }
 
-            inline boost::filesystem::path getLocalPath(unsigned int gameId) const {
-                if (gameId == LIBLO_GAME_TES3)
-                    return "./local/Morrowind";
-                else if (gameId == LIBLO_GAME_TES4)
-                    return "./local/Oblivion";
-                else
-                    return "./local/Skyrim";
-            }
+            const GameSettings gameSettings;
 
-            GameSettings gameSettings;
+            const boost::filesystem::path oblivionIni;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -82,39 +82,19 @@ namespace liblo {
         }
 
         TEST_P(GameSettingsTest, gettingMasterFileShouldReturnTheCorrectFilenameForEachGame) {
-            if (GetParam() == LIBLO_GAME_TES3)
-                EXPECT_EQ("Morrowind.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_TES4)
-                EXPECT_EQ("Oblivion.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_TES5)
-                EXPECT_EQ("Skyrim.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_FO3)
-                EXPECT_EQ("Fallout3.esm", gameSettings.getMasterFile());
-            else if (GetParam() == LIBLO_GAME_FNV)
-                EXPECT_EQ("FalloutNV.esm", gameSettings.getMasterFile());
-            else
-                EXPECT_EQ("Fallout4.esm", gameSettings.getMasterFile());
+            EXPECT_EQ(masterFile, gameSettings.getMasterFile());
         }
 
         TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndFallout4AndTimestampOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
-                EXPECT_EQ(LIBLO_METHOD_TEXTFILE, gameSettings.getLoadOrderMethod());
-            else
-                EXPECT_EQ(LIBLO_METHOD_TIMESTAMP, gameSettings.getLoadOrderMethod());
+            EXPECT_EQ(loadOrderMethod, gameSettings.getLoadOrderMethod());
         }
 
         TEST_P(GameSettingsTest, pluginsFolderShouldBeDataFilesForMorrowindAndDataOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES3)
-                EXPECT_EQ("Data Files", gameSettings.getPluginsFolder());
-            else
-                EXPECT_EQ("Data", gameSettings.getPluginsFolder());
+            EXPECT_EQ(pluginsPath, gameSettings.getPluginsFolder());
         }
 
         TEST_P(GameSettingsTest, activePluginsFileShouldBeMorrowindIniForMorrowindAndPluginsTxtOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES3)
-                EXPECT_EQ("Morrowind.ini", gameSettings.getActivePluginsFile());
-            else
-                EXPECT_EQ(getLocalPath(GetParam()) / "plugins.txt", gameSettings.getActivePluginsFile());
+            EXPECT_EQ(activePluginsFilePath, gameSettings.getActivePluginsFile());
         }
 
         TEST_P(GameSettingsTest, activePluginsFileShouldBeInGameFolderForOblivionIfItIsSetToUseTheGameFolder) {
@@ -122,16 +102,31 @@ namespace liblo {
                 return;
 
             // Set ini setting.
-            boost::filesystem::ofstream out("Oblivion.ini");
+            boost::filesystem::ofstream out(oblivionIni);
             out << "bUseMyGamesDirectory=0";
             out.close();
 
-            // Now reinitialise game settings.
-            gameSettings = GameSettings(GetParam(), "", getLocalPath(GetParam()));
+            // The active plugins folder for existing game settings should be
+            // unchanged, but new objects should use the game folder.
+            ASSERT_NE(activePluginsFilePath, activePluginsFilePath.filename());
+            EXPECT_EQ(activePluginsFilePath, gameSettings.getActivePluginsFile());
+            GameSettings settings = GameSettings(GetParam(), gamePath, localPath);
+            EXPECT_EQ(gamePath / activePluginsFilePath.filename(), settings.getActivePluginsFile());
+        }
 
-            EXPECT_EQ("plugins.txt", gameSettings.getActivePluginsFile());
+        TEST_P(GameSettingsTest, activePluginsFileShouldBeInLocalFolderForOblivionIfItIsSetNotToUseTheGameFolder) {
+            if (GetParam() != LIBLO_GAME_TES4)
+                return;
 
-            EXPECT_NO_THROW(boost::filesystem::remove("Oblivion.ini"));
+            // Set ini setting.
+            boost::filesystem::ofstream out(oblivionIni);
+            out << "bUseMyGamesDirectory=1";
+            out.close();
+
+            // The active plugins folder for existing game settings should be
+            // unchanged, but new objects should use the game folder.
+            EXPECT_EQ(activePluginsFilePath, gameSettings.getActivePluginsFile());
+            EXPECT_EQ(activePluginsFilePath, GameSettings(GetParam(), gamePath, localPath).getActivePluginsFile());
         }
 
         TEST_P(GameSettingsTest, gettingLoadOrderFilePathShouldThrowForTimestampBasedGamesAndNotOtherwise) {
@@ -143,7 +138,7 @@ namespace liblo {
 
         TEST_P(GameSettingsTest, activePluginsFileShouldBeLoadOrderTxtForTimestampBasedGames) {
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
-                EXPECT_EQ(getLocalPath(GetParam()) / "loadorder.txt", gameSettings.getLoadOrderFile());
+                EXPECT_EQ(loadOrderFilePath, gameSettings.getLoadOrderFile());
         }
     }
 }
