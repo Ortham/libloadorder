@@ -104,6 +104,8 @@ IF (CMAKE_COMPILER_IS_GNUCXX)
         set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
         set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
     ENDIF ()
+
+    set(PROJECT_LIBRARIES "pthread")
 ENDIF ()
 
 
@@ -138,7 +140,7 @@ target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIB
 IF (${GTEST_FOUND})
     # Build libloadorder tester.
     add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
-    target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES} ${PROJECT_LIBRARIES})
 ENDIF ()
 
 
