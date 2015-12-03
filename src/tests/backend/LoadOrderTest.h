@@ -39,7 +39,6 @@ namespace liblo {
         class LoadOrderTest : public GameTest {
         protected:
             inline LoadOrderTest() :
-                blankDifferentEsm("Blank - Different.esm"),
                 blankMasterDependentEsm("Blank - Master Dependent.esm"),
                 blankDifferentMasterDependentEsm("Blank - Different Master Dependent.esm"),
                 blankEsp("Blank.esp"),
@@ -48,7 +47,6 @@ namespace liblo {
                 blankDifferentMasterDependentEsp("Blank - Different Master Dependent.esp"),
                 blankPluginDependentEsp("Blank - Plugin Dependent.esp"),
                 blankDifferentPluginDependentEsp("Blank - Different Plugin Dependent.esp"),
-                invalidPlugin("NotAPlugin.esm"),
                 missingPlugin("missing.esm"),
                 updateEsm("Update.esm"),
                 nonAsciiEsm("Blàñk.esm"),
@@ -58,8 +56,6 @@ namespace liblo {
             inline virtual void SetUp() {
                 GameTest::SetUp();
 
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsm));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankMasterDependentEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentMasterDependentEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsp));
@@ -68,12 +64,6 @@ namespace liblo {
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentMasterDependentEsp));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentPluginDependentEsp));
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / missingPlugin));
-
-                // Write out an non-empty, non-plugin file.
-                boost::filesystem::ofstream out(pluginsPath / invalidPlugin);
-                out << "This isn't a valid plugin file.";
-                out.close();
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / invalidPlugin));
 
                 // Make sure Update.esm exists.
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / updateEsm));
@@ -91,7 +81,7 @@ namespace liblo {
 
                 // Write out an active plugins file, making it as invalid as
                 // possible for the game to still fix.
-                out.open(activePluginsFilePath);
+                boost::filesystem::ofstream out(activePluginsFilePath);
                 out << std::endl
                     << '#' << utf8ToWindows1252(blankDifferentEsm) << std::endl
                     << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
@@ -124,13 +114,8 @@ namespace liblo {
             inline virtual void TearDown() {
                 GameTest::TearDown();
 
-                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / invalidPlugin));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
-
-                ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
-                if (loadOrderMethod == LIBLO_METHOD_TEXTFILE)
-                    ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
             }
 
             inline void writeLoadOrder(std::vector<std::string> loadOrder) const {
@@ -151,7 +136,6 @@ namespace liblo {
             const GameSettings gameSettings;
             LoadOrder loadOrder;
 
-            std::string blankDifferentEsm;
             std::string blankMasterDependentEsm;
             std::string blankDifferentMasterDependentEsm;
             std::string blankEsp;
@@ -161,7 +145,6 @@ namespace liblo {
             std::string blankPluginDependentEsp;
             std::string blankDifferentPluginDependentEsp;
 
-            std::string invalidPlugin;
             std::string missingPlugin;
             std::string updateEsm;
             std::string nonAsciiEsm;

@@ -32,16 +32,11 @@ namespace liblo {
     namespace test {
         class CApiGameOperationTest : public lo_create_handle_test {
         protected:
-            CApiGameOperationTest() :
-                invalidPlugin("NotAPlugin.esm") {}
-
             inline virtual void SetUp() {
                 GameTest::SetUp();
 
                 ASSERT_EQ(LIBLO_OK, lo_create_handle(&gameHandle, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
             }
-
-            const std::string invalidPlugin;
         };
 
         // A couple of helpers for using C arrays with standard library

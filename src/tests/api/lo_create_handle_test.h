@@ -35,28 +35,21 @@ namespace liblo {
         protected:
             lo_create_handle_test() :
                 invalidPath("./missing"),
-                blankDifferentEsm("Blank - Different.esm"),
                 gameHandle(nullptr) {}
 
             inline virtual void SetUp() {
                 GameTest::SetUp();
 
                 ASSERT_FALSE(boost::filesystem::exists(invalidPath));
-
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsm));
             }
 
             inline virtual void TearDown() {
                 GameTest::TearDown();
 
                 EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
-
-                ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
             }
 
             const boost::filesystem::path invalidPath;
-
-            const std::string blankDifferentEsm;
 
             lo_game_handle gameHandle;
         };

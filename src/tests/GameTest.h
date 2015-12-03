@@ -44,21 +44,31 @@ namespace liblo {
                 activePluginsFilePath(getActivePluginsFilePath()),
                 loadOrderFilePath(localPath / "loadorder.txt"),
                 masterFile(getMasterFile()),
-                blankEsm("Blank.esm") {}
+                blankEsm("Blank.esm"),
+                blankDifferentEsm("Blank - Different.esm"),
+                invalidPlugin("NotAPlugin.esm") {}
 
             inline virtual void SetUp() {
                 ASSERT_NO_THROW(boost::filesystem::create_directories(localPath));
 
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentEsm));
 
                 // Make sure the game master file exists.
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / masterFile));
                 ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / masterFile));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / masterFile));
+
+                // Write out an non-empty, non-plugin file.
+                boost::filesystem::ofstream out(pluginsPath / invalidPlugin);
+                out << "This isn't a valid plugin file.";
+                out.close();
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / invalidPlugin));
             }
 
             inline virtual void TearDown() {
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / masterFile));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / invalidPlugin));
 
                 ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
                 ASSERT_NO_THROW(boost::filesystem::remove(loadOrderFilePath));
@@ -82,6 +92,8 @@ namespace liblo {
 
             const std::string masterFile;
             const std::string blankEsm;
+            const std::string blankDifferentEsm;
+            const std::string invalidPlugin;
 
         private:
             inline boost::filesystem::path getLocalPath() const {
