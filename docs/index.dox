@@ -42,6 +42,33 @@
 
     All allocated memory is freed when lo_destroy_handle() is called, except the string allocated by lo_get_error_message(), which must be freed by calling lo_cleanup().
 
+    @section valid_plugins_sec Plugin Validity
+
+    Where libloadorder functions take one or more plugin filenames, it checks that these filenames correspond to valid plugins. libloadorder defines a valid plugin as one that:
+
+    - Ends with ".esp", ".esm", ".esp.ghost" or ".esm.ghost".
+    - Contains a header record with:
+      - The correct type ("TES3" for Morrowind, "TES4" otherwise).
+      - A size that is not larger than the total file size.
+      - Subrecords with sizes that do not together sum to larger than the expected total subrecords size.
+
+    This definition is substantially more permissive than games or other utilities may be for performance reasons, and because libloadorder uses no plugin data beyond the header record, so later corruption or invalid data would not affect its behaviour.
+
+    This permissivity does allow more strictly invalid plugins to be positioned in the load order and activated, which may cause game issues, but protecting against such circumstances is beyond the scope of libloadorder.
+
+    @section caching_sec Data Caching
+
+    libloadorder caches plugin, load order and active status data to improve performance. Each game handle has its own unique cache, and change detection is performed whenever an API function that takes a game handle is called. If changes are detected, the necessary data are reloaded before the function operates on the data.
+
+    Change detection is carried out by timestamp comparison, checking the current timestamps against the timestamps for the cached data. The files and folders which libloadorder checks the timestamps of are:
+
+    - The folder into which plugins are installed.
+    - The installed plugins.
+    - The file that holds the active plugins data.
+    - The file that holds the load order data, if the game is one handled by the textfile-based load order system.
+
+    Edits made to a file will only be detected if they call that file's timestamp to change. If edits are made and the timestamp is unchanged, the changes can only be detected by destroying the existing game handle and creating a new game handle to use.
+
     @section credit_sec Credits
 
     libloadorder is written by WrinklyNinja, with code contribution from Leandro Conde. libloadorder is written in C/C++ and makes use of some of the <a href="http://www.boost.org/">Boost</a> libraries and the <a href="https://github.com/WrinklyNinja/libespm">libespm</a> and <a href="https://github.com/google/googletest">Google Test</a> libraries.
