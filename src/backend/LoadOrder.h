@@ -60,7 +60,6 @@ namespace liblo {
         void activate(const std::string& pluginName);
         void deactivate(const std::string& pluginName);
 
-        bool hasFilesystemChanged() const;
         static bool isSynchronised(const GameSettings& gameSettings);
 
         void clear();
@@ -81,6 +80,7 @@ namespace liblo {
         size_t getMasterPartitionPoint() const;
         size_t countActivePlugins() const;
         Plugin getPluginObject(const std::string& pluginName) const;
+        size_t getAppendPosition(const Plugin& plugin) const;
 
         std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName);
         void partitionMasters();

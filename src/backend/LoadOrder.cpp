@@ -39,23 +39,40 @@ using namespace std;
 namespace fs = boost::filesystem;
 
 namespace liblo {
-    LoadOrder::LoadOrder(const GameSettings& gameSettings) : gameSettings(gameSettings) {}
+    LoadOrder::LoadOrder(const GameSettings& gameSettings) :
+        gameSettings(gameSettings),
+        pluginsFolderModTime(0),
+        activePluginsFileModTime(0),
+        loadOrderFileModTime(0) {}
 
     void LoadOrder::load() {
-        loadOrder.clear();
-        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-            if (fs::exists(gameSettings.getLoadOrderFile()))
-                loadFromFile(gameSettings.getLoadOrderFile());
-            else if (fs::exists(gameSettings.getActivePluginsFile()))
-                loadFromFile(gameSettings.getActivePluginsFile());
+        // Only reload plugins that have changed.
+        auto it = begin(loadOrder);
+        while (it != end(loadOrder)) {
+            try {
+                if (it->hasFileChanged(gameSettings.getPluginsFolder()))
+                    *it = Plugin(it->libespm::Plugin::getName(), gameSettings);
+                ++it;
+            } catch (std::exception&) {
+                it = loadOrder.erase(it);
+            }
         }
-        if (fs::is_directory(gameSettings.getPluginsFolder())) {
+
+        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
+            if (fs::exists(gameSettings.getLoadOrderFile()) && fs::last_write_time(gameSettings.getLoadOrderFile()) != loadOrderFileModTime)
+                loadFromFile(gameSettings.getLoadOrderFile());
+            else if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime) {
+                loadFromFile(gameSettings.getActivePluginsFile());
+                loadActivePlugins();
+            }
+        }
+        if (fs::is_directory(gameSettings.getPluginsFolder()) && fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime) {
             // Now scan through Data folder. Add any plugins that aren't
             // already in load order.
             for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
                 if (fs::is_regular_file(itr->status())) {
                     const std::string filename(itr->path().filename().string());
-                    if (Plugin::isValid(filename, gameSettings) && count(begin(loadOrder), end(loadOrder), filename) == 0)
+                    if (count(begin(loadOrder), end(loadOrder), filename) == 0 && Plugin::isValid(filename, gameSettings))
                         loadOrder.push_back(Plugin(filename, gameSettings));
                 }
             }
@@ -70,7 +87,7 @@ namespace liblo {
             partitionMasters();
             pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
         }
-        if (fs::exists(gameSettings.getActivePluginsFile()))
+        if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
             loadActivePlugins();
     }
 
@@ -272,43 +289,6 @@ namespace liblo {
             it->deactivate();
     }
 
-    bool LoadOrder::hasFilesystemChanged() const {
-        if (loadOrder.empty())
-            return true;
-
-        try {
-            // Has the plugins folder been modified since the load order
-            // was last read or saved?
-            if (fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime)
-                return true;
-
-            // Has the active plugins file been changed since it was last
-            // read or saved?
-            if (fs::exists(gameSettings.getActivePluginsFile())
-                && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
-                return true;
-
-            // Has the full textfile load order been changed since it was
-            // last read or saved?
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE
-                && fs::exists(gameSettings.getLoadOrderFile())
-                && fs::last_write_time(gameSettings.getLoadOrderFile()) != loadOrderFileModTime)
-                return true;
-
-            // Plugins folder modification time not changed if a file in it is
-            // edited, so check plugin modification dates.
-            for (const auto& plugin : loadOrder) {
-                if (plugin.hasFileChanged(gameSettings.getPluginsFolder()))
-                    return true;
-            }
-
-            return false;
-        }
-        catch (fs::filesystem_error& e) {
-            throw error(LIBLO_ERROR_TIMESTAMP_READ_FAIL, e.what());
-        }
-    }
-
     bool LoadOrder::isSynchronised(const GameSettings& gameSettings) {
         if (gameSettings.getLoadOrderMethod() != LIBLO_METHOD_TEXTFILE
             || !boost::filesystem::exists(gameSettings.getActivePluginsFile())
@@ -338,6 +318,9 @@ namespace liblo {
 
     void LoadOrder::clear() {
         loadOrder.clear();
+        pluginsFolderModTime = 0;
+        activePluginsFileModTime = 0;
+        loadOrderFileModTime = 0;
     }
 
     void LoadOrder::loadFromFile(const boost::filesystem::path& file) {
@@ -354,15 +337,27 @@ namespace liblo {
                 if (transcode)
                     line = windows1252toUtf8(line);
 
-                if (Plugin::isValid(line, gameSettings)) {
-                    // Erase the entry if it already exists.
-                    auto it = find(begin(loadOrder), end(loadOrder), line);
-                    if (it != end(loadOrder))
-                        loadOrder.erase(it);
+                // If the entry already exists, move it to the last
+                // valid position for it. Otherwise, add it at that
+                // position.
+                auto it = find(begin(loadOrder), end(loadOrder), line);
+                if (it != end(loadOrder)) {
+                    // Check if new pos will be different from old pos.
+                    size_t newPos = getAppendPosition(*it);
 
+                    size_t currentPos = distance(begin(loadOrder), it);
+                    if (newPos != currentPos) {
+                        if (newPos > currentPos)
+                            --newPos;
+
+                        Plugin plugin = *it;
+                        loadOrder.erase(it);
+                        loadOrder.insert(next(begin(loadOrder), newPos), plugin);
+                    }
+                } else if (Plugin::isValid(line, gameSettings)) {
                     // Add the entry to the appropriate place in the
                     // load order (eg. masters before plugins).
-                    it = addToLoadOrder(line);
+                    addToLoadOrder(line);
                 }
             }
 
@@ -410,16 +405,15 @@ namespace liblo {
 
                 line = windows1252toUtf8(line);
 
-                if (Plugin::isValid(line, gameSettings)) {
-                    // Add the entry to the appropriate place in the
-                    // load order if it does not already exist.
-                    auto it = find(begin(loadOrder), end(loadOrder), line);
-                    if (it == end(loadOrder))
-                        it = addToLoadOrder(line);
+                // Check if the line exists as a plugin. If it doesn't,
+                // check if it is for a valid plugin, and add it if so.
+                auto it = find(begin(loadOrder), end(loadOrder), line);
+                if (it == end(loadOrder) && Plugin::isValid(line, gameSettings))
+                    it = addToLoadOrder(line);
 
-                    // Activate the plugin.
+                // Activate the plugin.
+                if (it != end(loadOrder))
                     it->activate(gameSettings.getPluginsFolder());
-                }
             }
 
             activePluginsFileModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
@@ -582,18 +576,23 @@ namespace liblo {
         }
     }
 
+    size_t LoadOrder::getAppendPosition(const Plugin& plugin) const {
+        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(plugin.getName(), gameSettings.getMasterFile()))
+            return 0;
+        else if (plugin.isMasterFile())
+            return getMasterPartitionPoint();
+        else
+            return loadOrder.size();
+    }
+
     std::vector<Plugin>::iterator LoadOrder::addToLoadOrder(const std::string& pluginName) {
         std::vector<Plugin>::iterator it;
         Plugin plugin(pluginName, gameSettings);
-        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameSettings.getMasterFile()))
-            it = loadOrder.insert(begin(loadOrder), plugin);
-        else if (plugin.isMasterFile())
-            it = loadOrder.insert(next(begin(loadOrder), getMasterPartitionPoint()), plugin);
-        else {
-            loadOrder.push_back(plugin);
-            it = prev(loadOrder.end());
-        }
-        return it;
+        size_t pos = getAppendPosition(plugin);
+        if (pos == loadOrder.size()) {
+            return loadOrder.insert(end(loadOrder), plugin);
+        } else
+            return loadOrder.insert(next(begin(loadOrder), pos), plugin);
     }
 
     void LoadOrder::partitionMasters() {

@@ -182,14 +182,8 @@ LIBLO unsigned int lo_fix_plugin_lists(lo_game_handle gh) {
     if (gh == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    //Only need to update loadorder.txt if it is used.
     try {
-        //Update cache if necessary.
-        if (gh->loadOrder.hasFilesystemChanged()) {
-            gh->loadOrder.load();
-        }
-
-        // Now write changes.
+        gh->loadOrder.load();
         gh->loadOrder.save();
     }
     catch (error& e) {

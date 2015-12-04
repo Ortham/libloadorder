@@ -49,8 +49,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.hasFilesystemChanged())
-            gh->loadOrder.load();
+        gh->loadOrder.load();
     }
     catch (error& e) {
         gh->loadOrder.clear();
@@ -85,8 +84,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.hasFilesystemChanged())
-            gh->loadOrder.load();
+        gh->loadOrder.load();
     }
     catch (error& e) {
         gh->loadOrder.clear();
@@ -119,8 +117,7 @@ LIBLO unsigned int lo_set_plugin_active(lo_game_handle gh, const char * const pl
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.hasFilesystemChanged())
-            gh->loadOrder.load();
+        gh->loadOrder.load();
     }
     catch (error& e) {
         gh->loadOrder.clear();
@@ -157,8 +154,7 @@ LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh, const char * const pl
 
     //Update cache if necessary.
     try {
-        if (gh->loadOrder.hasFilesystemChanged())
-            gh->loadOrder.load();
+        gh->loadOrder.load();
     }
     catch (error& e) {
         gh->loadOrder.clear();

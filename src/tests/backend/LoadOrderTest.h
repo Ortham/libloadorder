@@ -81,15 +81,16 @@ namespace liblo {
 
                 // Write out an active plugins file, making it as invalid as
                 // possible for the game to still fix.
-                boost::filesystem::ofstream out(activePluginsFilePath);
-                out << std::endl
-                    << '#' << utf8ToWindows1252(blankDifferentEsm) << std::endl
-                    << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
-                    << linePrefix << utf8ToWindows1252(blankEsp) << std::endl
-                    << linePrefix << utf8ToWindows1252(nonAsciiEsm) << std::endl
-                    << linePrefix << utf8ToWindows1252(blankEsm) << std::endl
-                    << linePrefix << utf8ToWindows1252(invalidPlugin) << std::endl;
-                out.close();
+                std::unordered_set<std::string> activePlugins({
+                    "",
+                    '#' + blankDifferentEsm,
+                    blankEsm,
+                    blankEsp,
+                    nonAsciiEsm,
+                    blankEsm,
+                    invalidPlugin,
+                });
+                writeActivePlugins(activePlugins);
 
                 // Write out a load order, making it as invalid as possible
                 // for the game to still fix.
@@ -118,6 +119,16 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
             }
 
+            inline void writeActivePlugins(std::unordered_set<std::string> activePlugins) {
+                // Morrowind load order files have a slightly different
+                // format and a prefix is necessary.
+                std::string linePrefix = getActivePluginsFileLinePrefix();
+
+                boost::filesystem::ofstream out(activePluginsFilePath);
+                for (const auto& plugin : activePlugins)
+                    out << linePrefix << utf8ToWindows1252(plugin) << std::endl;
+            }
+
             inline void writeLoadOrder(std::vector<std::string> loadOrder) const {
                 if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                     boost::filesystem::ofstream out(loadOrderFilePath);
@@ -131,6 +142,16 @@ namespace liblo {
                         modificationTime += 60;
                     }
                 }
+            }
+
+            void incrementModTime(const boost::filesystem::path& file) {
+                time_t currentModTime = boost::filesystem::last_write_time(file);
+                boost::filesystem::last_write_time(file, currentModTime + 1);
+            }
+
+            void decrementModTime(const boost::filesystem::path& file) {
+                time_t currentModTime = boost::filesystem::last_write_time(file);
+                boost::filesystem::last_write_time(file, currentModTime - 1);
             }
 
             const GameSettings gameSettings;
@@ -498,6 +519,14 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.clear());
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
+        }
+
+        TEST_P(LoadOrderTest, clearingLoadOrderShouldResetTimestamps) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            EXPECT_NO_THROW(loadOrder.clear());
+            ASSERT_NO_THROW(loadOrder.load());
+            EXPECT_FALSE(loadOrder.getLoadOrder().empty());
         }
 
         TEST_P(LoadOrderTest, checkingIfAnInactivePluginIsActiveShouldReturnFalse) {
@@ -1087,25 +1116,59 @@ namespace liblo {
             }
         }
 
-        TEST_P(LoadOrderTest, loadingDataTwiceShouldDiscardTheDataRead) {
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheActivePluginsIfTheyHaveBeenChanged) {
             ASSERT_NO_THROW(loadOrder.load());
 
-            std::string linePrefix = getActivePluginsFileLinePrefix();
-            boost::filesystem::ofstream out(activePluginsFilePath, std::ios_base::trunc);
-            out << linePrefix << utf8ToWindows1252(blankEsp) << std::endl;
-            out.close();
-
-            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
-                out.open(loadOrderFilePath, std::ios_base::trunc);
-                out << blankDifferentEsm << std::endl;
-                out.close();
-            }
+            writeActivePlugins({blankEsp});
+            incrementModTime(activePluginsFilePath);
 
             EXPECT_NO_THROW(loadOrder.load());
 
             std::unordered_set<std::string> expectedActivePlugins({
                 blankEsp,
             });
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                expectedActivePlugins.insert(masterFile);
+
+                if (GetParam() == LIBLO_GAME_TES5)
+                    expectedActivePlugins.insert(updateEsm);
+            }
+
+            EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheActivePluginsIfTheyHaveBeenChangedAndFileHasOlderTimestamp) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            writeActivePlugins({blankEsp});
+            decrementModTime(activePluginsFilePath);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            std::unordered_set<std::string> expectedActivePlugins({
+                blankEsp,
+            });
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                expectedActivePlugins.insert(masterFile);
+
+                if (GetParam() == LIBLO_GAME_TES5)
+                    expectedActivePlugins.insert(updateEsm);
+            }
+
+            EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheLoadOrderIfItHasBeenChangedForTextfileBasedGames) {
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            writeLoadOrder({blankDifferentEsm});
+            incrementModTime(loadOrderFilePath);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
             std::vector<std::string> expectedLoadOrder({
                 nonAsciiEsm,
                 masterFile,
@@ -1124,17 +1187,119 @@ namespace liblo {
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
                 EXPECT_NE(expectedLoadOrder, loadOrder.getLoadOrder());
                 EXPECT_TRUE(is_permutation(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
-
-                expectedActivePlugins.insert(masterFile);
-
-                if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(updateEsm);
             }
-            else {
+            else
                 EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
-            }
+        }
 
-            EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheLoadOrderIfItHasBeenChangedForTextfileBasedGamesAndFileHasOlderTimestamp) {
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
+                return;
+
+            ASSERT_NO_THROW(loadOrder.load());
+
+            writeLoadOrder({blankDifferentEsm});
+            decrementModTime(loadOrderFilePath);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            std::vector<std::string> expectedLoadOrder({
+                nonAsciiEsm,
+                masterFile,
+                blankDifferentEsm,
+                blankEsm,
+                blankMasterDependentEsm,
+                blankDifferentMasterDependentEsm,
+                updateEsm,
+                blankEsp,
+                blankDifferentEsp,
+                blankMasterDependentEsp,
+                blankDifferentMasterDependentEsp,
+                blankPluginDependentEsp,
+                blankDifferentPluginDependentEsp,
+            });
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+                EXPECT_NE(expectedLoadOrder, loadOrder.getLoadOrder());
+                EXPECT_TRUE(is_permutation(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
+            }
+            else
+                EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadFromThePluginsFolderIfItHasBeenChanged) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
+            incrementModTime(pluginsPath);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            std::vector<std::string> expectedLoadOrder({
+                masterFile,
+                blankDifferentEsm,
+                blankEsm,
+                blankMasterDependentEsm,
+                blankDifferentMasterDependentEsm,
+                updateEsm,
+                blankEsp,
+                blankDifferentEsp,
+                blankMasterDependentEsp,
+                blankDifferentMasterDependentEsp,
+                blankPluginDependentEsp,
+                blankDifferentPluginDependentEsp,
+            });
+            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadFromThePluginsFolderIfItHasBeenChangedAndFolderHasOlderTimestamp) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
+            decrementModTime(pluginsPath);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            std::vector<std::string> expectedLoadOrder({
+                masterFile,
+                blankDifferentEsm,
+                blankEsm,
+                blankMasterDependentEsm,
+                blankDifferentMasterDependentEsm,
+                updateEsm,
+                blankEsp,
+                blankDifferentEsp,
+                blankMasterDependentEsp,
+                blankDifferentMasterDependentEsp,
+                blankPluginDependentEsp,
+                blankDifferentPluginDependentEsp,
+            });
+            EXPECT_EQ(expectedLoadOrder, loadOrder.getLoadOrder());
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadAPluginIfItHasBeenEdited) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            boost::filesystem::ofstream out(pluginsPath / updateEsm);
+            out << std::endl;
+            out.close();
+            incrementModTime(pluginsPath / updateEsm);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            EXPECT_EQ(loadOrder.getLoadOrder().size(), loadOrder.getPosition(updateEsm));
+        }
+
+        TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadAPluginIfItHasBeenEditedAndFileHasOlderTimestamp) {
+            ASSERT_NO_THROW(loadOrder.load());
+
+            boost::filesystem::ofstream out(pluginsPath / updateEsm);
+            out << std::endl;
+            out.close();
+            decrementModTime(pluginsPath / updateEsm);
+
+            EXPECT_NO_THROW(loadOrder.load());
+
+            EXPECT_EQ(loadOrder.getLoadOrder().size(), loadOrder.getPosition(updateEsm));
         }
 
         TEST_P(LoadOrderTest, savingShouldSetTimestampsForTimestampBasedGamesAndWriteToLoadOrderAndActivePluginsFilesOtherwise) {
@@ -1167,157 +1332,6 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.load());
 
             EXPECT_EQ(activePlugins, loadOrder.getActivePlugins());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadOrderIsEmpty) {
-            ASSERT_TRUE(loadOrder.getLoadOrder().empty());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndPluginsFolderIsUnchanged) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndPluginsFolderIsChanged) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndPluginsFolderTimetampIsSetToOlderTime) {
-            ASSERT_NO_THROW(loadOrder.load());
-
-            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(pluginsPath, currentModTime - 1));
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndActivePluginsFileIsUnchanged) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndActivePluginsFileIsChanged) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            boost::filesystem::ofstream out(activePluginsFilePath);
-            out << std::endl;
-            out.close();
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndActivePluginsTimetampIsSetToOlderTime) {
-            ASSERT_NO_THROW(loadOrder.load());
-
-            time_t currentModTime = boost::filesystem::last_write_time(activePluginsFilePath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(activePluginsFilePath, currentModTime - 1));
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldNotDetectFilesystemChangesIfLoadedAndLoadOrderFileIsUnchangedForTextfileBasedGames) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileIsChangedForTextfileBasedGames) {
-            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
-                return;
-
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            boost::filesystem::ofstream out(loadOrderFilePath);
-            out << std::endl;
-            out.close();
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfLoadedAndLoadOrderFileTimetampIsSetToOlderTimeForTextfileBasedGames) {
-            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
-                return;
-
-            ASSERT_NO_THROW(loadOrder.load());
-
-            time_t currentModTime = boost::filesystem::last_write_time(loadOrderFilePath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime - 1));
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfAPluginIsEdited) {
-            ASSERT_NO_THROW(loadOrder.load());
-            // Timestamps have 1 second precision, so wait to allow them
-            // to change.
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            boost::filesystem::ofstream out(pluginsPath / updateEsm);
-            out << std::endl;
-            out.close();
-
-            EXPECT_TRUE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButActivePluginsFileAndPluginsFolderTimestampsAreDifferent) {
-            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(activePluginsFilePath, currentModTime + 2));
-
-            ASSERT_NO_THROW(loadOrder.load());
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderFileAndPluginsFolderTimestampsAreDifferent) {
-            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
-                return;
-
-            time_t currentModTime = boost::filesystem::last_write_time(pluginsPath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime + 2));
-
-            ASSERT_NO_THROW(loadOrder.load());
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
-        }
-
-        TEST_P(LoadOrderTest, shouldDetectFilesystemChangesIfNoChangesAreMadeButLoadOrderAndActivePluginsFilesAreDifferent) {
-            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
-                return;
-
-            time_t currentModTime = boost::filesystem::last_write_time(activePluginsFilePath);
-            EXPECT_NO_THROW(boost::filesystem::last_write_time(loadOrderFilePath, currentModTime + 2));
-
-            ASSERT_NO_THROW(loadOrder.load());
-
-            EXPECT_FALSE(loadOrder.hasFilesystemChanged());
         }
     }
 }
