@@ -4,7 +4,7 @@ compiler:
   - gcc
 
 # Need Boost 1.54+, which isn't in the 12.04 repositories, and GCC 5 - install
-# from a PPA.
+# from PPAs.
 addons:
   apt:
     sources:
@@ -25,7 +25,7 @@ install:
   # Install libespm.
   - wget https://github.com/WrinklyNinja/libespm/archive/2.5.0.tar.gz -O - | tar -xz
   - mv libespm-2.5.0 libespm
-  # Install Google Test
+  # Install and build Google Test
   - wget https://github.com/google/googletest/archive/release-1.7.0.tar.gz -O - | tar -xz
   - cd googletest-release-1.7.0
   - cmake .
@@ -39,7 +39,8 @@ before_script:
   # Fetch plugins to test with.
   - wget https://github.com/WrinklyNinja/testing-plugins/archive/master.tar.gz -O - | tar -xz
   - mv testing-plugins-master/* ./
-  # Travis machines are 64 bit, and the deps use dynamic linking.
+  # Travis machines are 64 bit, and the dependencies use the dynamic runtime, so
+  # use the same.
   - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF -DGTEST_ROOT=../googletest-release-1.7.0
 
 script: make && ./tests
