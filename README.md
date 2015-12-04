@@ -21,7 +21,7 @@ Instructions for other platforms are not provided, but the process for building 
 
 * [Boost](http://www.boost.org) Filesystem and Locale libraries: tested with v1.55.0 and v1.59.0.
 * [Google Test](https://github.com/google/googletest): Required to build libloadorder's tests, but not the library itself. Tested with v1.7.0.
-* [Libespm](http://github.com/WrinklyNinja/libespm) v2.4.0
+* [Libespm](http://github.com/WrinklyNinja/libespm) v2.5.0
 
 ### Windows
 
