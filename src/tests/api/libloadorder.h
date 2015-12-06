@@ -30,6 +30,8 @@ along with libloadorder.  If not, see
 #include "tests/api/CApiGameOperationTest.h"
 #include "tests/api/lo_create_handle_test.h"
 
+#include <thread>
+
 namespace liblo {
     namespace test {
         TEST(lo_get_version, shouldFailIfPassedNullMajorVersionParameter) {
@@ -110,6 +112,23 @@ namespace liblo {
             ASSERT_EQ(lastError, error);
         }
 
+        TEST(lo_get_error_message, errorMessagesShouldBeLocalToTheThreadTheErrorWasCausedIn) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_STREQ("Null pointer passed.", error);
+
+            std::thread otherThread([]() {
+                const char * error = nullptr;
+                EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+                EXPECT_EQ(nullptr, error);
+            });
+            otherThread.join();
+
+            EXPECT_NO_THROW(lo_cleanup());
+        }
+
         TEST(lo_cleanup, shouldNotThrowIfNoErrorMessageToCleanUp) {
             EXPECT_NO_THROW(lo_cleanup());
         }
@@ -130,6 +149,21 @@ namespace liblo {
             EXPECT_EQ(nullptr, error);
         }
 
+        TEST(lo_cleanup, shouldNotCleanupErrorMessageInAnotherThread) {
+            ASSERT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_error_message(NULL));
+
+            std::thread otherThread([]() {
+                EXPECT_NO_THROW(lo_cleanup());
+            });
+            otherThread.join();
+
+            const char * error = nullptr;
+            EXPECT_EQ(LIBLO_OK, lo_get_error_message(&error));
+            EXPECT_STREQ("Null pointer passed.", error);
+
+            EXPECT_NO_THROW(lo_cleanup());
+        }
+
         TEST(lo_destroy_handle, shouldNotThrowIfGameHandleIsNotCreated) {
             lo_game_handle gameHandle = nullptr;
             EXPECT_NO_THROW(lo_destroy_handle(gameHandle));
@@ -144,14 +178,14 @@ namespace liblo {
         // Pass an empty first argument, as it's a prefix for the test instantation,
         // but we only have the one so no prefix is necessary.
         INSTANTIATE_TEST_CASE_P(,
-                                lo_set_game_master_test,
-                                ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+            lo_set_game_master_test,
+            ::testing::Values(
+                LIBLO_GAME_TES3,
+                LIBLO_GAME_TES4,
+                LIBLO_GAME_TES5,
+                LIBLO_GAME_FO3,
+                LIBLO_GAME_FNV,
+                LIBLO_GAME_FO4));
 
         TEST_P(lo_set_game_master_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, blankEsm.c_str()));
@@ -194,14 +228,14 @@ namespace liblo {
         // Pass an empty first argument, as it's a prefix for the test instantation,
         // but we only have the one so no prefix is necessary.
         INSTANTIATE_TEST_CASE_P(,
-                                lo_fix_plugin_lists_test,
-                                ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+            lo_fix_plugin_lists_test,
+            ::testing::Values(
+                LIBLO_GAME_TES3,
+                LIBLO_GAME_TES4,
+                LIBLO_GAME_TES5,
+                LIBLO_GAME_FO3,
+                LIBLO_GAME_FNV,
+                LIBLO_GAME_FO4));
 
         TEST_P(lo_fix_plugin_lists_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));

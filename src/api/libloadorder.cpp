@@ -72,14 +72,16 @@ LIBLO unsigned int lo_get_error_message(const char ** const details) {
     if (details == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    *details = extErrorString;
+    if (extErrorString.empty())
+        *details = nullptr;
+    else
+        *details = extErrorString.c_str();
 
     return LIBLO_OK;
 }
 
 LIBLO void lo_cleanup() {
-    delete[] extErrorString;
-    extErrorString = nullptr;
+    extErrorString.clear();
 }
 
 /*----------------------------------
@@ -101,7 +103,7 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
              && gameId != LIBLO_GAME_FO3
              && gameId != LIBLO_GAME_FNV
              && gameId != LIBLO_GAME_FO4)
-             return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
+        return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
 
     // Set the locale to get UTF-8 conversions working correctly.
     std::locale::global(std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>));

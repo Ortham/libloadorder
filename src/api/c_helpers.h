@@ -45,7 +45,7 @@ namespace liblo {
         return container;
     }
 
-    extern char * extErrorString;
+    thread_local extern std::string extErrorString;
 
     unsigned int c_error(const error& e);
 

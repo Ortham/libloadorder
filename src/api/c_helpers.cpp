@@ -37,16 +37,10 @@ namespace liblo {
         return strcpy(p, str.c_str());
     }
 
-    char * extErrorString = nullptr;
+    thread_local std::string extErrorString;
 
     unsigned int c_error(const error& e) {
-        delete[] extErrorString;
-        try {
-            extErrorString = copyString(e.what());
-        }
-        catch (std::bad_alloc&) {
-            extErrorString = nullptr;
-        }
+        extErrorString = e.what();
         return e.code();
     }
 
