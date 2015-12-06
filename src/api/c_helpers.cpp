@@ -31,12 +31,6 @@
 using namespace std;
 
 namespace liblo {
-    // std::string to null-terminated char string converter.
-    char * copyString(const string& str) {
-        char * p = new char[str.length() + 1];
-        return strcpy(p, str.c_str());
-    }
-
     thread_local std::string extErrorString;
 
     unsigned int c_error(const error& e) {

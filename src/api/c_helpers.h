@@ -33,9 +33,6 @@
 namespace liblo {
     class error;
 
-    // std::string to null-terminated char string converter.
-    char * copyString(const std::string& str);
-
     template<class T>
     T copyToContainer(const char * const * const plugins, size_t numPlugins) {
         T container;

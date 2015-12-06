@@ -23,10 +23,12 @@ along with libloadorder.  If not, see
 <http://www.gnu.org/licenses/>.
 */
 
-#include <gtest/gtest.h>
-
-#include "libloadorder/constants.h"
 #include "api/_lo_game_handle_int.h"
+#include "libloadorder/constants.h"
+
+#include <thread>
+
+#include <gtest/gtest.h>
 
 namespace liblo {
     namespace test {
@@ -36,58 +38,73 @@ namespace liblo {
                 // Just use Skyrim game handle to test with as the
                 // functionality tested isn't game-specific.
                 gameHandle(LIBLO_GAME_TES5, "./Skyrim", "./local/Skyrim"),
-                vectorOfStrings({"1", "2"}) {}
+                vectorOfStrings({"1", "2"}),
+                otherVectorOfStrings({"3"}) {}
 
             _lo_game_handle_int gameHandle;
 
             std::vector<std::string> vectorOfStrings;
+            std::vector<std::string> otherVectorOfStrings;
         };
 
+        TEST_F(_lo_game_handle_intTest, settingExternalStringShouldCopyIt) {
+            EXPECT_NO_THROW(gameHandle.setExternalString("test"));
+            EXPECT_STREQ("test", gameHandle.getExternalString());
+        }
+
+        TEST_F(_lo_game_handle_intTest, settingExternalStringShouldSetItOnlyForTheThreadItWasSetIn) {
+            EXPECT_NO_THROW(gameHandle.setExternalString("foo"));
+            EXPECT_STREQ("foo", gameHandle.getExternalString());
+
+            std::thread otherThread([&]() {
+                EXPECT_STREQ("", gameHandle.getExternalString());
+
+                EXPECT_NO_THROW(gameHandle.setExternalString("bar"));
+                EXPECT_STREQ("bar", gameHandle.getExternalString());
+            });
+            otherThread.join();
+
+            EXPECT_STREQ("foo", gameHandle.getExternalString());
+        }
+
         TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldCopyAContainersElementsToTheObjectsStringArray) {
-            EXPECT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
+            EXPECT_NO_THROW(gameHandle.setExternalStringArray(vectorOfStrings));
 
-            EXPECT_EQ(2, gameHandle.extStringArraySize);
-            EXPECT_STREQ("1", gameHandle.extStringArray[0]);
-            EXPECT_STREQ("2", gameHandle.extStringArray[1]);
+            EXPECT_EQ(vectorOfStrings.size(), gameHandle.getExternalStringArray().size());
+            EXPECT_EQ(vectorOfStrings[0], gameHandle.getExternalStringArray()[0]);
+            EXPECT_EQ(vectorOfStrings[1], gameHandle.getExternalStringArray()[1]);
         }
 
-        TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArraySize) {
-            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
-            ASSERT_NE(0, gameHandle.extStringArraySize);
+        TEST_F(_lo_game_handle_intTest, copyingToStringArrayTwiceShouldOverwriteTheFirstDataCopied) {
+            ASSERT_NO_THROW(gameHandle.setExternalStringArray(vectorOfStrings));
 
-            EXPECT_NO_THROW(gameHandle.freeStringArray());
-            EXPECT_EQ(0, gameHandle.extStringArraySize);
+            ASSERT_NO_THROW(gameHandle.setExternalStringArray(otherVectorOfStrings));
+            ASSERT_NE(otherVectorOfStrings[0], vectorOfStrings[0]);
+
+            EXPECT_EQ(otherVectorOfStrings.size(), gameHandle.getExternalStringArray().size());
+            EXPECT_EQ(otherVectorOfStrings[0], gameHandle.getExternalStringArray()[0]);
         }
 
-        TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArrayPointer) {
-            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
-            ASSERT_NE(nullptr, gameHandle.extStringArray);
+        TEST_F(_lo_game_handle_intTest, settingExternalStringArrayShouldSetItOnlyForTheThreadItWasSetIn) {
+            ASSERT_NO_THROW(gameHandle.setExternalStringArray(vectorOfStrings));
 
-            EXPECT_NO_THROW(gameHandle.freeStringArray());
-            EXPECT_EQ(nullptr, gameHandle.extStringArray);
-        }
+            EXPECT_EQ(vectorOfStrings.size(), gameHandle.getExternalStringArray().size());
+            EXPECT_EQ(vectorOfStrings[0], gameHandle.getExternalStringArray()[0]);
+            EXPECT_EQ(vectorOfStrings[1], gameHandle.getExternalStringArray()[1]);
 
-        TEST_F(_lo_game_handle_intTest, freeStringArrayShouldResetStringArrayElementPointers) {
-            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
+            std::thread otherThread([&]() {
+                EXPECT_TRUE(gameHandle.getExternalStringArray().empty());
 
-            char ** stringArray = gameHandle.extStringArray;
-            const char * element0 = gameHandle.extStringArray[0];
-            const char * element1 = gameHandle.extStringArray[1];
+                ASSERT_NO_THROW(gameHandle.setExternalStringArray(otherVectorOfStrings));
 
-            EXPECT_NO_THROW(gameHandle.freeStringArray());
-            EXPECT_NE(element0, stringArray[0]);
-            EXPECT_NE(element1, stringArray[1]);
-        }
+                EXPECT_EQ(otherVectorOfStrings.size(), gameHandle.getExternalStringArray().size());
+                EXPECT_EQ(otherVectorOfStrings[0], gameHandle.getExternalStringArray()[0]);
+            });
+            otherThread.join();
 
-        TEST_F(_lo_game_handle_intTest, copyToStringArrayShouldFreeAnyMemoryPreviouslyAllocated) {
-            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
-
-            char ** firstStringArray = gameHandle.extStringArray;
-            char * firstStringArrayElement = gameHandle.extStringArray[0];
-
-            ASSERT_NO_THROW(gameHandle.copyToStringArray(vectorOfStrings));
-
-            EXPECT_NE(firstStringArrayElement, firstStringArray[0]);
+            EXPECT_EQ(vectorOfStrings.size(), gameHandle.getExternalStringArray().size());
+            EXPECT_EQ(vectorOfStrings[0], gameHandle.getExternalStringArray()[0]);
+            EXPECT_EQ(vectorOfStrings[1], gameHandle.getExternalStringArray()[1]);
         }
     }
 }

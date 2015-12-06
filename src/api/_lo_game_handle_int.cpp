@@ -29,25 +29,48 @@ using namespace liblo;
 
 _lo_game_handle_int::_lo_game_handle_int(unsigned int id, const boost::filesystem::path& gamePath, const boost::filesystem::path& localPath)
     : GameSettings(id, gamePath, localPath),
-    loadOrder(*this),
-    extString(nullptr),
-    extStringArray(nullptr),
-    extStringArraySize(0) {}
+    loadOrder(*this) {
+    std::lock_guard<std::mutex> guard(mutex);
+
+    dataStore.emplace(this, GameHandleData());
+}
 
 _lo_game_handle_int::~_lo_game_handle_int() {
-    delete[] extString;
+    std::lock_guard<std::mutex> guard(mutex);
 
-    freeStringArray();
+    dataStore.erase(this);
 }
 
-void _lo_game_handle_int::freeStringArray() {
-    if (extStringArray != nullptr) {
-        for (size_t i = 0; i < extStringArraySize; i++) {
-            delete[] extStringArray[i];  //Clear all the char strings created.
-            extStringArray[i] = nullptr;
-        }
-        delete[] extStringArray;  //Clear the string array.
-        extStringArray = nullptr;
-        extStringArraySize = 0;
-    }
+const char * _lo_game_handle_int::getExternalString() const {
+    std::lock_guard<std::mutex> guard(mutex);
+
+    auto it = dataStore.find(this);
+    if (it == end(dataStore))
+        it = dataStore.emplace(this, GameHandleData()).first;
+
+    return it->second.externalString.c_str();
 }
+
+const std::vector<const char *>& _lo_game_handle_int::getExternalStringArray() const {
+    std::lock_guard<std::mutex> guard(mutex);
+
+    auto it = dataStore.find(this);
+    if (it == end(dataStore))
+        it = dataStore.emplace(this, GameHandleData()).first;
+
+    return it->second.externalStringArray;
+}
+
+void _lo_game_handle_int::setExternalString(const std::string& str) {
+    std::lock_guard<std::mutex> guard(mutex);
+
+    auto it = dataStore.find(this);
+    if (it == end(dataStore))
+        it = dataStore.emplace(this, GameHandleData()).first;
+
+    it->second.externalString = str;
+}
+
+thread_local std::unordered_map<const _lo_game_handle_int *, _lo_game_handle_int::GameHandleData> _lo_game_handle_int::dataStore;
+
+std::mutex _lo_game_handle_int::mutex;

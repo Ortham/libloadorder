@@ -34,7 +34,7 @@ namespace fs = boost::filesystem;
 
 /*------------------------------
    Load Order Functions
-   ------------------------------*/
+------------------------------*/
 
 /* Returns which method the game uses for the load order. */
 LIBLO unsigned int lo_get_load_order_method(lo_game_handle gh, unsigned int * const method) {
@@ -52,19 +52,14 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
     if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    //Free memory if in use.
-    gh->freeStringArray();
+    //Set initial outputs.
+    *plugins = nullptr;
+    *numPlugins = 0;
 
-    //Update cache if necessary.
     try {
+        //Update cache if necessary.
         gh->loadOrder.load();
-    }
-    catch (error& e) {
-        gh->loadOrder.clear();
-        return c_error(e);
-    }
 
-    try {
         vector<string> loadOrder = gh->loadOrder.getLoadOrder();
 
         //Check vector size. Exit early if zero.
@@ -72,15 +67,19 @@ LIBLO unsigned int lo_get_load_order(lo_game_handle gh, char *** const plugins, 
             return LIBLO_OK;
 
         //Allocate memory.
-        gh->copyToStringArray(loadOrder);
+        gh->setExternalStringArray(loadOrder);
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
+    catch (error& e) {
+        gh->loadOrder.clear();
+        return c_error(e);
+    }
 
     //Set outputs.
-    *plugins = gh->extStringArray;
-    *numPlugins = gh->extStringArraySize;
+    *plugins = const_cast<char **>(&gh->getExternalStringArray()[0]);
+    *numPlugins = gh->getExternalStringArray().size();
 
     return LIBLO_OK;
 }
@@ -183,9 +182,8 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     if (gh == nullptr || plugin == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    //Free memory if in use.
-    delete[] gh->extString;
-    gh->extString = nullptr;
+    // Initialise ouput
+    *plugin = nullptr;
 
     //Update cache if necessary.
     try {
@@ -198,7 +196,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
 
     //Allocate memory.
     try {
-        gh->extString = copyString(gh->loadOrder.getPluginAtPosition(index));
+        gh->setExternalString(gh->loadOrder.getPluginAtPosition(index));
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
@@ -208,7 +206,7 @@ LIBLO unsigned int lo_get_indexed_plugin(lo_game_handle gh, const size_t index, 
     }
 
     //Set output.
-    *plugin = gh->extString;
+    *plugin = const_cast<char*>(gh->getExternalString());
 
     return LIBLO_OK;
 }

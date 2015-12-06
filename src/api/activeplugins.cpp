@@ -33,30 +33,21 @@ using namespace liblo;
 
 /*----------------------------------
    Plugin Active Status Functions
-   ----------------------------------*/
+----------------------------------*/
 
 /* Returns the list of active plugins. */
 LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugins, size_t * const numPlugins) {
     if (gh == nullptr || plugins == nullptr || numPlugins == nullptr)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
 
-    //Free memory if in use.
-    gh->freeStringArray();
-
     //Set initial outputs.
-    *plugins = gh->extStringArray;
-    *numPlugins = gh->extStringArraySize;
+    *plugins = nullptr;
+    *numPlugins = 0;
 
-    //Update cache if necessary.
     try {
+        //Update cache if necessary.
         gh->loadOrder.load();
-    }
-    catch (error& e) {
-        gh->loadOrder.clear();
-        return c_error(e);
-    }
 
-    try {
         unordered_set<string> activePlugins = gh->loadOrder.getActivePlugins();
 
         //Check set size. Exit early if zero.
@@ -64,15 +55,19 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
             return LIBLO_OK;
 
         //Allocate memory.
-        gh->copyToStringArray(activePlugins);
+        gh->setExternalStringArray(activePlugins);
     }
     catch (bad_alloc& e) {
         return c_error(LIBLO_ERROR_NO_MEM, e.what());
     }
+    catch (error& e) {
+        gh->loadOrder.clear();
+        return c_error(e);
+    }
 
     //Set outputs.
-    *plugins = gh->extStringArray;
-    *numPlugins = gh->extStringArraySize;
+    *plugins = const_cast<char **>(&gh->getExternalStringArray()[0]);
+    *numPlugins = gh->getExternalStringArray().size();
 
     return LIBLO_OK;
 }

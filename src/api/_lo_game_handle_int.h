@@ -30,6 +30,9 @@
 #include "../backend/GameSettings.h"
 #include "c_helpers.h"
 
+#include <mutex>
+#include <unordered_map>
+
 #include <boost/filesystem.hpp>
 
 struct _lo_game_handle_int : public liblo::GameSettings {
@@ -39,26 +42,39 @@ public:
 
     liblo::LoadOrder loadOrder;
 
-    char * extString;
-    char ** extStringArray;
+    const char * getExternalString() const;
+    const std::vector<const char *>& getExternalStringArray() const;
 
-    size_t extStringArraySize;
-
-    void freeStringArray();
+    void setExternalString(const std::string& str);
 
     template<class T>
-    void copyToStringArray(T container) {
-        freeStringArray();
+    void setExternalStringArray(T container) {
+        std::lock_guard<std::mutex> guard(mutex);
 
-        extStringArraySize = container.size();
-        extStringArray = new char*[extStringArraySize];
+        auto it = dataStore.find(this);
+        if (it == end(dataStore))
+            it = dataStore.emplace(this, GameHandleData()).first;
 
-        size_t i = 0;
-        for (const auto& element : container) {
-            extStringArray[i] = liblo::copyString(element);
-            ++i;
-        }
+        it->second.internalStringArray.resize(container.size());
+        std::move(begin(container), end(container), begin(it->second.internalStringArray));
+
+        it->second.externalStringArray.resize(it->second.internalStringArray.size());
+        std::transform(begin(it->second.internalStringArray),
+                       end(it->second.internalStringArray),
+                       begin(it->second.externalStringArray),
+                       [](const std::string& element) {
+            return element.c_str();
+        });
     }
+private:
+    struct GameHandleData {
+        std::string externalString;
+        std::vector<const char *> externalStringArray;
+        std::vector<std::string> internalStringArray;
+    };
+
+    thread_local static std::unordered_map<const _lo_game_handle_int *, GameHandleData> dataStore;
+    static std::mutex mutex;
 };
 
 #endif
