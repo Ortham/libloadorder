@@ -24,8 +24,6 @@
 
     This documentation assumes a familiarity with the basics of load ordering. An introduction to the concepts involved may be found in @ref tlos_page.
 
-    @note libloadorder is *not* thread safe. Thread safety is a goal, but one that has not yet been achieved. Bear this in mind if using it in a multi-threaded client.
-
     @section var_sec Variable Types
 
     libloadorder uses character strings and integers for information input/output.
@@ -41,6 +39,12 @@
     Data returned by a function lasts until a function is called which returns data of the same type (eg. a string is stored until the client calls another function which returns a string, an integer array lasts until another integer array is returned, etc.).
 
     All allocated memory is freed when lo_destroy_handle() is called, except the string allocated by lo_get_error_message(), which must be freed by calling lo_cleanup().
+
+    @section thread_sec Thread Safety
+
+    libloadorder is thread-safe and all data output is thread-local.
+
+    Reading and writing data for a single game handle is protected by mutual exclusion. Game handles operate independently, so using more than one game handle for a single game across multiple threads is not advised, as filesystem changes made when writing data are not atomic and data races may occur under such usage.
 
     @section valid_plugins_sec Plugin Validity
 

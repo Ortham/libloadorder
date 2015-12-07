@@ -72,9 +72,7 @@ extern "C"
      *         libloadorder.
      *  @details Used to keep each game's data independent. Abstracts the
      *           definition of libloadorder's internal state while still
-     *           providing type safety across the library. Multiple handles
-     *           can also be made for each game, though it should be kept in
-     *           mind that libloadorder is not thread-safe.
+     *           providing type safety across the library.
      */
     typedef struct _lo_game_handle_int * lo_game_handle;
 
