@@ -23,14 +23,15 @@
     <http://www.gnu.org/licenses/>.
     */
 
-#ifndef __LIBLO_PLUGINS_H__
-#define __LIBLO_PLUGINS_H__
+#ifndef LIBLO_LOADORDER_H
+#define LIBLO_LOADORDER_H
 
 #include "Plugin.h"
 
+#include <mutex>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 #include <boost/filesystem.hpp>
 
@@ -69,6 +70,7 @@ namespace liblo {
         time_t loadOrderFileModTime;
         std::vector<Plugin> loadOrder;
         const GameSettings& gameSettings;
+        mutable std::recursive_mutex mutex;
 
         void loadFromFile(const boost::filesystem::path& file);
         void loadActivePlugins();

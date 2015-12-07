@@ -46,6 +46,8 @@ namespace liblo {
         loadOrderFileModTime(0) {}
 
     void LoadOrder::load() {
+        lock_guard<recursive_mutex> guard(mutex);
+
         // Only reload plugins that have changed.
         auto it = begin(loadOrder);
         while (it != end(loadOrder)) {
@@ -92,6 +94,8 @@ namespace liblo {
     }
 
     void LoadOrder::save() {
+        lock_guard<recursive_mutex> guard(mutex);
+
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
             saveTimestampLoadOrder();
         else
@@ -100,6 +104,8 @@ namespace liblo {
     }
 
     std::vector<std::string> LoadOrder::getLoadOrder() const {
+        lock_guard<recursive_mutex> guard(mutex);
+
         std::vector<std::string> pluginNames;
         transform(begin(loadOrder),
                   end(loadOrder),
@@ -111,6 +117,8 @@ namespace liblo {
     }
 
     size_t LoadOrder::getPosition(const std::string& pluginName) const {
+        lock_guard<recursive_mutex> guard(mutex);
+
         return distance(begin(loadOrder),
                         find(begin(loadOrder),
                         end(loadOrder),
@@ -118,10 +126,14 @@ namespace liblo {
     }
 
     std::string LoadOrder::getPluginAtPosition(size_t index) const {
+        lock_guard<recursive_mutex> guard(mutex);
+
         return loadOrder.at(index).getName();
     }
 
     void LoadOrder::setLoadOrder(const std::vector<std::string>& pluginNames) {
+        lock_guard<recursive_mutex> guard(mutex);
+
         // For textfile-based load order games, check that the game's master file loads first.
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && (pluginNames.empty() || !boost::iequals(pluginNames[0], gameSettings.getMasterFile())))
             throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + gameSettings.getMasterFile() + "\" must load first.");
@@ -168,6 +180,8 @@ namespace liblo {
     }
 
     void LoadOrder::setPosition(const std::string& pluginName, size_t loadOrderIndex) {
+        lock_guard<recursive_mutex> guard(mutex);
+
         // For textfile-based load order games, check that this doesn't move the game master file from the beginning of the load order.
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
             if (loadOrderIndex == 0 && !boost::iequals(pluginName, gameSettings.getMasterFile()))
@@ -200,6 +214,8 @@ namespace liblo {
     }
 
     std::unordered_set<std::string> LoadOrder::getActivePlugins() const {
+        lock_guard<recursive_mutex> guard(mutex);
+
         unordered_set<string> activePlugins;
         for_each(begin(loadOrder),
                  end(loadOrder),
@@ -211,12 +227,16 @@ namespace liblo {
     }
 
     bool LoadOrder::isActive(const std::string& pluginName) const {
+        lock_guard<recursive_mutex> guard(mutex);
+
         return find_if(begin(loadOrder), end(loadOrder), [&](const Plugin& plugin) {
             return plugin == pluginName && plugin.isActive();
         }) != end(loadOrder);
     }
 
     void LoadOrder::setActivePlugins(const std::unordered_set<std::string>& pluginNames) {
+        lock_guard<recursive_mutex> guard(mutex);
+
         if (pluginNames.size() > maxActivePlugins)
             throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate more than " + to_string(maxActivePlugins) + " plugins.");
 
@@ -265,6 +285,8 @@ namespace liblo {
     }
 
     void LoadOrder::activate(const std::string& pluginName) {
+        lock_guard<recursive_mutex> guard(mutex);
+
         if (countActivePlugins() >= maxActivePlugins)
             throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot activate " + pluginName + " as this would mean more than " + to_string(maxActivePlugins) + " plugins are active.");
 
@@ -279,6 +301,8 @@ namespace liblo {
     }
 
     void LoadOrder::deactivate(const std::string& pluginName) {
+        lock_guard<recursive_mutex> guard(mutex);
+
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE && boost::iequals(pluginName, gameSettings.getMasterFile()))
             throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + gameSettings.getMasterFile() + ".");
         else if (gameSettings.getId() == LIBLO_GAME_TES5 && boost::iequals(pluginName, "Update.esm"))
@@ -317,6 +341,8 @@ namespace liblo {
     }
 
     void LoadOrder::clear() {
+        lock_guard<recursive_mutex> guard(mutex);
+
         loadOrder.clear();
         pluginsFolderModTime = 0;
         activePluginsFileModTime = 0;
