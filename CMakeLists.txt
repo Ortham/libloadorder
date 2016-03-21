@@ -1,7 +1,6 @@
 # Settings passed on the command line:
 #
 # PROJECT_ARCH = the build architecture
-# LIBESPM_ROOT = the path to the root of the libespm source.
 
 ##############################
 # General Settings
@@ -9,6 +8,7 @@
 
 cmake_minimum_required (VERSION 2.8)
 project (libloadorder)
+include(ExternalProject)
 
 option(BUILD_SHARED_LIBS "Build a shared library" OFF)
 option(PROJECT_STATIC_RUNTIME "Build with static runtime libs (/MT)" ON)
@@ -21,22 +21,43 @@ IF (MSVC)
     ELSE ()
         set (PROJECT_ARCH "32")
     ENDIF ()
+    set(BUILD_SUBDIRECTORY $<CONFIGURATION>)
 ELSE ()
     IF (NOT DEFINED PROJECT_ARCH)
         set (PROJECT_ARCH "32")
     ENDIF ()
+    set(BUILD_SUBDIRECTORY "")
 ENDIF ()
 
-IF (NOT DEFINED LIBESPM_ROOT)
-    set (LIBESPM_ROOT "../libespm")
-ENDIF ()
+ExternalProject_Add(libespm
+                    PREFIX "external"
+                    URL "https://github.com/WrinklyNinja/libespm/archive/2.5.1.tar.gz"
+                    CONFIGURE_COMMAND ""
+                    BUILD_COMMAND ""
+                    INSTALL_COMMAND "")
+ExternalProject_Get_Property(libespm SOURCE_DIR)
+set (LIBESPM_INCLUDE_DIRS "${SOURCE_DIR}/include")
+
+ExternalProject_Add(GTest
+                    PREFIX "external"
+                    URL "https://github.com/google/googletest/archive/release-1.7.0.tar.gz"
+                    INSTALL_COMMAND "")
+ExternalProject_Get_Property(GTest SOURCE_DIR BINARY_DIR)
+set (GTEST_INCLUDE_DIRS "${SOURCE_DIR}/include")
+set (GTEST_LIBRARIES "${BINARY_DIR}/${BUILD_SUBDIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+ExternalProject_Add(testing-plugins
+                    PREFIX "external"
+                    URL "https://github.com/WrinklyNinja/testing-plugins/archive/1.0.0.tar.gz"
+                    CONFIGURE_COMMAND ""
+                    BUILD_COMMAND ""
+                    INSTALL_COMMAND "")
 
 set (Boost_USE_STATIC_LIBS ${PROJECT_STATIC_RUNTIME})
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME ${PROJECT_STATIC_RUNTIME})
 
 find_package(Boost REQUIRED COMPONENTS locale filesystem system iostreams)
-find_package(GTest)
 
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp"
@@ -83,7 +104,7 @@ source_group("Header Files" FILES ${PROJECT_HEADERS} ${TESTER_HEADERS})
 # Include source and library directories.
 include_directories ("${CMAKE_SOURCE_DIR}/src"
                      "${CMAKE_SOURCE_DIR}/include"
-                     "${LIBESPM_ROOT}/include"
+                     ${LIBESPM_INCLUDE_DIRS}
                      ${Boost_INCLUDE_DIRS}
                      ${GTEST_INCLUDE_DIRS})
 
@@ -137,13 +158,13 @@ ENDIF ()
 
 # Build libloadorder library.
 add_library           (loadorder${PROJECT_ARCH} ${PROJECT_SRC} ${PROJECT_HEADERS})
+add_dependencies      (loadorder${PROJECT_ARCH} libespm)
 target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS})
 
-IF (${GTEST_FOUND})
     # Build libloadorder tester.
-    add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
-    target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES} ${PROJECT_LIBRARIES})
-ENDIF ()
+add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
+add_dependencies      (tests GTest testing-plugins)
+target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROJECT_LIBS})
 
 
 ##############################
@@ -155,8 +176,13 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_EXPORT")
     ELSE ()
         set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
-        IF (${GTEST_FOUND})
-            set_target_properties (tests PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
-        ENDIF ()
+        set_target_properties (tests PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
     ENDIF ()
 ENDIF ()
+
+# Copy testing plugins
+ExternalProject_Get_Property(testing-plugins SOURCE_DIR)
+add_custom_command(TARGET tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${SOURCE_DIR}
+        $<TARGET_FILE_DIR:tests>)

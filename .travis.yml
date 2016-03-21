@@ -17,30 +17,12 @@ addons:
       - gcc-5
       - g++-5
 
-install:
+before_script:
   # Use GCC 5.
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
-  # Currently inside the cloned repo path.
-  - cd ..
-  # Install libespm.
-  - wget https://github.com/WrinklyNinja/libespm/archive/2.5.0.tar.gz -O - | tar -xz
-  - mv libespm-2.5.0 libespm
-  # Install and build Google Test
-  - wget https://github.com/google/googletest/archive/release-1.7.0.tar.gz -O - | tar -xz
-  - cd googletest-release-1.7.0
-  - cmake .
-  - make
-  # Move back into the cloned libloadorder repo path.
-  - cd $TRAVIS_BUILD_DIR
-
-before_script:
-  - mkdir build
-  - cd build
-  # Fetch plugins to test with.
-  - wget https://github.com/WrinklyNinja/testing-plugins/archive/master.tar.gz -O - | tar -xz
-  - mv testing-plugins-master/* ./
+  - mkdir build && cd build
   # Travis machines are 64 bit, and the dependencies use the dynamic runtime, so
   # use the same.
-  - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF -DGTEST_ROOT=../googletest-release-1.7.0
+  - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF
 
 script: make && ./tests
