@@ -13,22 +13,6 @@ include(ExternalProject)
 option(BUILD_SHARED_LIBS "Build a shared library" OFF)
 option(PROJECT_STATIC_RUNTIME "Build with static runtime libs (/MT)" ON)
 
-# With MSVC, the 32/64 bit compilers have separate generators, so PROJECT_ARCH
-# should always match whichever is being used.
-IF (MSVC)
-    IF (CMAKE_CL_64)
-        set (PROJECT_ARCH "64")
-    ELSE ()
-        set (PROJECT_ARCH "32")
-    ENDIF ()
-    set(BUILD_SUBDIRECTORY $<CONFIGURATION>)
-ELSE ()
-    IF (NOT DEFINED PROJECT_ARCH)
-        set (PROJECT_ARCH "32")
-    ENDIF ()
-    set(BUILD_SUBDIRECTORY "")
-ENDIF ()
-
 ExternalProject_Add(libespm
                     PREFIX "external"
                     URL "https://github.com/WrinklyNinja/libespm/archive/2.5.1.tar.gz"
@@ -44,7 +28,7 @@ ExternalProject_Add(GTest
                     INSTALL_COMMAND "")
 ExternalProject_Get_Property(GTest SOURCE_DIR BINARY_DIR)
 set (GTEST_INCLUDE_DIRS "${SOURCE_DIR}/include")
-set (GTEST_LIBRARIES "${BINARY_DIR}/${BUILD_SUBDIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set (GTEST_LIBRARIES "${BINARY_DIR}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 ExternalProject_Add(testing-plugins
                     PREFIX "external"
@@ -120,12 +104,12 @@ ENDIF ()
 
 # GCC and MinGW settings.
 IF (CMAKE_COMPILER_IS_GNUCXX)
-    set (CMAKE_C_FLAGS "-m${PROJECT_ARCH} -O3 -std=c++14")
-    set (CMAKE_CXX_FLAGS "-m${PROJECT_ARCH} -O3 -std=c++14")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c++14")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14")
     IF (PROJECT_STATIC_RUNTIME)
-        set (CMAKE_EXE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
-        set (CMAKE_SHARED_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
-        set (CMAKE_MODULE_LINKER_FLAGS "-static-libstdc++ -static-libgcc")
+        set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+        set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+        set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
     ENDIF ()
 
     set(PROJECT_LIBRARIES "pthread")
@@ -157,14 +141,14 @@ ENDIF ()
 ##############################
 
 # Build libloadorder library.
-add_library           (loadorder${PROJECT_ARCH} ${PROJECT_SRC} ${PROJECT_HEADERS})
-add_dependencies      (loadorder${PROJECT_ARCH} libespm)
-target_link_libraries (loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${PROJECT_LIBS})
+add_library           (loadorder ${PROJECT_SRC} ${PROJECT_HEADERS})
+add_dependencies      (loadorder libespm)
+target_link_libraries (loadorder ${Boost_LIBRARIES} ${PROJECT_LIBS})
 
     # Build libloadorder tester.
 add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
 add_dependencies      (tests GTest testing-plugins)
-target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROJECT_LIBS})
+target_link_libraries (tests loadorder ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROJECT_LIBS})
 
 
 ##############################
@@ -173,9 +157,9 @@ target_link_libraries (tests loadorder${PROJECT_ARCH} ${Boost_LIBRARIES} ${GTEST
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     IF (BUILD_SHARED_LIBS)
-        set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_EXPORT")
+        set_target_properties (loadorder PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_EXPORT")
     ELSE ()
-        set_target_properties (loadorder${PROJECT_ARCH} PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
+        set_target_properties (loadorder PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
         set_target_properties (tests PROPERTIES COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS} LIBLO_STATIC")
     ENDIF ()
 ENDIF ()
