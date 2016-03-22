@@ -23,6 +23,6 @@ before_script:
   - mkdir build && cd build
   # Travis machines are 64 bit, and the dependencies use the dynamic runtime, so
   # use the same.
-  - cmake .. -DPROJECT_ARCH=64 -DPROJECT_STATIC_RUNTIME=OFF
+  - cmake .. -DPROJECT_STATIC_RUNTIME=OFF
 
 script: make && ./tests
