@@ -132,7 +132,7 @@ ELSEIF (MSVC)
             SET("${flag}" "${${flag}} /EHsc")
         ENDFOREACH()
     ENDIF ()
-    set (PROJECT_LIBS version)
+    set (PROJECT_LIBRARIES version)
 ENDIF ()
 
 
@@ -143,12 +143,12 @@ ENDIF ()
 # Build libloadorder library.
 add_library           (loadorder ${PROJECT_SRC} ${PROJECT_HEADERS})
 add_dependencies      (loadorder libespm)
-target_link_libraries (loadorder ${Boost_LIBRARIES} ${PROJECT_LIBS})
+target_link_libraries (loadorder ${Boost_LIBRARIES} ${PROJECT_LIBRARIES})
 
     # Build libloadorder tester.
 add_executable        (tests ${TESTER_SRC} ${TESTER_HEADERS})
 add_dependencies      (tests GTest testing-plugins)
-target_link_libraries (tests loadorder ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROJECT_LIBS})
+target_link_libraries (tests loadorder ${Boost_LIBRARIES} ${GTEST_LIBRARIES} ${PROJECT_LIBRARIES})
 
 
 ##############################
