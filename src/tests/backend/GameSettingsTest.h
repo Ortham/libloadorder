@@ -136,7 +136,7 @@ namespace liblo {
                 EXPECT_NO_THROW(gameSettings.getLoadOrderFile());
         }
 
-        TEST_P(GameSettingsTest, activePluginsFileShouldBeLoadOrderTxtForTimestampBasedGames) {
+        TEST_P(GameSettingsTest, activePluginsFileShouldBeLoadOrderTxtForTextfileBasedGames) {
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
                 EXPECT_EQ(loadOrderFilePath, gameSettings.getLoadOrderFile());
         }
