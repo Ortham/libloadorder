@@ -59,12 +59,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 lo_create_handle_test,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_create_handle_test, shouldFailIfHandleInputIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));
@@ -123,7 +123,7 @@ namespace liblo {
         }
 
         TEST_P(lo_create_handle_test, shouldSucceedWithWarningIfFilesAreDesynchronisedForTextfileBasedGames) {
-            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
+            if (loadOrderMethod != LIBLO_METHOD_TEXTFILE)
                 return;
 
             boost::filesystem::ofstream out(activePluginsFilePath);

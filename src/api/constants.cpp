@@ -43,6 +43,7 @@ const unsigned int LIBLO_RETURN_MAX = LIBLO_WARN_INVALID_LIST;
 
 const unsigned int LIBLO_METHOD_TIMESTAMP = 0;
 const unsigned int LIBLO_METHOD_TEXTFILE = 1;
+const unsigned int LIBLO_METHOD_ASTERISK = 2;
 
 const unsigned int LIBLO_GAME_TES3 = 1;
 const unsigned int LIBLO_GAME_TES4 = 2;

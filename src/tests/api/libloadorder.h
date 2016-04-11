@@ -178,14 +178,14 @@ namespace liblo {
         // Pass an empty first argument, as it's a prefix for the test instantation,
         // but we only have the one so no prefix is necessary.
         INSTANTIATE_TEST_CASE_P(,
-            lo_set_game_master_test,
-            ::testing::Values(
-                LIBLO_GAME_TES3,
-                LIBLO_GAME_TES4,
-                LIBLO_GAME_TES5,
-                LIBLO_GAME_FO3,
-                LIBLO_GAME_FNV,
-                LIBLO_GAME_FO4));
+                                lo_set_game_master_test,
+                                ::testing::Values(
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_set_game_master_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, blankEsm.c_str()));
@@ -196,10 +196,10 @@ namespace liblo {
         }
 
         TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsAnEmptyStringForTimestampBasedGamesAndFailOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
-                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, ""));
-            else
+            if (loadOrderMethod == LIBLO_METHOD_TIMESTAMP)
                 EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, ""));
+            else
+                EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, ""));
         }
 
         TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsInvalidForTimestampBasedGamesAndFailOtherwise) {
@@ -228,14 +228,14 @@ namespace liblo {
         // Pass an empty first argument, as it's a prefix for the test instantation,
         // but we only have the one so no prefix is necessary.
         INSTANTIATE_TEST_CASE_P(,
-            lo_fix_plugin_lists_test,
-            ::testing::Values(
-                LIBLO_GAME_TES3,
-                LIBLO_GAME_TES4,
-                LIBLO_GAME_TES5,
-                LIBLO_GAME_FO3,
-                LIBLO_GAME_FNV,
-                LIBLO_GAME_FO4));
+                                lo_fix_plugin_lists_test,
+                                ::testing::Values(
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_fix_plugin_lists_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));

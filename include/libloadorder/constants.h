@@ -135,7 +135,14 @@ extern "C"
     /**@{*/
 
     LIBLO extern const unsigned int LIBLO_METHOD_TIMESTAMP;  /**< The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas all use this system. */
-    LIBLO extern const unsigned int LIBLO_METHOD_TEXTFILE;   /**< The game handle is using the textfile-based load order system. Skyrim and Fallout 4 use this system. */
+    LIBLO extern const unsigned int LIBLO_METHOD_TEXTFILE;   /**< The game handle is using the textfile-based load order system. Skyrim uses this system. */
+    /**
+     *  @brief The asterisk load order system, used by Fallout 4.
+     *  @details The game handle is using the asterisk load order system, in
+     *           which all plugins are listed in plugins.txt and active plugins
+     *           are prefixed with an asterisk. Fallout 4 uses this system.
+     */
+    LIBLO extern const unsigned int LIBLO_METHOD_ASTERISK;
 
     /**@}*/
     /*******************//**

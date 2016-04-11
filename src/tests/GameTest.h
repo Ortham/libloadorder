@@ -77,6 +77,8 @@ namespace liblo {
             inline std::string getActivePluginsFileLinePrefix() const {
                 if (GetParam() == LIBLO_GAME_TES3)
                     return "GameFile0=";
+                else if (GetParam() == LIBLO_GAME_FO4)
+                    return "*";
                 else
                     return "";
             }
@@ -137,7 +139,12 @@ namespace liblo {
             }
 
             inline unsigned int getLoadOrderMethod() const {
-                return GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4;
+                if (GetParam() == LIBLO_GAME_FO4)
+                    return LIBLO_METHOD_ASTERISK;
+                else if (GetParam() == LIBLO_GAME_TES5)
+                    return LIBLO_METHOD_TEXTFILE;
+                else
+                    return LIBLO_METHOD_TIMESTAMP;
             }
         };
     }

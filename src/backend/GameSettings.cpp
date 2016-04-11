@@ -89,7 +89,7 @@ namespace liblo {
             pluginsFileName = "plugins.txt";
         }
         else if (id == LIBLO_GAME_FO4) {
-            loMethod = LIBLO_METHOD_TEXTFILE;
+            loMethod = LIBLO_METHOD_ASTERISK;
             masterFile = "Fallout4.esm";
 
             appdataFolderName = "Fallout4";

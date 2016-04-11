@@ -52,12 +52,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 lo_get_active_plugins_test,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_get_active_plugins_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
@@ -74,7 +74,7 @@ namespace liblo {
         TEST_P(lo_get_active_plugins_test, outputShouldMatchExpectedActivePlugins) {
             EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gameHandle, &plugins, &numPlugins));
 
-            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE) {
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
                 EXPECT_EQ(2, numPlugins);
                 EXPECT_EQ(1, std::count(begin(plugins), end(plugins, numPlugins), masterFile));
                 EXPECT_EQ(1, std::count(begin(plugins), end(plugins, numPlugins), blankEsm));
@@ -99,12 +99,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 lo_set_active_plugins_test,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_set_active_plugins_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins.data(), plugins.size()));
@@ -142,12 +142,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 lo_get_plugin_active_test,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_get_plugin_active_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, blankEsm.c_str(), &isActive));
@@ -183,12 +183,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 lo_set_plugin_active_test,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(lo_set_plugin_active_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, blankEsm.c_str(), true));

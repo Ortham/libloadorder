@@ -169,7 +169,7 @@ LIBLO void lo_destroy_handle(lo_game_handle gh) {
 LIBLO unsigned int lo_set_game_master(lo_game_handle gh, const char * const masterFile) {
     if (gh == nullptr || masterFile == nullptr) //Check for valid args.
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed.");
-    if (gh->getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
+    if (gh->getLoadOrderMethod() != LIBLO_METHOD_TIMESTAMP)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Cannot change main master file from " + gh->getMasterFile());
 
     return LIBLO_OK;

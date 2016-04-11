@@ -66,12 +66,12 @@ namespace liblo {
         INSTANTIATE_TEST_CASE_P(,
                                 GameSettingsTest,
                                 ::testing::Values(
-                                LIBLO_GAME_TES3,
-                                LIBLO_GAME_TES4,
-                                LIBLO_GAME_TES5,
-                                LIBLO_GAME_FO3,
-                                LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                    LIBLO_GAME_TES3,
+                                    LIBLO_GAME_TES4,
+                                    LIBLO_GAME_TES5,
+                                    LIBLO_GAME_FO3,
+                                    LIBLO_GAME_FNV,
+                                    LIBLO_GAME_FO4));
 
         TEST_P(GameSettingsTest, gettingIdShouldReturnTheTestParameter) {
             EXPECT_EQ(GetParam(), gameSettings.getId());
@@ -85,7 +85,7 @@ namespace liblo {
             EXPECT_EQ(masterFile, gameSettings.getMasterFile());
         }
 
-        TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndFallout4AndTimestampOtherwise) {
+        TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndAsteriskForFallout4AndTimestampOtherwise) {
             EXPECT_EQ(loadOrderMethod, gameSettings.getLoadOrderMethod());
         }
 
@@ -129,11 +129,11 @@ namespace liblo {
             EXPECT_EQ(activePluginsFilePath, GameSettings(GetParam(), gamePath, localPath).getActivePluginsFile());
         }
 
-        TEST_P(GameSettingsTest, gettingLoadOrderFilePathShouldThrowForTimestampBasedGamesAndNotOtherwise) {
-            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP)
-                EXPECT_ANY_THROW(gameSettings.getLoadOrderFile());
-            else
+        TEST_P(GameSettingsTest, gettingLoadOrderFilePathShouldNotThrowForTextfileBasedGamesAndThrowOtherwise) {
+            if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE)
                 EXPECT_NO_THROW(gameSettings.getLoadOrderFile());
+            else
+                EXPECT_ANY_THROW(gameSettings.getLoadOrderFile());
         }
 
         TEST_P(GameSettingsTest, activePluginsFileShouldBeLoadOrderTxtForTextfileBasedGames) {
