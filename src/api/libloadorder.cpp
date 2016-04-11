@@ -37,9 +37,9 @@ using namespace liblo;
    Version Functions
    ------------------------------*/
 
-const unsigned int LIBLO_VERSION_MAJOR = 8;
+const unsigned int LIBLO_VERSION_MAJOR = 9;
 const unsigned int LIBLO_VERSION_MINOR = 0;
-const unsigned int LIBLO_VERSION_PATCH = 1;
+const unsigned int LIBLO_VERSION_PATCH = 0;
 
 /* Returns whether this version of libloadorder is compatible with the given
    version of libloadorder. */
