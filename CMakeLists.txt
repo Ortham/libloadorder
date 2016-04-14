@@ -164,9 +164,21 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     ENDIF ()
 ENDIF ()
 
+##############################
+# Post-Build Steps
+##############################
+
 # Copy testing plugins
 ExternalProject_Get_Property(testing-plugins SOURCE_DIR)
 add_custom_command(TARGET tests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${SOURCE_DIR}
         $<TARGET_FILE_DIR:tests>)
+
+IF (NOT $ENV{TRAVIS})
+    # Run Doxygen and LaTeX to generate readme
+    add_custom_command(TARGET loadorder POST_BUILD
+        COMMAND doxygen Doxyfile
+        COMMAND "${CMAKE_SOURCE_DIR}/docs/latex/make.bat"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/docs")
+ENDIF ()
