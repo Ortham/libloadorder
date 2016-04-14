@@ -751,7 +751,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldThrow) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
                 invalidPlugin,
@@ -760,7 +760,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldMakeNoChanges) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
                 invalidPlugin,
@@ -772,13 +772,13 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldThrow) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
-                activePlugins.insert(std::to_string(i) + ".esp");
+                activePlugins.push_back(std::to_string(i) + ".esp");
             }
 
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -790,13 +790,13 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingMoreThanMaxNumberActivePluginsShouldMakeNoChanges) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
-                activePlugins.insert(std::to_string(i) + ".esp");
+                activePlugins.push_back(std::to_string(i) + ".esp");
             }
 
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -807,7 +807,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldThrowForTextfileAndAsteriskBasedGamesAndNotOtherwise) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 updateEsm,
                 blankEsm,
             });
@@ -818,7 +818,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldMakeNoChangesForTextfileAndAsteriskBasedGames) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 updateEsm,
                 blankEsm,
             });
@@ -829,7 +829,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldThrowForSkyrimAndNotOtherwise) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
             });
@@ -840,7 +840,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldMakeNoChangesForSkyrim) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
             });
@@ -853,7 +853,7 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItDoesNotExistShouldNotThrow) {
             ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
             });
@@ -869,28 +869,23 @@ namespace liblo {
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
             ASSERT_NO_THROW(loadOrder.activate(blankEsp));
 
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
                 boost::to_lower_copy(blankEsm),
             });
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
 
-            std::unordered_set<std::string> expectedActivePlugins({
+            std::vector<std::string> expectedActivePlugins({
                 masterFile,
-                updateEsm,
                 blankEsm,
+                updateEsm,
             });
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
         }
 
-        TEST_P(LoadOrderTest, settingActivePluginsNotInLoadOrderShouldAddThem) {
-            std::unordered_set<std::string> activePlugins({
-                masterFile,
-                updateEsm,
-                blankEsm,
-            });
-            std::vector<std::string> expectedLoadOrder({
+        TEST_P(LoadOrderTest, settingActivePluginsNotInLoadOrderShouldAddThemInTheOrderTheyAreGiven) {
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
                 blankEsm,
@@ -899,11 +894,7 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
 
-            std::vector<std::string> newLoadOrder(loadOrder.getLoadOrder());
-            EXPECT_EQ(3, newLoadOrder.size());
-            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), masterFile));
-            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), updateEsm));
-            EXPECT_EQ(1, count(std::begin(newLoadOrder), std::end(newLoadOrder), blankEsm));
+            EXPECT_EQ(activePlugins, loadOrder.getLoadOrder());
         }
 
         TEST_P(LoadOrderTest, isSynchronisedForTimestampAndAsteriskBasedGames) {
@@ -963,21 +954,21 @@ namespace liblo {
         TEST_P(LoadOrderTest, loadingDataShouldActivateTheGameMasterForTextfileAndAsteriskBasedGamesAndNotOtherwise) {
             EXPECT_NO_THROW(loadOrder.load());
 
-            int count = loadOrder.getActivePlugins().count(masterFile);
+            bool ismasterFileActive = loadOrder.isActive(masterFile);
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK)
-                EXPECT_EQ(1, count);
+                EXPECT_TRUE(ismasterFileActive);
             else
-                EXPECT_EQ(0, count);
+                EXPECT_FALSE(ismasterFileActive);
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateUpdateEsmWhenItExistsForSkyrimAndNotOtherwise) {
             EXPECT_NO_THROW(loadOrder.load());
 
-            int count = loadOrder.getActivePlugins().count(updateEsm);
+            bool isUpdateEsmActive = loadOrder.isActive(updateEsm);
             if (GetParam() == LIBLO_GAME_TES5)
-                EXPECT_EQ(1, count);
+                EXPECT_TRUE(isUpdateEsmActive);
             else
-                EXPECT_EQ(0, count);
+                EXPECT_FALSE(isUpdateEsmActive);
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotActivateUpdateEsmWhenItDoesNotExist) {
@@ -985,38 +976,40 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.load());
 
-            EXPECT_EQ(0, loadOrder.getActivePlugins().count(updateEsm));
+            EXPECT_FALSE(loadOrder.isActive(updateEsm));
         }
 
         TEST_P(LoadOrderTest, loadingDataWithMoreThanMaxNumberActivePluginsShouldStopWhenMaxIsReached) {
             // Create plugins to test active plugins limit with. Do it
             // here because it's too expensive to do for every test.
-            std::unordered_set<std::string> expectedActivePlugins;
+            std::vector<std::string> expectedActivePlugins;
 
             std::string linePrefix = getActivePluginsFileLinePrefix();
             boost::filesystem::ofstream out(activePluginsFilePath);
 
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
                 out << linePrefix << utf8ToWindows1252(masterFile) << std::endl;
-                expectedActivePlugins.insert(masterFile);
+                expectedActivePlugins.push_back(masterFile);
 
                 if (GetParam() == LIBLO_GAME_TES5) {
                     out << linePrefix << utf8ToWindows1252(updateEsm) << std::endl;
-                    expectedActivePlugins.insert(updateEsm);
+                    expectedActivePlugins.push_back(updateEsm);
                 }
             }
 
-            for (size_t i = 0; i < LoadOrder::maxActivePlugins - expectedActivePlugins.size(); ++i) {
+            for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 std::string filename = std::to_string(i) + ".esp";
                 EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / filename));
                 out << linePrefix << filename << std::endl;
-                expectedActivePlugins.insert(filename);
+                expectedActivePlugins.push_back(filename);
             }
             out.close();
 
+            expectedActivePlugins.erase(prev(end(expectedActivePlugins), expectedActivePlugins.size() - LoadOrder::maxActivePlugins), end(expectedActivePlugins));
+
+            EXPECT_NO_THROW(loadOrder.setLoadOrder(expectedActivePlugins));
             EXPECT_NO_THROW(loadOrder.load());
 
-            EXPECT_EQ(expectedActivePlugins.size(), loadOrder.getActivePlugins().size());
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i)
@@ -1026,16 +1019,16 @@ namespace liblo {
         TEST_P(LoadOrderTest, loadingDataShouldFixInvalidDataWhenReadingActivePluginsFile) {
             EXPECT_NO_THROW(loadOrder.load());
 
-            std::unordered_set<std::string> expectedActivePlugins({
+            std::vector<std::string> expectedActivePlugins({
                 nonAsciiEsm,
                 blankEsm,
                 blankEsp,
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
-                expectedActivePlugins.insert(masterFile);
+                expectedActivePlugins.insert(begin(expectedActivePlugins), masterFile);
 
                 if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(updateEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
         }
@@ -1111,14 +1104,14 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.load());
 
-            std::unordered_set<std::string> expectedActivePlugins({
+            std::vector<std::string> expectedActivePlugins({
                 blankEsp,
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
-                expectedActivePlugins.insert(masterFile);
+                expectedActivePlugins.insert(begin(expectedActivePlugins), masterFile);
 
                 if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(updateEsm);
+                    expectedActivePlugins.insert(next(begin(expectedActivePlugins)), updateEsm);
             }
 
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1132,14 +1125,14 @@ namespace liblo {
 
             EXPECT_NO_THROW(loadOrder.load());
 
-            std::unordered_set<std::string> expectedActivePlugins({
+            std::vector<std::string> expectedActivePlugins({
                 blankEsp,
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
-                expectedActivePlugins.insert(masterFile);
+                expectedActivePlugins.insert(begin(expectedActivePlugins), masterFile);
 
                 if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(updateEsm);
+                    expectedActivePlugins.insert(next(begin(expectedActivePlugins)), updateEsm);
             }
 
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1303,7 +1296,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, savingShouldWriteActivePluginsToActivePluginsFile) {
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 updateEsm,
                 blankEsm,
@@ -1336,7 +1329,7 @@ namespace liblo {
                 blankDifferentMasterDependentEsp,
                 blankPluginDependentEsp,
             });
-            std::unordered_set<std::string> activePlugins({
+            std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
                 blankDifferentEsp,

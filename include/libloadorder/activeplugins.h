@@ -63,8 +63,8 @@ extern "C"
 
     /**
      *  @brief Gets the list of currently active plugins.
-     *  @details Outputs an unordered list of the plugins that are currently
-     *           active.
+     *  @details Outputs an list of the plugins that are currently active, in
+     *           their load order.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins
@@ -85,8 +85,8 @@ extern "C"
      *           the given array. The replacement list must be valid. If, for
      *           Skyrim or Fallout 4, a plugin to be activated does not have a
      *           defined load order position, this function will append it to
-     *           the load order. If multiple such plugins exist, the order in
-     *           which they are appended is undefined.
+     *           the load order. If multiple such plugins exist, they are
+     *           appended in the order they are given.
      *  @param gh
      *      The game handle the function operates on.
      *  @param plugins

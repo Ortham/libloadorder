@@ -223,16 +223,17 @@ namespace liblo {
         loadOrder.insert(next(begin(loadOrder), loadOrderIndex), plugin);
     }
 
-    std::unordered_set<std::string> LoadOrder::getActivePlugins() const {
+    std::vector<std::string> LoadOrder::getActivePlugins() const {
         lock_guard<recursive_mutex> guard(mutex);
 
-        unordered_set<string> activePlugins;
+        vector<string> activePlugins;
         for_each(begin(loadOrder),
                  end(loadOrder),
                  [&](const Plugin& plugin) {
             if (plugin.isActive())
-                activePlugins.insert(plugin.getName());
+                activePlugins.push_back(plugin.getName());
         });
+
         return activePlugins;
     }
 
@@ -244,7 +245,7 @@ namespace liblo {
         }) != end(loadOrder);
     }
 
-    void LoadOrder::setActivePlugins(const std::unordered_set<std::string>& pluginNames) {
+    void LoadOrder::setActivePlugins(const std::vector<std::string>& pluginNames) {
         lock_guard<recursive_mutex> guard(mutex);
 
         if (pluginNames.size() > maxActivePlugins)

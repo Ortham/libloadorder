@@ -84,6 +84,20 @@ namespace liblo {
             }
         }
 
+        TEST_P(lo_get_active_plugins_test, outputShouldBeInLoadOrder) {
+            EXPECT_EQ(LIBLO_OK, lo_get_active_plugins(gameHandle, &plugins, &numPlugins));
+
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
+                EXPECT_EQ(2, numPlugins);
+                EXPECT_EQ(masterFile, plugins[0]);
+                EXPECT_EQ(blankEsm, plugins[1]);
+            }
+            else {
+                ASSERT_EQ(1, numPlugins);
+                EXPECT_EQ(blankEsm, plugins[0]);
+            }
+        }
+
         class lo_set_active_plugins_test : public CApiGameOperationTest {
         protected:
             lo_set_active_plugins_test() {

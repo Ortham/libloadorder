@@ -48,7 +48,7 @@ LIBLO unsigned int lo_get_active_plugins(lo_game_handle gh, char *** const plugi
         //Update cache if necessary.
         gh->loadOrder.load();
 
-        unordered_set<string> activePlugins = gh->loadOrder.getActivePlugins();
+        vector<string> activePlugins = gh->loadOrder.getActivePlugins();
 
         //Check set size. Exit early if zero.
         if (activePlugins.empty())
@@ -87,7 +87,7 @@ LIBLO unsigned int lo_set_active_plugins(lo_game_handle gh, const char * const *
     }
 
     try {
-        gh->loadOrder.setActivePlugins(copyToContainer<unordered_set<string>>(plugins, numPlugins));
+        gh->loadOrder.setActivePlugins(copyToContainer<vector<string>>(plugins, numPlugins));
     }
     catch (error& e) {
         return c_error(LIBLO_ERROR_INVALID_ARGS, string("Invalid active plugins list supplied. Details: ") + e.what());

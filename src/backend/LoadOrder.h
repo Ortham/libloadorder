@@ -54,10 +54,10 @@ namespace liblo {
         void setLoadOrder(const std::vector<std::string>& pluginNames);
         void setPosition(const std::string& pluginName, size_t loadOrderIndex);
 
-        std::unordered_set<std::string> getActivePlugins() const;
+        std::vector<std::string> getActivePlugins() const;
         bool isActive(const std::string& pluginName) const;
 
-        void setActivePlugins(const std::unordered_set<std::string>& pluginNames);
+        void setActivePlugins(const std::vector<std::string>& pluginNames);
         void activate(const std::string& pluginName);
         void deactivate(const std::string& pluginName);
 
