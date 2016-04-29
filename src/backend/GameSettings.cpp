@@ -28,6 +28,8 @@
 #include "helpers.h"
 #include "error.h"
 
+#include <boost/algorithm/string.hpp>
+
 #ifdef _WIN32
 #   ifndef UNICODE
 #       define UNICODE
@@ -147,6 +149,36 @@ namespace liblo {
 
     unsigned int GameSettings::getLoadOrderMethod() const {
         return loMethod;
+    }
+
+    std::vector<std::string> GameSettings::getImplicitlyActivePlugins() const {
+        if (id == LIBLO_GAME_TES5) {
+            return std::vector<std::string>({
+                masterFile,
+                "Update.esm",
+            });
+        }
+        else if (id == LIBLO_GAME_FO4) {
+            return std::vector<std::string>({
+                masterFile,
+                "DLCRobot.esm",
+                "DLCworkshop01.esm",
+            });
+        }
+
+        return std::vector<std::string>();
+    }
+
+    bool GameSettings::isImplicitlyActive(const std::string & pluginName) const {
+        auto implicitlyActivePlugins = getImplicitlyActivePlugins();
+
+        auto it = find_if(begin(implicitlyActivePlugins),
+                          end(implicitlyActivePlugins),
+                          [&](const string& name) {
+            return boost::iequals(pluginName, name);
+        });
+
+        return it != end(implicitlyActivePlugins);
     }
 
     boost::filesystem::path GameSettings::getPluginsFolder() const {

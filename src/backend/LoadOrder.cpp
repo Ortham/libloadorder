@@ -258,26 +258,18 @@ namespace liblo {
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
         });
 
-        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
-            // Check that the game master file is active.
-            // Need to first lowercase all plugin names for comparison.
-            unordered_set<string> lowercasedPluginNames;
-            transform(begin(pluginNames),
-                      end(pluginNames),
-                      inserter(lowercasedPluginNames, begin(lowercasedPluginNames)),
-                      [&](const std::string& pluginName) {
-                return boost::to_lower_copy(pluginName);
+        // Check that all installed implicitly active plugins are explicitly
+        // active in the given active plugins list.
+        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
+            if (!Plugin::isValid(pluginName, gameSettings))
+                continue;
+
+            auto it = find_if(begin(pluginNames), end(pluginNames), [&](const string& name) {
+                return boost::iequals(pluginName, name);
             });
 
-            // Now do the check.
-            if (lowercasedPluginNames.count(boost::to_lower_copy(gameSettings.getMasterFile())) == 0)
-                throw error(LIBLO_ERROR_INVALID_ARGS, gameSettings.getMasterFile() + " must be active.");
-
-            // Also check for Skyrim if Update.esm exists.
-            if (gameSettings.getId() == LIBLO_GAME_TES5
-                && Plugin::isValid("Update.esm", gameSettings)
-                && lowercasedPluginNames.count("update.esm") == 0)
-                throw error(LIBLO_ERROR_INVALID_ARGS, "Update.esm must be active.");
+            if (it == end(pluginNames))
+                throw error(LIBLO_ERROR_INVALID_ARGS, pluginName + " must be active.");
         }
 
         // Deactivate all existing plugins.
@@ -314,10 +306,9 @@ namespace liblo {
     void LoadOrder::deactivate(const std::string& pluginName) {
         lock_guard<recursive_mutex> guard(mutex);
 
-        if ((gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) && boost::iequals(pluginName, gameSettings.getMasterFile()))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + gameSettings.getMasterFile() + ".");
-        else if (gameSettings.getId() == LIBLO_GAME_TES5 && boost::iequals(pluginName, "Update.esm"))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate Update.esm.");
+        // Check that the plugin is not implicitly active.
+        if (gameSettings.isImplicitlyActive(pluginName))
+            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + pluginName + ".");
 
         auto it = find(begin(loadOrder), end(loadOrder), pluginName);
         if (it != end(loadOrder))
@@ -412,16 +403,13 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
 
-        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
-            // Add the game master file if it hasn't already been loaded.
-            if (count(begin(loadOrder), end(loadOrder), gameSettings.getMasterFile()) == 0)
-                addToLoadOrder(gameSettings.getMasterFile());
+        // Add any missing installed implicitly active plugins.
+        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
+            if (!Plugin::isValid(pluginName, gameSettings))
+                continue;
 
-            // Add Update.esm if it exists and hasn't already been loaded.
-            if (gameSettings.getId() == LIBLO_GAME_TES5 && Plugin::isValid("Update.esm", gameSettings)
-                && count(begin(loadOrder), end(loadOrder), string("Update.esm")) == 0) {
-                addToLoadOrder("Update.esm");
-            }
+            if (count(begin(loadOrder), end(loadOrder), pluginName) == 0)
+                addToLoadOrder(pluginName);
         }
     }
 
@@ -467,20 +455,16 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be read. Details: " + e.what());
         }
 
-        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
-            // Activate the game master file.
-            auto it = find(begin(loadOrder), end(loadOrder), gameSettings.getMasterFile());
-            if (it == end(loadOrder))
-                it = addToLoadOrder(gameSettings.getMasterFile());
-            it->activate(gameSettings.getPluginsFolder());
+        // Add any missing installed implicitly active plugins.
+        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
+            if (isActive(pluginName) || !Plugin::isValid(pluginName, gameSettings))
+                continue;
 
-            // Activate Update.esm if it exists.
-            if (gameSettings.getId() == LIBLO_GAME_TES5 && Plugin::isValid("Update.esm", gameSettings)) {
-                auto it = find(begin(loadOrder), end(loadOrder), string("Update.esm"));
-                if (it == end(loadOrder))
-                    it = addToLoadOrder("Update.esm");
-                it->activate(gameSettings.getPluginsFolder());
-            }
+            auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+            if (it == end(loadOrder))
+                it = addToLoadOrder(pluginName);
+
+            it->activate(gameSettings.getPluginsFolder());
         }
 
         // Deactivate excess plugins.

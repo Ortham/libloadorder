@@ -41,6 +41,8 @@ namespace liblo {
         libespm::GameId getLibespmId() const;
         std::string getMasterFile() const;
         unsigned int getLoadOrderMethod() const;
+        std::vector<std::string> getImplicitlyActivePlugins() const;
+        bool isImplicitlyActive(const std::string& pluginName) const;
 
         boost::filesystem::path getPluginsFolder() const;
         boost::filesystem::path getActivePluginsFile() const;

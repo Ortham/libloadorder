@@ -41,7 +41,7 @@ namespace liblo {
                 EXPECT_NO_THROW(boost::filesystem::remove(oblivionIni));
             }
 
-            inline libespm::GameId getExpectedLibespmId() {
+            inline libespm::GameId getExpectedLibespmId() const {
                 if (GetParam() == LIBLO_GAME_TES3)
                     return libespm::GameId::MORROWIND;
                 else if (GetParam() == LIBLO_GAME_TES4)
@@ -54,6 +54,24 @@ namespace liblo {
                     return libespm::GameId::FALLOUTNV;
                 else
                     return libespm::GameId::FALLOUT4;
+            }
+
+            inline std::vector<std::string> getExpectedImplicitlyActivePlugins() const {
+                if (GetParam() == LIBLO_GAME_TES5) {
+                    return std::vector<std::string>({
+                        masterFile,
+                        "Update.esm",
+                    });
+                }
+                else if (GetParam() == LIBLO_GAME_FO4) {
+                    return std::vector<std::string>({
+                        masterFile,
+                        "DLCRobot.esm",
+                        "DLCworkshop01.esm",
+                    });
+                }
+
+                return std::vector<std::string>();
             }
 
             const GameSettings gameSettings;
@@ -87,6 +105,19 @@ namespace liblo {
 
         TEST_P(GameSettingsTest, gettingLoadOrderMethodShouldReturnTextfileForSkyrimAndAsteriskForFallout4AndTimestampOtherwise) {
             EXPECT_EQ(loadOrderMethod, gameSettings.getLoadOrderMethod());
+        }
+
+        TEST_P(GameSettingsTest, gettingImplicitlyActivePluginsShouldReturnCorrectPluginNames) {
+            EXPECT_EQ(getExpectedImplicitlyActivePlugins(), gameSettings.getImplicitlyActivePlugins());
+        }
+
+        TEST_P(GameSettingsTest, isImplicitlyActiveShouldReturnTrueForAllImplicitlyActivePlugins) {
+            for (const auto& plugin : gameSettings.getImplicitlyActivePlugins())
+                EXPECT_TRUE(gameSettings.isImplicitlyActive(plugin));
+        }
+
+        TEST_P(GameSettingsTest, isImplicitlyActiveShouldReturnFalseForAPluginThatIsNotImplicitlyActive) {
+            EXPECT_FALSE(gameSettings.isImplicitlyActive(blankEsm));
         }
 
         TEST_P(GameSettingsTest, pluginsFolderShouldBeDataFilesForMorrowindAndDataOtherwise) {

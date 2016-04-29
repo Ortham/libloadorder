@@ -46,6 +46,8 @@ namespace liblo {
                 masterFile(getMasterFile()),
                 blankEsm("Blank.esm"),
                 blankDifferentEsm("Blank - Different.esm"),
+                automatronDlcEsm("DLCRobot.esm"),
+                wastelandWorkshopDlcEsm("DLCworkshop01.esm"),
                 invalidPlugin("NotAPlugin.esm") {}
 
             inline virtual void SetUp() {
@@ -95,6 +97,8 @@ namespace liblo {
             const std::string masterFile;
             const std::string blankEsm;
             const std::string blankDifferentEsm;
+            const std::string automatronDlcEsm;
+            const std::string wastelandWorkshopDlcEsm;
             const std::string invalidPlugin;
 
         private:
