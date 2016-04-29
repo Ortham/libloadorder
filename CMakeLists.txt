@@ -192,3 +192,42 @@ IF (DOXYGEN_FOUND AND LATEX_FOUND)
         COMMAND "${CMAKE_SOURCE_DIR}/docs/latex/make.bat"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/docs")
 ENDIF ()
+
+##############################
+# Install
+##############################
+
+install(TARGETS loadorder
+        DESTINATION bin
+        CONFIGURATIONS Release)
+
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/libloadorder"
+        DESTINATION include
+        CONFIGURATIONS Release)
+
+install(FILES "${CMAKE_SOURCE_DIR}/docs/latex/refman.pdf"
+        DESTINATION "."
+        CONFIGURATIONS Release
+        RENAME "readme.pdf")
+
+##############################
+# CPack
+##############################
+
+# Get version info using Git if available
+find_package(Git)
+
+IF (GIT_FOUND)
+    execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --long
+                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                  OUTPUT_VARIABLE GIT_DESCRIBE_STRING
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+ELSE()
+    SET (GIT_DESCRIBE_STRING "unknown-version")
+ENDIF ()
+
+set(CPACK_GENERATOR "7Z")
+set(CPACK_PACKAGE_VERSION ${GIT_DESCRIBE_STRING})
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
+
+include(CPack)
