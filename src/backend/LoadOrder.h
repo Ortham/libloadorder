@@ -74,6 +74,7 @@ namespace liblo {
 
         void loadFromFile(const boost::filesystem::path& file);
         void loadActivePlugins();
+        void addMissingPlugins();
 
         void saveTimestampLoadOrder();
         void saveTextfileLoadOrder();
@@ -83,9 +84,9 @@ namespace liblo {
         size_t countActivePlugins() const;
         Plugin getPluginObject(const std::string& pluginName) const;
         size_t getAppendPosition(const Plugin& plugin) const;
+        bool contains(const std::string& pluginName) const;
 
         std::vector<Plugin>::iterator addToLoadOrder(const std::string& pluginName);
-        void partitionMasters();
     };
 }
 

@@ -48,6 +48,7 @@ namespace liblo {
                 blankDifferentEsm("Blank - Different.esm"),
                 automatronDlcEsm("DLCRobot.esm"),
                 wastelandWorkshopDlcEsm("DLCworkshop01.esm"),
+                farHarborDlcEsm("DLCCoast.esm"),
                 invalidPlugin("NotAPlugin.esm") {}
 
             inline virtual void SetUp() {
@@ -99,6 +100,7 @@ namespace liblo {
             const std::string blankDifferentEsm;
             const std::string automatronDlcEsm;
             const std::string wastelandWorkshopDlcEsm;
+            const std::string farHarborDlcEsm;
             const std::string invalidPlugin;
 
         private:

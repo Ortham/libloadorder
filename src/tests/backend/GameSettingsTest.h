@@ -68,6 +68,7 @@ namespace liblo {
                         masterFile,
                         "DLCRobot.esm",
                         "DLCworkshop01.esm",
+                        "DLCCoast.esm",
                     });
                 }
 

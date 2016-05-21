@@ -85,6 +85,11 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / wastelandWorkshopDlcEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / wastelandWorkshopDlcEsm));
 
+                // Make sure the farHarborDlcEsm plugin exists.
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / farHarborDlcEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
+
                 // Morrowind load order files have a slightly different
                 // format and a prefix is necessary.
                 std::string linePrefix = getActivePluginsFileLinePrefix();
@@ -102,6 +107,7 @@ namespace liblo {
                     {updateEsm, false},
                     {automatronDlcEsm, false},
                     {wastelandWorkshopDlcEsm, false},
+                    {farHarborDlcEsm, false},
                     {blankDifferentEsp, false},
                     {blankMasterDependentEsp, false},
                     {blankDifferentMasterDependentEsp, false},
@@ -119,6 +125,7 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nonAsciiEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / automatronDlcEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / wastelandWorkshopDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / farHarborDlcEsm));
             }
 
             inline void writeLoadOrder(std::vector<std::pair<std::string, bool>> loadOrder) const {
@@ -335,7 +342,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            EXPECT_EQ(15, loadOrder.getPosition(missingPlugin));
+            EXPECT_EQ(16, loadOrder.getPosition(missingPlugin));
         }
 
         TEST_P(LoadOrderTest, positionOfAPluginShouldBeEqualToItsLoadOrderIndex) {
@@ -815,6 +822,7 @@ namespace liblo {
                 blankEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
             });
             if (GetParam() == LIBLO_GAME_TES5) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -854,6 +862,22 @@ namespace liblo {
                 EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
         }
 
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutFarHarborDlcEsmWhenItExistsShouldThrowForFallout4AndNotOtherwise) {
+            std::vector<std::string> activePlugins({
+                masterFile,
+                blankEsm,
+                updateEsm,
+                automatronDlcEsm,
+                wastelandWorkshopDlcEsm,
+            });
+            if (GetParam() == LIBLO_GAME_FO4) {
+                EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
+                EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+            }
+            else
+                EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
+        }
+
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmShouldNotThrowWhenItDoesNotExist) {
             ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
@@ -862,6 +886,7 @@ namespace liblo {
                 blankEsm,
                 wastelandWorkshopDlcEsm,
                 automatronDlcEsm,
+                farHarborDlcEsm,
             });
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
         }
@@ -874,6 +899,7 @@ namespace liblo {
                 blankEsm,
                 updateEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -886,6 +912,21 @@ namespace liblo {
                 masterFile,
                 blankEsm,
                 updateEsm,
+                automatronDlcEsm,
+                farHarborDlcEsm,
+            });
+
+            EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
+        }
+
+        TEST_P(LoadOrderTest, settingActivePluginsWithoutFarHarborDlcEsmShouldNotThrowWhenItDoesNotExist) {
+            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / farHarborDlcEsm));
+
+            std::vector<std::string> activePlugins({
+                masterFile,
+                blankEsm,
+                updateEsm,
+                wastelandWorkshopDlcEsm,
                 automatronDlcEsm,
             });
 
@@ -902,6 +943,7 @@ namespace liblo {
                 updateEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -917,6 +959,7 @@ namespace liblo {
                 blankEsm,
                 wastelandWorkshopDlcEsm,
                 automatronDlcEsm,
+                farHarborDlcEsm,
             });
             ASSERT_TRUE(loadOrder.getLoadOrder().empty());
 
@@ -1019,6 +1062,16 @@ namespace liblo {
                 EXPECT_FALSE(isPluginActive);
         }
 
+        TEST_P(LoadOrderTest, loadingDataShouldActivateFarHarborDlcEsmWhenItExistsForFallout4AndNotOtherwise) {
+            EXPECT_NO_THROW(loadOrder.load());
+
+            bool isPluginActive = loadOrder.isActive(farHarborDlcEsm);
+            if (GetParam() == LIBLO_GAME_FO4)
+                EXPECT_TRUE(isPluginActive);
+            else
+                EXPECT_FALSE(isPluginActive);
+        }
+
         TEST_P(LoadOrderTest, loadingDataShouldNotActivateUpdateEsmWhenItDoesNotExist) {
             ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
 
@@ -1076,6 +1129,7 @@ namespace liblo {
                 else if (GetParam() == LIBLO_GAME_FO4) {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
                 }
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1108,6 +1162,7 @@ namespace liblo {
                     updateEsm,
                     automatronDlcEsm,
                     wastelandWorkshopDlcEsm,
+                    farHarborDlcEsm,
                     blankEsp,
                     blankDifferentEsp,
                     blankMasterDependentEsp,
@@ -1165,6 +1220,7 @@ namespace liblo {
                 else if (GetParam() == LIBLO_GAME_FO4) {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
                 }
             }
 
@@ -1190,6 +1246,7 @@ namespace liblo {
                 else if (GetParam() == LIBLO_GAME_FO4) {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
                 }
             }
 
@@ -1217,6 +1274,7 @@ namespace liblo {
                 updateEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1253,6 +1311,7 @@ namespace liblo {
                 updateEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1281,6 +1340,7 @@ namespace liblo {
                 updateEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1308,6 +1368,7 @@ namespace liblo {
                 updateEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1368,6 +1429,7 @@ namespace liblo {
                 blankEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
             });
             ASSERT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
 
@@ -1402,6 +1464,7 @@ namespace liblo {
                 blankEsm,
                 automatronDlcEsm,
                 wastelandWorkshopDlcEsm,
+                farHarborDlcEsm,
                 blankDifferentEsp,
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(plugins));
@@ -1427,6 +1490,7 @@ namespace liblo {
                 updateEsm,
                 '*' + automatronDlcEsm,
                 '*' + wastelandWorkshopDlcEsm,
+                '*' + farHarborDlcEsm,
                 blankMasterDependentEsp,
                 '*' + blankDifferentEsp,
                 blankDifferentPluginDependentEsp,

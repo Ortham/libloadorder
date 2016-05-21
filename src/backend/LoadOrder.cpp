@@ -79,22 +79,17 @@ namespace liblo {
         if (fs::is_directory(gameSettings.getPluginsFolder()) && fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime) {
             // Now scan through Data folder. Add any plugins that aren't
             // already in load order.
-            for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
-                if (fs::is_regular_file(itr->status())) {
-                    const std::string filename(itr->path().filename().string());
-                    if (count(begin(loadOrder), end(loadOrder), filename) == 0 && Plugin::isValid(filename, gameSettings))
-                        loadOrder.push_back(Plugin(filename, gameSettings));
-                }
-            }
+            addMissingPlugins();
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
                 stable_sort(begin(loadOrder),
                             end(loadOrder),
                             [&](const Plugin& lhs, const Plugin& rhs) {
-                    return difftime(lhs.getModTime(),
-                                    rhs.getModTime()) < 0;
+                    if (lhs.isMasterFile() == rhs.isMasterFile())
+                        return difftime(lhs.getModTime(), rhs.getModTime()) < 0;
+                    else
+                        return lhs.isMasterFile();
                 });
             }
-            partitionMasters();
             pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
         }
         if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
@@ -175,13 +170,7 @@ namespace liblo {
 
         // Now append any plugins that are installed but aren't present in the
         // new load order.
-        for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
-            if (fs::is_regular_file(itr->status())) {
-                const std::string filename(itr->path().filename().string());
-                if (Plugin::isValid(filename, gameSettings) && count(begin(loadOrder), end(loadOrder), filename) == 0)
-                    addToLoadOrder(filename);
-            }
-        }
+        addMissingPlugins();
 
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
             // Make sure that game master is active.
@@ -253,7 +242,7 @@ namespace liblo {
 
         // Check all plugins are valid.
         for_each(begin(pluginNames), end(pluginNames), [&](const std::string& pluginName) {
-            if (count(begin(loadOrder), end(loadOrder), pluginName) == 0
+            if (!this->contains(pluginName)
                 && !Plugin::isValid(pluginName, gameSettings))
                 throw error(LIBLO_ERROR_INVALID_ARGS, "\"" + pluginName + "\" is not a valid plugin file.");
         });
@@ -408,7 +397,7 @@ namespace liblo {
             if (!Plugin::isValid(pluginName, gameSettings))
                 continue;
 
-            if (count(begin(loadOrder), end(loadOrder), pluginName) == 0)
+            if (!this->contains(pluginName))
                 addToLoadOrder(pluginName);
         }
     }
@@ -474,6 +463,36 @@ namespace liblo {
                 it->deactivate();
                 --numActivePlugins;
             }
+        }
+    }
+
+    void LoadOrder::addMissingPlugins() {
+        const vector<string> implicitlyActivePlugins = gameSettings.getImplicitlyActivePlugins();
+
+        // Add any missing plugins, apart from implicitly active plugins, which
+        // if missing must be loaded last (of the master files).
+        for (fs::directory_iterator itr(gameSettings.getPluginsFolder()); itr != fs::directory_iterator(); ++itr) {
+            if (fs::is_regular_file(itr->status())) {
+                const std::string filename(itr->path().filename().string());
+
+                auto iequals = [&](const string& pluginName) {
+                    return boost::iequals(pluginName, filename);
+                };
+
+                if (!this->contains(filename)
+                    && find_if(begin(implicitlyActivePlugins),
+                               end(implicitlyActivePlugins),
+                               iequals) == end(implicitlyActivePlugins)
+                    && Plugin::isValid(filename, gameSettings))
+                    addToLoadOrder(filename);
+            }
+        }
+
+        // Now add any implicitly active plugins in the order they are given.
+        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
+            if (!this->contains(pluginName)
+                && Plugin::isValid(pluginName, gameSettings))
+                addToLoadOrder(pluginName);
         }
     }
 
@@ -618,6 +637,10 @@ namespace liblo {
             return loadOrder.size();
     }
 
+    bool LoadOrder::contains(const std::string& pluginName) const {
+        return find(begin(loadOrder), end(loadOrder), pluginName) != end(loadOrder);
+    }
+
     std::vector<Plugin>::iterator LoadOrder::addToLoadOrder(const std::string& pluginName) {
         std::vector<Plugin>::iterator it;
         Plugin plugin(pluginName, gameSettings);
@@ -627,13 +650,5 @@ namespace liblo {
         }
         else
             return loadOrder.insert(next(begin(loadOrder), pos), plugin);
-    }
-
-    void LoadOrder::partitionMasters() {
-        stable_partition(begin(loadOrder),
-                         end(loadOrder),
-                         [&](const Plugin& plugin) {
-            return plugin.isMasterFile();
-        });
     }
 }
