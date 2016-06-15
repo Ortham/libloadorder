@@ -102,6 +102,9 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / automatronDlcEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / wastelandWorkshopDlcEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / farHarborDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / contraptionsWorkshopDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / vaultTecWorkshopDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nukaWorldDlcEsm));
             }
 
             inline void writeLoadOrder(std::vector<std::pair<std::string, bool>> loadOrder) const {
@@ -993,6 +996,9 @@ namespace liblo {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), contraptionsWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), vaultTecWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), nukaWorldDlcEsm);
                 }
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());

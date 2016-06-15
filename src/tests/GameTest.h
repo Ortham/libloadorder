@@ -49,6 +49,9 @@ namespace liblo {
                 automatronDlcEsm("DLCRobot.esm"),
                 wastelandWorkshopDlcEsm("DLCworkshop01.esm"),
                 farHarborDlcEsm("DLCCoast.esm"),
+                contraptionsWorkshopDlcEsm("DLCworkshop02.esm"),
+                vaultTecWorkshopDlcEsm("DLCworkshop03.esm"),
+                nukaWorldDlcEsm("DLCNukaWorld.esm"),
                 invalidPlugin("NotAPlugin.esm") {}
 
             inline virtual void SetUp() {
@@ -101,6 +104,9 @@ namespace liblo {
             const std::string automatronDlcEsm;
             const std::string wastelandWorkshopDlcEsm;
             const std::string farHarborDlcEsm;
+            const std::string contraptionsWorkshopDlcEsm;
+            const std::string vaultTecWorkshopDlcEsm;
+            const std::string nukaWorldDlcEsm;
             const std::string invalidPlugin;
 
         private:

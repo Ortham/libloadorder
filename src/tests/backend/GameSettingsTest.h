@@ -69,6 +69,9 @@ namespace liblo {
                         "DLCRobot.esm",
                         "DLCworkshop01.esm",
                         "DLCCoast.esm",
+                        "DLCworkshop02.esm",
+                        "DLCworkshop03.esm",
+                        "DLCNukaWorld.esm",
                     });
                 }
 
