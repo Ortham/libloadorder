@@ -295,13 +295,14 @@ namespace liblo {
     void LoadOrder::deactivate(const std::string& pluginName) {
         lock_guard<recursive_mutex> guard(mutex);
 
-        // Check that the plugin is not implicitly active.
-        if (gameSettings.isImplicitlyActive(pluginName))
-            throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + pluginName + ".");
-
         auto it = find(begin(loadOrder), end(loadOrder), pluginName);
-        if (it != end(loadOrder))
+        if (it != end(loadOrder)) {
+            // Check that the plugin is not implicitly active.
+            if (gameSettings.isImplicitlyActive(pluginName))
+                throw error(LIBLO_ERROR_INVALID_ARGS, "Cannot deactivate " + pluginName + ".");
+
             it->deactivate();
+        }
     }
 
     bool LoadOrder::isSynchronised(const GameSettings& gameSettings) {

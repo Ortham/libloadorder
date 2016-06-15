@@ -669,6 +669,18 @@ namespace liblo {
             }
         }
 
+        TEST_P(LoadOrderTest, deactivatingAnImplicitlyActivePluginThatIsNotInstalledShouldDoNothing) {
+            loadOrder.load();
+
+            for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
+                if (boost::filesystem::exists(pluginsPath / plugin))
+                    continue;
+
+                EXPECT_NO_THROW(loadOrder.deactivate(plugin));
+                EXPECT_FALSE(loadOrder.isActive(plugin));
+            }
+        }
+
         TEST_P(LoadOrderTest, deactivatingAnInactivePluginShouldHaveNoEffect) {
             std::vector<std::string> validLoadOrder({
                 masterFile,
