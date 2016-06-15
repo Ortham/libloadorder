@@ -65,30 +65,10 @@ namespace liblo {
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / blankDifferentPluginDependentEsp));
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / missingPlugin));
 
-                // Make sure Update.esm exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / updateEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / updateEsm));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / updateEsm));
-
                 // Make sure the non-ASCII plugin exists.
                 ASSERT_FALSE(boost::filesystem::exists(pluginsPath / nonAsciiEsm));
                 ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / nonAsciiEsm));
                 ASSERT_TRUE(boost::filesystem::exists(pluginsPath / nonAsciiEsm));
-
-                // Make sure the automatronDlcEsm plugin exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / automatronDlcEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / automatronDlcEsm));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / automatronDlcEsm));
-
-                // Make sure the wastelandWorkshopDlcEsm plugin exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / wastelandWorkshopDlcEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / wastelandWorkshopDlcEsm));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / wastelandWorkshopDlcEsm));
-
-                // Make sure the farHarborDlcEsm plugin exists.
-                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
-                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / farHarborDlcEsm));
-                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
 
                 // Morrowind load order files have a slightly different
                 // format and a prefix is necessary.
@@ -104,10 +84,6 @@ namespace liblo {
                     {blankMasterDependentEsm, false},
                     {blankDifferentMasterDependentEsm, false},
                     {blankEsp, true},  // Put a plugin before master to test fixup.
-                    {updateEsm, false},
-                    {automatronDlcEsm, false},
-                    {wastelandWorkshopDlcEsm, false},
-                    {farHarborDlcEsm, false},
                     {blankDifferentEsp, false},
                     {blankMasterDependentEsp, false},
                     {blankDifferentMasterDependentEsp, false},
@@ -171,6 +147,30 @@ namespace liblo {
             void decrementModTime(const boost::filesystem::path& file) {
                 time_t currentModTime = boost::filesystem::last_write_time(file);
                 boost::filesystem::last_write_time(file, currentModTime - 1);
+            }
+
+            inline void createUpdateEsm() const {
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / updateEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / updateEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / updateEsm));
+            }
+
+            inline void createAutomatronDlcEsm() const {
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / automatronDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / automatronDlcEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / automatronDlcEsm));
+            }
+
+            inline void createWastelandWorkshipDlcEsm() const {
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / wastelandWorkshopDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / wastelandWorkshopDlcEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / wastelandWorkshopDlcEsm));
+            }
+
+            inline void createFarHarborDlcEsm() const {
+                ASSERT_FALSE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsm, pluginsPath / farHarborDlcEsm));
+                ASSERT_TRUE(boost::filesystem::exists(pluginsPath / farHarborDlcEsm));
             }
 
             const GameSettings gameSettings;
@@ -342,7 +342,7 @@ namespace liblo {
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(validLoadOrder));
 
-            EXPECT_EQ(16, loadOrder.getPosition(missingPlugin));
+            EXPECT_EQ(12, loadOrder.getPosition(missingPlugin));
         }
 
         TEST_P(LoadOrderTest, positionOfAPluginShouldBeEqualToItsLoadOrderIndex) {
@@ -660,7 +660,11 @@ namespace liblo {
             EXPECT_TRUE(loadOrder.getLoadOrder().empty());
         }
 
-        TEST_P(LoadOrderTest, deactivatingAnImplicitlyActivePluginShouldThrow) {
+        TEST_P(LoadOrderTest, deactivatingAnImplicitlyActivePluginThatIsInstalledShouldThrow) {
+            createUpdateEsm();
+            createAutomatronDlcEsm();
+            createWastelandWorkshipDlcEsm();
+            createFarHarborDlcEsm();
             loadOrder.load();
 
             for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
@@ -762,7 +766,6 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldThrow) {
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
                 invalidPlugin,
             });
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -771,7 +774,6 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingInvalidActivePluginsShouldMakeNoChanges) {
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
                 invalidPlugin,
             });
             EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -783,7 +785,6 @@ namespace liblo {
             // here because it's too expensive to do for every test.
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
@@ -801,7 +802,6 @@ namespace liblo {
             // here because it's too expensive to do for every test.
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
             });
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 EXPECT_NO_THROW(boost::filesystem::copy_file(pluginsPath / blankEsp, pluginsPath / (std::to_string(i) + ".esp")));
@@ -817,7 +817,6 @@ namespace liblo {
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutGameMasterShouldThrowForTextfileAndAsteriskBasedGamesAndNotOtherwise) {
             std::vector<std::string> activePlugins({
-                updateEsm,
                 blankEsm,
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
@@ -829,12 +828,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmWhenItExistsShouldThrowForSkyrimAndNotOtherwise) {
+            createUpdateEsm();
+
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
             });
             if (GetParam() == LIBLO_GAME_TES5) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -845,11 +843,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutAutomatronDlcEsmWhenItExistsShouldThrowForFallout4AndNotOtherwise) {
+            createAutomatronDlcEsm();
+
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                wastelandWorkshopDlcEsm,
             });
             if (GetParam() == LIBLO_GAME_FO4) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -860,11 +858,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutWastelandWorkshopDlcEsmWhenItExistsShouldThrowForFallout4AndNotOtherwise) {
+            createWastelandWorkshipDlcEsm();
+
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                automatronDlcEsm,
             });
             if (GetParam() == LIBLO_GAME_FO4) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -875,12 +873,11 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutFarHarborDlcEsmWhenItExistsShouldThrowForFallout4AndNotOtherwise) {
+            createFarHarborDlcEsm();
+
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
             });
             if (GetParam() == LIBLO_GAME_FO4) {
                 EXPECT_ANY_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -891,55 +888,35 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutUpdateEsmShouldNotThrowWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
-
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                wastelandWorkshopDlcEsm,
-                automatronDlcEsm,
-                farHarborDlcEsm,
             });
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutAutomatronDlcEsmShouldNotThrowWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / automatronDlcEsm));
-
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutWastelandWorkshopDlcEsmShouldNotThrowWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / wastelandWorkshopDlcEsm));
-
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                automatronDlcEsm,
-                farHarborDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
         }
 
         TEST_P(LoadOrderTest, settingActivePluginsWithoutFarHarborDlcEsmShouldNotThrowWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / farHarborDlcEsm));
-
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                updateEsm,
-                wastelandWorkshopDlcEsm,
-                automatronDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -952,10 +929,6 @@ namespace liblo {
             std::vector<std::string> activePlugins({
                 masterFile,
                 boost::to_lower_copy(blankEsm),
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
             });
 
             EXPECT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
@@ -967,11 +940,7 @@ namespace liblo {
         TEST_P(LoadOrderTest, settingActivePluginsNotInLoadOrderShouldAddThemInTheOrderTheyAreGiven) {
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
                 blankEsm,
-                wastelandWorkshopDlcEsm,
-                automatronDlcEsm,
-                farHarborDlcEsm,
             });
             ASSERT_TRUE(loadOrder.getLoadOrder().empty());
 
@@ -1045,6 +1014,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateUpdateEsmWhenItExistsForSkyrimAndNotOtherwise) {
+            createUpdateEsm();
             EXPECT_NO_THROW(loadOrder.load());
 
             bool isUpdateEsmActive = loadOrder.isActive(updateEsm);
@@ -1055,6 +1025,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateAutomatronDlcEsmWhenItExistsForFallout4AndNotOtherwise) {
+            createAutomatronDlcEsm();
             EXPECT_NO_THROW(loadOrder.load());
 
             bool isPluginActive = loadOrder.isActive(automatronDlcEsm);
@@ -1065,6 +1036,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateWastelandWorkshopDlcEsmWhenItExistsForFallout4AndNotOtherwise) {
+            createWastelandWorkshipDlcEsm();
             EXPECT_NO_THROW(loadOrder.load());
 
             bool isPluginActive = loadOrder.isActive(wastelandWorkshopDlcEsm);
@@ -1075,6 +1047,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateFarHarborDlcEsmWhenItExistsForFallout4AndNotOtherwise) {
+            createFarHarborDlcEsm();
             EXPECT_NO_THROW(loadOrder.load());
 
             bool isPluginActive = loadOrder.isActive(farHarborDlcEsm);
@@ -1085,8 +1058,6 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldNotActivateUpdateEsmWhenItDoesNotExist) {
-            ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / updateEsm));
-
             EXPECT_NO_THROW(loadOrder.load());
 
             EXPECT_FALSE(loadOrder.isActive(updateEsm));
@@ -1100,10 +1071,8 @@ namespace liblo {
             std::string linePrefix = getActivePluginsFileLinePrefix();
             boost::filesystem::ofstream out(activePluginsFilePath);
 
-            for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
-                out << linePrefix << utf8ToWindows1252(plugin) << std::endl;
-                expectedActivePlugins.push_back(plugin);
-            }
+            if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK)
+                expectedActivePlugins.push_back(masterFile);
 
             for (size_t i = 0; i < LoadOrder::maxActivePlugins; ++i) {
                 std::string filename = std::to_string(i) + ".esp";
@@ -1125,6 +1094,10 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldFixInvalidDataWhenReadingActivePluginsFile) {
+            createUpdateEsm();
+            createAutomatronDlcEsm();
+            createWastelandWorkshipDlcEsm();
+            createFarHarborDlcEsm();
             EXPECT_NO_THROW(loadOrder.load());
 
             std::vector<std::string> expectedActivePlugins({
@@ -1159,7 +1132,6 @@ namespace liblo {
                     blankEsm,
                     blankMasterDependentEsm,
                     blankDifferentMasterDependentEsm,
-                    updateEsm,
                 });
                 EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
             }
@@ -1171,10 +1143,6 @@ namespace liblo {
                     blankEsm,
                     blankMasterDependentEsm,
                     blankDifferentMasterDependentEsm,
-                    updateEsm,
-                    automatronDlcEsm,
-                    wastelandWorkshopDlcEsm,
-                    farHarborDlcEsm,
                     blankEsp,
                     blankDifferentEsp,
                     blankMasterDependentEsp,
@@ -1207,8 +1175,6 @@ namespace liblo {
                 nonAsciiEsm,
                 blankEsm,
             });
-            if (GetParam() == LIBLO_GAME_TES5)
-                expectedLoadOrder.push_back(updateEsm);
 
             EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
         }
@@ -1226,14 +1192,6 @@ namespace liblo {
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
                 expectedActivePlugins.insert(begin(expectedActivePlugins), masterFile);
-
-                if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(next(begin(expectedActivePlugins)), updateEsm);
-                else if (GetParam() == LIBLO_GAME_FO4) {
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
-                }
             }
 
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1252,14 +1210,6 @@ namespace liblo {
             });
             if (loadOrderMethod == LIBLO_METHOD_TEXTFILE || loadOrderMethod == LIBLO_METHOD_ASTERISK) {
                 expectedActivePlugins.insert(begin(expectedActivePlugins), masterFile);
-
-                if (GetParam() == LIBLO_GAME_TES5)
-                    expectedActivePlugins.insert(next(begin(expectedActivePlugins)), updateEsm);
-                else if (GetParam() == LIBLO_GAME_FO4) {
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
-                }
             }
 
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1283,10 +1233,6 @@ namespace liblo {
                 blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1320,10 +1266,6 @@ namespace liblo {
                 blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1349,10 +1291,6 @@ namespace liblo {
                 blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1377,10 +1315,6 @@ namespace liblo {
                 blankEsm,
                 blankMasterDependentEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
                 blankEsp,
                 blankDifferentEsp,
                 blankMasterDependentEsp,
@@ -1392,6 +1326,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadAPluginIfItHasBeenEdited) {
+            createUpdateEsm();
             ASSERT_NO_THROW(loadOrder.load());
 
             boost::filesystem::ofstream out(pluginsPath / updateEsm);
@@ -1405,6 +1340,7 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadAPluginIfItHasBeenEditedAndFileHasOlderTimestamp) {
+            createUpdateEsm();
             ASSERT_NO_THROW(loadOrder.load());
 
             boost::filesystem::ofstream out(pluginsPath / updateEsm);
@@ -1437,11 +1373,7 @@ namespace liblo {
         TEST_P(LoadOrderTest, savingShouldWriteActivePluginsToActivePluginsFile) {
             std::vector<std::string> activePlugins({
                 masterFile,
-                updateEsm,
                 blankEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
             });
             ASSERT_NO_THROW(loadOrder.setActivePlugins(activePlugins));
 
@@ -1463,7 +1395,6 @@ namespace liblo {
                 blankDifferentEsm,
                 nonAsciiEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
                 blankMasterDependentEsp,
                 blankDifferentEsp,
                 blankDifferentPluginDependentEsp,
@@ -1474,9 +1405,6 @@ namespace liblo {
             std::vector<std::string> activePlugins({
                 masterFile,
                 blankEsm,
-                automatronDlcEsm,
-                wastelandWorkshopDlcEsm,
-                farHarborDlcEsm,
                 blankDifferentEsp,
             });
             ASSERT_NO_THROW(loadOrder.setLoadOrder(plugins));
@@ -1499,10 +1427,6 @@ namespace liblo {
                 blankDifferentEsm,
                 nonAsciiEsm,
                 blankDifferentMasterDependentEsm,
-                updateEsm,
-                '*' + automatronDlcEsm,
-                '*' + wastelandWorkshopDlcEsm,
-                '*' + farHarborDlcEsm,
                 blankMasterDependentEsp,
                 '*' + blankDifferentEsp,
                 blankDifferentPluginDependentEsp,
