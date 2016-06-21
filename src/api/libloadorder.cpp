@@ -38,7 +38,7 @@ using namespace liblo;
    ------------------------------*/
 
 const unsigned int LIBLO_VERSION_MAJOR = 9;
-const unsigned int LIBLO_VERSION_MINOR = 3;
+const unsigned int LIBLO_VERSION_MINOR = 4;
 const unsigned int LIBLO_VERSION_PATCH = 0;
 
 /* Returns whether this version of libloadorder is compatible with the given
