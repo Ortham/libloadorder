@@ -120,21 +120,11 @@ ENDIF ()
 IF (CMAKE_COMPILER_IS_GNUCXX)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c++14")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14")
-    IF (PROJECT_STATIC_RUNTIME)
-        set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
-        set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
-        set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
-    ENDIF ()
 
     set(PROJECT_LIBRARIES "pthread")
 ENDIF ()
 
-
-IF (MINGW)
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--subsystem,windows")
-    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--subsystem,windows")
-    set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--subsystem,windows")
-ELSEIF (MSVC)
+IF (MSVC)
     # Update compiler flags.
     IF (PROJECT_STATIC_RUNTIME)
         FOREACH(flag
