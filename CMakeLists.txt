@@ -15,7 +15,7 @@ option(PROJECT_STATIC_RUNTIME "Build with static runtime libs (/MT)" ON)
 
 ExternalProject_Add(libespm
                     PREFIX "external"
-                    URL "https://github.com/WrinklyNinja/libespm/archive/2.5.1.tar.gz"
+                    URL "https://github.com/WrinklyNinja/libespm/archive/2.5.4.tar.gz"
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
