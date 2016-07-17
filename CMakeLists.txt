@@ -104,6 +104,13 @@ include_directories ("${CMAKE_SOURCE_DIR}/src"
 # Platform-Specific Settings
 ##############################
 
+# If building on Travis, define BOOST_NO_CXX11_SCOPED_ENUMS to avoid
+# boost::filesystem::copy_file() linking errors due to mismatched C++ runtimes
+# between Boost and libloadorder.
+IF ($ENV{TRAVIS})
+    add_definitions (-DBOOST_NO_CXX11_SCOPED_ENUMS)
+ENDIF ()
+
 # Settings when compiling for Windows.
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions (-DUNICODE -D_UNICODE)
