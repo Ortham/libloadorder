@@ -7,25 +7,27 @@ compiler:
 addons:
   apt:
     sources:
-      - boost-latest
       - llvm-toolchain-precise-3.8
       - ubuntu-toolchain-r-test
     packages:
-      - libboost-filesystem1.55-dev
-      - libboost-iostreams1.55-dev
-      - libboost-locale1.55-dev
       - gcc-5
       - g++-5
       - clang-3.8
       - libstdc++-5-dev
+cache:
+  directories:
+    - $HOME/boost_1_61_0/boost
+    - $HOME/boost_1_61_0/stage/lib
 
-before_script:
+install:
   # Use the latest version of Clang/GCC.
   - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8"; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
+  - chmod +x scripts/travis/install_boost.sh
+  - scripts/travis/install_boost.sh
+
+before_script:
   - mkdir build && cd build
-  # Travis machines are 64 bit, and the dependencies use the dynamic runtime, so
-  # use the same.
-  - cmake .. -DPROJECT_STATIC_RUNTIME=OFF
+  - cmake .. -DBOOST_ROOT=~/boost_1_61_0
 
 script: make && ./tests

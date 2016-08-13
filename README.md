@@ -43,7 +43,7 @@ Libloadorder uses the following CMake variables to set build parameters:
 Parameter | Values | Description
 ----------|--------|------------
 `BUILD_SHARED_LIBS` | `ON`, `OFF` | Whether or not to build a shared libloadorder. Defaults to `OFF`.
-`PROJECT_STATIC_RUNTIME` | `ON`, `OFF` | Whether to link the C++ runtime statically or not. This also affects the Boost libraries used. Defaults to `ON`.
+`MSVC_STATIC_RUNTIME` | `ON`, `OFF` | Whether to link the MSVC C++ runtime statically or not. Defaults to `ON`.
 
 You may also need to define `BOOST_ROOT` if CMake can't find Boost.
 

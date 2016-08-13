@@ -1,7 +1,3 @@
-# Settings passed on the command line:
-#
-# PROJECT_ARCH = the build architecture
-
 ##############################
 # General Settings
 ##############################
@@ -11,7 +7,23 @@ project (libloadorder)
 include(ExternalProject)
 
 option(BUILD_SHARED_LIBS "Build a shared library" OFF)
-option(PROJECT_STATIC_RUNTIME "Build with static runtime libs (/MT)" ON)
+option(MSVC_STATIC_RUNTIME "Build with static runtime libs (/MT)" ON)
+
+IF (${MSVC_STATIC_RUNTIME})
+    set (MSVC_SHARED_RUNTIME OFF)
+ELSE()
+    set (MSVC_SHARED_RUNTIME ON)
+ENDIF()
+
+set (Boost_USE_STATIC_LIBS ON)
+set (Boost_USE_MULTITHREADED ON)
+IF (MSVC)
+    set (Boost_USE_STATIC_RUNTIME ${MSVC_STATIC_RUNTIME})
+ELSE()
+    set (Boost_USE_STATIC_RUNTIME OFF)
+ENDIF()
+
+find_package(Boost REQUIRED COMPONENTS locale filesystem system iostreams)
 
 ExternalProject_Add(libespm
                     PREFIX "external"
@@ -25,6 +37,7 @@ set (LIBESPM_INCLUDE_DIRS "${SOURCE_DIR}/include")
 ExternalProject_Add(GTest
                     PREFIX "external"
                     URL "https://github.com/google/googletest/archive/release-1.7.0.tar.gz"
+                    CMAKE_ARGS -Dgtest_force_shared_crt=${MSVC_SHARED_RUNTIME}
                     INSTALL_COMMAND "")
 ExternalProject_Get_Property(GTest SOURCE_DIR BINARY_DIR)
 set (GTEST_INCLUDE_DIRS "${SOURCE_DIR}/include")
@@ -36,12 +49,6 @@ ExternalProject_Add(testing-plugins
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
-
-set (Boost_USE_STATIC_LIBS ${PROJECT_STATIC_RUNTIME})
-set (Boost_USE_MULTITHREADED ON)
-set (Boost_USE_STATIC_RUNTIME ${PROJECT_STATIC_RUNTIME})
-
-find_package(Boost REQUIRED COMPONENTS locale filesystem system iostreams)
 
 set (PROJECT_SRC    "${CMAKE_SOURCE_DIR}/src/backend/error.cpp"
                     "${CMAKE_SOURCE_DIR}/src/backend/helpers.cpp"
@@ -104,13 +111,6 @@ include_directories ("${CMAKE_SOURCE_DIR}/src"
 # Platform-Specific Settings
 ##############################
 
-# If building on Travis, define BOOST_NO_CXX11_SCOPED_ENUMS to avoid
-# boost::filesystem::copy_file() linking errors due to mismatched C++ runtimes
-# between Boost and libloadorder.
-IF ($ENV{TRAVIS})
-    add_definitions (-DBOOST_NO_CXX11_SCOPED_ENUMS)
-ENDIF ()
-
 # Settings when compiling for Windows.
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions (-DUNICODE -D_UNICODE)
@@ -126,7 +126,7 @@ ENDIF ()
 
 IF (MSVC)
     # Update compiler flags.
-    IF (PROJECT_STATIC_RUNTIME)
+    IF (MSVC_STATIC_RUNTIME)
         FOREACH(flag
             CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO
             CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG_INIT
