@@ -185,7 +185,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_set_game_master_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(NULL, blankEsm.c_str()));
@@ -203,21 +204,21 @@ namespace liblo {
         }
 
         TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsInvalidForTimestampBasedGamesAndFailOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_TES5SE || GetParam() == LIBLO_GAME_FO4)
                 EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
             else
                 EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, invalidPlugin.c_str()));
         }
 
         TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsValidForTimestampBasedGamesAndFailOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_TES5SE || GetParam() == LIBLO_GAME_FO4)
                 EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, blankEsm.c_str()));
             else
                 EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, blankEsm.c_str()));
         }
 
         TEST_P(lo_set_game_master_test, shouldSucceedIfPluginIsDefaultGameMasterForTimestampBasedGamesAndFailOtherwise) {
-            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_FO4)
+            if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_TES5SE || GetParam() == LIBLO_GAME_FO4)
                 EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_game_master(gameHandle, masterFile.c_str()));
             else
                 EXPECT_EQ(LIBLO_OK, lo_set_game_master(gameHandle, masterFile.c_str()));
@@ -235,7 +236,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_fix_plugin_lists_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_fix_plugin_lists(NULL));

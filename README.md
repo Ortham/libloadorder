@@ -7,6 +7,7 @@ Libloadorder is a free software library for manipulating the load order and acti
 * TES III: Morrowind
 * TES IV: Oblivion
 * TES V: Skyrim
+* TES V: Skyrim Special Edition
 * Fallout 3
 * Fallout: New Vegas
 * Fallout 4

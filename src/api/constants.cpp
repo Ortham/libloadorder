@@ -51,3 +51,4 @@ const unsigned int LIBLO_GAME_TES5 = 3;
 const unsigned int LIBLO_GAME_FO3 = 4;
 const unsigned int LIBLO_GAME_FNV = 5;
 const unsigned int LIBLO_GAME_FO4 = 6;
+const unsigned int LIBLO_GAME_TES5SE = 7;

@@ -83,7 +83,7 @@ namespace liblo {
             inline std::string getActivePluginsFileLinePrefix() const {
                 if (GetParam() == LIBLO_GAME_TES3)
                     return "GameFile0=";
-                else if (GetParam() == LIBLO_GAME_FO4)
+                else if (GetParam() == LIBLO_GAME_FO4 || GetParam() == LIBLO_GAME_TES5SE)
                     return "*";
                 else
                     return "";
@@ -133,7 +133,7 @@ namespace liblo {
                     return "Morrowind.esm";
                 else if (GetParam() == LIBLO_GAME_TES4)
                     return "Oblivion.esm";
-                else if (GetParam() == LIBLO_GAME_TES5)
+                else if (GetParam() == LIBLO_GAME_TES5 || GetParam() == LIBLO_GAME_TES5SE)
                     return "Skyrim.esm";
                 else if (GetParam() == LIBLO_GAME_FO3)
                     return "Fallout3.esm";
@@ -151,7 +151,7 @@ namespace liblo {
             }
 
             inline unsigned int getLoadOrderMethod() const {
-                if (GetParam() == LIBLO_GAME_FO4)
+                if (GetParam() == LIBLO_GAME_FO4 || GetParam() == LIBLO_GAME_TES5SE)
                     return LIBLO_METHOD_ASTERISK;
                 else if (GetParam() == LIBLO_GAME_TES5)
                     return LIBLO_METHOD_TEXTFILE;

@@ -64,7 +64,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_create_handle_test, shouldFailIfHandleInputIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_create_handle(NULL, GetParam(), gamePath.string().c_str(), localPath.string().c_str()));

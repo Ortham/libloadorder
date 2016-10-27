@@ -47,6 +47,9 @@ namespace liblo {
                 blankDifferentMasterDependentEsp("Blank - Different Master Dependent.esp"),
                 blankPluginDependentEsp("Blank - Plugin Dependent.esp"),
                 blankDifferentPluginDependentEsp("Blank - Different Plugin Dependent.esp"),
+                hearthfiresEsm("Hearthfires.esm"),
+                dawnguardEsm("Dawnguard.esm"),
+                dragonbornEsm("Dragonborn.esm"),
                 missingPlugin("missing.esm"),
                 updateEsm("Update.esm"),
                 nonAsciiEsm("Blàñk.esm"),
@@ -105,6 +108,9 @@ namespace liblo {
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / contraptionsWorkshopDlcEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / vaultTecWorkshopDlcEsm));
                 ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / nukaWorldDlcEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / hearthfiresEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / dawnguardEsm));
+                ASSERT_NO_THROW(boost::filesystem::remove(pluginsPath / dragonbornEsm));
             }
 
             inline void writeLoadOrder(std::vector<std::pair<std::string, bool>> loadOrder) const {
@@ -168,18 +174,22 @@ namespace liblo {
             const GameSettings gameSettings;
             LoadOrder loadOrder;
 
-            std::string blankMasterDependentEsm;
-            std::string blankDifferentMasterDependentEsm;
-            std::string blankEsp;
-            std::string blankDifferentEsp;
-            std::string blankMasterDependentEsp;
-            std::string blankDifferentMasterDependentEsp;
-            std::string blankPluginDependentEsp;
-            std::string blankDifferentPluginDependentEsp;
+            const std::string blankMasterDependentEsm;
+            const std::string blankDifferentMasterDependentEsm;
+            const std::string blankEsp;
+            const std::string blankDifferentEsp;
+            const std::string blankMasterDependentEsp;
+            const std::string blankDifferentMasterDependentEsp;
+            const std::string blankPluginDependentEsp;
+            const std::string blankDifferentPluginDependentEsp;
 
-            std::string missingPlugin;
-            std::string updateEsm;
-            std::string nonAsciiEsm;
+            const std::string hearthfiresEsm;
+            const std::string dawnguardEsm;
+            const std::string dragonbornEsm;
+
+            const std::string missingPlugin;
+            const std::string updateEsm;
+            const std::string nonAsciiEsm;
         };
 
         // Pass an empty first argument, as it's a prefix for the test instantation,
@@ -192,7 +202,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(LoadOrderTest, settingAValidLoadOrderShouldNotThrow) {
             std::vector<std::string> validLoadOrder({
@@ -992,6 +1003,12 @@ namespace liblo {
 
                 if (GetParam() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
+                else if (GetParam() == LIBLO_GAME_TES5SE) {
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Hearthfires.esm");
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Dragonborn.esm");
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Dawnguard.esm");
+                }
                 else if (GetParam() == LIBLO_GAME_FO4) {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);

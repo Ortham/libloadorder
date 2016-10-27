@@ -57,7 +57,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_active_plugins_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_active_plugins(NULL, &plugins, &numPlugins));
@@ -118,7 +119,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_set_active_plugins_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_active_plugins(NULL, plugins.data(), plugins.size()));
@@ -161,7 +163,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_plugin_active_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_active(NULL, blankEsm.c_str(), &isActive));
@@ -202,7 +205,8 @@ namespace liblo {
                                     LIBLO_GAME_TES5,
                                     LIBLO_GAME_FO3,
                                     LIBLO_GAME_FNV,
-                                    LIBLO_GAME_FO4));
+                                    LIBLO_GAME_FO4,
+                                    LIBLO_GAME_TES5SE));
 
         TEST_P(lo_set_plugin_active_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_active(NULL, blankEsm.c_str(), true));

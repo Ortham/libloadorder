@@ -74,6 +74,14 @@ namespace liblo {
             pluginsFolderName = "Data";
             pluginsFileName = "plugins.txt";
         }
+        else if (id == LIBLO_GAME_TES5SE) {
+            loMethod = LIBLO_METHOD_ASTERISK;
+            masterFile = "Skyrim.esm";
+
+            appdataFolderName = "Skyrim Special Edition";
+            pluginsFolderName = "Data";
+            pluginsFileName = "plugins.txt";
+        }
         else if (id == LIBLO_GAME_FO3) {
             loMethod = LIBLO_METHOD_TIMESTAMP;
             masterFile = "Fallout3.esm";
@@ -168,6 +176,15 @@ namespace liblo {
                 "DLCworkshop03.esm",
                 "DLCNukaWorld.esm",
             });
+        }
+        else if (id == LIBLO_GAME_TES5SE) {
+          return std::vector<std::string>({
+              masterFile,
+              "Update.esm",
+              "Hearthfires.esm",
+              "Dragonborn.esm",
+              "Dawnguard.esm",
+          });
         }
 
         return std::vector<std::string>();

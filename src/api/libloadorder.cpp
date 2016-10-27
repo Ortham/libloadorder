@@ -102,7 +102,8 @@ LIBLO unsigned int lo_create_handle(lo_game_handle * const gh,
              && gameId != LIBLO_GAME_TES5
              && gameId != LIBLO_GAME_FO3
              && gameId != LIBLO_GAME_FNV
-             && gameId != LIBLO_GAME_FO4)
+             && gameId != LIBLO_GAME_FO4
+             && gameId != LIBLO_GAME_TES5SE)
         return c_error(LIBLO_ERROR_INVALID_ARGS, "Invalid game specified.");
 
     // Set the locale to get UTF-8 conversions working correctly.

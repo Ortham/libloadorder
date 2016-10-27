@@ -49,7 +49,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_load_order_method_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order_method(NULL, &method));
@@ -84,7 +85,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_set_load_order_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_load_order(NULL, plugins.data(), plugins.size()));
@@ -138,7 +140,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_load_order_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_load_order(NULL, &plugins, &numPlugins));
@@ -172,7 +175,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_set_plugin_position_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_set_plugin_position(NULL, masterFile.c_str(), 0));
@@ -207,7 +211,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_plugin_position_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_plugin_position(NULL, masterFile.c_str(), &position));
@@ -249,7 +254,8 @@ namespace liblo {
                                 LIBLO_GAME_TES5,
                                 LIBLO_GAME_FO3,
                                 LIBLO_GAME_FNV,
-                                LIBLO_GAME_FO4));
+                                LIBLO_GAME_FO4,
+                                LIBLO_GAME_TES5SE));
 
         TEST_P(lo_get_indexed_plugin_test, shouldFailIfGameHandleIsNull) {
             EXPECT_EQ(LIBLO_ERROR_INVALID_ARGS, lo_get_indexed_plugin(NULL, 0, &plugin));
