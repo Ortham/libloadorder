@@ -40,10 +40,7 @@ namespace fs = boost::filesystem;
 
 namespace liblo {
     LoadOrder::LoadOrder(const GameSettings& gameSettings) :
-        gameSettings(gameSettings),
-        pluginsFolderModTime(0),
-        activePluginsFileModTime(0),
-        loadOrderFileModTime(0) {}
+        gameSettings(gameSettings) {}
 
     void LoadOrder::load() {
         lock_guard<recursive_mutex> guard(mutex);
@@ -62,21 +59,21 @@ namespace liblo {
         }
 
         if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE) {
-            if (fs::exists(gameSettings.getLoadOrderFile()) && fs::last_write_time(gameSettings.getLoadOrderFile()) != loadOrderFileModTime)
+            if (pathCache.isModified(gameSettings.getLoadOrderFile()))
                 loadFromFile(gameSettings.getLoadOrderFile());
-            else if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime) {
+            else if (pathCache.isModified(gameSettings.getActivePluginsFile())) {
                 loadFromFile(gameSettings.getActivePluginsFile());
                 loadActivePlugins();
             }
         }
         else if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
-            if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime) {
+            if (pathCache.isModified(gameSettings.getActivePluginsFile())) {
                 loadFromFile(gameSettings.getActivePluginsFile());
                 loadActivePlugins();
             }
         }
 
-        if (fs::is_directory(gameSettings.getPluginsFolder()) && fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime) {
+        if (fs::is_directory(gameSettings.getPluginsFolder()) && pathCache.isModified(gameSettings.getPluginsFolder())) {
             addMissingPlugins();
 
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
@@ -91,7 +88,7 @@ namespace liblo {
             }
         }
 
-        if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
+        if (pathCache.isModified(gameSettings.getActivePluginsFile()))
             loadActivePlugins();
     }
 
@@ -335,9 +332,7 @@ namespace liblo {
         lock_guard<recursive_mutex> guard(mutex);
 
         loadOrder.clear();
-        pluginsFolderModTime = 0;
-        activePluginsFileModTime = 0;
-        loadOrderFileModTime = 0;
+        pathCache.clear();
     }
 
     void LoadOrder::loadFromFile(const boost::filesystem::path& file) {
@@ -383,10 +378,7 @@ namespace liblo {
                 }
             }
 
-            if (file == gameSettings.getActivePluginsFile())
-                activePluginsFileModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
-            else if (file == gameSettings.getLoadOrderFile())
-                loadOrderFileModTime = boost::filesystem::last_write_time(gameSettings.getLoadOrderFile());
+            pathCache.updateCachedState(file);
         }
         catch (std::ifstream::failure& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
@@ -438,7 +430,7 @@ namespace liblo {
                     it->activate(gameSettings.getPluginsFolder());
             }
 
-            activePluginsFileModTime = boost::filesystem::last_write_time(gameSettings.getActivePluginsFile());
+            pathCache.updateCachedState(gameSettings.getActivePluginsFile());
         }
         catch (std::exception& e) {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be read. Details: " + e.what());
@@ -470,7 +462,7 @@ namespace liblo {
             }
         }
 
-        pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+        pathCache.updateCachedState(gameSettings.getPluginsFolder());
 
         addImplicitlyActivePlugins();
     }
@@ -539,7 +531,7 @@ namespace liblo {
                 outfile << plugin.getName() << endl;
             outfile.close();
 
-            loadOrderFileModTime = fs::last_write_time(gameSettings.getLoadOrderFile());
+            pathCache.updateCachedState(gameSettings.getLoadOrderFile());
         }
         catch (std::ios_base::failure& e) {
             throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameSettings.getLoadOrderFile().string() + "\" cannot be written to. Details: " + e.what());
@@ -598,7 +590,7 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_WRITE_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be written. Details: " + e.what());
         }
 
-        activePluginsFileModTime = fs::last_write_time(gameSettings.getActivePluginsFile());
+        pathCache.updateCachedState(gameSettings.getActivePluginsFile());
 
         if (!badFilename.empty())
             throw error(LIBLO_WARN_BAD_FILENAME, badFilename);

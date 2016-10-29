@@ -26,6 +26,7 @@
 #ifndef LIBLO_LOADORDER_H
 #define LIBLO_LOADORDER_H
 
+#include "PathCache.h"
 #include "Plugin.h"
 
 #include <mutex>
@@ -65,9 +66,7 @@ namespace liblo {
 
         void clear();
     private:
-        time_t pluginsFolderModTime;
-        time_t activePluginsFileModTime;
-        time_t loadOrderFileModTime;
+        PathCache pathCache;
         std::vector<Plugin> loadOrder;
         const GameSettings& gameSettings;
         mutable std::recursive_mutex mutex;
