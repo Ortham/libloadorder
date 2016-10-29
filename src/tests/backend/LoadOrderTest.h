@@ -922,12 +922,13 @@ namespace liblo {
             EXPECT_NO_THROW(loadOrder.load());
         }
 
-        TEST_P(LoadOrderTest, loadingDataShouldActivateNoPluginsIfActivePluginsFileDoesNotExist) {
+        TEST_P(LoadOrderTest, loadingDataShouldActivateNoPluginsIfActivePluginsFileDoesNotExistAndTheGameHasNoImplicitlyActivePlugins) {
             ASSERT_NO_THROW(boost::filesystem::remove(activePluginsFilePath));
 
             ASSERT_NO_THROW(loadOrder.load());
 
-            EXPECT_TRUE(loadOrder.getActivePlugins().empty());
+            if (gameSettings.getImplicitlyActivePlugins().empty())
+                EXPECT_TRUE(loadOrder.getActivePlugins().empty());
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateTheGameMasterForTextfileAndAsteriskBasedGamesAndNotOtherwise) {
@@ -941,6 +942,17 @@ namespace liblo {
         }
 
         TEST_P(LoadOrderTest, loadingDataShouldActivateInstalledImplicitlyActivePlugins) {
+            createImplicitlyActivePlugins();
+            EXPECT_NO_THROW(loadOrder.load());
+
+            for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
+                EXPECT_TRUE(loadOrder.isActive(plugin));
+            }
+        }
+
+        TEST_P(LoadOrderTest, loadingDataShouldActivateInstalledImplicitlyActivePluginsIfActivePluginsFileIsMissing) {
+            boost::filesystem::remove(activePluginsFilePath);
+            
             createImplicitlyActivePlugins();
             EXPECT_NO_THROW(loadOrder.load());
 

@@ -77,9 +77,8 @@ namespace liblo {
         }
 
         if (fs::is_directory(gameSettings.getPluginsFolder()) && fs::last_write_time(gameSettings.getPluginsFolder()) != pluginsFolderModTime) {
-            // Now scan through Data folder. Add any plugins that aren't
-            // already in load order.
             addMissingPlugins();
+
             if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TIMESTAMP) {
                 stable_sort(begin(loadOrder),
                             end(loadOrder),
@@ -90,8 +89,8 @@ namespace liblo {
                         return lhs.isMasterFile();
                 });
             }
-            pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
         }
+
         if (fs::exists(gameSettings.getActivePluginsFile()) && fs::last_write_time(gameSettings.getActivePluginsFile()) != activePluginsFileModTime)
             loadActivePlugins();
     }
@@ -445,26 +444,8 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + gameSettings.getActivePluginsFile().string() + "\" could not be read. Details: " + e.what());
         }
 
-        // Add any missing installed implicitly active plugins.
-        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
-            if (isActive(pluginName) || !Plugin::isValid(pluginName, gameSettings))
-                continue;
-
-            auto it = find(begin(loadOrder), end(loadOrder), pluginName);
-            if (it == end(loadOrder))
-                it = addToLoadOrder(pluginName);
-
-            it->activate(gameSettings.getPluginsFolder());
-        }
-
-        // Deactivate excess plugins.
-        size_t numActivePlugins = countActivePlugins();
-        for (auto it = rbegin(loadOrder); numActivePlugins > maxActivePlugins && it != rend(loadOrder); ++it) {
-            if (it->isActive()) {
-                it->deactivate();
-                --numActivePlugins;
-            }
-        }
+        addImplicitlyActivePlugins();
+        deactivateExcessPlugins();
     }
 
     void LoadOrder::addMissingPlugins() {
@@ -489,12 +470,32 @@ namespace liblo {
             }
         }
 
-        // Now add any implicitly active plugins in the order they are given.
-        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
-            if (!this->contains(pluginName)
-                && Plugin::isValid(pluginName, gameSettings))
-                addToLoadOrder(pluginName);
+        pluginsFolderModTime = boost::filesystem::last_write_time(gameSettings.getPluginsFolder());
+
+        addImplicitlyActivePlugins();
+    }
+
+    void LoadOrder::addImplicitlyActivePlugins() {
+      for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
+        if (isActive(pluginName) || !Plugin::isValid(pluginName, gameSettings))
+          continue;
+
+        auto it = find(begin(loadOrder), end(loadOrder), pluginName);
+        if (it == end(loadOrder))
+          it = addToLoadOrder(pluginName);
+
+        it->activate(gameSettings.getPluginsFolder());
+      }
+    }
+
+    void LoadOrder::deactivateExcessPlugins() {
+      size_t numActivePlugins = countActivePlugins();
+      for (auto it = rbegin(loadOrder); numActivePlugins > maxActivePlugins && it != rend(loadOrder); ++it) {
+        if (it->isActive()) {
+          it->deactivate();
+          --numActivePlugins;
         }
+      }
     }
 
     void LoadOrder::saveTimestampLoadOrder() {

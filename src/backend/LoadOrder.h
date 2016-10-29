@@ -75,6 +75,8 @@ namespace liblo {
         void loadFromFile(const boost::filesystem::path& file);
         void loadActivePlugins();
         void addMissingPlugins();
+        void addImplicitlyActivePlugins();
+        void deactivateExcessPlugins();
 
         void saveTimestampLoadOrder();
         void saveTextfileLoadOrder();
