@@ -181,17 +181,6 @@ add_custom_command(TARGET tests POST_BUILD
         ${SOURCE_DIR}
         $<TARGET_FILE_DIR:tests>)
 
-find_package(Doxygen)
-find_package(LATEX)
-
-IF (DOXYGEN_FOUND AND LATEX_FOUND)
-    # Run Doxygen and LaTeX to generate readme
-    add_custom_command(TARGET loadorder POST_BUILD
-        COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-        COMMAND "${CMAKE_SOURCE_DIR}/docs/latex/make.bat"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/docs")
-ENDIF ()
-
 ##############################
 # Install
 ##############################
@@ -204,10 +193,10 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/libloadorder"
         DESTINATION include
         CONFIGURATIONS Release)
 
-install(FILES "${CMAKE_SOURCE_DIR}/docs/latex/refman.pdf"
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/build/docs/html"
         DESTINATION "."
         CONFIGURATIONS Release
-        RENAME "readme.pdf")
+        RENAME "docs")
 
 ##############################
 # CPack
