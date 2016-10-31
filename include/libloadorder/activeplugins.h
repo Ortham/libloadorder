@@ -23,29 +23,6 @@
     <http://www.gnu.org/licenses/>.
     */
 
-/**
- *  @file activeplugins.h
- *  @brief This file contains the API frontend for active plugin management.
- *
- *  @section valid_apl_sec Valid Active Plugin Lists
- *
- *  Any active plugin list that is set using libloadorder must be valid,
- *  ie. it must meet all the following conditions:
- *  - Contains only installed plugins.
- *  - Contains no duplicate entries.
- *  - Contains no more than 255 plugins.
- *  - If a Skyrim or Fallout 4 load order, contains `Skyrim.esm` or
- *    `Fallout4.esm` respectively.
- *  - If a Skyrim load order and `Update.esm` is installed, contains
- *    `Update.esm`.
- *
- *  Libloadorder is less strict when loading active plugin lists. If loading
- *  a Skyrim or Fallout 4 list and the relevant main master file is missing, it
- *  will be inferred to load first.
- *  Similarly, if Update.esm is installed but not in the active list, it will
- *  be inferred to load after all other master files.
- */
-
 #ifndef __LIBLO_ACTIVE_PLUGINS__
 #define __LIBLO_ACTIVE_PLUGINS__
 
@@ -55,11 +32,6 @@
 extern "C"
 {
 #endif
-
-    /***************************************//**
-     *  @name Plugin Active Status Functions
-     ******************************************/
-    /**@{*/
 
     /**
      *  @brief Gets the list of currently active plugins.
@@ -133,8 +105,6 @@ extern "C"
     LIBLO unsigned int lo_get_plugin_active(lo_game_handle gh,
                                             const char * const plugin,
                                             bool * const result);
-
-    /**@}*/
 
 #ifdef __cplusplus
 }

@@ -174,7 +174,7 @@ extern "C"
      *         plugins systems.
      *  @details This checks that the load order and active plugin lists
      *           conform to libloadorder's validity requirements (see
-     *           \ref valid_lo_sec and \ref valid_apl_sec respectively), and
+     *           Miscellaneous Details for details), and
      *           resolves any issues encountered, then saves the fixed lists.
      *
      *           For the case of a plugin appearing multiple times in a load

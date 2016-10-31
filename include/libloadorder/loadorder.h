@@ -23,22 +23,6 @@
     <http://www.gnu.org/licenses/>.
     */
 
-/**
- *  @file loadorder.h
- *  @brief This file contains the API frontend for load order management.
- *
- *  @section valid_lo_sec Valid Load Orders
- *
- *  Any load order that is set using libloadorder must be valid, ie. it must
- *  meet all the following conditions:
- *  - Contains only installed plugins.
- *  - Contains no duplicate entries.
- *  - Loads all master files before all plugin files. Master bit flag value,
- *    rather than file extension, is checked.
- *  - For Skyrim or Fallout 4, the first plugin in the load order must be
- *    Skyrim.esm or Fallout4.esm respectively.
- */
-
 #ifndef __LIBLO_LOAD_ORDER__
 #define __LIBLO_LOAD_ORDER__
 

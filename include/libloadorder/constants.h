@@ -105,8 +105,7 @@ extern "C"
      * @brief The current load order and/or active plugins list is invalid.
      * @details This warning occurs when libloadorder reads a load order
      *          or active plugins list that does not conform to its validity
-     *          requirements (see \ref valid_lo_sec and \ref valid_apl_sec
-     *          respectively).
+     *          requirements (see Miscellaneous Details for details).
      */
     LIBLO extern const unsigned int LIBLO_WARN_INVALID_LIST;
     LIBLO extern const unsigned int LIBLO_ERROR_FILE_READ_FAIL;  /**< A file could not be read. */

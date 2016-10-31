@@ -52,3 +52,11 @@ You may also need to define `BOOST_ROOT` if CMake can't find Boost.
 2. Define any necessary parameters.
 3. Configure CMake, then generate a build system for Visual Studio.
 4. Open the generated solution file, and build it.
+
+#### Documentation
+
+The documentation is built using [Doxygen](http://www.stack.nl/~dimitri/doxygen/), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Sphinx](http://www.sphinx-doc.org/en/stable/). Install them (Breathe and Sphinx support Python 2 and 3) and make sure they're accessible from your `PATH`, then run:
+
+```
+sphinx-build -b html docs build/docs/html
+```
