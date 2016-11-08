@@ -384,14 +384,7 @@ namespace liblo {
             throw error(LIBLO_ERROR_FILE_READ_FAIL, "\"" + file.string() + "\" could not be read. Details: " + e.what());
         }
 
-        // Add any missing installed implicitly active plugins.
-        for (const auto& pluginName : gameSettings.getImplicitlyActivePlugins()) {
-            if (!Plugin::isValid(pluginName, gameSettings))
-                continue;
-
-            if (!this->contains(pluginName))
-                addToLoadOrder(pluginName);
-        }
+        addImplicitlyActivePlugins();
     }
 
     void LoadOrder::loadActivePlugins() {
@@ -623,9 +616,20 @@ namespace liblo {
     }
 
     size_t LoadOrder::getAppendPosition(const Plugin& plugin) const {
-        if ((gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) && boost::iequals(plugin.getName(), gameSettings.getMasterFile()))
-            return 0;
-        else if (plugin.isMasterFile())
+        if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE
+            && boost::iequals(plugin.getName(), gameSettings.getMasterFile())) {
+          return 0;
+        }
+        else if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
+          auto implicitlyActivePlugins = gameSettings.getImplicitlyActivePlugins();
+
+          for (size_t i = 0; i < implicitlyActivePlugins.size(); ++i) {
+            if (boost::iequals(plugin.getName(), implicitlyActivePlugins[i]))
+              return i;
+          }
+        }
+        
+        if (plugin.isMasterFile())
             return getMasterPartitionPoint();
         else
             return loadOrder.size();

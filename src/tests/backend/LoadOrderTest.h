@@ -1016,18 +1016,18 @@ namespace liblo {
                 if (GetParam() == LIBLO_GAME_TES5)
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
                 else if (GetParam() == LIBLO_GAME_TES5SE) {
-                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
-                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Hearthfires.esm");
-                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Dragonborn.esm");
-                  expectedActivePlugins.insert(prev(end(expectedActivePlugins)), "Dawnguard.esm");
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), updateEsm);
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Hearthfires.esm");
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Dragonborn.esm");
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Dawnguard.esm");
                 }
                 else if (GetParam() == LIBLO_GAME_FO4) {
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), automatronDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), wastelandWorkshopDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), farHarborDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), contraptionsWorkshopDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), vaultTecWorkshopDlcEsm);
-                    expectedActivePlugins.insert(prev(end(expectedActivePlugins)), nukaWorldDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), automatronDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), wastelandWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), farHarborDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), contraptionsWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), vaultTecWorkshopDlcEsm);
+                    expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), nukaWorldDlcEsm);
                 }
             }
             EXPECT_EQ(expectedActivePlugins, loadOrder.getActivePlugins());
@@ -1090,6 +1090,43 @@ namespace liblo {
             });
 
             EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
+        }
+
+        TEST_P(LoadOrderTest, loadingDataShouldUseHardcodedPositionsForImplicitlyActivePluginsIfGameIsFallout4OrSkyrimSE) {
+          createImplicitlyActivePlugins();
+
+          EXPECT_NO_THROW(loadOrder.load());
+
+          std::vector<std::string> expectedLoadOrder;
+          if (gameSettings.getId() == LIBLO_GAME_FO4 || gameSettings.getId() == LIBLO_GAME_TES5SE) {
+            expectedLoadOrder = gameSettings.getImplicitlyActivePlugins();
+            expectedLoadOrder.push_back(nonAsciiEsm);
+            expectedLoadOrder.push_back(blankDifferentEsm);
+            expectedLoadOrder.push_back(blankEsm);
+            expectedLoadOrder.push_back(blankMasterDependentEsm);
+            expectedLoadOrder.push_back(blankDifferentMasterDependentEsm);
+          } else {
+            expectedLoadOrder = std::vector<std::string>({
+              nonAsciiEsm,
+              masterFile,
+              blankDifferentEsm,
+              blankEsm,
+              blankMasterDependentEsm,
+              blankDifferentMasterDependentEsm,
+            });
+
+            if (gameSettings.getId() == LIBLO_GAME_TES5) {
+              expectedLoadOrder[0] = masterFile;
+              expectedLoadOrder[1] = nonAsciiEsm;
+            }
+
+            for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
+              if (plugin != masterFile)
+                expectedLoadOrder.push_back(plugin);
+            }
+          }
+
+          EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
         TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheActivePluginsIfTheyHaveBeenChanged) {
