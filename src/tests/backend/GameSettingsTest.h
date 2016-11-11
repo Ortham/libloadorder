@@ -81,9 +81,9 @@ namespace liblo {
                   return std::vector<std::string>({
                       masterFile,
                       "Update.esm",
+                      "Dawnguard.esm",
                       "Hearthfires.esm",
                       "Dragonborn.esm",
-                      "Dawnguard.esm",
                   });
                 }
 

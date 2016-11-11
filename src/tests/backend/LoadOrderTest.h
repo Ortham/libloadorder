@@ -1031,9 +1031,9 @@ namespace liblo {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins)), updateEsm);
                 else if (GetParam() == LIBLO_GAME_TES5SE) {
                   expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), updateEsm);
+                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Dawnguard.esm");
                   expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Hearthfires.esm");
                   expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Dragonborn.esm");
-                  expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), "Dawnguard.esm");
                 }
                 else if (GetParam() == LIBLO_GAME_FO4) {
                     expectedActivePlugins.insert(prev(end(expectedActivePlugins), 3), automatronDlcEsm);
