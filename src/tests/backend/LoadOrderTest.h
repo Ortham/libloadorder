@@ -171,6 +171,20 @@ namespace liblo {
                 }
             }
 
+            std::vector<std::string> readTextFile(const boost::filesystem::path& path) {
+              boost::filesystem::ifstream in(path);
+              std::vector<std::string> lines;
+              while (in) {
+                std::string line;
+                std::getline(in, line);
+
+                if (!line.empty())
+                  lines.push_back(windows1252toUtf8(line));
+              }
+
+              return lines;
+            }
+
             const GameSettings gameSettings;
             LoadOrder loadOrder;
 
@@ -1362,14 +1376,7 @@ namespace liblo {
             EXPECT_NO_THROW(loadOrder.save());
 
             boost::filesystem::ifstream in(activePluginsFilePath);
-            std::vector<std::string> lines;
-            while (in) {
-                std::string line;
-                std::getline(in, line);
-
-                if (!line.empty())
-                    lines.push_back(windows1252toUtf8(line));
-            }
+            std::vector<std::string> lines = readTextFile(activePluginsFilePath);
 
             std::vector<std::string> expectedLines({
                 '*' + blankEsm,
@@ -1386,6 +1393,45 @@ namespace liblo {
             });
 
             EXPECT_EQ(expectedLines, lines);
+        }
+
+        TEST_P(LoadOrderTest, savingShouldNotWriteImplicitlyActivePluginsToPluginsDotTxtForFallout4AndSkyrimSE) {
+          createImplicitlyActivePlugins();
+
+          ASSERT_NO_THROW(loadOrder.load());
+          ASSERT_NO_THROW(loadOrder.save());
+
+          std::string linePrefix = getActivePluginsFileLinePrefix();
+          std::vector<std::string> lines = readTextFile(activePluginsFilePath);
+
+          std::vector<std::string> expectedLines({
+            nonAsciiEsm,
+            blankEsm,
+            blankEsp,
+          });
+
+          if (gameSettings.getId() == LIBLO_GAME_TES3) {
+            for (size_t i = 0; i < expectedLines.size(); ++i)
+              expectedLines[i] = "GameFile" + std::to_string(i) + "=" + expectedLines[i];
+          } else if (gameSettings.getId() == LIBLO_GAME_TES5) {
+            expectedLines.insert(prev(end(expectedLines)), updateEsm);
+          } else if (loadOrderMethod == LIBLO_METHOD_ASTERISK) {
+            expectedLines = {
+              '*' + nonAsciiEsm,
+              blankDifferentEsm,
+              '*' + blankEsm,
+              blankMasterDependentEsm,
+              blankDifferentMasterDependentEsm,
+              '*' + blankEsp,
+              blankDifferentEsp,
+              blankMasterDependentEsp,
+              blankDifferentMasterDependentEsp,
+              blankPluginDependentEsp,
+              blankDifferentPluginDependentEsp,
+            };
+          }
+
+          EXPECT_EQ(expectedLines, lines);
         }
     }
 }

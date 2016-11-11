@@ -560,7 +560,10 @@ namespace liblo {
             size_t i = 0;
             for (const auto &plugin : loadOrder) {
                 if ((gameSettings.getLoadOrderMethod() != LIBLO_METHOD_ASTERISK && !plugin.isActive())
-                    || ((gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE || gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) && plugin == gameSettings.getMasterFile()))
+                    || (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_TEXTFILE
+                        && plugin == gameSettings.getMasterFile())
+                    || (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK
+                        && gameSettings.isImplicitlyActive(plugin.getName())))
                     continue;
 
                 if (gameSettings.getId() == LIBLO_GAME_TES3) { //Need to write "GameFileN=" before plugin name, where N is an integer from 0 up.
