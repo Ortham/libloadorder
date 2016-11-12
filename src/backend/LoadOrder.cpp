@@ -353,6 +353,11 @@ namespace liblo {
                         line = line.substr(1);
                 }
 
+                if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK
+                    && gameSettings.isImplicitlyActive(line)) {
+                  continue;
+                }
+
                 // If the entry already exists, move it to the last
                 // valid position for it. Otherwise, add it at that
                 // position.

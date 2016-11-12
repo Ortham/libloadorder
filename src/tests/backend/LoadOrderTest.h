@@ -1143,6 +1143,30 @@ namespace liblo {
           EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
         }
 
+        TEST_P(LoadOrderTest, loadingDataShouldIgnoreThePositionsOfImplicitlyActivePluginsInPluginsDotTxtIfTheGameIsFallout4OrSkyrimSE) {
+          if (loadOrderMethod != LIBLO_METHOD_ASTERISK)
+            return;
+
+          createImplicitlyActivePlugins();
+
+          std::vector<std::pair<std::string, bool>> plugins = {
+            {blankEsm, true},
+          };
+          for (const auto& plugin : gameSettings.getImplicitlyActivePlugins()) {
+            if (plugin != masterFile)
+              plugins.push_back(std::pair<std::string, bool>(plugin, true));
+          }
+
+          writeLoadOrder(plugins);
+
+          EXPECT_NO_THROW(loadOrder.load());
+
+          size_t blankEsmPos = loadOrder.getPosition(blankEsm);
+          size_t implicitlyActivePluginPos = loadOrder.getPosition(plugins[1].first);
+
+          EXPECT_GT(blankEsmPos, implicitlyActivePluginPos);
+        }
+
         TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheActivePluginsIfTheyHaveBeenChanged) {
             ASSERT_NO_THROW(loadOrder.load());
 
