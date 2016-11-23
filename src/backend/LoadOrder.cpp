@@ -629,11 +629,13 @@ namespace liblo {
           return 0;
         }
         else if (gameSettings.getLoadOrderMethod() == LIBLO_METHOD_ASTERISK) {
-          auto implicitlyActivePlugins = gameSettings.getImplicitlyActivePlugins();
-
-          for (size_t i = 0; i < implicitlyActivePlugins.size(); ++i) {
-            if (boost::iequals(plugin.getName(), implicitlyActivePlugins[i]))
-              return i;
+          size_t installedPluginCount = 0;
+          for (const auto& implicitlyActivePlugin : gameSettings.getImplicitlyActivePlugins()) {
+            if (boost::iequals(plugin.getName(), implicitlyActivePlugin))
+              return installedPluginCount;
+            
+            if (contains(implicitlyActivePlugin) || Plugin::isValid(implicitlyActivePlugin, gameSettings))
+              ++installedPluginCount;
           }
         }
         
@@ -651,7 +653,7 @@ namespace liblo {
         std::vector<Plugin>::iterator it;
         Plugin plugin(pluginName, gameSettings);
         size_t pos = getAppendPosition(plugin);
-        if (pos == loadOrder.size()) {
+        if (pos >= loadOrder.size()) {
             return loadOrder.insert(end(loadOrder), plugin);
         }
         else

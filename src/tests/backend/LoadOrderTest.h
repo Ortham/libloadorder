@@ -1167,6 +1167,28 @@ namespace liblo {
           EXPECT_GT(blankEsmPos, implicitlyActivePluginPos);
         }
 
+        TEST_P(LoadOrderTest, loadingDataShouldUseHardcodedPositionsForImplicitlyActivePluginsEvenIfPrecedingPluginsAreMissing) {
+          if (gameSettings.getImplicitlyActivePlugins().size() < 3)
+            return;
+
+          createImplicitlyActivePlugins();
+
+          const std::string removedPlugin = gameSettings.getImplicitlyActivePlugins()[1];
+          boost::filesystem::remove(pluginsPath / removedPlugin);
+
+          std::vector<std::string> expectedLoadOrder = gameSettings.getImplicitlyActivePlugins();
+          expectedLoadOrder.erase(next(begin(expectedLoadOrder)));
+          expectedLoadOrder.push_back(nonAsciiEsm);
+          expectedLoadOrder.push_back(blankDifferentEsm);
+          expectedLoadOrder.push_back(blankEsm);
+          expectedLoadOrder.push_back(blankMasterDependentEsm);
+          expectedLoadOrder.push_back(blankDifferentMasterDependentEsm);
+
+          EXPECT_NO_THROW(loadOrder.load());
+
+          EXPECT_TRUE(equal(begin(expectedLoadOrder), end(expectedLoadOrder), begin(loadOrder.getLoadOrder())));
+        }
+
         TEST_P(LoadOrderTest, loadingDataTwiceShouldReloadTheActivePluginsIfTheyHaveBeenChanged) {
             ASSERT_NO_THROW(loadOrder.load());
 
