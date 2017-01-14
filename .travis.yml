@@ -23,8 +23,8 @@ install:
   # Use the latest version of Clang/GCC.
   - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8"; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
-  - chmod +x scripts/travis/install_boost.sh
-  - scripts/travis/install_boost.sh
+  - wget https://raw.githubusercontent.com/WrinklyNinja/ci-scripts/1.0.0/install_boost.py
+  - python install_boost.py --directory ~ --boost-version 1.61.0 filesystem iostreams locale system
 
 before_script:
   - mkdir build && cd build
