@@ -1,0 +1,16 @@
+[package]
+name = "libloadorder"
+version = "0.1.0"
+authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
+
+[dependencies]
+encoding = "0.2"
+libespm = { git = "https://github.com/WrinklyNinja/libespm", branch = "rust-rewrite" }
+tempdir = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.4.0"
+
+[lib]
+name = "loadorder"
+crate-type = ["lib", "cdylib"]
