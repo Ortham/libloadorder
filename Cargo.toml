@@ -9,7 +9,7 @@ libespm = { git = "https://github.com/WrinklyNinja/libespm", branch = "rust-rewr
 tempdir = "0.3"
 
 [target.'cfg(windows)'.dependencies]
-winreg = "0.4.0"
+app_dirs = "1.1.1"
 
 [lib]
 name = "loadorder"

@@ -1,13 +1,33 @@
 use std::fs::File;
+use std::io;
 use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+#[cfg(windows)]
+use app_dirs;
+
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
 
 use enums::{GameId, LoadOrderMethod};
+
+#[derive(Debug)]
+enum Error {
+    IO(io::Error),
+    NoLocalAppData,
+}
+
+#[cfg(windows)]
+impl From<app_dirs::AppDirsError> for Error {
+    fn from(error: app_dirs::AppDirsError) -> Self {
+        match error {
+            app_dirs::AppDirsError::Io(x) => Error::IO(x),
+            _ => Error::NoLocalAppData,
+        }
+    }
+}
 
 #[derive(Debug)]
 struct GameSettings {
@@ -19,13 +39,17 @@ struct GameSettings {
 
 impl GameSettings {
     #[cfg(windows)]
-    pub fn new(game_id: GameId, game_path: &Path) -> GameSettings {
-        let local_app_data_path = local_app_data_path();
+    pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
+        let local_app_data_path = app_dirs::get_data_root(app_dirs::AppDataType::UserCache)?;
         let local_path = match appdata_folder_name(&game_id) {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,
         };
-        GameSettings::with_local_path(game_id, game_path, &local_path)
+        Ok(GameSettings::with_local_path(
+            game_id,
+            game_path,
+            &local_path,
+        ))
     }
 
     pub fn with_local_path(game_id: GameId, game_path: &Path, local_path: &Path) -> GameSettings {
@@ -176,18 +200,42 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
     }
 }
 
-fn local_app_data_path() -> PathBuf {
-    PathBuf::default()
-}
-
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
 
+    use std::env;
     use std::io::Write;
     use self::tempdir::TempDir;
 
     use super::*;
+
+    #[test]
+    #[cfg(windows)]
+    fn new_should_determine_correct_local_path() {
+        let settings = GameSettings::new(GameId::Skyrim, Path::new("game")).unwrap();
+        let local_app_data = env::var("LOCALAPPDATA").unwrap();
+        let local_app_data_path = Path::new(&local_app_data);
+
+        assert_eq!(
+            local_app_data_path.join("Skyrim").join("plugins.txt"),
+            *settings.active_plugins_file()
+        );
+        assert_eq!(
+            &local_app_data_path.join("Skyrim").join("loadorder.txt"),
+            settings.load_order_file().as_ref().unwrap()
+        );
+    }
+
+    #[test]
+    fn id_should_be_the_id_the_struct_was_created_with() {
+        let settings = GameSettings::with_local_path(
+            GameId::Morrowind,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        );
+        assert_eq!(&GameId::Morrowind, settings.id());
+    }
 
     #[test]
     fn load_order_method_should_be_timestamp_for_tes3_tes4_fo3_and_fonv() {
