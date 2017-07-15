@@ -26,7 +26,7 @@ pub enum LoadOrderMethod {
     Asterisk,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum GameId {
     Morrowind,
     Oblivion,

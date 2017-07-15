@@ -14,7 +14,7 @@ use encoding::all::WINDOWS_1252;
 use enums::{GameId, LoadOrderMethod};
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     IO(io::Error),
     NoLocalAppData,
 }
@@ -30,7 +30,7 @@ impl From<app_dirs::AppDirsError> for Error {
 }
 
 #[derive(Debug)]
-struct GameSettings {
+pub struct GameSettings {
     id: GameId,
     game_path: PathBuf,
     plugins_file_path: PathBuf,
