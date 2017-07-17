@@ -1,5 +1,6 @@
 extern crate encoding;
 extern crate espm;
+extern crate filetime;
 #[cfg(windows)]
 extern crate app_dirs;
 
