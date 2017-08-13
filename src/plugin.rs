@@ -17,10 +17,7 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::ffi::OsStr;
 use std::fs::File;
-use std::io;
-use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use espm;
@@ -31,7 +28,7 @@ use enums::GameId;
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 
-struct Plugin {
+pub struct Plugin {
     game: GameId,
     active: bool,
     modification_time: SystemTime,
@@ -39,23 +36,23 @@ struct Plugin {
 }
 
 impl Plugin {
-    fn new(filename: &str, gameSettings: &GameSettings) -> Result<Plugin, Error> {
-        let filepath = gameSettings.plugins_folder().join(filename).resolve_path()?;
+    pub fn new(filename: &str, game_settings: &GameSettings) -> Result<Plugin, Error> {
+        let filepath = game_settings.plugins_folder().join(filename).resolve_path()?;
 
         let modification_time = File::open(&filepath)?.metadata()?.modified()?;
 
-        let mut data = espm::Plugin::new(gameSettings.id().to_libespm_id(), &filepath);
+        let mut data = espm::Plugin::new(game_settings.id().to_libespm_id(), &filepath);
         data.parse_file(true)?;
 
         Ok(Plugin {
-            game: gameSettings.id().clone(),
+            game: game_settings.id().clone(),
             active: !filepath.is_ghosted(),
             modification_time,
             data,
         })
     }
 
-    fn name(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         self.data.filename()
     }
 
@@ -71,7 +68,7 @@ impl Plugin {
         self.modification_time
     }
 
-    fn is_active(&self) -> bool {
+    pub fn is_active(&self) -> bool {
         self.active
     }
 
@@ -95,7 +92,7 @@ impl Plugin {
         Ok(())
     }
 
-    fn activate(&mut self) -> Result<(), Error> {
+    pub fn activate(&mut self) -> Result<(), Error> {
         if self.is_active() {
             Ok(())
         } else {
@@ -110,11 +107,11 @@ impl Plugin {
         }
     }
 
-    fn deactivate(&mut self) {
+    pub fn deactivate(&mut self) {
         self.active = false;
     }
 
-    fn is_valid(filename: &str, game_settings: &GameSettings) -> bool {
+    pub fn is_valid(filename: &str, game_settings: &GameSettings) -> bool {
         if !filename.ends_with(".esp") && !filename.ends_with(".esm") &&
             !filename.ends_with(".esp.ghost") && !filename.ends_with(".esm.ghost")
         {
@@ -134,17 +131,9 @@ mod tests {
 
     use super::*;
 
-    use std::fs::{copy, create_dir};
+    use std::path::PathBuf;
     use self::tempdir::TempDir;
-
-    fn copy_to_test_dir(from_file: &str, to_file: &str, game_dir: &Path) {
-        let testing_plugins_dir = Path::new("./tests/testing-plugins/Oblivion/Data");
-        let data_dir = game_dir.join("Data");
-        if !data_dir.exists() {
-            create_dir(&data_dir).unwrap();
-        }
-        copy(testing_plugins_dir.join(from_file), data_dir.join(to_file)).unwrap();
-    }
+    use tests::copy_to_test_dir;
 
     #[test]
     fn name_should_return_the_plugin_filename_that_exists() {
@@ -154,15 +143,15 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp.ghost", &settings).unwrap();
         assert_eq!("Blank.esp", plugin.name().unwrap());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
         assert_eq!("Blank.esp", plugin.name().unwrap());
 
-        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &game_dir);
+        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
         assert_eq!("Blank.esm.ghost", plugin.name().unwrap());
     }
@@ -175,11 +164,11 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
         assert_eq!("Blank.esp", plugin.unghosted_name().unwrap());
 
-        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &game_dir);
+        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
         assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
     }
@@ -192,7 +181,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin_path = game_dir.join("Data").join("Blank.esp");
         let mtime = File::open(&plugin_path)
             .unwrap()
@@ -215,7 +204,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(plugin.is_active());
@@ -229,7 +218,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(!plugin.is_active());
@@ -243,7 +232,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esm", "Blank.esm", &game_dir);
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
 
         assert!(plugin.is_master_file());
@@ -257,7 +246,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(!plugin.is_master_file());
@@ -271,7 +260,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         set_file_times(
@@ -290,7 +279,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(!plugin.has_file_changed().unwrap());
@@ -304,7 +293,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         plugin.set_modification_time(UNIX_EPOCH).unwrap();
@@ -327,7 +316,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         plugin.activate().unwrap();
@@ -345,7 +334,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         plugin.deactivate();
@@ -362,23 +351,23 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         assert!(Plugin::is_valid("Blank.esp", &settings));
 
-        copy_to_test_dir("Blank.esm", "Blank.esm", &game_dir);
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
         assert!(Plugin::is_valid("Blank.esm", &settings));
 
         copy_to_test_dir(
             "Blank - Different.esp",
             "Blank - Different.esp.ghost",
-            &game_dir,
+            &settings,
         );
         assert!(Plugin::is_valid("Blank - Different.esp", &settings));
 
         copy_to_test_dir(
             "Blank - Different.esm",
             "Blank - Different.esm.ghost",
-            &game_dir,
+            &settings,
         );
         assert!(Plugin::is_valid("Blank - Different.esm", &settings));
     }
@@ -391,7 +380,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.esp", "Blank.pse", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.pse", &settings);
         assert!(!Plugin::is_valid("Blank.pse", &settings));
     }
 
@@ -403,7 +392,7 @@ mod tests {
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
-        copy_to_test_dir("Blank.bsa", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.bsa", "Blank.esp", &settings);
         assert!(!Plugin::is_valid("Blank.esp", &settings));
     }
 }
