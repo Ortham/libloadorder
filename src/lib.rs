@@ -20,6 +20,7 @@
 extern crate encoding;
 extern crate espm;
 extern crate filetime;
+extern crate unicase;
 #[cfg(windows)]
 extern crate app_dirs;
 
@@ -27,4 +28,6 @@ mod enums;
 mod error;
 mod game_settings;
 mod ghostable_path;
+mod load_order;
 mod plugin;
+mod tests;

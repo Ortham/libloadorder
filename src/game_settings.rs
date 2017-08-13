@@ -108,7 +108,7 @@ impl GameSettings {
         }
     }
 
-    pub fn implicitly_active_plugins(&self) -> Option<Vec<&str>> {
+    pub fn implicitly_active_plugins(&self) -> Option<Vec<&'static str>> {
         match self.id {
             GameId::Skyrim => Some(vec![self.master_file(), "Update.esm"]),
             GameId::SkyrimSE => Some(vec![
@@ -132,8 +132,9 @@ impl GameSettings {
     }
 
     pub fn is_implicitly_active(&self, plugin: &str) -> bool {
+        use unicase::eq;
         match self.implicitly_active_plugins() {
-            Some(x) => x.contains(&plugin),
+            Some(x) => x.iter().any(|p| eq(p, &plugin)),
             None => false,
         }
     }
@@ -591,6 +592,13 @@ mod tests {
             GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default());
         assert!(settings.is_implicitly_active("Update.esm"));
         assert!(!settings.is_implicitly_active("Test.esm"));
+    }
+
+    #[test]
+    fn is_implicitly_active_should_match_case_insensitively() {
+        let settings =
+            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default());
+        assert!(settings.is_implicitly_active("update.esm"));
     }
 
     #[test]
