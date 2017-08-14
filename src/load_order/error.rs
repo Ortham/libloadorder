@@ -17,17 +17,19 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
-mod error;
-mod readable;
-mod writable;
-mod tests;
+use error::Error;
 
-use unicase::eq;
-use plugin::Plugin;
+#[derive(Debug)]
+pub enum LoadOrderError {
+    PluginError(Error),
+    PluginNotFound,
+    TooManyActivePlugins,
+    InvalidPlugin(String),
+    ImplicitlyActivePlugin(String),
+}
 
-fn match_plugin(plugin: &Plugin, name: &str) -> bool {
-    match plugin.name() {
-        None => false,
-        Some(n) => eq(n.as_str(), name),
+impl From<Error> for LoadOrderError {
+    fn from(error: Error) -> Self {
+        LoadOrderError::PluginError(error)
     }
 }
