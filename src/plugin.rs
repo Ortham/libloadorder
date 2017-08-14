@@ -46,7 +46,7 @@ impl Plugin {
 
         Ok(Plugin {
             game: game_settings.id().clone(),
-            active: !filepath.is_ghosted(),
+            active: false,
             modification_time,
             data,
         })
@@ -197,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn is_active_should_be_true_after_creation_if_plugin_is_not_ghosted() {
+    fn is_active_should_be_false() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let game_dir = tmp_dir.path();
 
@@ -205,20 +205,6 @@ mod tests {
             GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-        let plugin = Plugin::new("Blank.esp", &settings).unwrap();
-
-        assert!(plugin.is_active());
-    }
-
-    #[test]
-    fn is_active_should_be_false_after_creation_if_plugin_is_ghosted() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
-
-        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(!plugin.is_active());

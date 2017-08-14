@@ -48,8 +48,7 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     write_active_plugins_file(&game_dir.join("plugins.txt"));
 
     //TODO: Remove this once the load order is initialised from the filesystem.
-    plugins[0].deactivate();
-    plugins[2].deactivate();
+    plugins[1].activate();
 
     (settings, plugins)
 }
