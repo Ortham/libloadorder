@@ -82,6 +82,11 @@ impl Plugin {
         Ok(self.modification_time != current_mtime)
     }
 
+    pub fn reload(&mut self) -> Result<(), Error> {
+        self.modification_time = File::open(self.data.path())?.metadata()?.modified()?;
+        Ok(self.data.parse_file(true)?)
+    }
+
     fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
         let atime = FileTime::from_last_access_time(&File::open(&self.data.path())?.metadata()?);
         let mtime =
@@ -269,6 +274,31 @@ mod tests {
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert!(!plugin.has_file_changed().unwrap());
+    }
+
+    #[test]
+    fn reload_should_reload_the_plugin_file_data_and_modification_time() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
+        let old_mod_time = plugin.modification_time();
+
+        assert!(!plugin.is_master_file());
+        copy_to_test_dir("Blank.esm", "Blank.esp", &settings);
+        set_file_times(
+            &game_dir.join("Data").join("Blank.esp"),
+            FileTime::zero(),
+            FileTime::zero(),
+        ).unwrap();
+
+        plugin.reload().unwrap();
+        assert!(plugin.is_master_file());
+        assert_ne!(old_mod_time, plugin.modification_time());
     }
 
     #[test]
