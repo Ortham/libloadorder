@@ -30,20 +30,23 @@ trait ExtensibleLoadOrder: ReadableLoadOrder {
     fn game_settings(&self) -> &GameSettings;
     fn mut_plugins(&mut self) -> &mut Vec<Plugin>;
 
-    fn insert_position(&self) -> usize;
+    fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
-    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<(), LoadOrderError> {
+    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, LoadOrderError> {
         let plugin = Plugin::new(plugin_name, &self.game_settings())?;
 
-        let insert_pos = self.insert_position();
+        let index = match self.insert_position(&plugin) {
+            Some(x) => {
+                self.mut_plugins().insert(x, plugin);
+                x
+            },
+            None => {
+                self.mut_plugins().push(plugin);
+                self.plugins().len() - 1
+            }
+        };
 
-        if insert_pos > self.plugins().len() {
-            self.mut_plugins().push(plugin);
-        } else {
-            self.mut_plugins().insert(insert_pos, plugin);
-        }
-
-        Ok(())
+        Ok(index)
     }
 
     fn count_active_plugins(&self) -> usize {
@@ -175,8 +178,8 @@ mod tests {
     }
 
     impl ExtensibleLoadOrder for TestLoadOrder {
-        fn insert_position(&self) -> usize {
-            self.plugins().len()
+        fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
+            None
         }
 
         fn game_settings(&self) -> &GameSettings {
