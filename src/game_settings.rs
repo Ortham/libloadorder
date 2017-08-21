@@ -108,35 +108,38 @@ impl GameSettings {
         }
     }
 
-    pub fn implicitly_active_plugins(&self) -> Option<Vec<&'static str>> {
+    pub fn implicitly_active_plugins(&self) -> Vec<&'static str> {
         match self.id {
-            GameId::Skyrim => Some(vec![self.master_file(), "Update.esm"]),
-            GameId::SkyrimSE => Some(vec![
-                self.master_file(),
-                "Update.esm",
-                "Dawnguard.esm",
-                "Hearthfires.esm",
-                "Dragonborn.esm",
-            ]),
-            GameId::Fallout4 => Some(vec![
-                self.master_file(),
-                "DLCRobot.esm",
-                "DLCworkshop01.esm",
-                "DLCCoast.esm",
-                "DLCworkshop02.esm",
-                "DLCworkshop03.esm",
-                "DLCNukaWorld.esm",
-            ]),
-            _ => None,
+            GameId::Skyrim => vec![self.master_file(), "Update.esm"],
+            GameId::SkyrimSE => {
+                vec![
+                    self.master_file(),
+                    "Update.esm",
+                    "Dawnguard.esm",
+                    "Hearthfires.esm",
+                    "Dragonborn.esm",
+                ]
+            }
+            GameId::Fallout4 => {
+                vec![
+                    self.master_file(),
+                    "DLCRobot.esm",
+                    "DLCworkshop01.esm",
+                    "DLCCoast.esm",
+                    "DLCworkshop02.esm",
+                    "DLCworkshop03.esm",
+                    "DLCNukaWorld.esm",
+                ]
+            }
+            _ => Vec::new(),
         }
     }
 
     pub fn is_implicitly_active(&self, plugin: &str) -> bool {
         use unicase::eq;
-        match self.implicitly_active_plugins() {
-            Some(x) => x.iter().any(|p| eq(p, &plugin)),
-            None => false,
-        }
+        self.implicitly_active_plugins().iter().any(
+            |p| eq(p, &plugin),
+        )
     }
 
     pub fn plugins_folder(&self) -> PathBuf {
@@ -525,7 +528,7 @@ mod tests {
         let mut settings =
             GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default());
         let mut plugins = vec!["Skyrim.esm", "Update.esm"];
-        assert_eq!(plugins, settings.implicitly_active_plugins().unwrap());
+        assert_eq!(plugins, settings.implicitly_active_plugins());
 
         settings = GameSettings::with_local_path(
             GameId::SkyrimSE,
@@ -539,7 +542,7 @@ mod tests {
             "Hearthfires.esm",
             "Dragonborn.esm",
         ];
-        assert_eq!(plugins, settings.implicitly_active_plugins().unwrap());
+        assert_eq!(plugins, settings.implicitly_active_plugins());
 
         settings = GameSettings::with_local_path(
             GameId::Fallout4,
@@ -555,35 +558,35 @@ mod tests {
             "DLCworkshop03.esm",
             "DLCNukaWorld.esm",
         ];
-        assert_eq!(plugins, settings.implicitly_active_plugins().unwrap());
+        assert_eq!(plugins, settings.implicitly_active_plugins());
 
         settings = GameSettings::with_local_path(
             GameId::Morrowind,
             &PathBuf::default(),
             &PathBuf::default(),
         );
-        assert!(settings.implicitly_active_plugins().is_none());
+        assert!(settings.implicitly_active_plugins().is_empty());
 
         settings = GameSettings::with_local_path(
             GameId::Oblivion,
             &PathBuf::default(),
             &PathBuf::default(),
         );
-        assert!(settings.implicitly_active_plugins().is_none());
+        assert!(settings.implicitly_active_plugins().is_empty());
 
         settings = GameSettings::with_local_path(
             GameId::Fallout3,
             &PathBuf::default(),
             &PathBuf::default(),
         );
-        assert!(settings.implicitly_active_plugins().is_none());
+        assert!(settings.implicitly_active_plugins().is_empty());
 
         settings = GameSettings::with_local_path(
             GameId::FalloutNV,
             &PathBuf::default(),
             &PathBuf::default(),
         );
-        assert!(settings.implicitly_active_plugins().is_none());
+        assert!(settings.implicitly_active_plugins().is_empty());
     }
 
     #[test]

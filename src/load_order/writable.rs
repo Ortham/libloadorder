@@ -110,17 +110,15 @@ trait MutableLoadOrder: ExtensibleLoadOrder {
             }
         }
 
-        if let Some(plugin_names) = self.game_settings().implicitly_active_plugins() {
-            for plugin_name in plugin_names {
-                if !Plugin::is_valid(plugin_name, &self.game_settings()) {
-                    continue;
-                }
+        for plugin_name in self.game_settings().implicitly_active_plugins() {
+            if !Plugin::is_valid(plugin_name, &self.game_settings()) {
+                continue;
+            }
 
-                if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
-                    return Err(LoadOrderError::ImplicitlyActivePlugin(
-                        plugin_name.to_string(),
-                    ));
-                }
+            if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
+                return Err(LoadOrderError::ImplicitlyActivePlugin(
+                    plugin_name.to_string(),
+                ));
             }
         }
 
