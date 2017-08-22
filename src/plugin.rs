@@ -37,7 +37,10 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn new(filename: &str, game_settings: &GameSettings) -> Result<Plugin, Error> {
-        let filepath = game_settings.plugins_folder().join(filename).resolve_path()?;
+        let filepath = game_settings
+            .plugins_directory()
+            .join(filename)
+            .resolve_path()?;
 
         let modification_time = File::open(&filepath)?.metadata()?.modified()?;
 
@@ -123,7 +126,10 @@ impl Plugin {
             return false;
         }
 
-        match game_settings.plugins_folder().join(filename).resolve_path() {
+        match game_settings
+            .plugins_directory()
+            .join(filename)
+            .resolve_path() {
             Err(_) => false,
             Ok(ref x) => espm::Plugin::is_valid(game_settings.id().to_libespm_id(), x, true),
         }

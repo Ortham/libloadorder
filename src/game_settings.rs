@@ -142,7 +142,7 @@ impl GameSettings {
         )
     }
 
-    pub fn plugins_folder(&self) -> PathBuf {
+    pub fn plugins_directory(&self) -> PathBuf {
         self.game_path.join(self.plugins_folder_name())
     }
 
@@ -608,7 +608,7 @@ mod tests {
     fn plugins_folder_should_be_a_child_of_the_game_path() {
         let settings =
             GameSettings::with_local_path(GameId::Skyrim, Path::new("game"), &PathBuf::default());
-        assert_eq!(Path::new("game/Data"), settings.plugins_folder());
+        assert_eq!(Path::new("game/Data"), settings.plugins_directory());
     }
 
     #[test]

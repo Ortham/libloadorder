@@ -24,7 +24,7 @@ use game_settings::GameSettings;
 
 pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());
-    let data_dir = game_settings.plugins_folder();
+    let data_dir = game_settings.plugins_directory();
     if !data_dir.exists() {
         create_dir(&data_dir).unwrap();
     }
