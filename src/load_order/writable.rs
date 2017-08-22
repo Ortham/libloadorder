@@ -18,6 +18,8 @@
  */
 
 use unicase::eq;
+use walkdir::WalkDir;
+
 use game_settings::GameSettings;
 use load_order::error::LoadOrderError;
 use load_order::readable::ReadableLoadOrder;
@@ -26,7 +28,7 @@ use super::match_plugin;
 
 const MAX_ACTIVE_PLUGINS: usize = 255;
 
-trait ExtensibleLoadOrder: ReadableLoadOrder {
+pub trait ExtensibleLoadOrder: ReadableLoadOrder {
     fn game_settings(&self) -> &GameSettings;
     fn mut_plugins(&mut self) -> &mut Vec<Plugin>;
 
@@ -39,7 +41,7 @@ trait ExtensibleLoadOrder: ReadableLoadOrder {
             Some(x) => {
                 self.mut_plugins().insert(x, plugin);
                 x
-            },
+            }
             None => {
                 self.mut_plugins().push(plugin);
                 self.plugins().len() - 1
@@ -52,9 +54,79 @@ trait ExtensibleLoadOrder: ReadableLoadOrder {
     fn count_active_plugins(&self) -> usize {
         self.plugins().iter().filter(|p| p.is_active()).count()
     }
+
+    fn add_missing_plugins(&mut self) -> Result<(), LoadOrderError> {
+        let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter_map(|e| {
+                e.file_name().to_str().and_then(
+                    |f| if !self.game_settings().is_implicitly_active(f) &&
+                        self.index_of(f).is_none() &&
+                        Plugin::is_valid(
+                            f,
+                            self.game_settings(),
+                        )
+                    {
+                        Some(f.to_string())
+                    } else {
+                        None
+                    },
+                )
+            })
+            .collect();
+
+        for filename in filenames {
+            self.add_to_load_order(&filename)?;
+        }
+
+        Ok(())
+    }
+
+    fn find_or_add(&mut self, filename: &str) -> Result<usize, LoadOrderError> {
+        let index = match self.index_of(filename) {
+            Some(x) => x,
+            None => self.add_to_load_order(filename)?,
+        };
+
+        Ok(index)
+    }
+
+    fn add_implicitly_active_plugins(&mut self) -> Result<(), LoadOrderError> {
+        for filename in self.game_settings().implicitly_active_plugins() {
+            if self.is_active(filename) || !Plugin::is_valid(filename, self.game_settings()) {
+                continue;
+            }
+
+            let index = self.find_or_add(filename)?;
+            self.mut_plugins()[index].activate()?;
+        }
+
+        Ok(())
+    }
+
+    fn deactivate_excess_plugins(&mut self) {
+        let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
+        let mut count = self.count_active_plugins();
+
+        for plugin in self.mut_plugins().iter_mut().rev() {
+            if count <= MAX_ACTIVE_PLUGINS {
+                break;
+            }
+            if plugin.is_active() &&
+                !implicitly_active_plugins.iter().any(
+                    |i| match_plugin(plugin, i),
+                )
+            {
+                plugin.deactivate();
+                count -= 1;
+            }
+        }
+    }
 }
 
-trait MutableLoadOrder: ExtensibleLoadOrder {
+pub trait MutableLoadOrder: ExtensibleLoadOrder {
     fn load(&mut self) -> Result<(), LoadOrderError>;
     fn save(&mut self) -> Result<(), LoadOrderError>;
 

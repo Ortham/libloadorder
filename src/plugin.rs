@@ -28,6 +28,7 @@ use enums::GameId;
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 
+#[derive(Debug)]
 pub struct Plugin {
     game: GameId,
     active: bool,
@@ -67,7 +68,7 @@ impl Plugin {
         })
     }
 
-    fn modification_time(&self) -> SystemTime {
+    pub fn modification_time(&self) -> SystemTime {
         self.modification_time
     }
 
@@ -75,11 +76,11 @@ impl Plugin {
         self.active
     }
 
-    fn is_master_file(&self) -> bool {
+    pub fn is_master_file(&self) -> bool {
         self.data.is_master_file()
     }
 
-    fn has_file_changed(&self) -> Result<bool, Error> {
+    pub fn has_file_changed(&self) -> Result<bool, Error> {
         let current_mtime = File::open(&self.data.path())?.metadata()?.modified()?;
 
         Ok(self.modification_time != current_mtime)
@@ -202,8 +203,6 @@ mod tests {
             .unwrap();
 
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
-
-        set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
         assert_eq!(mtime, plugin.modification_time);
     }
 

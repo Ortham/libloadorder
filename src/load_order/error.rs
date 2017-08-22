@@ -17,6 +17,9 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::borrow::Cow;
+use std::io;
+use regex;
 use error::Error;
 
 #[derive(Debug)]
@@ -26,10 +29,31 @@ pub enum LoadOrderError {
     TooManyActivePlugins,
     InvalidPlugin(String),
     ImplicitlyActivePlugin(String),
+    IoError(io::Error),
+    DecodeError(Cow<'static, str>),
+    InvalidRegex,
 }
 
 impl From<Error> for LoadOrderError {
     fn from(error: Error) -> Self {
         LoadOrderError::PluginError(error)
+    }
+}
+
+impl From<io::Error> for LoadOrderError {
+    fn from(error: io::Error) -> Self {
+        LoadOrderError::IoError(error)
+    }
+}
+
+impl From<Cow<'static, str>> for LoadOrderError {
+    fn from(error: Cow<'static, str>) -> Self {
+        LoadOrderError::DecodeError(error)
+    }
+}
+
+impl From<regex::Error> for LoadOrderError {
+    fn from(error: regex::Error) -> Self {
+        LoadOrderError::InvalidRegex
     }
 }

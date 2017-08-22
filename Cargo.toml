@@ -7,8 +7,10 @@ authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 encoding = "0.2"
 filetime = "0.1.10"
 libespm = { git = "https://github.com/WrinklyNinja/libespm", branch = "rust-rewrite" }
+regex = "0.2"
 tempdir = "0.3"
 unicase = "2.0.0"
+walkdir = "1"
 
 [target.'cfg(windows)'.dependencies]
 app_dirs = "1.1.1"

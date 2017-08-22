@@ -18,17 +18,38 @@
  */
 
 use std::path::Path;
+use encoding::{Encoding, EncoderTrap};
+use encoding::all::WINDOWS_1252;
+use filetime::{FileTime, set_file_times};
+
 use enums::GameId;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use tests::copy_to_test_dir;
 
-fn write_active_plugins_file(path: &Path) {
+pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str]) {
     use std::fs::File;
     use std::io::Write;
 
-    let mut file = File::create(&path).unwrap();
-    writeln!(file, "Blank.esp").unwrap();
+    let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
+    for filename in filenames {
+        if game_settings.id() == &GameId::Morrowind {
+            write!(file, "GameFile0=").unwrap();
+        }
+        file.write_all(&WINDOWS_1252.encode(filename, EncoderTrap::Strict).unwrap())
+            .unwrap();
+        writeln!(file, "").unwrap();
+    }
+}
+
+pub fn set_timestamps(plugins_directory: &Path, filenames: &[&str]) {
+    for (index, filename) in filenames.iter().enumerate() {
+        set_file_times(
+            &plugins_directory.join(filename),
+            FileTime::zero(),
+            FileTime::from_seconds_since_1970(index as u64, 0),
+        ).unwrap();
+    }
 }
 
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
@@ -38,6 +59,12 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
     copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
     copy_to_test_dir("Blank - Different.esp", "Blank - Different.esp", &settings);
+    copy_to_test_dir(
+        "Blank - Master Dependent.esp",
+        "Blank - Master Dependent.esp",
+        &settings,
+    );
+    copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
 
     let mut plugins = vec![
         Plugin::new(settings.master_file(), &settings).unwrap(),
@@ -45,10 +72,21 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
         Plugin::new("Blank - Different.esp", &settings).unwrap(),
     ];
 
-    write_active_plugins_file(&game_dir.join("plugins.txt"));
-
-    //TODO: Remove this once the load order is initialised from the filesystem.
+    // Activate a plugin that isn't going to be in the active plugins file.
     plugins[1].activate();
+
+    write_active_plugins_file(&settings, &["Blank.esm\r", "#Blank.esp", "Blàñk.esp"]);
+
+    set_timestamps(
+        &settings.plugins_directory(),
+        &[
+            "Blank - Master Dependent.esp",
+            "Blank.esm",
+            "Blank - Different.esp",
+            "Blank.esp",
+            settings.master_file(),
+        ],
+    );
 
     (settings, plugins)
 }

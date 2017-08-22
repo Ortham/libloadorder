@@ -21,13 +21,36 @@ mod error;
 mod readable;
 mod writable;
 mod tests;
+mod timestamp_based;
 
 use unicase::eq;
+
 use plugin::Plugin;
 
 fn match_plugin(plugin: &Plugin, name: &str) -> bool {
     match plugin.name() {
         None => false,
         Some(n) => eq(n.as_str(), name),
+    }
+}
+
+fn find_first_non_master_position(plugins: &Vec<Plugin>) -> Option<usize> {
+    plugins.iter().position(|p| !p.is_master_file())
+}
+
+//TODO: Profile if the 'has changed' check is actually necessary.
+fn reload_changed_plugins(plugins: &mut Vec<Plugin>) {
+    for i in (0..plugins.len()).rev() {
+        let should_remove = plugins[i]
+            .has_file_changed()
+            .and_then(|has_changed| if has_changed {
+                plugins[i].reload()
+            } else {
+                Ok(())
+            })
+            .is_err();
+        if should_remove {
+            plugins.remove(i);
+        }
     }
 }

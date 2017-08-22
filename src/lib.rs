@@ -20,7 +20,9 @@
 extern crate encoding;
 extern crate espm;
 extern crate filetime;
+extern crate regex;
 extern crate unicase;
+extern crate walkdir;
 #[cfg(windows)]
 extern crate app_dirs;
 
