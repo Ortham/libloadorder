@@ -91,7 +91,7 @@ impl Plugin {
         Ok(self.data.parse_file(true)?)
     }
 
-    fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
+    pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
         let atime = FileTime::from_last_access_time(&File::open(&self.data.path())?.metadata()?);
         let mtime =
             FileTime::from_seconds_since_1970(time.duration_since(UNIX_EPOCH)?.as_secs(), 0);

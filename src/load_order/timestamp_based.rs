@@ -18,7 +18,9 @@
  */
 use std::cmp::Ordering;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Error};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
 use regex::bytes::Regex;
@@ -89,7 +91,26 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), LoadOrderError> {
-        unimplemented!();
+        use std::collections::BTreeSet;
+        use std::time::Duration;
+        let mut timestamps: BTreeSet<SystemTime> = self.plugins()
+            .iter()
+            .map(Plugin::modification_time)
+            .collect();
+
+        while timestamps.len() < self.plugins().len() {
+            let timestamp = *timestamps.iter().rev().nth(0).unwrap_or(&UNIX_EPOCH) +
+                Duration::from_secs(60);
+            timestamps.insert(timestamp);
+        }
+
+        for (plugin, timestamp) in self.mut_plugins().iter_mut().zip(timestamps.into_iter()) {
+            plugin.set_modification_time(timestamp)?;
+        }
+
+        save_active_plugins(self)?;
+
+        Ok(())
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
@@ -145,12 +166,64 @@ fn load_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(),
     Ok(())
 }
 
+fn save_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+    use std::fs::create_dir_all;
+    use std::io::Write;
+    use encoding::EncoderTrap;
+
+    if let Some(x) = load_order.game_settings().active_plugins_file().parent() {
+        if !x.exists() {
+            create_dir_all(x)?;
+        }
+    }
+
+    let prelude = get_file_prelude(load_order.game_settings())?;
+
+    let mut file = File::create(&load_order.game_settings().active_plugins_file())?;
+    file.write_all(&prelude)?;
+    for (index, plugin_name) in load_order.active_plugin_names().iter().enumerate() {
+        if load_order.game_settings().id() == &GameId::Morrowind {
+            write!(file, "GameFile{}=", index)?;
+        }
+        file.write_all(
+            &WINDOWS_1252.encode(&plugin_name, EncoderTrap::Strict)?,
+        )?;
+        writeln!(file, "")?;
+    }
+
+    Ok(())
+}
+
+fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
+    let mut prelude: Vec<u8> = Vec::new();
+    if game_settings.id() == &GameId::Morrowind && game_settings.active_plugins_file().exists() {
+        let input = File::open(game_settings.active_plugins_file())?;
+        let buffered = BufReader::new(input);
+
+        let game_files_header: &'static [u8] = "[Game Files]".as_bytes();
+        for line in buffered.split(b'\n') {
+            let line = line?;
+            prelude.append(&mut line.clone());
+            prelude.push(b'\n');
+
+            if line.starts_with(game_files_header) {
+                break;
+            }
+        }
+
+    }
+
+    Ok(prelude)
+}
+
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
 
     use super::*;
 
+    use std::fs::remove_dir_all;
+    use std::io::Read;
     use std::path::Path;
     use self::tempdir::TempDir;
     use enums::GameId;
@@ -265,8 +338,8 @@ mod tests {
             "Blank.esm",
             "Oblivion.esm",
             "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
             "Blank.esp",
+            "Blank - Different.esp",
             "Blàñk.esp",
         ];
 
@@ -296,8 +369,8 @@ mod tests {
             "Blank.esm",
             load_order.game_settings().master_file(),
             "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
             "Blank.esp",
+            "Blank - Different.esp",
             "Blàñk.esp",
         ];
 
@@ -375,6 +448,88 @@ mod tests {
             assert_eq!(plugins[i], active_plugin_names[i]);
         }
         assert_eq!(plugins, active_plugin_names);
+    }
+
+    #[test]
+    fn save_should_preserve_and_extend_the_existing_set_of_timestamps() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let mapper = |p: &Plugin| {
+            p.modification_time()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        };
+
+        let mut old_timestamps: Vec<u64> = load_order.plugins().iter().map(&mapper).collect();
+
+        load_order.save().unwrap();
+
+        let timestamps: Vec<u64> = load_order.plugins().iter().map(&mapper).collect();
+
+        assert_ne!(old_timestamps, timestamps);
+
+        old_timestamps.sort();
+        old_timestamps.dedup_by_key(|t| *t);
+        let last_timestamp = *old_timestamps.last().unwrap();
+        old_timestamps.push(last_timestamp + 60);
+
+        assert_eq!(old_timestamps, timestamps);
+    }
+
+    #[test]
+    fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        remove_dir_all(
+            load_order
+                .game_settings()
+                .active_plugins_file()
+                .parent()
+                .unwrap(),
+        ).unwrap();
+
+        load_order.save().unwrap();
+
+        assert!(
+            load_order
+                .game_settings()
+                .active_plugins_file()
+                .parent()
+                .unwrap()
+                .exists()
+        );
+    }
+
+    #[test]
+    fn save_should_write_active_plugins_file_for_oblivion() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        load_order.save().unwrap();
+
+        load_order.load().unwrap();
+        assert_eq!(vec!["Blank.esp"], load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn save_should_write_active_plugins_file_for_morrowind() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        load_order.save().unwrap();
+
+        load_order.load().unwrap();
+        assert_eq!(vec!["Blank.esp"], load_order.active_plugin_names());
+
+        let mut content = String::new();
+        File::open(load_order.game_settings().active_plugins_file())
+            .unwrap()
+            .read_to_string(&mut content)
+            .unwrap();
+        assert!(content.contains("isrealmorrowindini=false\n[Game Files]\n"));
     }
 
 }

@@ -32,6 +32,12 @@ pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str
     use std::io::Write;
 
     let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
+
+    if *game_settings.id() == GameId::Morrowind {
+        writeln!(file, "isrealmorrowindini=false").unwrap();
+        writeln!(file, "[Game Files]").unwrap();
+    }
+
     for filename in filenames {
         if game_settings.id() == &GameId::Morrowind {
             write!(file, "GameFile0=").unwrap();
@@ -53,7 +59,11 @@ pub fn set_timestamps(plugins_directory: &Path, filenames: &[&str]) {
 }
 
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
-    let settings = GameSettings::with_local_path(game_id, &game_dir, &game_dir);
+    use std::fs::create_dir;
+
+    let local_path = game_dir.join("local");
+    create_dir(&local_path);
+    let settings = GameSettings::with_local_path(game_id, &game_dir, &local_path);
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
@@ -65,15 +75,6 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
         &settings,
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
-
-    let mut plugins = vec![
-        Plugin::new(settings.master_file(), &settings).unwrap(),
-        Plugin::new("Blank.esp", &settings).unwrap(),
-        Plugin::new("Blank - Different.esp", &settings).unwrap(),
-    ];
-
-    // Activate a plugin that isn't going to be in the active plugins file.
-    plugins[1].activate();
 
     write_active_plugins_file(&settings, &["Blank.esm\r", "#Blank.esp", "Blàñk.esp"]);
 
@@ -87,6 +88,21 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
             settings.master_file(),
         ],
     );
+    // Give two files the same timestamp.
+    set_file_times(
+        &settings.plugins_directory().join("Blank.esp"),
+        FileTime::zero(),
+        FileTime::from_seconds_since_1970(2, 0),
+    ).unwrap();
+
+    let mut plugins = vec![
+        Plugin::new(settings.master_file(), &settings).unwrap(),
+        Plugin::new("Blank.esp", &settings).unwrap(),
+        Plugin::new("Blank - Different.esp", &settings).unwrap(),
+    ];
+
+    // Activate a plugin that isn't going to be in the active plugins file.
+    plugins[1].activate();
 
     (settings, plugins)
 }
