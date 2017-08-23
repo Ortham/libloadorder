@@ -203,7 +203,7 @@ mod tests {
             .unwrap();
 
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
-        assert_eq!(mtime, plugin.modification_time);
+        assert_eq!(mtime, plugin.modification_time());
     }
 
     #[test]
