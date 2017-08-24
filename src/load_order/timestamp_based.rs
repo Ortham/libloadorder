@@ -556,7 +556,12 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let filenames = vec!["Blank.esm", "Blank.esp"];
+        let filenames = vec![
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+        ];
         load_order.set_load_order(&filenames).unwrap();
 
         let expected_filenames = vec![
