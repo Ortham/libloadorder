@@ -28,7 +28,7 @@ use enums::GameId;
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Plugin {
     game: GameId,
     active: bool,

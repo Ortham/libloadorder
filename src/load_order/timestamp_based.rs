@@ -17,6 +17,7 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufReader, BufRead, Error};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -114,7 +115,41 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
-        unimplemented!();
+        use error::Error;
+        use super::match_plugin;
+        use std::mem;
+
+        let unique_plugin_names: HashSet<String> =
+            plugin_names.iter().map(|s| s.to_lowercase()).collect();
+        if unique_plugin_names.len() != plugin_names.len() {
+            return Err(LoadOrderError::DuplicatePlugin);
+        }
+        if let Some(x) = plugin_names.iter().find(|p| {
+            !Plugin::is_valid(p, self.game_settings())
+        })
+        {
+            return Err(LoadOrderError::InvalidPlugin(x.to_string()));
+        }
+
+        let mut plugins = plugin_names
+            .iter()
+            .map(|n| match self.plugins().iter().find(
+                |p| match_plugin(p, n),
+            ) {
+                None => Plugin::new(n, self.game_settings()),
+                Some(x) => Ok(x.clone()),
+            })
+            .collect::<Result<Vec<Plugin>, Error>>()?;
+
+        if !is_partitioned_by_master_flag(&plugins) {
+            return Err(LoadOrderError::NonMasterBeforeMaster);
+        }
+
+        mem::swap(&mut plugins, self.mut_plugins());
+
+        self.add_missing_plugins();
+
+        Ok(())
     }
 
     fn set_plugin_index(
@@ -123,6 +158,17 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
         position: usize,
     ) -> Result<(), LoadOrderError> {
         unimplemented!();
+    }
+}
+
+fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> bool {
+    let plugin_pos = match find_first_non_master_position(plugins) {
+        None => return true,
+        Some(x) => x,
+    };
+    match plugins.iter().rposition(|p| p.is_master_file()) {
+        None => true,
+        Some(master_pos) => master_pos < plugin_pos,
     }
 }
 
@@ -530,6 +576,53 @@ mod tests {
             .read_to_string(&mut content)
             .unwrap();
         assert!(content.contains("isrealmorrowindini=false\n[Game Files]\n"));
+    }
+
+    #[test]
+    fn set_load_order_should_error_if_given_duplicate_plugins() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec!["Blank.esp", "blank.esp"];
+        assert!(load_order.set_load_order(&filenames).is_err());
+    }
+
+    #[test]
+    fn set_load_order_should_error_if_given_an_invalid_plugin() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec!["Blank.esp", "missing.esp"];
+        assert!(load_order.set_load_order(&filenames).is_err());
+    }
+
+    #[test]
+    fn set_load_order_should_error_if_given_a_list_with_plugins_before_masters() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec!["Blank.esp", "Blank.esm"];
+        assert!(load_order.set_load_order(&filenames).is_err());
+    }
+
+    #[test]
+    fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec!["Blank.esm", "Blank.esp"];
+        load_order.set_load_order(&filenames).unwrap();
+
+        let expected_filenames = vec![
+            "Blank.esm",
+            "Morrowind.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+        assert_eq!(expected_filenames, load_order.plugin_names());
+        assert!(load_order.is_active("Blank.esp"));
     }
 
 }

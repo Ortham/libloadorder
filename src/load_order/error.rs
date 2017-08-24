@@ -32,6 +32,8 @@ pub enum LoadOrderError {
     IoError(io::Error),
     DecodeError(Cow<'static, str>),
     InvalidRegex,
+    DuplicatePlugin,
+    NonMasterBeforeMaster,
 }
 
 impl From<Error> for LoadOrderError {
