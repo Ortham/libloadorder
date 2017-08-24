@@ -18,115 +18,13 @@
  */
 
 use unicase::eq;
-use walkdir::WalkDir;
 
-use game_settings::GameSettings;
+use load_order::match_plugin;
 use load_order::error::LoadOrderError;
-use load_order::readable::ReadableLoadOrder;
+use load_order::mutable::{MAX_ACTIVE_PLUGINS, MutableLoadOrder};
 use plugin::Plugin;
-use super::match_plugin;
 
-const MAX_ACTIVE_PLUGINS: usize = 255;
-
-pub trait ExtensibleLoadOrder: ReadableLoadOrder {
-    fn game_settings(&self) -> &GameSettings;
-    fn mut_plugins(&mut self) -> &mut Vec<Plugin>;
-
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
-
-    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, LoadOrderError> {
-        let plugin = Plugin::new(plugin_name, self.game_settings())?;
-
-        let index = match self.insert_position(&plugin) {
-            Some(x) => {
-                self.mut_plugins().insert(x, plugin);
-                x
-            }
-            None => {
-                self.mut_plugins().push(plugin);
-                self.plugins().len() - 1
-            }
-        };
-
-        Ok(index)
-    }
-
-    fn count_active_plugins(&self) -> usize {
-        self.plugins().iter().filter(|p| p.is_active()).count()
-    }
-
-    fn add_missing_plugins(&mut self) -> Result<(), LoadOrderError> {
-        let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
-            .filter_map(|e| {
-                e.file_name().to_str().and_then(
-                    |f| if !self.game_settings().is_implicitly_active(f) &&
-                        self.index_of(f).is_none() &&
-                        Plugin::is_valid(
-                            f,
-                            self.game_settings(),
-                        )
-                    {
-                        Some(f.to_string())
-                    } else {
-                        None
-                    },
-                )
-            })
-            .collect();
-
-        for filename in filenames {
-            self.add_to_load_order(&filename)?;
-        }
-
-        Ok(())
-    }
-
-    fn find_or_add(&mut self, filename: &str) -> Result<usize, LoadOrderError> {
-        let index = match self.index_of(filename) {
-            Some(x) => x,
-            None => self.add_to_load_order(filename)?,
-        };
-
-        Ok(index)
-    }
-
-    fn add_implicitly_active_plugins(&mut self) -> Result<(), LoadOrderError> {
-        for filename in self.game_settings().implicitly_active_plugins() {
-            if self.is_active(filename) || !Plugin::is_valid(filename, self.game_settings()) {
-                continue;
-            }
-
-            let index = self.find_or_add(filename)?;
-            self.mut_plugins()[index].activate()?;
-        }
-
-        Ok(())
-    }
-
-    fn deactivate_excess_plugins(&mut self) {
-        let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
-        let mut count = self.count_active_plugins();
-
-        for plugin in self.mut_plugins().iter_mut().rev() {
-            if count <= MAX_ACTIVE_PLUGINS {
-                break;
-            }
-            if plugin.is_active() &&
-                !implicitly_active_plugins.iter().any(
-                    |i| match_plugin(plugin, i),
-                )
-            {
-                plugin.deactivate();
-                count -= 1;
-            }
-        }
-    }
-}
-
-pub trait MutableLoadOrder: ExtensibleLoadOrder {
+pub trait WritableLoadOrder: MutableLoadOrder {
     fn load(&mut self) -> Result<(), LoadOrderError>;
     fn save(&mut self) -> Result<(), LoadOrderError>;
 
@@ -149,7 +47,7 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
 
         let at_max_active_plugins = self.count_active_plugins() == MAX_ACTIVE_PLUGINS;
 
-        let plugin = get_plugin_by_name(self.mut_plugins(), plugin_name).ok_or(
+        let plugin = self.find_plugin_mut(plugin_name).ok_or(
             LoadOrderError::PluginNotFound,
         )?;
 
@@ -167,7 +65,7 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
             ));
         }
 
-        get_plugin_by_name(self.mut_plugins(), plugin_name)
+        self.find_plugin_mut(plugin_name)
             .ok_or(LoadOrderError::PluginNotFound)
             .map(|p| p.deactivate())
     }
@@ -209,23 +107,13 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
                 self.add_to_load_order(plugin_name)?;
             }
 
-            if let Some(p) = self.mut_plugins().iter_mut().find(|p| {
-                match_plugin(p, plugin_name)
-            })
-            {
+            if let Some(p) = self.find_plugin_mut(plugin_name) {
                 p.activate()?;
             }
         }
 
         Ok(())
     }
-}
-
-fn get_plugin_by_name<'a>(
-    plugins: &'a mut Vec<Plugin>,
-    plugin_name: &str,
-) -> Option<&'a mut Plugin> {
-    plugins.iter_mut().find(|p| match_plugin(p, plugin_name))
 }
 
 #[cfg(test)]
@@ -237,7 +125,10 @@ mod tests {
     use std::path::Path;
     use self::tempdir::TempDir;
     use enums::GameId;
+    use game_settings::GameSettings;
+    use load_order::readable::ReadableLoadOrder;
     use load_order::tests::mock_game_files;
+    use tests::copy_to_test_dir;
 
     struct TestLoadOrder {
         game_settings: GameSettings,
@@ -250,7 +141,7 @@ mod tests {
         }
     }
 
-    impl ExtensibleLoadOrder for TestLoadOrder {
+    impl MutableLoadOrder for TestLoadOrder {
         fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
             None
         }
@@ -264,7 +155,7 @@ mod tests {
         }
     }
 
-    impl MutableLoadOrder for TestLoadOrder {
+    impl WritableLoadOrder for TestLoadOrder {
         // Dummy method, unused.
         fn load(&mut self) -> Result<(), LoadOrderError> {
             Ok(())
@@ -326,8 +217,6 @@ mod tests {
 
     #[test]
     fn activate_should_throw_if_increasing_the_number_of_active_plugins_past_the_limit() {
-        use tests::copy_to_test_dir;
-
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
@@ -342,8 +231,6 @@ mod tests {
 
     #[test]
     fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_already_active() {
-        use tests::copy_to_test_dir;
-
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 

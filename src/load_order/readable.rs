@@ -18,7 +18,7 @@
  */
 
 use plugin::Plugin;
-use super::match_plugin;
+use load_order::match_plugin;
 
 pub trait ReadableLoadOrder {
     fn plugins(&self) -> &Vec<Plugin>;

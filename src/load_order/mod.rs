@@ -18,6 +18,7 @@
  */
 
 mod error;
+mod mutable;
 mod readable;
 mod writable;
 mod tests;
@@ -36,21 +37,4 @@ fn match_plugin(plugin: &Plugin, name: &str) -> bool {
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())
-}
-
-//TODO: Profile if the 'has changed' check is actually necessary.
-fn reload_changed_plugins(plugins: &mut Vec<Plugin>) {
-    for i in (0..plugins.len()).rev() {
-        let should_remove = plugins[i]
-            .has_file_changed()
-            .and_then(|has_changed| if has_changed {
-                plugins[i].reload()
-            } else {
-                Ok(())
-            })
-            .is_err();
-        if should_remove {
-            plugins.remove(i);
-        }
-    }
 }

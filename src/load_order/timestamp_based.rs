@@ -17,24 +17,23 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
-use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufReader, BufRead, Error};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::BTreeSet;
+use std::fs::{create_dir_all, File};
+use std::io::{BufReader, BufRead, Error, Write};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use encoding::{Encoding, DecoderTrap};
+use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use regex::bytes::Regex;
 
 use enums::GameId;
 use game_settings::GameSettings;
 use plugin::Plugin;
-use super::error::LoadOrderError;
-use super::readable::ReadableLoadOrder;
-use super::writable::ExtensibleLoadOrder;
-use super::writable::MutableLoadOrder;
-use super::reload_changed_plugins;
-use super::find_first_non_master_position;
+use load_order::find_first_non_master_position;
+use load_order::error::LoadOrderError;
+use load_order::mutable::MutableLoadOrder;
+use load_order::readable::ReadableLoadOrder;
+use load_order::writable::WritableLoadOrder;
 
 struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
@@ -47,7 +46,7 @@ impl ReadableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-impl ExtensibleLoadOrder for TimestampBasedLoadOrder {
+impl MutableLoadOrder for TimestampBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if plugin.is_master_file() {
             find_first_non_master_position(self.plugins())
@@ -65,9 +64,9 @@ impl ExtensibleLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-impl MutableLoadOrder for TimestampBasedLoadOrder {
+impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), LoadOrderError> {
-        reload_changed_plugins(self.mut_plugins());
+        self.reload_changed_plugins();
 
         //TODO: Profile vs. C++ libloadorder to see if caching plugins folder timestamp is worth it
         self.add_missing_plugins()?;
@@ -92,8 +91,6 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), LoadOrderError> {
-        use std::collections::BTreeSet;
-        use std::time::Duration;
         let mut timestamps: BTreeSet<SystemTime> = self.plugins()
             .iter()
             .map(Plugin::modification_time)
@@ -115,7 +112,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
-        replace_plugins(self, plugin_names)
+        self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(
@@ -123,117 +120,11 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
         plugin_name: &str,
         position: usize,
     ) -> Result<(), LoadOrderError> {
-        move_or_insert_plugin(self, plugin_name, position)
+        self.move_or_insert_plugin(plugin_name, position)
     }
 }
 
-fn validate_index(index: usize, is_master: bool, plugins: &[Plugin]) -> Result<(), LoadOrderError> {
-    match find_first_non_master_position(plugins) {
-        None if !is_master && index < plugins.len() => Err(LoadOrderError::NonMasterBeforeMaster),
-        Some(i) if is_master && index > i || !is_master && index < i => Err(LoadOrderError::NonMasterBeforeMaster),
-        _ => Ok(())
-    }
-}
-
-fn get_plugin_to_insert<T: ExtensibleLoadOrder>(load_order: &mut T,
-plugin_name: &str,
-position: usize) -> Result<Plugin, LoadOrderError> {
-    use super::match_plugin;
-    if let Some(i) = load_order.plugins().iter().position(|p| match_plugin(p, plugin_name)) {
-        let is_master = load_order.plugins()[i].is_master_file();
-        validate_index(position, is_master, load_order.plugins())?;
-
-        Ok(load_order.mut_plugins().remove(i))
-    } else {
-        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
-            return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
-        }
-
-        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
-
-        validate_index(position, plugin.is_master_file(), load_order.plugins())?;
-
-        Ok(plugin)
-    }
-}
-
-fn move_or_insert_plugin<T: ExtensibleLoadOrder>(load_order: &mut T,
-plugin_name: &str,
-position: usize) -> Result<(), LoadOrderError> {
-    let plugin = get_plugin_to_insert(load_order, plugin_name, position)?;
-
-    if position >= load_order.plugins().len() {
-        load_order.mut_plugins().push(plugin);
-    } else {
-        load_order.mut_plugins().insert(position, plugin);
-    }
-
-    Ok(())
-}
-
-fn replace_plugins<T: ExtensibleLoadOrder>(load_order: &mut T,plugin_names: &[&str]) -> Result<(), LoadOrderError> {
-    use std::mem;
-
-    validate_plugin_names(plugin_names, load_order.game_settings())?;
-
-    let mut plugins = map_to_plugins(load_order, plugin_names)?;
-
-    if !is_partitioned_by_master_flag(&plugins) {
-        return Err(LoadOrderError::NonMasterBeforeMaster);
-    }
-
-    mem::swap(&mut plugins, load_order.mut_plugins());
-
-    load_order.add_missing_plugins()?;
-
-    Ok(())
-}
-
-fn validate_plugin_names(plugin_names: &[&str], game_settings: &GameSettings) -> Result<(), LoadOrderError> {
-    let unique_plugin_names: HashSet<String> =
-        plugin_names.iter().map(|s| s.to_lowercase()).collect();
-
-    if unique_plugin_names.len() != plugin_names.len() {
-        return Err(LoadOrderError::DuplicatePlugin);
-    }
-
-    let invalid_plugin = plugin_names.iter().find(|p| {
-        !Plugin::is_valid(p, game_settings)
-    });
-
-    match invalid_plugin {
-        Some(x) => Err(LoadOrderError::InvalidPlugin(x.to_string())),
-        None => Ok(())
-    }
-}
-
-fn to_plugin(plugin_name: &str, existing_plugins: &[Plugin], game_settings: &GameSettings) -> Result<Plugin, LoadOrderError> {
-    use super::match_plugin;
-    match existing_plugins.iter().find(|p| match_plugin(p, plugin_name)) {
-        None => Ok(Plugin::new(plugin_name, game_settings)?),
-        Some(x) => Ok(x.clone()),
-    }
-}
-
-fn map_to_plugins<T: ExtensibleLoadOrder>(load_order: &T, plugin_names: &[&str]) -> Result<Vec<Plugin>, LoadOrderError> {
-    plugin_names
-        .iter()
-        .map(|n| to_plugin(n, load_order.plugins(), load_order.game_settings()))
-        .collect()
-}
-
-fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> bool {
-    let plugin_pos = match find_first_non_master_position(plugins) {
-        None => return true,
-        Some(x) => x,
-    };
-    match plugins.iter().rposition(|p| p.is_master_file()) {
-        None => true,
-        Some(master_pos) => master_pos < plugin_pos,
-    }
-}
-
-fn load_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+fn load_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
     for plugin in load_order.mut_plugins() {
         plugin.deactivate();
     }
@@ -273,11 +164,7 @@ fn load_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(),
     Ok(())
 }
 
-fn save_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
-    use std::fs::create_dir_all;
-    use std::io::Write;
-    use encoding::EncoderTrap;
-
+fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
     if let Some(x) = load_order.game_settings().active_plugins_file().parent() {
         if !x.exists() {
             create_dir_all(x)?;
@@ -329,8 +216,8 @@ mod tests {
 
     use super::*;
 
-    use std::fs::remove_dir_all;
-    use std::io::Read;
+    use std::fs::{File, remove_dir_all};
+    use std::io::{Read, Write};
     use std::path::Path;
     use self::tempdir::TempDir;
     use enums::GameId;
@@ -347,8 +234,6 @@ mod tests {
     }
 
     fn write_file(path: &Path) {
-        use std::fs::File;
-        use std::io::Write;
 
         let mut file = File::create(&path).unwrap();
         writeln!(file, "").unwrap();
@@ -691,7 +576,11 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        assert!(load_order.set_plugin_index("Blank - Master Dependent.esp", 0).is_err());
+        assert!(
+            load_order
+                .set_plugin_index("Blank - Master Dependent.esp", 0)
+                .is_err()
+        );
     }
 
     #[test]
@@ -743,7 +632,9 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
-        load_order.set_plugin_index("Blank - Different.esp", 1).unwrap();
+        load_order
+            .set_plugin_index("Blank - Different.esp", 1)
+            .unwrap();
         assert_eq!(1, load_order.index_of("Blank - Different.esp").unwrap());
         assert_eq!(num_plugins, load_order.plugins().len());
     }
