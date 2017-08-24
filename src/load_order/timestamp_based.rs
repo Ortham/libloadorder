@@ -115,21 +115,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
-        use std::mem;
-
-        validate_plugin_names(plugin_names, self.game_settings())?;
-
-        let mut plugins = map_to_plugins(self, plugin_names)?;
-
-        if !is_partitioned_by_master_flag(&plugins) {
-            return Err(LoadOrderError::NonMasterBeforeMaster);
-        }
-
-        mem::swap(&mut plugins, self.mut_plugins());
-
-        self.add_missing_plugins()?;
-
-        Ok(())
+        replace_plugins(self, plugin_names)
     }
 
     fn set_plugin_index(
@@ -137,8 +123,70 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
         plugin_name: &str,
         position: usize,
     ) -> Result<(), LoadOrderError> {
-        unimplemented!();
+        move_or_insert_plugin(self, plugin_name, position)
     }
+}
+
+fn validate_index(index: usize, is_master: bool, plugins: &[Plugin]) -> Result<(), LoadOrderError> {
+    match find_first_non_master_position(plugins) {
+        None if !is_master && index < plugins.len() => Err(LoadOrderError::NonMasterBeforeMaster),
+        Some(i) if is_master && index > i || !is_master && index < i => Err(LoadOrderError::NonMasterBeforeMaster),
+        _ => Ok(())
+    }
+}
+
+fn get_plugin_to_insert<T: ExtensibleLoadOrder>(load_order: &mut T,
+plugin_name: &str,
+position: usize) -> Result<Plugin, LoadOrderError> {
+    use super::match_plugin;
+    if let Some(i) = load_order.plugins().iter().position(|p| match_plugin(p, plugin_name)) {
+        let is_master = load_order.plugins()[i].is_master_file();
+        validate_index(position, is_master, load_order.plugins())?;
+
+        Ok(load_order.mut_plugins().remove(i))
+    } else {
+        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
+            return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
+        }
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
+
+        validate_index(position, plugin.is_master_file(), load_order.plugins())?;
+
+        Ok(plugin)
+    }
+}
+
+fn move_or_insert_plugin<T: ExtensibleLoadOrder>(load_order: &mut T,
+plugin_name: &str,
+position: usize) -> Result<(), LoadOrderError> {
+    let plugin = get_plugin_to_insert(load_order, plugin_name, position)?;
+
+    if position >= load_order.plugins().len() {
+        load_order.mut_plugins().push(plugin);
+    } else {
+        load_order.mut_plugins().insert(position, plugin);
+    }
+
+    Ok(())
+}
+
+fn replace_plugins<T: ExtensibleLoadOrder>(load_order: &mut T,plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+    use std::mem;
+
+    validate_plugin_names(plugin_names, load_order.game_settings())?;
+
+    let mut plugins = map_to_plugins(load_order, plugin_names)?;
+
+    if !is_partitioned_by_master_flag(&plugins) {
+        return Err(LoadOrderError::NonMasterBeforeMaster);
+    }
+
+    mem::swap(&mut plugins, load_order.mut_plugins());
+
+    load_order.add_missing_plugins()?;
+
+    Ok(())
 }
 
 fn validate_plugin_names(plugin_names: &[&str], game_settings: &GameSettings) -> Result<(), LoadOrderError> {
@@ -638,4 +686,65 @@ mod tests {
         assert!(load_order.is_active("Blank.esp"));
     }
 
+    #[test]
+    fn set_plugin_index_should_error_if_inserting_a_non_master_before_a_master() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("Blank - Master Dependent.esp", 0).is_err());
+    }
+
+    #[test]
+    fn set_plugin_index_should_error_if_moving_a_non_master_before_a_master() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("Blank.esp", 0).is_err());
+    }
+
+    #[test]
+    fn set_plugin_index_should_error_if_inserting_a_master_after_a_non_master() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("Blank.esm", 2).is_err());
+    }
+
+    #[test]
+    fn set_plugin_index_should_error_if_moving_a_master_after_a_non_master() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("Morrowind.esm", 2).is_err());
+    }
+
+    #[test]
+    fn set_plugin_index_should_error_if_setting_the_index_of_an_invalid_plugin() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("missing.esm", 0).is_err());
+    }
+
+    #[test]
+    fn set_plugin_index_should_insert_a_new_plugin() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let num_plugins = load_order.plugins().len();
+        load_order.set_plugin_index("Blank.esm", 1).unwrap();
+        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
+        assert_eq!(num_plugins + 1, load_order.plugins().len());
+    }
+
+    #[test]
+    fn set_plugin_index_should_move_an_existing_plugin() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let num_plugins = load_order.plugins().len();
+        load_order.set_plugin_index("Blank - Different.esp", 1).unwrap();
+        assert_eq!(1, load_order.index_of("Blank - Different.esp").unwrap());
+        assert_eq!(num_plugins, load_order.plugins().len());
+    }
 }
