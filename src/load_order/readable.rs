@@ -78,7 +78,7 @@ mod tests {
     }
 
     fn prepare(game_dir: &Path) -> TestLoadOrder {
-        let (_, plugins) = mock_game_files(GameId::Oblivion, &game_dir);
+        let (_, plugins) = mock_game_files(GameId::Oblivion, game_dir);
         TestLoadOrder { plugins }
     }
 

@@ -72,8 +72,8 @@ impl GameSettings {
     }
 
     pub fn with_local_path(game_id: GameId, game_path: &Path, local_path: &Path) -> GameSettings {
-        let plugins_file_path = plugins_file_path(&game_id, &game_path, &local_path);
-        let load_order_path = load_order_path(&game_id, &local_path);
+        let plugins_file_path = plugins_file_path(&game_id, game_path, local_path);
+        let load_order_path = load_order_path(&game_id, local_path);
 
         GameSettings {
             id: game_id,
@@ -205,7 +205,7 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
     let mut buf_reader = BufReader::new(file);
     let mut contents = Vec::new();
 
-    if let Err(_) = buf_reader.read_to_end(&mut contents) {
+    if buf_reader.read_to_end(&mut contents).is_err() {
         return false;
     }
 
@@ -217,8 +217,7 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
             s.find("bUseMyGamesDirectory=1")
         },
     ) {
-        Err(_) => false,
-        Ok(None) => false,
+        Err(_) | Ok(None) => false,
         Ok(Some(_)) => true,
     }
 }

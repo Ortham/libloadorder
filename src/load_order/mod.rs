@@ -34,7 +34,7 @@ fn match_plugin(plugin: &Plugin, name: &str) -> bool {
     }
 }
 
-fn find_first_non_master_position(plugins: &Vec<Plugin>) -> Option<usize> {
+fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())
 }
 

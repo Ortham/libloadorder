@@ -186,7 +186,7 @@ fn save_active_plugins<T: ExtensibleLoadOrder>(load_order: &mut T) -> Result<(),
             write!(file, "GameFile{}=", index)?;
         }
         file.write_all(
-            &WINDOWS_1252.encode(&plugin_name, EncoderTrap::Strict)?,
+            &WINDOWS_1252.encode(plugin_name, EncoderTrap::Strict)?,
         )?;
         writeln!(file, "")?;
     }
@@ -200,7 +200,7 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
         let input = File::open(game_settings.active_plugins_file())?;
         let buffered = BufReader::new(input);
 
-        let game_files_header: &'static [u8] = "[Game Files]".as_bytes();
+        let game_files_header: &'static [u8] = b"[Game Files]";
         for line in buffered.split(b'\n') {
             let line = line?;
             prelude.append(&mut line.clone());
@@ -232,7 +232,7 @@ mod tests {
     use tests::copy_to_test_dir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TimestampBasedLoadOrder {
-        let (game_settings, plugins) = mock_game_files(game_id, &game_dir);
+        let (game_settings, plugins) = mock_game_files(game_id, game_dir);
         TimestampBasedLoadOrder {
             game_settings,
             plugins,

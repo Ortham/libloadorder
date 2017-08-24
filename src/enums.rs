@@ -42,11 +42,10 @@ impl GameId {
         match *self {
             GameId::Morrowind => EspmId::Morrowind,
             GameId::Oblivion => EspmId::Oblivion,
-            GameId::Skyrim => EspmId::Skyrim,
+            GameId::Skyrim | GameId::SkyrimSE => EspmId::Skyrim,
             GameId::Fallout3 => EspmId::Fallout3,
             GameId::FalloutNV => EspmId::FalloutNV,
             GameId::Fallout4 => EspmId::Fallout4,
-            GameId::SkyrimSE => EspmId::Skyrim,
         }
     }
 }

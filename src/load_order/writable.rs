@@ -35,7 +35,7 @@ pub trait ExtensibleLoadOrder: ReadableLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
     fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, LoadOrderError> {
-        let plugin = Plugin::new(plugin_name, &self.game_settings())?;
+        let plugin = Plugin::new(plugin_name, self.game_settings())?;
 
         let index = match self.insert_position(&plugin) {
             Some(x) => {
@@ -140,7 +140,7 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), LoadOrderError> {
         if !self.plugins().iter().any(|p| match_plugin(p, plugin_name)) {
-            if !Plugin::is_valid(plugin_name, &self.game_settings()) {
+            if !Plugin::is_valid(plugin_name, self.game_settings()) {
                 return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
             }
 
@@ -179,14 +179,14 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
 
         for plugin_name in active_plugin_names {
             if self.index_of(plugin_name).is_none() &&
-                !Plugin::is_valid(plugin_name, &self.game_settings())
+                !Plugin::is_valid(plugin_name, self.game_settings())
             {
                 return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
             }
         }
 
         for plugin_name in self.game_settings().implicitly_active_plugins() {
-            if !Plugin::is_valid(plugin_name, &self.game_settings()) {
+            if !Plugin::is_valid(plugin_name, self.game_settings()) {
                 continue;
             }
 
@@ -202,12 +202,13 @@ pub trait MutableLoadOrder: ExtensibleLoadOrder {
         }
 
         for plugin_name in active_plugin_names {
-            if !self.mut_plugins().iter_mut().any(|p| {
+            let plugin_exists = self.mut_plugins().iter_mut().any(|p| {
                 match_plugin(p, plugin_name)
-            })
-            {
+            });
+            if !plugin_exists {
                 self.add_to_load_order(plugin_name)?;
             }
+
             if let Some(p) = self.mut_plugins().iter_mut().find(|p| {
                 match_plugin(p, plugin_name)
             })
@@ -290,7 +291,7 @@ mod tests {
     }
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TestLoadOrder {
-        let (game_settings, plugins) = mock_game_files(game_id, &game_dir);
+        let (game_settings, plugins) = mock_game_files(game_id, game_dir);
         TestLoadOrder {
             game_settings,
             plugins,

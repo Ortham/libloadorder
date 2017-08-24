@@ -56,8 +56,7 @@ impl From<espm::Error> for Error {
             espm::Error::NonUtf8StringData => Error::NonUTF8StringData,
             espm::Error::IoError(x) => Error::IoError(x),
             espm::Error::NoFilename => Error::NoFilename,
-            espm::Error::ParsingIncomplete => Error::ParsingError,
-            espm::Error::ParsingError => Error::ParsingError,
+            espm::Error::ParsingIncomplete | espm::Error::ParsingError => Error::ParsingError,
             espm::Error::DecodeError(x) => Error::DecodeError(x),
         }
     }

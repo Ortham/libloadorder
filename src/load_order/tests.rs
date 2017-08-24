@@ -62,8 +62,8 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     use std::fs::create_dir;
 
     let local_path = game_dir.join("local");
-    create_dir(&local_path);
-    let settings = GameSettings::with_local_path(game_id, &game_dir, &local_path);
+    create_dir(&local_path).unwrap();
+    let settings = GameSettings::with_local_path(game_id, game_dir, &local_path);
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
@@ -102,7 +102,7 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     ];
 
     // Activate a plugin that isn't going to be in the active plugins file.
-    plugins[1].activate();
+    plugins[1].activate().unwrap();
 
     (settings, plugins)
 }
