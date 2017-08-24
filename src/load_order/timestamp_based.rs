@@ -115,31 +115,11 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
-        use error::Error;
-        use super::match_plugin;
         use std::mem;
 
-        let unique_plugin_names: HashSet<String> =
-            plugin_names.iter().map(|s| s.to_lowercase()).collect();
-        if unique_plugin_names.len() != plugin_names.len() {
-            return Err(LoadOrderError::DuplicatePlugin);
-        }
-        if let Some(x) = plugin_names.iter().find(|p| {
-            !Plugin::is_valid(p, self.game_settings())
-        })
-        {
-            return Err(LoadOrderError::InvalidPlugin(x.to_string()));
-        }
+        validate_plugin_names(plugin_names, self.game_settings())?;
 
-        let mut plugins = plugin_names
-            .iter()
-            .map(|n| match self.plugins().iter().find(
-                |p| match_plugin(p, n),
-            ) {
-                None => Plugin::new(n, self.game_settings()),
-                Some(x) => Ok(x.clone()),
-            })
-            .collect::<Result<Vec<Plugin>, Error>>()?;
+        let mut plugins = map_to_plugins(self, plugin_names)?;
 
         if !is_partitioned_by_master_flag(&plugins) {
             return Err(LoadOrderError::NonMasterBeforeMaster);
@@ -147,7 +127,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 
         mem::swap(&mut plugins, self.mut_plugins());
 
-        self.add_missing_plugins();
+        self.add_missing_plugins()?;
 
         Ok(())
     }
@@ -159,6 +139,39 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     ) -> Result<(), LoadOrderError> {
         unimplemented!();
     }
+}
+
+fn validate_plugin_names(plugin_names: &[&str], game_settings: &GameSettings) -> Result<(), LoadOrderError> {
+    let unique_plugin_names: HashSet<String> =
+        plugin_names.iter().map(|s| s.to_lowercase()).collect();
+
+    if unique_plugin_names.len() != plugin_names.len() {
+        return Err(LoadOrderError::DuplicatePlugin);
+    }
+
+    let invalid_plugin = plugin_names.iter().find(|p| {
+        !Plugin::is_valid(p, game_settings)
+    });
+
+    match invalid_plugin {
+        Some(x) => Err(LoadOrderError::InvalidPlugin(x.to_string())),
+        None => Ok(())
+    }
+}
+
+fn to_plugin(plugin_name: &str, existing_plugins: &[Plugin], game_settings: &GameSettings) -> Result<Plugin, LoadOrderError> {
+    use super::match_plugin;
+    match existing_plugins.iter().find(|p| match_plugin(p, plugin_name)) {
+        None => Ok(Plugin::new(plugin_name, game_settings)?),
+        Some(x) => Ok(x.clone()),
+    }
+}
+
+fn map_to_plugins<T: ExtensibleLoadOrder>(load_order: &T, plugin_names: &[&str]) -> Result<Vec<Plugin>, LoadOrderError> {
+    plugin_names
+        .iter()
+        .map(|n| to_plugin(n, load_order.plugins(), load_order.game_settings()))
+        .collect()
 }
 
 fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> bool {
