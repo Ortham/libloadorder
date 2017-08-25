@@ -19,6 +19,7 @@
 
 use std::borrow::Cow;
 use std::io;
+use std::string::FromUtf8Error;
 use regex;
 use error::Error;
 
@@ -35,6 +36,7 @@ pub enum LoadOrderError {
     DuplicatePlugin,
     NonMasterBeforeMaster,
     GameMasterMustLoadFirst,
+    NotUtf8(Vec<u8>),
 }
 
 impl From<Error> for LoadOrderError {
@@ -58,5 +60,11 @@ impl From<Cow<'static, str>> for LoadOrderError {
 impl From<regex::Error> for LoadOrderError {
     fn from(error: regex::Error) -> Self {
         LoadOrderError::InvalidRegex
+    }
+}
+
+impl From<FromUtf8Error> for LoadOrderError {
+    fn from(error: FromUtf8Error) -> Self {
+        LoadOrderError::NotUtf8(error.into_bytes())
     }
 }

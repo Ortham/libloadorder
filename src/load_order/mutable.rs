@@ -23,7 +23,7 @@ use std::mem;
 use walkdir::WalkDir;
 
 use game_settings::GameSettings;
-use load_order::{find_first_non_master_position, match_plugin};
+use load_order::{find_first_non_master_position, match_plugin, read_plugin_names};
 use load_order::error::LoadOrderError;
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
@@ -128,12 +128,30 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         }
     }
 
-    fn move_or_insert_plugin(
+    fn move_or_insert_plugin(&mut self, plugin_name: &str) -> Result<(), LoadOrderError> {
+        let plugin = get_plugin_to_insert(self, plugin_name, None)?;
+        let position = self.insert_position(&plugin);
+
+        match position {
+            None => self.mut_plugins().push(plugin),
+            Some(x) => self.mut_plugins().insert(x, plugin),
+        }
+
+        Ok(())
+    }
+
+    fn move_or_insert_plugin_with_index(
         &mut self,
         plugin_name: &str,
         position: usize,
     ) -> Result<(), LoadOrderError> {
-        let plugin = get_plugin_to_insert(self, plugin_name, position)?;
+        if let Some(x) = self.index_of(plugin_name) {
+            if x == position {
+                return Ok(());
+            }
+        }
+
+        let plugin = get_plugin_to_insert(self, plugin_name, Some(position))?;
 
         if position >= self.plugins().len() {
             self.mut_plugins().push(plugin);
@@ -183,6 +201,25 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
         }
     }
+
+    fn load_active_plugins<F>(&mut self, line_mapper: F) -> Result<(), LoadOrderError>
+    where
+        F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
+    {
+        for plugin in self.mut_plugins() {
+            plugin.deactivate();
+        }
+
+        let plugin_names =
+            read_plugin_names(self.game_settings().active_plugins_file(), line_mapper)?;
+
+        for plugin_name in plugin_names {
+            let index = self.find_or_add(&plugin_name)?;
+            self.mut_plugins()[index].activate()?;
+        }
+
+        Ok(())
+    }
 }
 
 fn validate_index<T: MutableLoadOrder + ?Sized>(
@@ -204,16 +241,18 @@ fn validate_index<T: MutableLoadOrder + ?Sized>(
 fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     plugin_name: &str,
-    position: usize,
+    insert_position: Option<usize>,
 ) -> Result<Plugin, LoadOrderError> {
-    if let Some(i) = load_order.plugins().iter().position(
+    let plugin_position = load_order.plugins().iter().position(
         |p| match_plugin(p, plugin_name),
-    )
-    {
-        let is_master = load_order.plugins()[i].is_master_file();
-        validate_index(load_order, position, is_master)?;
+    );
+    if let Some(p) = plugin_position {
+        if let Some(i) = insert_position {
+            let is_master = load_order.plugins()[p].is_master_file();
+            validate_index(load_order, i, is_master)?;
+        }
 
-        Ok(load_order.mut_plugins().remove(i))
+        Ok(load_order.mut_plugins().remove(p))
     } else {
         if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
             return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
@@ -221,7 +260,9 @@ fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
 
         let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
-        validate_index(load_order, position, plugin.is_master_file())?;
+        if let Some(i) = insert_position {
+            validate_index(load_order, i, plugin.is_master_file())?;
+        }
 
         Ok(plugin)
     }

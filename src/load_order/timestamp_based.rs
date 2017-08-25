@@ -29,7 +29,7 @@ use regex::bytes::Regex;
 use enums::GameId;
 use game_settings::GameSettings;
 use plugin::Plugin;
-use load_order::find_first_non_master_position;
+use load_order::{find_first_non_master_position, read_plugin_names};
 use load_order::error::LoadOrderError;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
@@ -119,48 +119,37 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         plugin_name: &str,
         position: usize,
     ) -> Result<(), LoadOrderError> {
-        self.move_or_insert_plugin(plugin_name, position)
+        self.move_or_insert_plugin_with_index(plugin_name, position)
+    }
+}
+
+fn extract_plugin_name_from_line(line: Vec<u8>, regex: &Regex, game_id: GameId) -> Vec<u8> {
+    if game_id == GameId::Morrowind {
+        regex.captures(&line).and_then(|c| c.get(1)).map_or(
+            Vec::new(),
+            |m| {
+                m.as_bytes().to_vec()
+            },
+        )
+    } else {
+        line
     }
 }
 
 fn load_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
-    for plugin in load_order.mut_plugins() {
-        plugin.deactivate();
-    }
-
-    if !load_order.game_settings().active_plugins_file().exists() {
-        return Ok(());
-    }
-
-    let input = File::open(load_order.game_settings().active_plugins_file())?;
-    let buffered = BufReader::new(input);
-
-    const CARRIAGE_RETURN: u8 = b'\r';
     let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
-    for line in buffered.split(b'\n') {
-        let mut line = line?;
-        if line.last().unwrap_or(&CARRIAGE_RETURN) == &CARRIAGE_RETURN {
-            line.pop();
-        }
-        if load_order.game_settings().id() == GameId::Morrowind {
-            line = regex.captures(&line).and_then(|c| c.get(1)).map_or(
-                Vec::new(),
-                |m| {
-                    m.as_bytes().to_vec()
-                },
-            )
-        }
-        if line.is_empty() || line[0] == b'#' {
-            continue;
-        }
+    let game_id = load_order.game_settings().id();
+    let line_mapper = |line: Vec<u8>| {
+        let line = extract_plugin_name_from_line(line, &regex, game_id);
 
-        let line = WINDOWS_1252.decode(&line, DecoderTrap::Strict)?;
+        WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
+            |e| {
+                LoadOrderError::DecodeError(e)
+            },
+        )
+    };
 
-        let index = load_order.find_or_add(&line)?;
-        load_order.mut_plugins()[index].activate()?;
-    }
-
-    Ok(())
+    load_order.load_active_plugins(line_mapper)
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
@@ -337,18 +326,6 @@ mod tests {
     }
 
     #[test]
-    // TODO: Move to textfile and asterisk-based load order implementations
-    fn load_should_add_missing_implicitly_active_plugins_after_other_missing_masters() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        load_order.load().unwrap();
-        assert_eq!(Some(2), load_order.index_of("Update.esm"));
-        assert!(load_order.is_active("Update.esm"));
-    }
-
-    #[test]
     fn load_should_sort_plugins_into_their_timestamp_order_with_master_files_first() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
@@ -401,10 +378,9 @@ mod tests {
     }
 
     #[test]
-    // TODO: Move to textfile and asterisk-based load order implementations
-    fn load_should_deactivate_excess_plugins_not_including_implicitly_active_plugins() {
+    fn load_should_deactivate_excess_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let mut plugins: Vec<String> = Vec::new();
         plugins.push(load_order.game_settings().master_file().to_string());
@@ -416,7 +392,6 @@ mod tests {
                 load_order.game_settings(),
             );
         }
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
 
         {
             let plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
@@ -427,8 +402,7 @@ mod tests {
             );
         }
 
-        plugins = plugins[0..254].to_vec();
-        plugins.push("Update.esm".to_string());
+        plugins = plugins[0..255].to_vec();
 
         load_order.load().unwrap();
         let active_plugin_names = load_order.active_plugin_names();
@@ -639,6 +613,20 @@ mod tests {
             .set_plugin_index("Blank - Different.esp", 1)
             .unwrap();
         assert_eq!(1, load_order.index_of("Blank - Different.esp").unwrap());
+        assert_eq!(num_plugins, load_order.plugins().len());
+    }
+
+    #[test]
+    fn set_plugin_index_should_move_an_existing_plugin_later_correctly() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        load_order
+            .add_to_load_order("Blank - Master Dependent.esp")
+            .unwrap();
+        let num_plugins = load_order.plugins().len();
+        load_order.set_plugin_index("Blank.esp", 2).unwrap();
+        assert_eq!(2, load_order.index_of("Blank.esp").unwrap());
         assert_eq!(num_plugins, load_order.plugins().len());
     }
 }

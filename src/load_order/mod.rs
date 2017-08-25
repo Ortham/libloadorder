@@ -25,9 +25,14 @@ mod tests;
 mod textfile_based;
 mod timestamp_based;
 
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use std::path::Path;
+
 use unicase::eq;
 
 use plugin::Plugin;
+use load_order::error::LoadOrderError;
 
 fn match_plugin(plugin: &Plugin, name: &str) -> bool {
     match plugin.name() {
@@ -38,4 +43,35 @@ fn match_plugin(plugin: &Plugin, name: &str) -> bool {
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())
+}
+
+fn trim_cr(mut buffer: Vec<u8>) -> Vec<u8> {
+    if buffer.last() == Some(&b'\r') {
+        buffer.pop();
+    }
+    buffer
+}
+
+fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, LoadOrderError>
+where
+    F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
+{
+    if !file_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let input = File::open(file_path)?;
+    let buffered = BufReader::new(input);
+
+    let mut names: Vec<String> = Vec::new();
+    for line in buffered.split(b'\n') {
+        let line = line_mapper(trim_cr(line?))?;
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        names.push(line);
+    }
+
+    Ok(names)
 }
