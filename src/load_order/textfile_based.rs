@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::fs::{create_dir_all, File};
+use std::fs::File;
 use std::io::Write;
 use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;

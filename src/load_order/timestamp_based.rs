@@ -18,7 +18,7 @@
  */
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use std::fs::{create_dir_all, File};
+use std::fs::File;
 use std::io::{BufReader, BufRead, Error, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -29,7 +29,7 @@ use regex::bytes::Regex;
 use enums::GameId;
 use game_settings::GameSettings;
 use plugin::Plugin;
-use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
+use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::error::LoadOrderError;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
