@@ -25,8 +25,8 @@ mod tests;
 mod textfile_based;
 mod timestamp_based;
 
-use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::fs::{create_dir_all, File};
+use std::io::{BufReader, BufRead, Error};
 use std::path::Path;
 
 use unicase::eq;
@@ -74,4 +74,13 @@ where
     }
 
     Ok(names)
+}
+
+fn create_parent_dirs(path: &Path) -> Result<(), Error> {
+    if let Some(x) = path.parent() {
+        if !x.exists() {
+            create_dir_all(x)?
+        }
+    }
+    Ok(())
 }

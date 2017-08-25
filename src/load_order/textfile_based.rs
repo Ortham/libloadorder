@@ -16,13 +16,15 @@
  * You should have received a copy of the GNU General Public License
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
-use encoding::{DecoderTrap, Encoding};
+use std::fs::{create_dir_all, File};
+use std::io::Write;
+use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
 use game_settings::GameSettings;
 use plugin::Plugin;
-use load_order::{find_first_non_master_position, read_plugin_names};
+use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
 use load_order::error::LoadOrderError;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
@@ -91,7 +93,8 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), LoadOrderError> {
-        unimplemented!();
+        save_load_order(self)?;
+        save_active_plugins(self)
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
@@ -160,13 +163,39 @@ fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
     )
 }
 
+fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+    if let Some(file_path) = load_order.game_settings().load_order_file() {
+        create_parent_dirs(file_path)?;
+
+        let mut file = File::create(file_path)?;
+        for plugin_name in load_order.plugin_names() {
+            writeln!(file, "{}", plugin_name)?;
+        }
+    }
+    Ok(())
+}
+
+fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+    create_parent_dirs(load_order.game_settings().active_plugins_file())?;
+
+    let mut file = File::create(load_order.game_settings().active_plugins_file())?;
+    for plugin_name in load_order.active_plugin_names() {
+        file.write_all(
+            &WINDOWS_1252.encode(&plugin_name, EncoderTrap::Strict)?,
+        )?;
+        writeln!(file, "")?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
 
     use super::*;
 
-    use std::fs::File;
+    use std::fs::{File, remove_dir_all};
     use std::io::Write;
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
@@ -410,6 +439,61 @@ mod tests {
             assert_eq!(plugins[i], active_plugin_names[i]);
         }
         assert_eq!(plugins, active_plugin_names);
+    }
+
+    #[test]
+    fn save_should_write_all_plugins_to_load_order_file() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        load_order.save().unwrap();
+
+        let expected_filenames = vec!["Skyrim.esm", "Blank.esp", "Blank - Different.esp"];
+        let line_mapper = |l| String::from_utf8(l).map_err(LoadOrderError::from);
+        let plugin_names = read_plugin_names(
+            load_order.game_settings().load_order_file().unwrap(),
+            line_mapper,
+        ).unwrap();
+        assert_eq!(expected_filenames, plugin_names);
+    }
+
+    #[test]
+    fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        remove_dir_all(
+            load_order
+                .game_settings()
+                .active_plugins_file()
+                .parent()
+                .unwrap(),
+        ).unwrap();
+
+        load_order.save().unwrap();
+
+        assert!(
+            load_order
+                .game_settings()
+                .active_plugins_file()
+                .parent()
+                .unwrap()
+                .exists()
+        );
+    }
+
+    #[test]
+    fn save_should_write_active_plugins_file() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        load_order.save().unwrap();
+
+        load_order.load().unwrap();
+        assert_eq!(
+            vec!["Skyrim.esm", "Blank.esp"],
+            load_order.active_plugin_names()
+        );
     }
 
     #[test]

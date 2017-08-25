@@ -29,7 +29,7 @@ use regex::bytes::Regex;
 use enums::GameId;
 use game_settings::GameSettings;
 use plugin::Plugin;
-use load_order::{find_first_non_master_position, read_plugin_names};
+use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
 use load_order::error::LoadOrderError;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
@@ -153,11 +153,7 @@ fn load_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Lo
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
-    if let Some(x) = load_order.game_settings().active_plugins_file().parent() {
-        if !x.exists() {
-            create_dir_all(x)?;
-        }
-    }
+    create_parent_dirs(load_order.game_settings().active_plugins_file())?;
 
     let prelude = get_file_prelude(load_order.game_settings())?;
 
