@@ -17,6 +17,7 @@
  * along with libespm. If not, see <http://www.gnu.org/licenses/>.
  */
 
+mod asterisk_based;
 mod error;
 mod mutable;
 mod readable;

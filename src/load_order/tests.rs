@@ -25,6 +25,7 @@ use encoding::all::WINDOWS_1252;
 use filetime::{FileTime, set_file_times};
 
 use enums::GameId;
+use enums::LoadOrderMethod;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use tests::copy_to_test_dir;
@@ -48,6 +49,8 @@ pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str
     for filename in filenames {
         if game_settings.id() == GameId::Morrowind {
             write!(file, "GameFile0=").unwrap();
+        } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
+            write!(file, "*").unwrap();
         }
         file.write_all(&WINDOWS_1252.encode(filename, EncoderTrap::Strict).unwrap())
             .unwrap();
