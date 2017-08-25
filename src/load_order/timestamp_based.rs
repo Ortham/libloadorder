@@ -68,7 +68,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), LoadOrderError> {
         self.reload_changed_plugins();
 
-        //TODO: Profile vs. C++ libloadorder to see if caching plugins folder timestamp is worth it
         self.add_missing_plugins()?;
 
         load_active_plugins(self)?;
@@ -240,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_return_the_size_of_the_load_order_if_given_a_non_master_plugin() {
+    fn insert_position_should_return_none_if_given_a_non_master_plugin() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
@@ -263,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_return_the_load_order_size_if_no_non_masters_are_present() {
+    fn insert_position_should_return_none_if_no_non_masters_are_present() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
