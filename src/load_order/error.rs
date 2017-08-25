@@ -34,6 +34,7 @@ pub enum LoadOrderError {
     InvalidRegex,
     DuplicatePlugin,
     NonMasterBeforeMaster,
+    GameMasterMustLoadFirst,
 }
 
 impl From<Error> for LoadOrderError {

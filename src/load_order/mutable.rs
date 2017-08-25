@@ -57,6 +57,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         self.plugins().iter().filter(|p| p.is_active()).count()
     }
 
+    //TODO: Profile vs. C++ libloadorder to see if caching plugins folder timestamp is worth it
     fn add_missing_plugins(&mut self) -> Result<(), LoadOrderError> {
         let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
             .into_iter()
@@ -156,7 +157,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
         self.add_missing_plugins()?;
 
-        Ok(())
+        self.add_implicitly_active_plugins()
     }
 
     fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {

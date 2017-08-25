@@ -22,6 +22,7 @@ mod mutable;
 mod readable;
 mod writable;
 mod tests;
+mod textfile_based;
 mod timestamp_based;
 
 use unicase::eq;
