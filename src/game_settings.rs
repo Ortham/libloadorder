@@ -150,8 +150,8 @@ impl GameSettings {
         &self.plugins_file_path
     }
 
-    pub fn load_order_file(&self) -> &Option<PathBuf> {
-        &self.load_order_path
+    pub fn load_order_file(&self) -> Option<&PathBuf> {
+        self.load_order_path.as_ref()
     }
 
     fn plugins_folder_name(&self) -> &'static str {
@@ -616,7 +616,7 @@ mod tests {
             GameSettings::with_local_path(GameId::Skyrim, Path::new("game"), Path::new("local"));
         assert_eq!(
             Path::new("local/loadorder.txt"),
-            settings.load_order_file().as_ref().unwrap()
+            settings.load_order_file().unwrap()
         );
 
         settings =
