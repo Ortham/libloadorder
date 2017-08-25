@@ -33,13 +33,13 @@ pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str
 
     let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
 
-    if *game_settings.id() == GameId::Morrowind {
+    if game_settings.id() == GameId::Morrowind {
         writeln!(file, "isrealmorrowindini=false").unwrap();
         writeln!(file, "[Game Files]").unwrap();
     }
 
     for filename in filenames {
-        if game_settings.id() == &GameId::Morrowind {
+        if game_settings.id() == GameId::Morrowind {
             write!(file, "GameFile0=").unwrap();
         }
         file.write_all(&WINDOWS_1252.encode(filename, EncoderTrap::Strict).unwrap())

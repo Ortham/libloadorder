@@ -31,14 +31,14 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
 
-fn testing_plugins_dir(game_id: &GameId) -> PathBuf {
-    let game_folder = match *game_id {
+fn testing_plugins_dir(game_id: GameId) -> PathBuf {
+    let game_folder = match game_id {
         GameId::Morrowind => "Morrowind",
         GameId::Oblivion => "Oblivion",
         _ => "Skyrim",
     };
 
-    let plugins_folder = match *game_id {
+    let plugins_folder = match game_id {
         GameId::Morrowind => "Data Files",
         _ => "Data",
     };

@@ -142,7 +142,7 @@ fn load_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Lo
         if line.last().unwrap_or(&CARRIAGE_RETURN) == &CARRIAGE_RETURN {
             line.pop();
         }
-        if *load_order.game_settings().id() == GameId::Morrowind {
+        if load_order.game_settings().id() == GameId::Morrowind {
             line = regex.captures(&line).and_then(|c| c.get(1)).map_or(
                 Vec::new(),
                 |m| {
@@ -175,7 +175,7 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Lo
     let mut file = File::create(&load_order.game_settings().active_plugins_file())?;
     file.write_all(&prelude)?;
     for (index, plugin_name) in load_order.active_plugin_names().iter().enumerate() {
-        if load_order.game_settings().id() == &GameId::Morrowind {
+        if load_order.game_settings().id() == GameId::Morrowind {
             write!(file, "GameFile{}=", index)?;
         }
         file.write_all(
@@ -189,7 +189,7 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Lo
 
 fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
     let mut prelude: Vec<u8> = Vec::new();
-    if game_settings.id() == &GameId::Morrowind && game_settings.active_plugins_file().exists() {
+    if game_settings.id() == GameId::Morrowind && game_settings.active_plugins_file().exists() {
         let input = File::open(game_settings.active_plugins_file())?;
         let buffered = BufReader::new(input);
 
@@ -233,7 +233,6 @@ mod tests {
     }
 
     fn write_file(path: &Path) {
-
         let mut file = File::create(&path).unwrap();
         writeln!(file, "").unwrap();
     }

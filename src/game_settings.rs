@@ -83,8 +83,8 @@ impl GameSettings {
         }
     }
 
-    pub fn id(&self) -> &GameId {
-        &self.id
+    pub fn id(&self) -> GameId {
+        self.id
     }
 
     pub fn load_order_method(&self) -> LoadOrderMethod {
@@ -256,7 +256,7 @@ mod tests {
             &PathBuf::default(),
             &PathBuf::default(),
         );
-        assert_eq!(&GameId::Morrowind, settings.id());
+        assert_eq!(GameId::Morrowind, settings.id());
     }
 
     #[test]
