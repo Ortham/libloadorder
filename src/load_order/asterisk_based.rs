@@ -69,7 +69,7 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
         &self.game_settings
     }
 
-    fn mut_plugins(&mut self) -> &mut Vec<Plugin> {
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
 }
@@ -211,7 +211,7 @@ mod tests {
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
-        load_order.mut_plugins().insert(1, plugin);
+        load_order.plugins_mut().insert(1, plugin);
 
         copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());
         let plugin = Plugin::new("Hearthfires.esm", &load_order.game_settings()).unwrap();
@@ -249,7 +249,7 @@ mod tests {
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         // Remove non-master plugins from the load order.
-        load_order.mut_plugins().retain(|p| p.is_master_file());
+        load_order.plugins_mut().retain(|p| p.is_master_file());
 
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
@@ -484,7 +484,7 @@ mod tests {
             "Blank - Different.esp",
         ];
         copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        load_order.mut_plugins().remove(0); // Remove the existing Skyrim.esm entry.
+        load_order.plugins_mut().remove(0); // Remove the existing Skyrim.esm entry.
         load_order.set_load_order(&filenames).unwrap();
 
         let expected_filenames = vec![

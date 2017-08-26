@@ -59,7 +59,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
         &self.game_settings
     }
 
-    fn mut_plugins(&mut self) -> &mut Vec<Plugin> {
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
 }
@@ -74,7 +74,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.mut_plugins().sort_by(|a, b| if a.is_master_file() ==
+        self.plugins_mut().sort_by(|a, b| if a.is_master_file() ==
             b.is_master_file()
         {
             a.modification_time().cmp(&b.modification_time())
@@ -101,7 +101,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
             timestamps.insert(timestamp);
         }
 
-        for (plugin, timestamp) in self.mut_plugins().iter_mut().zip(timestamps.into_iter()) {
+        for (plugin, timestamp) in self.plugins_mut().iter_mut().zip(timestamps.into_iter()) {
             plugin.set_modification_time(timestamp)?;
         }
 
@@ -251,7 +251,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         // Remove non-master plugins from the load order.
-        load_order.mut_plugins().retain(|p| p.is_master_file());
+        load_order.plugins_mut().retain(|p| p.is_master_file());
 
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);

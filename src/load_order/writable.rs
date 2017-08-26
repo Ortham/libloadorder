@@ -95,12 +95,12 @@ pub trait WritableLoadOrder: MutableLoadOrder {
             }
         }
 
-        for plugin in self.mut_plugins() {
+        for plugin in self.plugins_mut() {
             plugin.deactivate();
         }
 
         for plugin_name in active_plugin_names {
-            let plugin_exists = self.mut_plugins().iter_mut().any(|p| {
+            let plugin_exists = self.plugins_mut().iter_mut().any(|p| {
                 match_plugin(p, plugin_name)
             });
             if !plugin_exists {
@@ -150,7 +150,7 @@ mod tests {
             &self.game_settings
         }
 
-        fn mut_plugins(&mut self) -> &mut Vec<Plugin> {
+        fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
         }
     }

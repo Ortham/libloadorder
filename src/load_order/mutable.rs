@@ -32,7 +32,7 @@ pub const MAX_ACTIVE_PLUGINS: usize = 255;
 
 pub trait MutableLoadOrder: ReadableLoadOrder {
     fn game_settings(&self) -> &GameSettings;
-    fn mut_plugins(&mut self) -> &mut Vec<Plugin>;
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
@@ -41,11 +41,11 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
         let index = match self.insert_position(&plugin) {
             Some(x) => {
-                self.mut_plugins().insert(x, plugin);
+                self.plugins_mut().insert(x, plugin);
                 x
             }
             None => {
-                self.mut_plugins().push(plugin);
+                self.plugins_mut().push(plugin);
                 self.plugins().len() - 1
             }
         };
@@ -103,7 +103,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
 
             let index = self.find_or_add(filename)?;
-            self.mut_plugins()[index].activate()?;
+            self.plugins_mut()[index].activate()?;
         }
 
         Ok(())
@@ -113,7 +113,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
         let mut count = self.count_active_plugins();
 
-        for plugin in self.mut_plugins().iter_mut().rev() {
+        for plugin in self.plugins_mut().iter_mut().rev() {
             if count <= MAX_ACTIVE_PLUGINS {
                 break;
             }
@@ -133,8 +133,8 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         let position = self.insert_position(&plugin);
 
         match position {
-            None => self.mut_plugins().push(plugin),
-            Some(x) => self.mut_plugins().insert(x, plugin),
+            None => self.plugins_mut().push(plugin),
+            Some(x) => self.plugins_mut().insert(x, plugin),
         }
 
         Ok(())
@@ -154,9 +154,9 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         let plugin = get_plugin_to_insert(self, plugin_name, Some(position))?;
 
         if position >= self.plugins().len() {
-            self.mut_plugins().push(plugin);
+            self.plugins_mut().push(plugin);
         } else {
-            self.mut_plugins().insert(position, plugin);
+            self.plugins_mut().insert(position, plugin);
         }
 
         Ok(())
@@ -171,7 +171,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             return Err(LoadOrderError::NonMasterBeforeMaster);
         }
 
-        mem::swap(&mut plugins, self.mut_plugins());
+        mem::swap(&mut plugins, self.plugins_mut());
 
         self.add_missing_plugins()?;
 
@@ -179,14 +179,14 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     }
 
     fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {
-        self.mut_plugins().iter_mut().find(|p| {
+        self.plugins_mut().iter_mut().find(|p| {
             match_plugin(p, plugin_name)
         })
     }
 
     //TODO: Profile if the 'has changed' check is actually necessary.
     fn reload_changed_plugins(&mut self) {
-        let plugins = self.mut_plugins();
+        let plugins = self.plugins_mut();
         for i in (0..plugins.len()).rev() {
             let should_remove = plugins[i]
                 .has_file_changed()
@@ -206,7 +206,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     where
         F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
     {
-        for plugin in self.mut_plugins() {
+        for plugin in self.plugins_mut() {
             plugin.deactivate();
         }
 
@@ -215,7 +215,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
         for plugin_name in plugin_names {
             let index = self.find_or_add(&plugin_name)?;
-            self.mut_plugins()[index].activate()?;
+            self.plugins_mut()[index].activate()?;
         }
 
         Ok(())
@@ -252,7 +252,7 @@ fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
             validate_index(load_order, i, is_master)?;
         }
 
-        Ok(load_order.mut_plugins().remove(p))
+        Ok(load_order.plugins_mut().remove(p))
     } else {
         if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
             return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
