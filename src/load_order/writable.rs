@@ -143,7 +143,7 @@ mod tests {
     }
 
     impl MutableLoadOrder for TestLoadOrder {
-        fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
+        fn insert_position(&self, _: &Plugin) -> Option<usize> {
             None
         }
 
@@ -168,16 +168,12 @@ mod tests {
         }
 
         // Dummy method, unused.
-        fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+        fn set_load_order(&mut self, _: &[&str]) -> Result<(), LoadOrderError> {
             Ok(())
         }
 
         // Dummy method, unused.
-        fn set_plugin_index(
-            &mut self,
-            plugin_name: &str,
-            position: usize,
-        ) -> Result<(), LoadOrderError> {
+        fn set_plugin_index(&mut self, _: &str, _: usize) -> Result<(), LoadOrderError> {
             Ok(())
         }
     }

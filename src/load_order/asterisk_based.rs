@@ -171,7 +171,7 @@ fn plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
 
     WINDOWS_1252
         .decode(line_slice, DecoderTrap::Strict)
-        .map_err(|e| LoadOrderError::DecodeError(e))
+        .map_err(LoadOrderError::DecodeError)
 }
 
 fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
@@ -182,8 +182,8 @@ fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
     };
 
     WINDOWS_1252
-        .decode(&line_slice, DecoderTrap::Strict)
-        .map_err(|e| LoadOrderError::DecodeError(e))
+        .decode(line_slice, DecoderTrap::Strict)
+        .map_err(LoadOrderError::DecodeError)
 }
 
 #[cfg(test)]

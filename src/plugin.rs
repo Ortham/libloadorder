@@ -49,7 +49,7 @@ impl Plugin {
         data.parse_file(true)?;
 
         Ok(Plugin {
-            game: game_settings.id().clone(),
+            game: game_settings.id(),
             active: false,
             modification_time,
             data,

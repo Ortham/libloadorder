@@ -251,6 +251,6 @@ mod tests {
 
     #[test]
     fn resolve_path_should_error_if_no_path_exists() {
-        let mut path = Path::new("foo").resolve_path().is_err();
+        assert!(Path::new("foo").resolve_path().is_err());
     }
 }

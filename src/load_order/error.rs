@@ -58,7 +58,7 @@ impl From<Cow<'static, str>> for LoadOrderError {
 }
 
 impl From<regex::Error> for LoadOrderError {
-    fn from(error: regex::Error) -> Self {
+    fn from(_: regex::Error) -> Self {
         LoadOrderError::InvalidRegex
     }
 }
