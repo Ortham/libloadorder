@@ -31,13 +31,22 @@ use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::error::LoadOrderError;
-use load_order::mutable::MutableLoadOrder;
+use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
-struct TimestampBasedLoadOrder {
+pub struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
+}
+
+impl TimestampBasedLoadOrder {
+    pub fn new(game_settings: GameSettings) -> TimestampBasedLoadOrder {
+        TimestampBasedLoadOrder {
+            game_settings,
+            plugins: Vec::new(),
+        }
+    }
 }
 
 impl ReadableLoadOrder for TimestampBasedLoadOrder {
@@ -70,7 +79,19 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.add_missing_plugins()?;
 
-        load_active_plugins(self)?;
+        let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
+        let game_id = self.game_settings().id();
+        let line_mapper = |line: Vec<u8>| {
+            let line = extract_plugin_name_from_line(line, &regex, game_id);
+
+            WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
+                |e| {
+                    LoadOrderError::DecodeError(e)
+                },
+            )
+        };
+
+        load_active_plugins(self, line_mapper)?;
 
         self.add_implicitly_active_plugins()?;
 
@@ -134,22 +155,6 @@ fn extract_plugin_name_from_line(line: Vec<u8>, regex: &Regex, game_id: GameId) 
     } else {
         line
     }
-}
-
-fn load_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
-    let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
-    let game_id = load_order.game_settings().id();
-    let line_mapper = |line: Vec<u8>| {
-        let line = extract_plugin_name_from_line(line, &regex, game_id);
-
-        WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
-            |e| {
-                LoadOrderError::DecodeError(e)
-            },
-        )
-    };
-
-    load_order.load_active_plugins(line_mapper)
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {

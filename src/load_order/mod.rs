@@ -34,6 +34,11 @@ use unicase::eq;
 
 use plugin::Plugin;
 use load_order::error::LoadOrderError;
+pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
+pub use load_order::textfile_based::TextfileBasedLoadOrder;
+pub use load_order::timestamp_based::TimestampBasedLoadOrder;
+pub use load_order::readable::ReadableLoadOrder;
+pub use load_order::writable::WritableLoadOrder;
 
 fn match_plugin(plugin: &Plugin, name: &str) -> bool {
     match plugin.name() {

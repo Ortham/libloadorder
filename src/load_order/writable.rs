@@ -22,9 +22,10 @@ use unicase::eq;
 use load_order::match_plugin;
 use load_order::error::LoadOrderError;
 use load_order::mutable::{MAX_ACTIVE_PLUGINS, MutableLoadOrder};
+use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
-pub trait WritableLoadOrder: MutableLoadOrder {
+pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn load(&mut self) -> Result<(), LoadOrderError>;
     fn save(&mut self) -> Result<(), LoadOrderError>;
 

@@ -201,25 +201,28 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
         }
     }
+}
 
-    fn load_active_plugins<F>(&mut self, line_mapper: F) -> Result<(), LoadOrderError>
-    where
-        F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
-    {
-        for plugin in self.plugins_mut() {
-            plugin.deactivate();
-        }
-
-        let plugin_names =
-            read_plugin_names(self.game_settings().active_plugins_file(), line_mapper)?;
-
-        for plugin_name in plugin_names {
-            let index = self.find_or_add(&plugin_name)?;
-            self.plugins_mut()[index].activate()?;
-        }
-
-        Ok(())
+pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), LoadOrderError>
+where
+    T: MutableLoadOrder,
+    F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
+{
+    for plugin in load_order.plugins_mut() {
+        plugin.deactivate();
     }
+
+    let plugin_names = read_plugin_names(
+        load_order.game_settings().active_plugins_file(),
+        line_mapper,
+    )?;
+
+    for plugin_name in plugin_names {
+        let index = load_order.find_or_add(&plugin_name)?;
+        load_order.plugins_mut()[index].activate()?;
+    }
+
+    Ok(())
 }
 
 fn validate_index<T: MutableLoadOrder + ?Sized>(

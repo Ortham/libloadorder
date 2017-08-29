@@ -26,13 +26,22 @@ use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
 use load_order::error::LoadOrderError;
-use load_order::mutable::MutableLoadOrder;
+use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
-struct TextfileBasedLoadOrder {
+pub struct TextfileBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
+}
+
+impl TextfileBasedLoadOrder {
+    pub fn new(game_settings: GameSettings) -> TextfileBasedLoadOrder {
+        TextfileBasedLoadOrder {
+            game_settings,
+            plugins: Vec::new(),
+        }
+    }
 }
 
 impl ReadableLoadOrder for TextfileBasedLoadOrder {
@@ -83,7 +92,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         self.add_missing_plugins()?;
 
-        self.load_active_plugins(active_plugin_line_mapper)?;
+        load_active_plugins(self, active_plugin_line_mapper)?;
 
         self.add_implicitly_active_plugins()?;
 

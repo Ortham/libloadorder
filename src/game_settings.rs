@@ -31,6 +31,10 @@ use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
 
 use enums::{GameId, LoadOrderMethod};
+use load_order::WritableLoadOrder;
+use load_order::AsteriskBasedLoadOrder;
+use load_order::TextfileBasedLoadOrder;
+use load_order::TimestampBasedLoadOrder;
 
 #[derive(Debug)]
 pub enum Error {
@@ -93,6 +97,14 @@ impl GameSettings {
             Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
             SkyrimSE | Fallout4 => LoadOrderMethod::Asterisk,
+        }
+    }
+
+    pub fn into_load_order(self) -> Box<WritableLoadOrder> {
+        match self.load_order_method() {
+            LoadOrderMethod::Asterisk => Box::new(AsteriskBasedLoadOrder::new(self)),
+            LoadOrderMethod::Textfile => Box::new(TextfileBasedLoadOrder::new(self)),
+            LoadOrderMethod::Timestamp => Box::new(TimestampBasedLoadOrder::new(self)),
         }
     }
 
