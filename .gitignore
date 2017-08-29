@@ -1,7 +1,7 @@
-include/
 target/
 **/*.rs.bk
 Cargo.lock
 
+build/
 include/
-tests/testing-plugins/
+testing-plugins/

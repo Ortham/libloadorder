@@ -42,7 +42,7 @@ pub enum LoadOrderMethod {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GameId {
-    Morrowind,
+    Morrowind = 1,
     Oblivion,
     Skyrim,
     Fallout3,

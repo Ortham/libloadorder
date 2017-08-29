@@ -17,4 +17,6 @@ app_dirs = "1.1.1"
 
 [lib]
 name = "loadorder"
-crate-type = ["lib", "cdylib"]
+
+[workspace]
+members = ["ffi"]

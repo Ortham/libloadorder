@@ -43,7 +43,7 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
         _ => "Data",
     };
 
-    Path::new("./tests/testing-plugins/")
-        .join(game_folder)
-        .join(plugins_folder)
+    Path::new("testing-plugins").join(game_folder).join(
+        plugins_folder,
+    )
 }

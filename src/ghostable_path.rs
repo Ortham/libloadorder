@@ -113,7 +113,7 @@ mod tests {
     use tempdir::TempDir;
 
     fn copy_to_test_dir(from_file: &str, to_file: &str, game_dir: &Path) {
-        let testing_plugins_dir = Path::new("./tests/testing-plugins/Oblivion/Data");
+        let testing_plugins_dir = Path::new("testing-plugins/Oblivion/Data");
         let data_dir = game_dir.join("Data");
         if !data_dir.exists() {
             create_dir(&data_dir).unwrap();
