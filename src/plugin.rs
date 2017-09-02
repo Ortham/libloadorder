@@ -23,8 +23,7 @@ use std::time::UNIX_EPOCH;
 use espm;
 use filetime::{FileTime, set_file_times};
 
-use error::Error;
-use enums::GameId;
+use enums::{Error, GameId};
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 

@@ -22,10 +22,10 @@ use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
+use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
-use load_order::error::LoadOrderError;
 use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
@@ -76,7 +76,7 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
 }
 
 impl WritableLoadOrder for TextfileBasedLoadOrder {
-    fn load(&mut self) -> Result<(), LoadOrderError> {
+    fn load(&mut self) -> Result<(), Error> {
         self.reload_changed_plugins();
 
         let load_order_file_exists = self.game_settings()
@@ -101,41 +101,35 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         Ok(())
     }
 
-    fn save(&mut self) -> Result<(), LoadOrderError> {
+    fn save(&mut self) -> Result<(), Error> {
         save_load_order(self)?;
         save_active_plugins(self)
     }
 
-    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
         if plugin_names.is_empty() || !eq(plugin_names[0], self.game_settings().master_file()) {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
 
         self.replace_plugins(plugin_names)
     }
 
-    fn set_plugin_index(
-        &mut self,
-        plugin_name: &str,
-        position: usize,
-    ) -> Result<(), LoadOrderError> {
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
         if position != 0 && !self.plugins().is_empty() &&
             eq(plugin_name, self.game_settings().master_file())
         {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
         if position == 0 && !eq(plugin_name, self.game_settings().master_file()) {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
 
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 }
 
-fn load_from_load_order_file<T: MutableLoadOrder>(
-    load_order: &mut T,
-) -> Result<(), LoadOrderError> {
-    let line_mapper = |l| String::from_utf8(l).map_err(LoadOrderError::from);
+fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
+    let line_mapper = |l| String::from_utf8(l).map_err(Error::from);
 
     let plugin_names = if let Some(file_path) = load_order.game_settings().load_order_file() {
         read_plugin_names(file_path, line_mapper)?
@@ -149,9 +143,7 @@ fn load_from_load_order_file<T: MutableLoadOrder>(
     Ok(())
 }
 
-fn load_from_active_plugins_file<T: MutableLoadOrder>(
-    load_order: &mut T,
-) -> Result<(), LoadOrderError> {
+fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),
         active_plugin_line_mapper,
@@ -164,15 +156,15 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(
     Ok(())
 }
 
-fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
+fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
     WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
         |e| {
-            LoadOrderError::DecodeError(e)
+            Error::DecodeError(e)
         },
     )
 }
 
-fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     if let Some(file_path) = load_order.game_settings().load_order_file() {
         create_parent_dirs(file_path)?;
 
@@ -184,14 +176,14 @@ fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOr
     Ok(())
 }
 
-fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     create_parent_dirs(load_order.game_settings().active_plugins_file())?;
 
     let mut file = File::create(load_order.game_settings().active_plugins_file())?;
     for plugin_name in load_order.active_plugin_names() {
-        file.write_all(
-            &WINDOWS_1252.encode(&plugin_name, EncoderTrap::Strict)?,
-        )?;
+        file.write_all(&WINDOWS_1252
+            .encode(&plugin_name, EncoderTrap::Strict)
+            .map_err(Error::EncodeError)?)?;
         writeln!(file, "")?;
     }
 
@@ -458,7 +450,7 @@ mod tests {
         load_order.save().unwrap();
 
         let expected_filenames = vec!["Skyrim.esm", "Blank.esp", "Blank - Different.esp"];
-        let line_mapper = |l| String::from_utf8(l).map_err(LoadOrderError::from);
+        let line_mapper = |l| String::from_utf8(l).map_err(Error::from);
         let plugin_names = read_plugin_names(
             load_order.game_settings().load_order_file().unwrap(),
             line_mapper,

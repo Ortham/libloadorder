@@ -19,18 +19,17 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Error, Write};
+use std::io::{BufReader, BufRead, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use regex::bytes::Regex;
 
-use enums::GameId;
+use enums::{Error, GameId};
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::error::LoadOrderError;
 use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
@@ -74,7 +73,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 }
 
 impl WritableLoadOrder for TimestampBasedLoadOrder {
-    fn load(&mut self) -> Result<(), LoadOrderError> {
+    fn load(&mut self) -> Result<(), Error> {
         self.reload_changed_plugins();
 
         self.add_missing_plugins()?;
@@ -86,7 +85,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
             WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
                 |e| {
-                    LoadOrderError::DecodeError(e)
+                    Error::DecodeError(e)
                 },
             )
         };
@@ -110,7 +109,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         Ok(())
     }
 
-    fn save(&mut self) -> Result<(), LoadOrderError> {
+    fn save(&mut self) -> Result<(), Error> {
         let mut timestamps: BTreeSet<SystemTime> = self.plugins()
             .iter()
             .map(Plugin::modification_time)
@@ -131,15 +130,11 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         Ok(())
     }
 
-    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
         self.replace_plugins(plugin_names)
     }
 
-    fn set_plugin_index(
-        &mut self,
-        plugin_name: &str,
-        position: usize,
-    ) -> Result<(), LoadOrderError> {
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 }
@@ -157,7 +152,7 @@ fn extract_plugin_name_from_line(line: Vec<u8>, regex: &Regex, game_id: GameId) 
     }
 }
 
-fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), LoadOrderError> {
+fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     create_parent_dirs(load_order.game_settings().active_plugins_file())?;
 
     let prelude = get_file_prelude(load_order.game_settings())?;
@@ -168,9 +163,9 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Lo
         if load_order.game_settings().id() == GameId::Morrowind {
             write!(file, "GameFile{}=", index)?;
         }
-        file.write_all(
-            &WINDOWS_1252.encode(plugin_name, EncoderTrap::Strict)?,
-        )?;
+        file.write_all(&WINDOWS_1252
+            .encode(plugin_name, EncoderTrap::Strict)
+            .map_err(Error::EncodeError)?)?;
         writeln!(file, "")?;
     }
 

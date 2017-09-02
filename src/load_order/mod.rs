@@ -18,7 +18,6 @@
  */
 
 mod asterisk_based;
-mod error;
 mod mutable;
 mod readable;
 mod writable;
@@ -27,18 +26,18 @@ mod textfile_based;
 mod timestamp_based;
 
 use std::fs::{create_dir_all, File};
-use std::io::{BufReader, BufRead, Error};
+use std::io::{BufReader, BufRead};
 use std::path::Path;
 
 use unicase::eq;
 
-use plugin::Plugin;
-use load_order::error::LoadOrderError;
+use enums::Error;
 pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
 pub use load_order::textfile_based::TextfileBasedLoadOrder;
 pub use load_order::timestamp_based::TimestampBasedLoadOrder;
 pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::writable::WritableLoadOrder;
+use plugin::Plugin;
 
 fn match_plugin(plugin: &Plugin, name: &str) -> bool {
     match plugin.name() {
@@ -58,9 +57,9 @@ fn trim_cr(mut buffer: Vec<u8>) -> Vec<u8> {
     buffer
 }
 
-fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, LoadOrderError>
+fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
 where
-    F: Fn(Vec<u8>) -> Result<String, LoadOrderError>,
+    F: Fn(Vec<u8>) -> Result<String, Error>,
 {
     if !file_path.exists() {
         return Ok(Vec::new());

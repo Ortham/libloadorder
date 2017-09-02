@@ -22,10 +22,10 @@ use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
+use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
-use load_order::error::LoadOrderError;
 use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
@@ -84,7 +84,7 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
 }
 
 impl WritableLoadOrder for AsteriskBasedLoadOrder {
-    fn load(&mut self) -> Result<(), LoadOrderError> {
+    fn load(&mut self) -> Result<(), Error> {
         self.reload_changed_plugins();
 
         load_from_active_plugins_file(self)?;
@@ -100,7 +100,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         Ok(())
     }
 
-    fn save(&mut self) -> Result<(), LoadOrderError> {
+    fn save(&mut self) -> Result<(), Error> {
         create_parent_dirs(self.game_settings().active_plugins_file())?;
 
         let mut file = File::create(self.game_settings().active_plugins_file())?;
@@ -112,44 +112,38 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             if self.is_active(&plugin_name) {
                 write!(file, "*")?;
             }
-            file.write_all(
-                &WINDOWS_1252.encode(&plugin_name, EncoderTrap::Strict)?,
-            )?;
+            file.write_all(&WINDOWS_1252
+                .encode(&plugin_name, EncoderTrap::Strict)
+                .map_err(Error::EncodeError)?)?;
             writeln!(file, "")?;
         }
 
         Ok(())
     }
 
-    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
         if plugin_names.is_empty() || !eq(plugin_names[0], self.game_settings().master_file()) {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
 
         self.replace_plugins(plugin_names)
     }
 
-    fn set_plugin_index(
-        &mut self,
-        plugin_name: &str,
-        position: usize,
-    ) -> Result<(), LoadOrderError> {
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
         if position != 0 && !self.plugins().is_empty() &&
             eq(plugin_name, self.game_settings().master_file())
         {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
         if position == 0 && !eq(plugin_name, self.game_settings().master_file()) {
-            return Err(LoadOrderError::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst);
         }
 
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 }
 
-fn load_from_active_plugins_file<T: MutableLoadOrder>(
-    load_order: &mut T,
-) -> Result<(), LoadOrderError> {
+fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),
         plugin_line_mapper,
@@ -162,7 +156,7 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(
     Ok(())
 }
 
-fn plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
+fn plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
     let line_slice = if line[0] == b'*' {
         &line[1..]
     } else {
@@ -171,10 +165,10 @@ fn plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
 
     WINDOWS_1252
         .decode(line_slice, DecoderTrap::Strict)
-        .map_err(LoadOrderError::DecodeError)
+        .map_err(Error::DecodeError)
 }
 
-fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
+fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
     let line_slice = if line[0] == b'*' {
         &line[1..]
     } else {
@@ -183,7 +177,7 @@ fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, LoadOrderError> {
 
     WINDOWS_1252
         .decode(line_slice, DecoderTrap::Strict)
-        .map_err(LoadOrderError::DecodeError)
+        .map_err(Error::DecodeError)
 }
 
 #[cfg(test)]

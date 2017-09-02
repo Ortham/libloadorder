@@ -18,7 +18,6 @@
  */
 
 use std::fs::File;
-use std::io;
 use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
@@ -35,22 +34,6 @@ use load_order::WritableLoadOrder;
 use load_order::AsteriskBasedLoadOrder;
 use load_order::TextfileBasedLoadOrder;
 use load_order::TimestampBasedLoadOrder;
-
-#[derive(Debug)]
-pub enum Error {
-    IO(io::Error),
-    NoLocalAppData,
-}
-
-#[cfg(windows)]
-impl From<app_dirs::AppDirsError> for Error {
-    fn from(error: app_dirs::AppDirsError) -> Self {
-        match error {
-            app_dirs::AppDirsError::Io(x) => Error::IO(x),
-            _ => Error::NoLocalAppData,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct GameSettings {

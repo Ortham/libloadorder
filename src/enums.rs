@@ -17,7 +17,19 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::borrow::Cow;
+use std::convert::From;
+use std::io;
+use std::path::PathBuf;
+use std::string::FromUtf8Error;
+use std::time;
+
+use espm;
 use espm::GameId as EspmId;
+use regex;
+
+#[cfg(windows)]
+use app_dirs;
 
 #[derive(Debug, PartialEq)]
 pub enum LoadOrderMethod {
@@ -46,6 +58,73 @@ impl GameId {
             GameId::Fallout3 => EspmId::Fallout3,
             GameId::FalloutNV => EspmId::FalloutNV,
             GameId::Fallout4 => EspmId::Fallout4,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    InvalidPath(PathBuf),
+    IoError(io::Error),
+    NoFilename,
+    SystemTimeError(time::SystemTimeError),
+    NotUtf8(Vec<u8>),
+    DecodeError(Cow<'static, str>),
+    EncodeError(Cow<'static, str>),
+    ParsingError,
+    PluginNotFound,
+    TooManyActivePlugins,
+    InvalidRegex,
+    DuplicatePlugin,
+    NonMasterBeforeMaster,
+    GameMasterMustLoadFirst,
+    InvalidPlugin(String),
+    ImplicitlyActivePlugin(String),
+    NoLocalAppData,
+}
+
+#[cfg(windows)]
+impl From<app_dirs::AppDirsError> for Error {
+    fn from(error: app_dirs::AppDirsError) -> Self {
+        match error {
+            app_dirs::AppDirsError::Io(x) => Error::IO(x),
+            _ => Error::NoLocalAppData,
+        }
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Self {
+        Error::IoError(error)
+    }
+}
+
+impl From<time::SystemTimeError> for Error {
+    fn from(error: time::SystemTimeError) -> Self {
+        Error::SystemTimeError(error)
+    }
+}
+
+impl From<regex::Error> for Error {
+    fn from(_: regex::Error) -> Self {
+        Error::InvalidRegex
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    fn from(error: FromUtf8Error) -> Self {
+        Error::NotUtf8(error.into_bytes())
+    }
+}
+
+impl From<espm::Error> for Error {
+    fn from(error: espm::Error) -> Self {
+        match error {
+            espm::Error::IoError(x) => Error::IoError(x),
+            espm::Error::NoFilename => Error::NoFilename,
+            espm::Error::ParsingIncomplete |
+            espm::Error::ParsingError => Error::ParsingError,
+            espm::Error::DecodeError(x) => Error::DecodeError(x),
         }
     }
 }

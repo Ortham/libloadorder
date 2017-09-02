@@ -19,28 +19,24 @@
 
 use unicase::eq;
 
+use enums::Error;
 use load_order::match_plugin;
-use load_order::error::LoadOrderError;
 use load_order::mutable::{MAX_ACTIVE_PLUGINS, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
 pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
-    fn load(&mut self) -> Result<(), LoadOrderError>;
-    fn save(&mut self) -> Result<(), LoadOrderError>;
+    fn load(&mut self) -> Result<(), Error>;
+    fn save(&mut self) -> Result<(), Error>;
 
-    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), LoadOrderError>;
+    fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error>;
 
-    fn set_plugin_index(
-        &mut self,
-        plugin_name: &str,
-        position: usize,
-    ) -> Result<(), LoadOrderError>;
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error>;
 
-    fn activate(&mut self, plugin_name: &str) -> Result<(), LoadOrderError> {
+    fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         if !self.plugins().iter().any(|p| match_plugin(p, plugin_name)) {
             if !Plugin::is_valid(plugin_name, self.game_settings()) {
-                return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
+                return Err(Error::InvalidPlugin(plugin_name.to_string()));
             }
 
             self.add_to_load_order(plugin_name)?;
@@ -49,38 +45,36 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         let at_max_active_plugins = self.count_active_plugins() == MAX_ACTIVE_PLUGINS;
 
         let plugin = self.find_plugin_mut(plugin_name).ok_or(
-            LoadOrderError::PluginNotFound,
+            Error::PluginNotFound,
         )?;
 
         if !plugin.is_active() && at_max_active_plugins {
-            Err(LoadOrderError::TooManyActivePlugins)
+            Err(Error::TooManyActivePlugins)
         } else {
-            plugin.activate().map_err(LoadOrderError::PluginError)
+            plugin.activate()
         }
     }
 
-    fn deactivate(&mut self, plugin_name: &str) -> Result<(), LoadOrderError> {
+    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
         if self.game_settings().is_implicitly_active(plugin_name) {
-            return Err(LoadOrderError::ImplicitlyActivePlugin(
-                plugin_name.to_string(),
-            ));
+            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
         }
 
         self.find_plugin_mut(plugin_name)
-            .ok_or(LoadOrderError::PluginNotFound)
+            .ok_or(Error::PluginNotFound)
             .map(|p| p.deactivate())
     }
 
-    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), LoadOrderError> {
+    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         if active_plugin_names.len() > MAX_ACTIVE_PLUGINS {
-            return Err(LoadOrderError::TooManyActivePlugins);
+            return Err(Error::TooManyActivePlugins);
         }
 
         for plugin_name in active_plugin_names {
             if self.index_of(plugin_name).is_none() &&
                 !Plugin::is_valid(plugin_name, self.game_settings())
             {
-                return Err(LoadOrderError::InvalidPlugin(plugin_name.to_string()));
+                return Err(Error::InvalidPlugin(plugin_name.to_string()));
             }
         }
 
@@ -90,9 +84,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
             }
 
             if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
-                return Err(LoadOrderError::ImplicitlyActivePlugin(
-                    plugin_name.to_string(),
-                ));
+                return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
             }
         }
 
@@ -158,22 +150,22 @@ mod tests {
 
     impl WritableLoadOrder for TestLoadOrder {
         // Dummy method, unused.
-        fn load(&mut self) -> Result<(), LoadOrderError> {
+        fn load(&mut self) -> Result<(), Error> {
             Ok(())
         }
 
         // Dummy method, unused.
-        fn save(&mut self) -> Result<(), LoadOrderError> {
+        fn save(&mut self) -> Result<(), Error> {
             Ok(())
         }
 
         // Dummy method, unused.
-        fn set_load_order(&mut self, _: &[&str]) -> Result<(), LoadOrderError> {
+        fn set_load_order(&mut self, _: &[&str]) -> Result<(), Error> {
             Ok(())
         }
 
         // Dummy method, unused.
-        fn set_plugin_index(&mut self, _: &str, _: usize) -> Result<(), LoadOrderError> {
+        fn set_plugin_index(&mut self, _: &str, _: usize) -> Result<(), Error> {
             Ok(())
         }
     }
