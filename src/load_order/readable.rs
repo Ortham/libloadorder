@@ -24,7 +24,10 @@ pub trait ReadableLoadOrder {
     fn plugins(&self) -> &Vec<Plugin>;
 
     fn plugin_names(&self) -> Vec<String> {
-        self.plugins().iter().filter_map(|p| p.name()).collect()
+        self.plugins()
+            .iter()
+            .filter_map(|p| p.unghosted_name())
+            .collect()
     }
 
     fn index_of(&self, plugin_name: &str) -> Option<usize> {
@@ -37,7 +40,7 @@ pub trait ReadableLoadOrder {
         if index >= self.plugins().len() {
             None
         } else {
-            self.plugins()[index].name()
+            self.plugins()[index].unghosted_name()
         }
     }
 
@@ -66,6 +69,7 @@ mod tests {
     use self::tempdir::TempDir;
     use enums::GameId;
     use load_order::tests::mock_game_files;
+    use tests::copy_to_test_dir;
 
     struct TestLoadOrder {
         plugins: Vec<Plugin>,
@@ -82,12 +86,42 @@ mod tests {
         TestLoadOrder { plugins }
     }
 
+    fn prepare_with_ghosted_plugin(game_dir: &Path) -> TestLoadOrder {
+        let (settings, mut plugins) = mock_game_files(GameId::Oblivion, game_dir);
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm.ghost",
+            &settings,
+        );
+        plugins.insert(
+            1,
+            Plugin::new("Blank - Different.esm.ghost", &settings).unwrap(),
+        );
+
+        TestLoadOrder { plugins }
+    }
+
     #[test]
     fn plugin_names_should_return_filenames_for_plugins_in_load_order() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         let expected_plugin_names = vec!["Oblivion.esm", "Blank.esp", "Blank - Different.esp"];
+        assert_eq!(expected_plugin_names, load_order.plugin_names());
+    }
+
+    #[test]
+    fn plugin_names_should_return_unghosted_filenames() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare_with_ghosted_plugin(&tmp_dir.path());
+
+        let expected_plugin_names = vec![
+            "Oblivion.esm",
+            "Blank - Different.esm",
+            "Blank.esp",
+            "Blank - Different.esp",
+        ];
         assert_eq!(expected_plugin_names, load_order.plugin_names());
     }
 
@@ -121,6 +155,14 @@ mod tests {
         let load_order = prepare(&tmp_dir.path());
 
         assert_eq!("Blank.esp", load_order.plugin_at(1).unwrap());
+    }
+
+    #[test]
+    fn plugin_at_should_return_some_unghosted_filename() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare_with_ghosted_plugin(&tmp_dir.path());
+
+        assert_eq!("Blank - Different.esm", load_order.plugin_at(1).unwrap());
     }
 
     #[test]

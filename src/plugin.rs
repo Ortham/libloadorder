@@ -59,7 +59,7 @@ impl Plugin {
         self.data.filename()
     }
 
-    fn unghosted_name(&self) -> Option<String> {
+    pub fn unghosted_name(&self) -> Option<String> {
         self.data.filename().map(
             |f| if iends_with_ascii(&f, ".ghost") {
                 f[..(f.len() - 6)].to_string()
