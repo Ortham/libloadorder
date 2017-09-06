@@ -60,11 +60,13 @@ impl Plugin {
     }
 
     fn unghosted_name(&self) -> Option<String> {
-        self.data.filename().map(|f| if f.ends_with(".ghost") {
-            f[..(f.len() - 6)].to_string()
-        } else {
-            f
-        })
+        self.data.filename().map(
+            |f| if iends_with_ascii(&f, ".ghost") {
+                f[..(f.len() - 6)].to_string()
+            } else {
+                f
+            },
+        )
     }
 
     pub fn modification_time(&self) -> SystemTime {
@@ -136,6 +138,15 @@ impl Plugin {
     }
 }
 
+fn iends_with_ascii(string: &str, suffix: &str) -> bool {
+    use std::ascii::AsciiExt;
+    string.chars().rev().zip(suffix.chars().rev()).all(
+        |(c1, c2)| {
+            c1.eq_ignore_ascii_case(&c2)
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
@@ -181,6 +192,19 @@ mod tests {
 
         copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
+        assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
+    }
+
+    #[test]
+    fn unghosted_name_should_check_ghost_extension_case_insensitively() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+
+        copy_to_test_dir("Blank.esm", "Blank.esm.GHoST", &settings);
+        let plugin = Plugin::new("Blank.esm.GHoST", &settings).unwrap();
         assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
     }
 
