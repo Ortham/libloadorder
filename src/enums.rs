@@ -87,7 +87,7 @@ pub enum Error {
 impl From<app_dirs::AppDirsError> for Error {
     fn from(error: app_dirs::AppDirsError) -> Self {
         match error {
-            app_dirs::AppDirsError::Io(x) => Error::IO(x),
+            app_dirs::AppDirsError::Io(x) => Error::IoError(x),
             _ => Error::NoLocalAppData,
         }
     }

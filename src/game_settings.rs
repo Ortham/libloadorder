@@ -29,7 +29,7 @@ use app_dirs;
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
 
-use enums::{GameId, LoadOrderMethod};
+use enums::{Error, GameId, LoadOrderMethod};
 use load_order::WritableLoadOrder;
 use load_order::AsteriskBasedLoadOrder;
 use load_order::TextfileBasedLoadOrder;
@@ -241,7 +241,7 @@ mod tests {
         );
         assert_eq!(
             &local_app_data_path.join("Skyrim").join("loadorder.txt"),
-            settings.load_order_file().as_ref().unwrap()
+            *settings.load_order_file().as_ref().unwrap()
         );
     }
 
