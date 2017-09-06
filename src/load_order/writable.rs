@@ -111,12 +111,10 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::path::Path;
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
     use enums::GameId;
     use game_settings::GameSettings;
     use load_order::readable::ReadableLoadOrder;

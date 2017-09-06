@@ -25,6 +25,8 @@ extern crate unicase;
 extern crate walkdir;
 #[cfg(windows)]
 extern crate app_dirs;
+#[cfg(test)]
+extern crate tempdir;
 
 mod enums;
 mod game_settings;

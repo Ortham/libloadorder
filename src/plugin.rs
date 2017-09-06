@@ -149,12 +149,10 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::path::PathBuf;
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
     use tests::copy_to_test_dir;
 
     #[test]

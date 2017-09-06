@@ -192,15 +192,13 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Er
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::fs::{File, remove_dir_all};
     use std::io::Write;
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
     use enums::GameId;
     use load_order::tests::*;
     use tests::copy_to_test_dir;

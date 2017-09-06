@@ -196,14 +196,12 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::fs::{File, remove_dir_all};
     use std::io::{Read, Write};
     use std::path::Path;
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
     use enums::GameId;
     use filetime::{FileTime, set_file_times};
     use load_order::tests::*;

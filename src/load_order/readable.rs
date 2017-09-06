@@ -61,12 +61,10 @@ pub trait ReadableLoadOrder {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::path::Path;
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
     use enums::GameId;
     use load_order::tests::mock_game_files;
     use tests::copy_to_test_dir;

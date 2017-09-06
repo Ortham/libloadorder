@@ -219,12 +219,10 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     #[cfg(windows)]
     use std::env;
     use std::io::Write;
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
 
     use super::*;
 

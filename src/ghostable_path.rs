@@ -107,12 +107,10 @@ impl GhostablePath for Path {
 
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
     use super::*;
 
     use std::fs::{copy, create_dir};
-    use self::tempdir::TempDir;
+    use tempdir::TempDir;
 
     fn copy_to_test_dir(from_file: &str, to_file: &str, game_dir: &Path) {
         let testing_plugins_dir = Path::new("./tests/testing-plugins/Oblivion/Data");
