@@ -18,7 +18,6 @@
  */
 
 use plugin::Plugin;
-use load_order::match_plugin;
 
 pub trait ReadableLoadOrder {
     fn plugins(&self) -> &Vec<Plugin>;
@@ -32,7 +31,7 @@ pub trait ReadableLoadOrder {
 
     fn index_of(&self, plugin_name: &str) -> Option<usize> {
         self.plugins().iter().position(
-            |p| match_plugin(p, plugin_name),
+            |p| p.name_matches(plugin_name),
         )
     }
 
@@ -54,7 +53,7 @@ pub trait ReadableLoadOrder {
     fn is_active(&self, plugin_name: &str) -> bool {
         self.plugins()
             .iter()
-            .find(|p| match_plugin(p, plugin_name))
+            .find(|p| p.name_matches(plugin_name))
             .map_or(false, |p| p.is_active())
     }
 }

@@ -22,6 +22,7 @@ use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use espm;
 use filetime::{FileTime, set_file_times};
+use unicase::eq;
 
 use enums::{Error, GameId};
 use game_settings::GameSettings;
@@ -60,13 +61,14 @@ impl Plugin {
     }
 
     pub fn unghosted_name(&self) -> Option<String> {
-        self.data.filename().map(
-            |f| if iends_with_ascii(&f, ".ghost") {
-                f[..(f.len() - 6)].to_string()
-            } else {
-                f
-            },
-        )
+        self.data.filename().map(|f| trim_dot_ghost(&f).to_string())
+    }
+
+    pub fn name_matches(&self, string: &str) -> bool {
+        match self.unghosted_name() {
+            None => false,
+            Some(n) => eq(n.as_str(), trim_dot_ghost(string)),
+        }
     }
 
     pub fn modification_time(&self) -> SystemTime {
@@ -147,6 +149,14 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     )
 }
 
+fn trim_dot_ghost(string: &str) -> &str {
+    if iends_with_ascii(string, ".ghost") {
+        &string[..(string.len() - 6)]
+    } else {
+        string
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,6 +214,28 @@ mod tests {
         copy_to_test_dir("Blank.esm", "Blank.esm.GHoST", &settings);
         let plugin = Plugin::new("Blank.esm.GHoST", &settings).unwrap();
         assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
+    }
+
+    #[test]
+    fn name_matches_should_ignore_plugin_ghost_extension() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let settings =
+            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default());
+        copy_to_test_dir("Blank.esp", "BlanK.esp.GHoSt", &settings);
+
+        let plugin = Plugin::new("BlanK.esp.GHoSt", &settings).unwrap();
+        assert!(plugin.name_matches("Blank.esp"));
+    }
+
+    #[test]
+    fn name_matches_should_ignore_string_ghost_suffix() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let settings =
+            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default());
+        copy_to_test_dir("Blank.esp", "BlanK.esp", &settings);
+
+        let plugin = Plugin::new("BlanK.esp", &settings).unwrap();
+        assert!(plugin.name_matches("Blank.esp.GHoSt"));
     }
 
     #[test]

@@ -29,8 +29,6 @@ use std::fs::{create_dir_all, File};
 use std::io::{BufReader, BufRead};
 use std::path::Path;
 
-use unicase::eq;
-
 use enums::Error;
 pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
 pub use load_order::textfile_based::TextfileBasedLoadOrder;
@@ -38,13 +36,6 @@ pub use load_order::timestamp_based::TimestampBasedLoadOrder;
 pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::writable::WritableLoadOrder;
 use plugin::Plugin;
-
-fn match_plugin(plugin: &Plugin, name: &str) -> bool {
-    match plugin.name() {
-        None => false,
-        Some(n) => eq(n.as_str(), name),
-    }
-}
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())

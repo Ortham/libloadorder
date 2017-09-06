@@ -20,7 +20,6 @@
 use unicase::eq;
 
 use enums::Error;
-use load_order::match_plugin;
 use load_order::mutable::{MAX_ACTIVE_PLUGINS, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
@@ -34,7 +33,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error>;
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        if !self.plugins().iter().any(|p| match_plugin(p, plugin_name)) {
+        if !self.plugins().iter().any(|p| p.name_matches(plugin_name)) {
             if !Plugin::is_valid(plugin_name, self.game_settings()) {
                 return Err(Error::InvalidPlugin(plugin_name.to_string()));
             }
@@ -93,9 +92,9 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         for plugin_name in active_plugin_names {
-            let plugin_exists = self.plugins_mut().iter_mut().any(|p| {
-                match_plugin(p, plugin_name)
-            });
+            let plugin_exists = self.plugins_mut().iter_mut().any(
+                |p| p.name_matches(plugin_name),
+            );
             if !plugin_exists {
                 self.add_to_load_order(plugin_name)?;
             }

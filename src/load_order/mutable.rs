@@ -24,7 +24,7 @@ use walkdir::WalkDir;
 
 use enums::Error;
 use game_settings::GameSettings;
-use load_order::{find_first_non_master_position, match_plugin, read_plugin_names};
+use load_order::{find_first_non_master_position, read_plugin_names};
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
@@ -119,7 +119,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
             if plugin.is_active() &&
                 !implicitly_active_plugins.iter().any(
-                    |i| match_plugin(plugin, i),
+                    |i| plugin.name_matches(i),
                 )
             {
                 plugin.deactivate();
@@ -179,9 +179,9 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     }
 
     fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {
-        self.plugins_mut().iter_mut().find(|p| {
-            match_plugin(p, plugin_name)
-        })
+        self.plugins_mut().iter_mut().find(
+            |p| p.name_matches(plugin_name),
+        )
     }
 
     //TODO: Profile if the 'has changed' check is actually necessary.
@@ -247,7 +247,7 @@ fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
     insert_position: Option<usize>,
 ) -> Result<Plugin, Error> {
     let plugin_position = load_order.plugins().iter().position(
-        |p| match_plugin(p, plugin_name),
+        |p| p.name_matches(plugin_name),
     );
     if let Some(p) = plugin_position {
         if let Some(i) = insert_position {
@@ -295,7 +295,7 @@ fn to_plugin(
     game_settings: &GameSettings,
 ) -> Result<Plugin, Error> {
     match existing_plugins.iter().find(
-        |p| match_plugin(p, plugin_name),
+        |p| p.name_matches(plugin_name),
     ) {
         None => Ok(Plugin::new(plugin_name, game_settings)?),
         Some(x) => Ok(x.clone()),
