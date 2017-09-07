@@ -135,6 +135,14 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(&tmp_dir.path());
 
+        assert_eq!(1, load_order.index_of("Blank.esp").unwrap());
+    }
+
+    #[test]
+    fn index_of_should_be_case_insensitive() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(&tmp_dir.path());
+
         assert_eq!(1, load_order.index_of("blank.esp").unwrap());
     }
 
@@ -180,10 +188,26 @@ mod tests {
     }
 
     #[test]
+    fn is_active_should_return_false_a_plugin_not_in_the_load_order() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(&tmp_dir.path());
+
+        assert!(!load_order.is_active("missing.esp"));
+    }
+
+    #[test]
     fn is_active_should_return_true_for_an_active_plugin() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(load_order.is_active("Blank.esp"));
+    }
+
+    #[test]
+    fn is_active_should_be_case_insensitive() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(&tmp_dir.path());
+
+        assert!(load_order.is_active("blank.esp"));
     }
 }

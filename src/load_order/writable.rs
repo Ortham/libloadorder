@@ -56,7 +56,11 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
     fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
         if self.game_settings().is_implicitly_active(plugin_name) {
-            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+            if self.index_of(plugin_name).is_some() {
+                return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+            } else {
+                return Ok(());
+            }
         }
 
         self.find_plugin_mut(plugin_name)
@@ -71,6 +75,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
         for plugin_name in active_plugin_names {
             if self.index_of(plugin_name).is_none() &&
+                !self.game_settings().is_implicitly_active(plugin_name) &&
                 !Plugin::is_valid(plugin_name, self.game_settings())
             {
                 return Err(Error::InvalidPlugin(plugin_name.to_string()));
@@ -92,6 +97,12 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         for plugin_name in active_plugin_names {
+            if self.game_settings().is_implicitly_active(plugin_name) &&
+                !Plugin::is_valid(plugin_name, self.game_settings())
+            {
+                continue;
+            }
+
             let plugin_exists = self.plugins_mut().iter_mut().any(
                 |p| p.name_matches(plugin_name),
             );
@@ -132,8 +143,12 @@ mod tests {
     }
 
     impl MutableLoadOrder for TestLoadOrder {
-        fn insert_position(&self, _: &Plugin) -> Option<usize> {
-            None
+        fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
+            if plugin.is_master_file() {
+                Some(1)
+            } else {
+                None
+            }
         }
 
         fn game_settings(&self) -> &GameSettings {
@@ -190,15 +205,39 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("missing.esp").is_err());
+        assert!(load_order.index_of("missing.esp").is_none());
     }
 
     #[test]
-    fn activate_should_add_the_plugin_to_the_load_order_if_it_is_not_present() {
+    fn activate_should_insert_a_master_before_non_masters_if_it_is_not_present() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("Blank.esm").is_ok());
         assert!(load_order.is_active("Blank.esm"));
+        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
+    }
+
+    #[test]
+    fn activate_should_append_a_non_master_if_it_is_not_present() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert!(load_order.activate("Blank - Master Dependent.esp").is_ok());
+        assert!(load_order.is_active("Blank - Master Dependent.esp"));
+        assert_eq!(
+            3,
+            load_order.index_of("Blank - Master Dependent.esp").unwrap()
+        );
+    }
+
+    #[test]
+    fn activate_should_be_case_insensitive() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert!(load_order.activate("Blank - different.esp").is_ok());
+        assert!(load_order.is_active("Blank - Different.esp"));
     }
 
     #[test]
@@ -213,6 +252,7 @@ mod tests {
         }
 
         assert!(load_order.activate("Blank - Different.esp").is_err());
+        assert!(!load_order.is_active("Blank - Different.esp"));
     }
 
     #[test]
@@ -226,6 +266,7 @@ mod tests {
             load_order.activate(&plugin).unwrap();
         }
 
+        assert!(load_order.is_active("Blank.esp"));
         assert!(load_order.activate("Blank.esp").is_ok());
     }
 
@@ -234,8 +275,9 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.deactivate("Blank - Different.esp").is_ok());
-        assert!(!load_order.is_active("Blank - Different.esp"));
+        assert!(load_order.is_active("Blank.esp"));
+        assert!(load_order.deactivate("Blank.esp").is_ok());
+        assert!(!load_order.is_active("Blank.esp"));
     }
 
     #[test]
@@ -244,6 +286,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.deactivate("missing.esp").is_err());
+        assert!(load_order.index_of("missing.esp").is_none());
     }
 
     #[test]
@@ -251,7 +294,29 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        assert!(load_order.activate("Skyrim.esm").is_ok());
         assert!(load_order.deactivate("Skyrim.esm").is_err());
+        assert!(load_order.is_active("Skyrim.esm"));
+    }
+
+    //NOTE: This isn't self-consistent behaviour, but matches existing libloadorder behaviour.
+    #[test]
+    fn deactivate_should_do_nothing_if_given_a_missing_implicitly_active_plugin() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        assert!(load_order.deactivate("Update.esm").is_ok());
+        assert!(load_order.index_of("Update.esm").is_none());
+    }
+
+    #[test]
+    fn deactivate_should_do_nothing_if_the_plugin_is_inactive() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        assert!(!load_order.is_active("Blank - Different.esp"));
+        assert!(load_order.deactivate("Blank - Different.esp").is_ok());
+        assert!(!load_order.is_active("Blank - Different.esp"));
     }
 
     #[test]
@@ -261,6 +326,7 @@ mod tests {
 
         let active_plugins = [""; 256];
         assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
     }
 
     #[test]
@@ -270,6 +336,7 @@ mod tests {
 
         let active_plugins = ["missing.esp"];
         assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
     }
 
     #[test]
@@ -279,6 +346,18 @@ fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_a
 
         let active_plugins = ["Blank.esp"];
         assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
+    }
+
+    //NOTE: This isn't self-consistent behaviour, but matches existing libloadorder behaviour.
+    #[test]
+    fn set_active_plugins_should_not_error_if_a_missing_implicitly_active_plugin_is_given() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let active_plugins = ["Skyrim.esm", "Update.esm"];
+        assert!(load_order.set_active_plugins(&active_plugins).is_ok());
+        assert_eq!(1, load_order.active_plugin_names().len());
     }
 
     #[test]
@@ -304,12 +383,18 @@ fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_a
     }
 
     #[test]
-    fn set_active_plugins_should_add_given_plugins_not_in_the_load_order() {
+    fn set_active_plugins_should_add_given_plugins_not_in_the_load_order_in_the_given_order() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        let active_plugins = ["Blank.esm"];
+        let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
         assert!(load_order.set_active_plugins(&active_plugins).is_ok());
-        assert!(load_order.is_active("Blank.esm"));
+        assert!(load_order.is_active("Blank - Master Dependent.esp"));
+        assert_eq!(
+            3,
+            load_order.index_of("Blank - Master Dependent.esp").unwrap()
+        );
+        assert!(load_order.is_active("Blàñk.esp"));
+        assert_eq!(4, load_order.index_of("Blàñk.esp").unwrap());
     }
 }

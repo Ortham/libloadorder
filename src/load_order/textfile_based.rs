@@ -194,7 +194,7 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Er
 mod tests {
     use super::*;
 
-    use std::fs::{File, remove_dir_all};
+    use std::fs::{File, remove_dir_all, remove_file};
     use std::io::Write;
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
@@ -402,6 +402,17 @@ mod tests {
     }
 
     #[test]
+    fn load_should_succeed_when_load_order_and_active_plugins_files_are_missing() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        remove_file(load_order.game_settings().active_plugins_file()).unwrap();
+
+        assert!(load_order.load().is_ok());
+        assert_eq!(1, load_order.active_plugin_names().len());
+    }
+
+    #[test]
     fn load_should_deactivate_excess_plugins_not_including_implicitly_active_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
@@ -500,8 +511,10 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        let existing_filenames = load_order.plugin_names();
         let filenames = vec![];
         assert!(load_order.set_load_order(&filenames).is_err());
+        assert_eq!(existing_filenames, load_order.plugin_names());
     }
 
     #[test]
@@ -509,8 +522,10 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        let existing_filenames = load_order.plugin_names();
         let filenames = vec!["Blank.esp"];
         assert!(load_order.set_load_order(&filenames).is_err());
+        assert_eq!(existing_filenames, load_order.plugin_names());
     }
 
     #[test]
@@ -548,7 +563,9 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        let existing_filenames = load_order.plugin_names();
         assert!(load_order.set_plugin_index("Skyrim.esm", 1).is_err());
+        assert_eq!(existing_filenames, load_order.plugin_names());
     }
 
     #[test]
@@ -556,7 +573,9 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        let existing_filenames = load_order.plugin_names();
         assert!(load_order.set_plugin_index("Blank.esm", 0).is_err());
+        assert_eq!(existing_filenames, load_order.plugin_names());
     }
 
     #[test]
