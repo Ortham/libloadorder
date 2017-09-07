@@ -315,7 +315,7 @@ mod tests {
         set_file_times(
             &game_dir.join("Data").join("Blank.esp"),
             FileTime::zero(),
-            FileTime::zero(),
+            FileTime::from_seconds_since_1970(5, 0),
         ).unwrap();
         assert!(plugin.has_file_changed().unwrap());
     }
@@ -370,6 +370,7 @@ mod tests {
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
+        assert_ne!(UNIX_EPOCH, plugin.modification_time());
         plugin.set_modification_time(UNIX_EPOCH).unwrap();
         let new_mtime = File::open(game_dir.join("Data").join("Blank.esp"))
             .unwrap()
