@@ -45,6 +45,10 @@ impl AsteriskBasedLoadOrder {
 }
 
 impl ReadableLoadOrder for AsteriskBasedLoadOrder {
+    fn game_settings(&self) -> &GameSettings {
+        &self.game_settings
+    }
+
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
@@ -72,10 +76,6 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
         } else {
             None
         }
-    }
-
-    fn game_settings(&self) -> &GameSettings {
-        &self.game_settings
     }
 
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {

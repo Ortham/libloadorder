@@ -137,6 +137,10 @@ mod tests {
     }
 
     impl ReadableLoadOrder for TestLoadOrder {
+        fn game_settings(&self) -> &GameSettings {
+            &self.game_settings
+        }
+
         fn plugins(&self) -> &Vec<Plugin> {
             &self.plugins
         }
@@ -149,10 +153,6 @@ mod tests {
             } else {
                 None
             }
-        }
-
-        fn game_settings(&self) -> &GameSettings {
-            &self.game_settings
         }
 
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {

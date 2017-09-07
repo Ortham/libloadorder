@@ -49,6 +49,10 @@ impl TimestampBasedLoadOrder {
 }
 
 impl ReadableLoadOrder for TimestampBasedLoadOrder {
+    fn game_settings(&self) -> &GameSettings {
+        &self.game_settings
+    }
+
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
@@ -61,10 +65,6 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
         } else {
             None
         }
-    }
-
-    fn game_settings(&self) -> &GameSettings {
-        &self.game_settings
     }
 
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {

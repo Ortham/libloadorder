@@ -17,9 +17,11 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use game_settings::GameSettings;
 use plugin::Plugin;
 
 pub trait ReadableLoadOrder {
+    fn game_settings(&self) -> &GameSettings;
     fn plugins(&self) -> &Vec<Plugin>;
 
     fn plugin_names(&self) -> Vec<String> {
@@ -69,18 +71,26 @@ mod tests {
     use tests::copy_to_test_dir;
 
     struct TestLoadOrder {
+        game_settings: GameSettings,
         plugins: Vec<Plugin>,
     }
 
     impl ReadableLoadOrder for TestLoadOrder {
+        fn game_settings(&self) -> &GameSettings {
+            &self.game_settings
+        }
+
         fn plugins(&self) -> &Vec<Plugin> {
             &self.plugins
         }
     }
 
     fn prepare(game_dir: &Path) -> TestLoadOrder {
-        let (_, plugins) = mock_game_files(GameId::Oblivion, game_dir);
-        TestLoadOrder { plugins }
+        let (game_settings, plugins) = mock_game_files(GameId::Oblivion, game_dir);
+        TestLoadOrder {
+            game_settings,
+            plugins,
+        }
     }
 
     fn prepare_with_ghosted_plugin(game_dir: &Path) -> TestLoadOrder {
@@ -96,7 +106,10 @@ mod tests {
             Plugin::new("Blank - Different.esm.ghost", &settings).unwrap(),
         );
 
-        TestLoadOrder { plugins }
+        TestLoadOrder {
+            game_settings: settings,
+            plugins,
+        }
     }
 
     #[test]

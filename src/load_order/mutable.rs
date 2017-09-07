@@ -31,7 +31,6 @@ use plugin::Plugin;
 pub const MAX_ACTIVE_PLUGINS: usize = 255;
 
 pub trait MutableLoadOrder: ReadableLoadOrder {
-    fn game_settings(&self) -> &GameSettings;
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
