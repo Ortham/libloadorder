@@ -44,7 +44,9 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         let at_max_active_plugins = self.count_active_plugins() == MAX_ACTIVE_PLUGINS;
 
         let plugin = self.find_plugin_mut(plugin_name).ok_or(
-            Error::PluginNotFound,
+            Error::PluginNotFound(
+                plugin_name.to_string(),
+            ),
         )?;
 
         if !plugin.is_active() && at_max_active_plugins {
@@ -64,7 +66,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         self.find_plugin_mut(plugin_name)
-            .ok_or(Error::PluginNotFound)
+            .ok_or(Error::PluginNotFound(plugin_name.to_string()))
             .map(|p| p.deactivate())
     }
 

@@ -35,7 +35,7 @@ mod load_order;
 mod plugin;
 mod tests;
 
-pub use enums::{GameId, LoadOrderMethod};
+pub use enums::{Error, GameId, LoadOrderMethod};
 pub use game_settings::GameSettings;
 pub use load_order::ReadableLoadOrder;
 pub use load_order::WritableLoadOrder;

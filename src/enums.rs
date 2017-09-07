@@ -19,6 +19,8 @@
 
 use std::borrow::Cow;
 use std::convert::From;
+use std::error;
+use std::fmt;
 use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
@@ -71,8 +73,8 @@ pub enum Error {
     NotUtf8(Vec<u8>),
     DecodeError(Cow<'static, str>),
     EncodeError(Cow<'static, str>),
-    ParsingError,
-    PluginNotFound,
+    PluginParsingError,
+    PluginNotFound(String),
     TooManyActivePlugins,
     InvalidRegex,
     DuplicatePlugin,
@@ -123,8 +125,92 @@ impl From<espm::Error> for Error {
             espm::Error::IoError(x) => Error::IoError(x),
             espm::Error::NoFilename => Error::NoFilename,
             espm::Error::ParsingIncomplete |
-            espm::Error::ParsingError => Error::ParsingError,
+            espm::Error::ParsingError => Error::PluginParsingError,
             espm::Error::DecodeError(x) => Error::DecodeError(x),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::InvalidPath(ref x) => write!(f, "The path \"{:?}\" is invalid", x),
+            Error::IoError(ref x) => x.fmt(f),
+            Error::NoFilename => write!(f, "The plugin path has no filename part"),
+            Error::SystemTimeError(ref x) => x.fmt(f),
+            Error::NotUtf8(ref x) => write!(f, "Expected a UTF-8 string, got bytes {:?}", x),
+            Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
+            Error::EncodeError(_) => write!(f, "Text could not be encoded in Windows-1252"),
+            Error::PluginParsingError => {
+                write!(f, "An error was encountered while parsing a plugin")
+            }
+            Error::PluginNotFound(ref x) => {
+                write!(f, "The plugin \"{}\" is not in the load order", x)
+            }
+            Error::TooManyActivePlugins => write!(f, "Maximum number of active plugins exceeded"),
+            Error::InvalidRegex => {
+                write!(
+                    f,
+                    "Internal error: regex used to parse Morrowind.ini is invalid"
+                )
+            }
+            Error::DuplicatePlugin => write!(f, "The given plugin list contains duplicates"),
+            Error::NonMasterBeforeMaster => {
+                write!(
+                    f,
+                    "Attempted to load a non-master plugin before a master plugin"
+                )
+            }
+            Error::GameMasterMustLoadFirst => {
+                write!(f, "The game's main master file must load first")
+            }
+            Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
+            Error::ImplicitlyActivePlugin(ref x) => {
+                write!(
+                    f,
+                    "The implicitly active plugin \"{}\" cannot be deactivated",
+                    x
+                )
+            }
+            Error::NoLocalAppData => {
+                write!(f, "The game's local app data folder could not be detected")
+            }
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::InvalidPath(_) => "The path is invalid",
+            Error::IoError(ref x) => x.description(),
+            Error::NoFilename => "The plugin path has no filename part",
+            Error::SystemTimeError(ref x) => x.description(),
+            Error::NotUtf8(_) => {
+                "Expected a UTF-8 string, but encountered an invalid byte sequence"
+            }
+            Error::DecodeError(_) => "Plugin string content could not be decoded from Windows-1252",
+            Error::EncodeError(_) => "Text could not be represented in Windows-1252",
+            Error::PluginParsingError => "An error was encountered while parsing a plugin",
+            Error::PluginNotFound(_) => "The plugin is not in the load order",
+            Error::TooManyActivePlugins => "Active plugins limit exceeded",
+            Error::InvalidRegex => "Internal error: regex used to parse Morrowind.ini is invalid",
+            Error::DuplicatePlugin => "The given plugin list contains duplicates",
+            Error::NonMasterBeforeMaster => {
+                "Attempted to load a non-master plugin before a master plugin"
+            }
+            Error::GameMasterMustLoadFirst => "The game's main master file must load first",
+            Error::InvalidPlugin(_) => "The plugin file is invalid",
+            Error::ImplicitlyActivePlugin(_) => "Implicitly active plugins cannot be deactivated",
+            Error::NoLocalAppData => "The game's local app data folder could not be detected",
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            Error::IoError(ref x) => Some(x),
+            Error::SystemTimeError(ref x) => Some(x),
+            _ => None,
         }
     }
 }
