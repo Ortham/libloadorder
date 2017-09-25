@@ -86,7 +86,10 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
 
-    write_active_plugins_file(&settings, &["#Blank.esp", "Blàñk.esp", "Blank.esm\r"]);
+    write_active_plugins_file(
+        &settings,
+        &["#Blank.esp", "Blàñk.esp", "Blank.esm\r", "missing.esp"],
+    );
 
     set_timestamps(
         &settings.plugins_directory(),

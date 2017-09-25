@@ -217,8 +217,10 @@ where
     )?;
 
     for plugin_name in plugin_names {
-        let index = load_order.find_or_add(&plugin_name)?;
-        load_order.plugins_mut()[index].activate()?;
+        if Plugin::is_valid(&plugin_name, load_order.game_settings()) {
+            let index = load_order.find_or_add(&plugin_name)?;
+            load_order.plugins_mut()[index].activate()?;
+        }
     }
 
     Ok(())
