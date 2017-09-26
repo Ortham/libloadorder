@@ -26,8 +26,8 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 use std::time;
 
-use espm;
-use espm::GameId as EspmId;
+use esplugin;
+use esplugin::GameId as EspmId;
 use regex;
 
 #[cfg(windows)]
@@ -52,7 +52,7 @@ pub enum GameId {
 }
 
 impl GameId {
-    pub fn to_libespm_id(&self) -> EspmId {
+    pub fn to_esplugin_id(&self) -> EspmId {
         match *self {
             GameId::Morrowind => EspmId::Morrowind,
             GameId::Oblivion => EspmId::Oblivion,
@@ -119,14 +119,14 @@ impl From<FromUtf8Error> for Error {
     }
 }
 
-impl From<espm::Error> for Error {
-    fn from(error: espm::Error) -> Self {
+impl From<esplugin::Error> for Error {
+    fn from(error: esplugin::Error) -> Self {
         match error {
-            espm::Error::IoError(x) => Error::IoError(x),
-            espm::Error::NoFilename => Error::NoFilename,
-            espm::Error::ParsingIncomplete |
-            espm::Error::ParsingError => Error::PluginParsingError,
-            espm::Error::DecodeError(x) => Error::DecodeError(x),
+            esplugin::Error::IoError(x) => Error::IoError(x),
+            esplugin::Error::NoFilename => Error::NoFilename,
+            esplugin::Error::ParsingIncomplete |
+            esplugin::Error::ParsingError => Error::PluginParsingError,
+            esplugin::Error::DecodeError(x) => Error::DecodeError(x),
         }
     }
 }
@@ -221,12 +221,12 @@ mod tests {
 
     #[test]
     fn game_id_should_map_to_libespm_id_correctly() {
-        assert_eq!(EspmId::Morrowind, GameId::Morrowind.to_libespm_id());
-        assert_eq!(EspmId::Oblivion, GameId::Oblivion.to_libespm_id());
-        assert_eq!(EspmId::Skyrim, GameId::Skyrim.to_libespm_id());
-        assert_eq!(EspmId::Skyrim, GameId::SkyrimSE.to_libespm_id());
-        assert_eq!(EspmId::Fallout3, GameId::Fallout3.to_libespm_id());
-        assert_eq!(EspmId::FalloutNV, GameId::FalloutNV.to_libespm_id());
-        assert_eq!(EspmId::Fallout4, GameId::Fallout4.to_libespm_id());
+        assert_eq!(EspmId::Morrowind, GameId::Morrowind.to_esplugin_id());
+        assert_eq!(EspmId::Oblivion, GameId::Oblivion.to_esplugin_id());
+        assert_eq!(EspmId::Skyrim, GameId::Skyrim.to_esplugin_id());
+        assert_eq!(EspmId::Skyrim, GameId::SkyrimSE.to_esplugin_id());
+        assert_eq!(EspmId::Fallout3, GameId::Fallout3.to_esplugin_id());
+        assert_eq!(EspmId::FalloutNV, GameId::FalloutNV.to_esplugin_id());
+        assert_eq!(EspmId::Fallout4, GameId::Fallout4.to_esplugin_id());
     }
 }

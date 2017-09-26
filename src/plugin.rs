@@ -20,7 +20,7 @@
 use std::fs::File;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use espm;
+use esplugin;
 use filetime::{FileTime, set_file_times};
 use unicase::eq;
 
@@ -33,7 +33,7 @@ pub struct Plugin {
     game: GameId,
     active: bool,
     modification_time: SystemTime,
-    data: espm::Plugin,
+    data: esplugin::Plugin,
 }
 
 impl Plugin {
@@ -45,7 +45,7 @@ impl Plugin {
 
         let modification_time = File::open(&filepath)?.metadata()?.modified()?;
 
-        let mut data = espm::Plugin::new(game_settings.id().to_libespm_id(), &filepath);
+        let mut data = esplugin::Plugin::new(game_settings.id().to_esplugin_id(), &filepath);
         data.parse_file(true)?;
 
         Ok(Plugin {
@@ -112,7 +112,7 @@ impl Plugin {
 
             self.modification_time = File::open(&new_path)?.metadata()?.modified()?;
 
-            self.data = espm::Plugin::new(*self.data.game_id(), &new_path);
+            self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
             self.data.parse_file(true)?;
             self.active = true;
             Ok(())
@@ -135,7 +135,7 @@ impl Plugin {
             .join(filename)
             .resolve_path() {
             Err(_) => false,
-            Ok(ref x) => espm::Plugin::is_valid(game_settings.id().to_libespm_id(), x, true),
+            Ok(ref x) => esplugin::Plugin::is_valid(game_settings.id().to_esplugin_id(), x, true),
         }
     }
 }

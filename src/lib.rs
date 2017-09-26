@@ -18,7 +18,7 @@
  */
 
 extern crate encoding;
-extern crate espm;
+extern crate esplugin;
 extern crate filetime;
 extern crate regex;
 extern crate unicase;
