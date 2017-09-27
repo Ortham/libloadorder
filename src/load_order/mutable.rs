@@ -211,6 +211,12 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
         }
     }
+
+    fn deactivate_all(&mut self) {
+        for plugin in self.plugins_mut() {
+            plugin.deactivate();
+        }
+    }
 }
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
@@ -218,9 +224,7 @@ where
     T: MutableLoadOrder,
     F: Fn(Vec<u8>) -> Result<String, Error>,
 {
-    for plugin in load_order.plugins_mut() {
-        plugin.deactivate();
-    }
+    load_order.deactivate_all();
 
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),

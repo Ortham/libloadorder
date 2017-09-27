@@ -91,8 +91,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
         self.add_missing_plugins()?;
 
-        load_active_plugins(self, active_plugin_line_mapper)?;
-
         self.add_implicitly_active_plugins()?;
 
         self.deactivate_excess_plugins();
@@ -144,40 +142,37 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 }
 
 fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
+    load_order.deactivate_all();
+
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),
         plugin_line_mapper,
     )?;
 
     for plugin_name in plugin_names {
-        load_order.move_or_insert_plugin_if_valid(&plugin_name)?;
+        let (plugin_name, active) = plugin_line_splitter(&plugin_name);
+
+        load_order.move_or_insert_plugin_if_valid(plugin_name)?;
+        if active {
+            load_order.activate_unvalidated(plugin_name)?;
+        }
     }
 
     Ok(())
 }
 
-fn plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
-    let line_slice = if line[0] == b'*' {
-        &line[1..]
+fn plugin_line_splitter(line: &str) -> (&str, bool) {
+    if line.as_bytes()[0] == b'*' {
+        (&line[1..], true)
     } else {
-        &line[..]
-    };
-
-    WINDOWS_1252
-        .decode(line_slice, DecoderTrap::Strict)
-        .map_err(Error::DecodeError)
+        (&line[..], false)
+    }
 }
 
-fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
-    let line_slice = if line[0] == b'*' {
-        &line[1..]
-    } else {
-        &line[0..0]
-    };
-
-    WINDOWS_1252
-        .decode(line_slice, DecoderTrap::Strict)
-        .map_err(Error::DecodeError)
+fn plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
+    WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
+        Error::DecodeError,
+    )
 }
 
 #[cfg(test)]

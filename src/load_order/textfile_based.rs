@@ -84,15 +84,19 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             .map(|p| p.exists())
             .unwrap_or(false);
 
+        let mut active_plugins_file_parsed = false;
         if load_order_file_exists {
             load_from_load_order_file(self)?;
         } else {
             load_from_active_plugins_file(self)?;
+            active_plugins_file_parsed = true;
         }
 
         self.add_missing_plugins()?;
 
-        load_active_plugins(self, active_plugin_line_mapper)?;
+        if !active_plugins_file_parsed {
+            load_active_plugins(self, active_plugin_line_mapper)?;
+        }
 
         self.add_implicitly_active_plugins()?;
 
@@ -144,6 +148,8 @@ fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<
 }
 
 fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
+    load_order.deactivate_all();
+
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),
         active_plugin_line_mapper,
@@ -151,6 +157,7 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
 
     for plugin_name in plugin_names {
         load_order.move_or_insert_plugin_if_valid(&plugin_name)?;
+        load_order.activate_unvalidated(&plugin_name)?;
     }
 
     Ok(())
