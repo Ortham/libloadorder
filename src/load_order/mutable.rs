@@ -134,11 +134,15 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         }
     }
 
-    fn move_or_insert_plugin(&mut self, plugin_name: &str) -> Result<(), Error> {
-        let plugin = get_plugin_to_insert(self, plugin_name, None)?;
-        let position = self.insert_position(&plugin);
+    fn move_or_insert_plugin_if_valid(&mut self, plugin_name: &str) -> Result<(), Error> {
+        // Exit successfully without changes if the plugin is invalid.
+        let plugin = match get_plugin_to_insert(self, plugin_name, None) {
+            Ok(x) => x,
+            Err(Error::InvalidPlugin(_)) => return Ok(()),
+            Err(x) => return Err(x),
+        };
 
-        match position {
+        match self.insert_position(&plugin) {
             None => self.plugins_mut().push(plugin),
             Some(x) => self.plugins_mut().insert(x, plugin),
         }

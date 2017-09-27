@@ -137,9 +137,7 @@ fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<
         Vec::new()
     };
     for plugin_name in plugin_names {
-        if Plugin::is_valid(&plugin_name, load_order.game_settings()) {
-            load_order.move_or_insert_plugin(&plugin_name)?;
-        }
+        load_order.move_or_insert_plugin_if_valid(&plugin_name)?;
     }
 
     Ok(())
@@ -152,9 +150,7 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
     )?;
 
     for plugin_name in plugin_names {
-        if Plugin::is_valid(&plugin_name, load_order.game_settings()) {
-            load_order.move_or_insert_plugin(&plugin_name)?;
-        }
+        load_order.move_or_insert_plugin_if_valid(&plugin_name)?;
     }
 
     Ok(())
