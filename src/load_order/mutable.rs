@@ -86,13 +86,21 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         Ok(())
     }
 
-    fn find_or_add(&mut self, filename: &str) -> Result<usize, Error> {
-        let index = match self.index_of(filename) {
-            Some(x) => x,
-            None => self.add_to_load_order(filename)?,
+    fn activate_unvalidated(&mut self, filename: &str) -> Result<(), Error> {
+        let index = {
+            let index = self.index_of(filename);
+            if index.is_none() && Plugin::is_valid(&filename, self.game_settings()) {
+                Some(self.add_to_load_order(filename)?)
+            } else {
+                index
+            }
         };
 
-        Ok(index)
+        if let Some(x) = index {
+            self.plugins_mut()[x].activate()?;
+        }
+
+        Ok(())
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
@@ -101,8 +109,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
                 continue;
             }
 
-            let index = self.find_or_add(filename)?;
-            self.plugins_mut()[index].activate()?;
+            self.activate_unvalidated(filename)?;
         }
 
         Ok(())
@@ -217,10 +224,7 @@ where
     )?;
 
     for plugin_name in plugin_names {
-        if Plugin::is_valid(&plugin_name, load_order.game_settings()) {
-            let index = load_order.find_or_add(&plugin_name)?;
-            load_order.plugins_mut()[index].activate()?;
-        }
+        load_order.activate_unvalidated(&plugin_name)?;
     }
 
     Ok(())
