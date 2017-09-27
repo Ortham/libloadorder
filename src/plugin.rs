@@ -17,7 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use esplugin;
@@ -43,7 +42,7 @@ impl Plugin {
             .join(filename)
             .resolve_path()?;
 
-        let modification_time = File::open(&filepath)?.metadata()?.modified()?;
+        let modification_time = filepath.metadata()?.modified()?;
 
         let mut data = esplugin::Plugin::new(game_settings.id().to_esplugin_id(), &filepath);
         data.parse_file(true)?;
@@ -84,18 +83,18 @@ impl Plugin {
     }
 
     pub fn has_file_changed(&self) -> Result<bool, Error> {
-        let current_mtime = File::open(&self.data.path())?.metadata()?.modified()?;
+        let current_mtime = self.data.path().metadata()?.modified()?;
 
         Ok(self.modification_time != current_mtime)
     }
 
     pub fn reload(&mut self) -> Result<(), Error> {
-        self.modification_time = File::open(self.data.path())?.metadata()?.modified()?;
+        self.modification_time = self.data.path().metadata()?.modified()?;
         Ok(self.data.parse_file(true)?)
     }
 
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
-        let atime = FileTime::from_last_access_time(&File::open(&self.data.path())?.metadata()?);
+        let atime = FileTime::from_last_access_time(&self.data.path().metadata()?);
         let mtime =
             FileTime::from_seconds_since_1970(time.duration_since(UNIX_EPOCH)?.as_secs(), 0);
         set_file_times(&self.data.path(), atime, mtime)?;
@@ -110,7 +109,7 @@ impl Plugin {
         } else {
             let new_path = self.data.path().unghost()?;
 
-            self.modification_time = File::open(&new_path)?.metadata()?.modified()?;
+            self.modification_time = new_path.metadata()?.modified()?;
 
             self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
             self.data.parse_file(true)?;
@@ -248,12 +247,7 @@ mod tests {
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin_path = game_dir.join("Data").join("Blank.esp");
-        let mtime = File::open(&plugin_path)
-            .unwrap()
-            .metadata()
-            .unwrap()
-            .modified()
-            .unwrap();
+        let mtime = plugin_path.metadata().unwrap().modified().unwrap();
 
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
         assert_eq!(mtime, plugin.modification_time());
@@ -372,8 +366,9 @@ mod tests {
 
         assert_ne!(UNIX_EPOCH, plugin.modification_time());
         plugin.set_modification_time(UNIX_EPOCH).unwrap();
-        let new_mtime = File::open(game_dir.join("Data").join("Blank.esp"))
-            .unwrap()
+        let new_mtime = game_dir
+            .join("Data")
+            .join("Blank.esp")
             .metadata()
             .unwrap()
             .modified()
