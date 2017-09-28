@@ -21,9 +21,10 @@ mod asterisk_based;
 mod mutable;
 mod readable;
 mod writable;
-mod tests;
 mod textfile_based;
 mod timestamp_based;
+#[cfg(test)]
+mod tests;
 
 use std::fs::{create_dir_all, File};
 use std::io::{BufReader, BufRead};
