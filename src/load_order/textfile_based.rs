@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_insert_a_new_plugin() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
         load_order.set_plugin_index("Blank.esm", 1).unwrap();
