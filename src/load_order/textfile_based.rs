@@ -24,7 +24,7 @@ use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
-use plugin::Plugin;
+use plugin::{Plugin, trim_dot_ghost};
 use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
 use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
@@ -130,13 +130,41 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
+
+    fn is_self_consistent(&self) -> Result<bool, Error> {
+        match self.game_settings().load_order_file() {
+            None => Ok(true),
+            Some(x) => {
+                if !x.exists() || !self.game_settings().active_plugins_file().exists() {
+                    return Ok(true);
+                }
+
+                // First get load order according to loadorder.txt.
+                let load_order_plugin_names = read_plugin_names(x, load_order_line_mapper)?;
+
+                // Get load order from plugins.txt.
+                let active_plugin_names = read_plugin_names(
+                    self.game_settings().active_plugins_file(),
+                    active_plugin_line_mapper,
+                )?;
+
+                let are_equal = load_order_plugin_names
+                    .iter()
+                    .filter(|l| {
+                        active_plugin_names.iter().any(|a| plugin_names_match(a, l))
+                    })
+                    .zip(active_plugin_names.iter())
+                    .all(|(l, a)| plugin_names_match(&l, &a));
+
+                Ok(are_equal)
+            }
+        }
+    }
 }
 
 fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    let line_mapper = |l| String::from_utf8(l).map_err(Error::from);
-
     let plugin_names = if let Some(file_path) = load_order.game_settings().load_order_file() {
-        read_plugin_names(file_path, line_mapper)?
+        read_plugin_names(file_path, load_order_line_mapper)?
     } else {
         Vec::new()
     };
@@ -161,6 +189,10 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
     }
 
     Ok(())
+}
+
+fn load_order_line_mapper(line: Vec<u8>) -> Result<String, Error> {
+    String::from_utf8(line).map_err(Error::from)
 }
 
 fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
@@ -195,6 +227,10 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Er
     }
 
     Ok(())
+}
+
+fn plugin_names_match(name1: &str, name2: &str) -> bool {
+    eq(trim_dot_ghost(name1), trim_dot_ghost(name2))
 }
 
 #[cfg(test)]
@@ -598,5 +634,48 @@ mod tests {
         load_order.set_plugin_index("Blank.esm", 1).unwrap();
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_true_when_no_load_order_file_exists() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_true_when_no_active_plugins_file_exists() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let expected_filenames = vec!["Skyrim.esm", "Blank - Master Dependent.esp"];
+        write_load_order_file(load_order.game_settings(), &expected_filenames);
+        remove_file(load_order.game_settings().active_plugins_file()).unwrap();
+
+        assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_false_when_load_order_and_active_plugins_files_mismatch() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let expected_filenames = vec!["Blàñk.esp", "missing.esp", "Blank.esm\r"];
+        write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        assert!(!load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_true_when_load_order_and_active_plugins_files_match() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
+        let expected_filenames = vec!["Skyrim.esm", "Blàñk.esp", "Blank.esm\r", "missing.esp"];
+        write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        assert!(load_order.is_self_consistent().unwrap());
     }
 }

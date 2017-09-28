@@ -137,6 +137,10 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
+
+    fn is_self_consistent(&self) -> Result<bool, Error> {
+        Ok(true)
+    }
 }
 
 fn extract_plugin_name_from_line(line: Vec<u8>, regex: &Regex, game_id: GameId) -> Vec<u8> {
@@ -667,5 +671,13 @@ mod tests {
             .set_plugin_index("Blank - Different.esp", 2)
             .unwrap();
         assert!(!load_order.is_active("Blank - Different.esp"));
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_true() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        assert!(load_order.is_self_consistent().unwrap());
     }
 }

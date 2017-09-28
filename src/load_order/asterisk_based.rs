@@ -26,7 +26,7 @@ use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
-use load_order::mutable::{load_active_plugins, MutableLoadOrder};
+use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -138,6 +138,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         }
 
         self.move_or_insert_plugin_with_index(plugin_name, position)
+    }
+
+    fn is_self_consistent(&self) -> Result<bool, Error> {
+        Ok(true)
     }
 }
 
@@ -541,5 +545,13 @@ mod tests {
         load_order.set_plugin_index("Blank.esm", 1).unwrap();
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
+    }
+
+    #[test]
+    fn is_self_consistent_should_return_true() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        assert!(load_order.is_self_consistent().unwrap());
     }
 }

@@ -32,6 +32,8 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error>;
 
+    fn is_self_consistent(&self) -> Result<bool, Error>;
+
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         if !self.plugins().iter().any(|p| p.name_matches(plugin_name)) {
             if !Plugin::is_valid(plugin_name, self.game_settings()) {
@@ -181,6 +183,11 @@ mod tests {
         // Dummy method, unused.
         fn set_plugin_index(&mut self, _: &str, _: usize) -> Result<(), Error> {
             Ok(())
+        }
+
+        // Dummy method, unused.
+        fn is_self_consistent(&self) -> Result<bool, Error> {
+            Ok(true)
         }
     }
 

@@ -148,7 +148,7 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     )
 }
 
-fn trim_dot_ghost(string: &str) -> &str {
+pub fn trim_dot_ghost(string: &str) -> &str {
     if iends_with_ascii(string, ".ghost") {
         &string[..(string.len() - 6)]
     } else {
