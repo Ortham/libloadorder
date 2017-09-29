@@ -33,6 +33,7 @@ mod game_settings;
 mod ghostable_path;
 mod load_order;
 mod plugin;
+#[cfg(test)]
 mod tests;
 
 pub use enums::{Error, GameId, LoadOrderMethod};
