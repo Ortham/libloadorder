@@ -104,7 +104,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
         for filename in self.game_settings().implicitly_active_plugins() {
-            if self.is_active(filename) || !Plugin::is_valid(filename, self.game_settings()) {
+            if self.is_active(filename) {
                 continue;
             }
 

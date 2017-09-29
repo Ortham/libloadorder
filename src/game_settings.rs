@@ -43,6 +43,26 @@ pub struct GameSettings {
     load_order_path: Option<PathBuf>,
 }
 
+const SKYRIM_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &["Skyrim.esm", "Update.esm"];
+
+const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
+    "Skyrim.esm",
+    "Update.esm",
+    "Dawnguard.esm",
+    "Hearthfires.esm",
+    "Dragonborn.esm",
+];
+
+const FALLOUT4_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
+    "Fallout4.esm",
+    "DLCRobot.esm",
+    "DLCworkshop01.esm",
+    "DLCCoast.esm",
+    "DLCworkshop02.esm",
+    "DLCworkshop03.esm",
+    "DLCNukaWorld.esm",
+];
+
 impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
@@ -103,30 +123,12 @@ impl GameSettings {
         }
     }
 
-    pub fn implicitly_active_plugins(&self) -> Vec<&'static str> {
+    pub fn implicitly_active_plugins(&self) -> &'static [&'static str] {
         match self.id {
-            GameId::Skyrim => vec![self.master_file(), "Update.esm"],
-            GameId::SkyrimSE => {
-                vec![
-                    self.master_file(),
-                    "Update.esm",
-                    "Dawnguard.esm",
-                    "Hearthfires.esm",
-                    "Dragonborn.esm",
-                ]
-            }
-            GameId::Fallout4 => {
-                vec![
-                    self.master_file(),
-                    "DLCRobot.esm",
-                    "DLCworkshop01.esm",
-                    "DLCCoast.esm",
-                    "DLCworkshop02.esm",
-                    "DLCworkshop03.esm",
-                    "DLCNukaWorld.esm",
-                ]
-            }
-            _ => Vec::new(),
+            GameId::Skyrim => SKYRIM_IMPLICITLY_ACTIVE_PLUGINS,
+            GameId::SkyrimSE => SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS,
+            GameId::Fallout4 => FALLOUT4_IMPLICITLY_ACTIVE_PLUGINS,
+            _ => &[],
         }
     }
 

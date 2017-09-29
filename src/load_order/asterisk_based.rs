@@ -57,16 +57,18 @@ impl ReadableLoadOrder for AsteriskBasedLoadOrder {
 impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if let Some(name) = plugin.name() {
-            let mut installed_plugin_count = 0;
-            for plugin_name in self.game_settings().implicitly_active_plugins() {
-                if eq(name.as_str(), plugin_name) {
-                    return Some(installed_plugin_count);
-                }
+            if self.game_settings().is_implicitly_active(&name) {
+                let mut installed_plugin_count = 0;
+                for plugin_name in self.game_settings().implicitly_active_plugins() {
+                    if eq(name.as_str(), plugin_name) {
+                        return Some(installed_plugin_count);
+                    }
 
-                if self.index_of(plugin_name).is_some() ||
-                    Plugin::is_valid(plugin_name, self.game_settings())
-                {
-                    installed_plugin_count += 1;
+                    if self.index_of(plugin_name).is_some() ||
+                        Plugin::is_valid(plugin_name, self.game_settings())
+                    {
+                        installed_plugin_count += 1;
+                    }
                 }
             }
         }
