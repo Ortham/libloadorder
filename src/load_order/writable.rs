@@ -60,11 +60,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
     fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
         if self.game_settings().is_implicitly_active(plugin_name) {
-            if self.index_of(plugin_name).is_some() {
-                return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
-            } else {
-                return Ok(());
-            }
+            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
         }
 
         self.find_plugin_mut(plugin_name)
@@ -79,7 +75,6 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
         for plugin_name in active_plugin_names {
             if self.index_of(plugin_name).is_none() &&
-                !self.game_settings().is_implicitly_active(plugin_name) &&
                 !Plugin::is_valid(plugin_name, self.game_settings())
             {
                 return Err(Error::InvalidPlugin(plugin_name.to_string()));
@@ -101,12 +96,6 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         for plugin_name in active_plugin_names {
-            if self.game_settings().is_implicitly_active(plugin_name) &&
-                !Plugin::is_valid(plugin_name, self.game_settings())
-            {
-                continue;
-            }
-
             let plugin_exists = self.plugins_mut().iter_mut().any(
                 |p| p.name_matches(plugin_name),
             );
@@ -308,13 +297,12 @@ mod tests {
         assert!(load_order.is_active("Skyrim.esm"));
     }
 
-    //NOTE: This isn't self-consistent behaviour, but matches existing libloadorder behaviour.
     #[test]
-    fn deactivate_should_do_nothing_if_given_a_missing_implicitly_active_plugin() {
+    fn deactivate_should_error_if_given_a_missing_implicitly_active_plugin() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
-        assert!(load_order.deactivate("Update.esm").is_ok());
+        assert!(load_order.deactivate("Update.esm").is_err());
         assert!(load_order.index_of("Update.esm").is_none());
     }
 
@@ -358,14 +346,13 @@ fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_a
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
-    //NOTE: This isn't self-consistent behaviour, but matches existing libloadorder behaviour.
     #[test]
-    fn set_active_plugins_should_not_error_if_a_missing_implicitly_active_plugin_is_given() {
+    fn set_active_plugins_should_error_if_a_missing_implicitly_active_plugin_is_given() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let active_plugins = ["Skyrim.esm", "Update.esm"];
-        assert!(load_order.set_active_plugins(&active_plugins).is_ok());
+        assert!(load_order.set_active_plugins(&active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
