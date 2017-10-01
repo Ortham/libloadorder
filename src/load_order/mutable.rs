@@ -60,6 +60,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn add_missing_plugins(&mut self) -> Result<(), Error> {
         let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
+            .sort_by(|a, b| a.cmp(b))
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
@@ -191,23 +192,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         self.plugins_mut().iter_mut().find(
             |p| p.name_matches(plugin_name),
         )
-    }
-
-    fn reload_changed_plugins(&mut self) {
-        let plugins = self.plugins_mut();
-        for i in (0..plugins.len()).rev() {
-            let should_remove = plugins[i]
-                .has_file_changed()
-                .and_then(|has_changed| if has_changed {
-                    plugins[i].reload()
-                } else {
-                    Ok(())
-                })
-                .is_err();
-            if should_remove {
-                plugins.remove(i);
-            }
-        }
     }
 
     fn deactivate_all(&mut self) {

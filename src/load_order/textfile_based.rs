@@ -77,7 +77,7 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
 
 impl WritableLoadOrder for TextfileBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
-        self.reload_changed_plugins();
+        self.plugins_mut().clear();
 
         let load_order_file_exists = self.game_settings()
             .load_order_file()
@@ -309,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn load_should_reload_changed_plugins() {
+    fn load_should_reload_existing_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
@@ -383,10 +383,10 @@ mod tests {
         let expected_filenames = vec![
             load_order.game_settings().master_file(),
             "Blank.esm",
-            "Blank.esp",
-            "Blank - Different.esp",
             "Blàñk.esp",
+            "Blank - Different.esp",
             "Blank - Master Dependent.esp",
+            "Blank.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());

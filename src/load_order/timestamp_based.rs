@@ -74,7 +74,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 
 impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
-        self.reload_changed_plugins();
+        self.plugins_mut().clear();
 
         self.add_missing_plugins()?;
 
@@ -262,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn load_should_reload_changed_plugins() {
+    fn load_should_reload_existing_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
@@ -315,8 +315,8 @@ mod tests {
             "Blank.esm",
             "Oblivion.esm",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
             "Blank - Different.esp",
+            "Blank.esp",
             "Blàñk.esp",
         ];
 
@@ -334,8 +334,8 @@ mod tests {
             "Blank.esm",
             load_order.game_settings().master_file(),
             "Blank - Master Dependent.esp",
-            "Blank.esp",
             "Blank - Different.esp",
+            "Blank.esp",
             "Blàñk.esp",
         ];
 
