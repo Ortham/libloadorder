@@ -35,21 +35,23 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
-    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, Error> {
-        let plugin = Plugin::new(plugin_name, self.game_settings())?;
-
-        let index = match self.insert_position(&plugin) {
-            Some(x) => {
-                self.plugins_mut().insert(x, plugin);
-                x
+    fn insert(&mut self, plugin: Plugin) -> usize {
+        match self.insert_position(&plugin) {
+            Some(position) => {
+                self.plugins_mut().insert(position, plugin);
+                position
             }
             None => {
                 self.plugins_mut().push(plugin);
                 self.plugins().len() - 1
             }
-        };
+        }
+    }
 
-        Ok(index)
+    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, Error> {
+        let plugin = Plugin::new(plugin_name, self.game_settings())?;
+
+        Ok(self.insert(plugin))
     }
 
     fn count_active_plugins(&self) -> usize {
@@ -133,20 +135,18 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         }
     }
 
-    fn move_or_insert_plugin_if_valid(&mut self, plugin_name: &str) -> Result<(), Error> {
+    fn move_or_insert_plugin_if_valid(
+        &mut self,
+        plugin_name: &str,
+    ) -> Result<Option<usize>, Error> {
         // Exit successfully without changes if the plugin is invalid.
-        let plugin = match get_plugin_to_insert(self, plugin_name, None) {
+        let plugin = match get_plugin_to_insert(self, plugin_name) {
             Ok(x) => x,
-            Err(Error::InvalidPlugin(_)) => return Ok(()),
+            Err(Error::InvalidPlugin(_)) => return Ok(None),
             Err(x) => return Err(x),
         };
 
-        match self.insert_position(&plugin) {
-            None => self.plugins_mut().push(plugin),
-            Some(x) => self.plugins_mut().insert(x, plugin),
-        }
-
-        Ok(())
+        Ok(Some(self.insert(plugin)))
     }
 
     fn move_or_insert_plugin_with_index(
@@ -160,7 +160,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             }
         }
 
-        let plugin = get_plugin_to_insert(self, plugin_name, Some(position))?;
+        let plugin = get_plugin_to_insert_at(self, plugin_name, position)?;
 
         if position >= self.plugins().len() {
             self.plugins_mut().push(plugin);
@@ -237,7 +237,7 @@ where
 }
 
 fn validate_index<T: MutableLoadOrder + ?Sized>(
-    load_order: &mut T,
+    load_order: &T,
     index: usize,
     is_master: bool,
 ) -> Result<(), Error> {
@@ -252,19 +252,14 @@ fn validate_index<T: MutableLoadOrder + ?Sized>(
     }
 }
 
-fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
+fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     plugin_name: &str,
-    insert_position: Option<usize>,
+    insert_position: usize,
 ) -> Result<Plugin, Error> {
-    let plugin_position = load_order.plugins().iter().position(
-        |p| p.name_matches(plugin_name),
-    );
-    if let Some(p) = plugin_position {
-        if let Some(i) = insert_position {
-            let is_master = load_order.plugins()[p].is_master_file();
-            validate_index(load_order, i, is_master)?;
-        }
+    if let Some(p) = load_order.index_of(plugin_name) {
+        let is_master = load_order.plugins()[p].is_master_file();
+        validate_index(load_order, insert_position, is_master)?;
 
         Ok(load_order.plugins_mut().remove(p))
     } else {
@@ -274,9 +269,24 @@ fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
 
         let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
-        if let Some(i) = insert_position {
-            validate_index(load_order, i, plugin.is_master_file())?;
+        validate_index(load_order, insert_position, plugin.is_master_file())?;
+
+        Ok(plugin)
+    }
+}
+
+fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<Plugin, Error> {
+    if let Some(p) = load_order.index_of(plugin_name) {
+        Ok(load_order.plugins_mut().remove(p))
+    } else {
+        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
+            return Err(Error::InvalidPlugin(plugin_name.to_string()));
         }
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
         Ok(plugin)
     }

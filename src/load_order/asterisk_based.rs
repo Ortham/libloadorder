@@ -158,9 +158,10 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
     for plugin_name in plugin_names {
         let (plugin_name, active) = plugin_line_splitter(&plugin_name);
 
-        load_order.move_or_insert_plugin_if_valid(plugin_name)?;
-        if active {
-            load_order.activate_unvalidated(plugin_name)?;
+        if let Some(x) = load_order.move_or_insert_plugin_if_valid(plugin_name)? {
+            if active {
+                load_order.plugins_mut()[x].activate()?;
+            }
         }
     }
 
