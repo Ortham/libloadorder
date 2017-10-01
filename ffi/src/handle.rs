@@ -154,6 +154,28 @@ pub unsafe extern "C" fn lo_destroy_handle(handle: lo_game_handle) {
     }
 }
 
+/// Load the current load order state, discarding any previously held state.
+///
+/// This function should be called whenever the load order or active state of plugins "on disk"
+/// changes, so that cached state is updated to reflect the changes.
+#[no_mangle]
+pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint {
+    if handle.is_null() {
+        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+    }
+    let mut handle = match (*handle).write() {
+        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+        Ok(h) => h,
+    };
+
+    if let Err(x) = handle.load() {
+        handle.plugins_mut().clear();
+        return handle_error(x);
+    }
+
+    LIBLO_OK
+}
+
 /// Fix up the text file(s) used by the load order and active plugins systems.
 ///
 /// This checks that the load order and active plugin lists conform to libloadorder's validity

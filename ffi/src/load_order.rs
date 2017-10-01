@@ -68,18 +68,13 @@ pub unsafe extern "C" fn lo_get_load_order(
     if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
     }
-    let mut handle = match (*handle).write() {
+    let handle = match (*handle).read() {
         Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
         Ok(h) => h,
     };
 
     *plugins = ptr::null_mut();
     *num_plugins = 0;
-
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
 
     let plugin_names = handle.plugin_names();
 
@@ -159,15 +154,10 @@ pub unsafe extern "C" fn lo_get_plugin_position(
     if handle.is_null() || plugin.is_null() || index.is_null() {
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
     }
-    let mut handle = match (*handle).write() {
+    let handle = match (*handle).read() {
         Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
         Ok(h) => h,
     };
-
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
 
     let plugin = match to_str(plugin) {
         Ok(x) => x,
@@ -205,11 +195,6 @@ pub unsafe extern "C" fn lo_set_plugin_position(
         Ok(h) => h,
     };
 
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
-
     let plugin = match to_str(plugin) {
         Ok(x) => x,
         Err(x) => return error(x, "The filename contained a null byte"),
@@ -242,17 +227,12 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
     if handle.is_null() || plugin.is_null() {
         return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
     }
-    let mut handle = match (*handle).write() {
+    let handle = match (*handle).read() {
         Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
         Ok(h) => h,
     };
 
     *plugin = ptr::null_mut();
-
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
 
     let plugin_name = match handle.plugin_at(index) {
         Some(x) => x,

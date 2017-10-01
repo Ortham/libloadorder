@@ -70,6 +70,9 @@ lo_game_handle create_handle() {
   assert(return_code == 0);
   assert(handle != NULL);
 
+  return_code = lo_load_current_state(handle);
+  assert(return_code == 0);
+
   return handle;
 }
 
