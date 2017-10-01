@@ -20,6 +20,7 @@
 use std::collections::HashSet;
 use std::mem;
 
+use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use enums::Error;
@@ -58,7 +59,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         self.plugins().iter().filter(|p| p.is_active()).count()
     }
 
-    fn add_missing_plugins(&mut self) -> Result<(), Error> {
+    fn add_missing_plugins(&mut self) {
         let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
             .sort_by(|a, b| a.cmp(b))
             .into_iter()
@@ -67,13 +68,9 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             .filter_map(|e| {
                 e.file_name().to_str().and_then(
                     |f| if !self.game_settings().is_implicitly_active(f) &&
-                        self.index_of(f).is_none() &&
-                        Plugin::is_valid(
-                            f,
-                            self.game_settings(),
-                        )
+                        self.index_of(f).is_none()
                     {
-                        Some(f.to_string())
+                        Some(f.to_owned())
                     } else {
                         None
                     },
@@ -81,11 +78,17 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             })
             .collect();
 
-        for filename in filenames {
-            self.add_to_load_order(&filename)?;
-        }
+        let plugins: Vec<Plugin> = {
+            let game_settings = self.game_settings();
+            filenames
+                .par_iter()
+                .filter_map(|f| Plugin::new(&f, game_settings).ok())
+                .collect()
+        };
 
-        Ok(())
+        for plugin in plugins {
+            self.insert(plugin);
+        }
     }
 
     fn activate_unvalidated(&mut self, filename: &str) -> Result<(), Error> {
@@ -183,7 +186,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
         mem::swap(&mut plugins, self.plugins_mut());
 
-        self.add_missing_plugins()?;
+        self.add_missing_plugins();
 
         self.add_implicitly_active_plugins()
     }

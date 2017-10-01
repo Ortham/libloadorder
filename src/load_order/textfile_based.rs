@@ -92,7 +92,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             active_plugins_file_parsed = true;
         }
 
-        self.add_missing_plugins()?;
+        self.add_missing_plugins();
 
         if !active_plugins_file_parsed {
             load_active_plugins(self, active_plugin_line_mapper)?;

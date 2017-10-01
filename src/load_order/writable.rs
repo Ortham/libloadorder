@@ -35,7 +35,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn is_self_consistent(&self) -> Result<bool, Error>;
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        if !self.plugins().iter().any(|p| p.name_matches(plugin_name)) {
+        if self.index_of(plugin_name).is_none() {
             if !Plugin::is_valid(plugin_name, self.game_settings()) {
                 return Err(Error::InvalidPlugin(plugin_name.to_string()));
             }

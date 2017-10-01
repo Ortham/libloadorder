@@ -20,6 +20,7 @@
 extern crate encoding;
 extern crate esplugin;
 extern crate filetime;
+extern crate rayon;
 extern crate regex;
 extern crate unicase;
 extern crate walkdir;

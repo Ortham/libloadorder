@@ -11,6 +11,7 @@ regex = "0.2"
 tempdir = "0.3"
 unicase = "2.0.0"
 walkdir = "1"
+rayon = "0.8.2"
 
 [target.'cfg(windows)'.dependencies]
 app_dirs = "1.1.1"

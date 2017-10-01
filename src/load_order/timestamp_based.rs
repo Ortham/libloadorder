@@ -76,7 +76,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        self.add_missing_plugins()?;
+        self.add_missing_plugins();
 
         let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
         let game_id = self.game_settings().id();

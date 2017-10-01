@@ -37,6 +37,10 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn new(filename: &str, game_settings: &GameSettings) -> Result<Plugin, Error> {
+        if !has_valid_extension(filename) {
+            return Err(Error::InvalidPlugin(filename.to_owned()));
+        }
+
         let filepath = game_settings
             .plugins_directory()
             .join(filename)
@@ -112,9 +116,7 @@ impl Plugin {
     }
 
     pub fn is_valid(filename: &str, game_settings: &GameSettings) -> bool {
-        if !filename.ends_with(".esp") && !filename.ends_with(".esm") &&
-            !filename.ends_with(".esp.ghost") && !filename.ends_with(".esm.ghost")
-        {
+        if !has_valid_extension(filename) {
             return false;
         }
 
@@ -126,6 +128,14 @@ impl Plugin {
             Ok(ref x) => esplugin::Plugin::is_valid(game_settings.id().to_esplugin_id(), x, true),
         }
     }
+}
+
+fn has_valid_extension(filename: &str) -> bool {
+    const VALID_EXTENSIONS: &'static [&'static str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
+
+    VALID_EXTENSIONS.iter().any(
+        |e| iends_with_ascii(filename, e),
+    )
 }
 
 fn iends_with_ascii(string: &str, suffix: &str) -> bool {

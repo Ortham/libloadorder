@@ -91,7 +91,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
         load_from_active_plugins_file(self)?;
 
-        self.add_missing_plugins()?;
+        self.add_missing_plugins();
 
         self.add_implicitly_active_plugins()?;
 
