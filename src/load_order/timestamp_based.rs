@@ -80,29 +80,13 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
         let game_id = self.game_settings().id();
-        let line_mapper = |line: Vec<u8>| {
-            let line = extract_plugin_name_from_line(line, &regex, game_id);
-
-            WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
-                |e| {
-                    Error::DecodeError(e)
-                },
-            )
-        };
+        let line_mapper = |line| plugin_line_mapper(line, &regex, game_id);
 
         load_active_plugins(self, line_mapper)?;
 
         self.add_implicitly_active_plugins()?;
 
-        self.plugins_mut().sort_by(|a, b| if a.is_master_file() ==
-            b.is_master_file()
-        {
-            a.modification_time().cmp(&b.modification_time())
-        } else if a.is_master_file() {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        });
+        self.plugins_mut().sort_by(plugin_sorter);
 
         self.deactivate_excess_plugins();
 
@@ -143,17 +127,31 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-fn extract_plugin_name_from_line(line: Vec<u8>, regex: &Regex, game_id: GameId) -> Vec<u8> {
+fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
+    if a.is_master_file() == b.is_master_file() {
+        a.modification_time().cmp(&b.modification_time())
+    } else if a.is_master_file() {
+        Ordering::Less
+    } else {
+        Ordering::Greater
+    }
+}
+
+fn plugin_line_mapper(mut line: Vec<u8>, regex: &Regex, game_id: GameId) -> Result<String, Error> {
     if game_id == GameId::Morrowind {
-        regex.captures(&line).and_then(|c| c.get(1)).map_or(
+        line = regex.captures(&line).and_then(|c| c.get(1)).map_or(
             Vec::new(),
             |m| {
                 m.as_bytes().to_vec()
             },
-        )
-    } else {
-        line
+        );
     }
+
+    WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
+        |e| {
+            Error::DecodeError(e)
+        },
+    )
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
