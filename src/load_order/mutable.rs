@@ -59,6 +59,14 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         self.plugins().iter().filter(|p| p.is_active()).count()
     }
 
+    fn load_plugins_if_valid(&self, filenames: Vec<String>) -> Vec<Plugin> {
+        let game_settings = self.game_settings();
+        filenames
+            .par_iter()
+            .filter_map(|f| Plugin::new(&f, game_settings).ok())
+            .collect()
+    }
+
     fn add_missing_plugins(&mut self) {
         let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
             .sort_by(|a, b| a.cmp(b))
@@ -78,15 +86,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             })
             .collect();
 
-        let plugins: Vec<Plugin> = {
-            let game_settings = self.game_settings();
-            filenames
-                .par_iter()
-                .filter_map(|f| Plugin::new(&f, game_settings).ok())
-                .collect()
-        };
-
-        for plugin in plugins {
+        for plugin in self.load_plugins_if_valid(filenames) {
             self.insert(plugin);
         }
     }

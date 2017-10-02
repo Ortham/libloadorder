@@ -24,7 +24,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use encoding::{DecoderTrap, Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
+use rayon::prelude::*;
 use regex::bytes::Regex;
+use walkdir::WalkDir;
 
 use enums::{Error, GameId};
 use game_settings::GameSettings;
@@ -76,7 +78,8 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        self.add_missing_plugins();
+        self.plugins = load_plugins_from_dir(self);
+        self.plugins.par_sort_by(plugin_sorter);
 
         let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
         let game_id = self.game_settings().id();
@@ -85,8 +88,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         load_active_plugins(self, line_mapper)?;
 
         self.add_implicitly_active_plugins()?;
-
-        self.plugins_mut().sort_by(plugin_sorter);
 
         self.deactivate_excess_plugins();
 
@@ -127,9 +128,23 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
+fn load_plugins_from_dir<T: MutableLoadOrder>(load_order: &T) -> Vec<Plugin> {
+    let filenames: Vec<String> = WalkDir::new(load_order.game_settings().plugins_directory())
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
+        .collect();
+
+    load_order.load_plugins_if_valid(filenames)
+}
+
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     if a.is_master_file() == b.is_master_file() {
-        a.modification_time().cmp(&b.modification_time())
+        match a.modification_time().cmp(&b.modification_time()) {
+            Ordering::Equal => a.name().cmp(&b.name()),
+            x => x,
+        }
     } else if a.is_master_file() {
         Ordering::Less
     } else {
