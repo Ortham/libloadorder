@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-
+use std::fs::File;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use esplugin;
@@ -46,10 +46,11 @@ impl Plugin {
             .join(filename)
             .resolve_path()?;
 
-        let modification_time = filepath.metadata()?.modified()?;
+        let file = File::open(&filepath)?;
+        let modification_time = file.metadata()?.modified()?;
 
         let mut data = esplugin::Plugin::new(game_settings.id().to_esplugin_id(), &filepath);
-        data.parse_file(true)?;
+        data.parse_open_file(file, true)?;
 
         Ok(Plugin {
             game: game_settings.id(),
