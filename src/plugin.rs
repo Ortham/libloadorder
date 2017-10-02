@@ -97,18 +97,19 @@ impl Plugin {
     }
 
     pub fn activate(&mut self) -> Result<(), Error> {
-        if self.is_active() {
-            Ok(())
-        } else {
-            let new_path = self.data.path().unghost()?;
+        if !self.is_active() {
+            if self.data.path().is_ghosted() {
+                let new_path = self.data.path().unghost()?;
 
-            self.modification_time = new_path.metadata()?.modified()?;
+                self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
+                self.data.parse_file(true)?;
+                let modification_time = self.modification_time();
+                self.set_modification_time(modification_time)?;
+            }
 
-            self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
-            self.data.parse_file(true)?;
             self.active = true;
-            Ok(())
         }
+        Ok(())
     }
 
     pub fn deactivate(&mut self) {
