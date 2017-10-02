@@ -22,10 +22,10 @@ use std::fs::File;
 use std::io::{BufReader, BufRead, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use encoding::{DecoderTrap, Encoding, EncoderTrap};
+use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use rayon::prelude::*;
-use regex::bytes::Regex;
+use regex::Regex;
 use walkdir::WalkDir;
 
 use enums::{Error, GameId};
@@ -81,9 +81,9 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         self.plugins = load_plugins_from_dir(self);
         self.plugins.par_sort_by(plugin_sorter);
 
-        let regex = Regex::new(r"(?i-u)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
+        let regex = Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
         let game_id = self.game_settings().id();
-        let line_mapper = |line| plugin_line_mapper(line, &regex, game_id);
+        let line_mapper = |line: &str| plugin_line_mapper(line, &regex, game_id);
 
         load_active_plugins(self, line_mapper)?;
 
@@ -152,21 +152,19 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     }
 }
 
-fn plugin_line_mapper(mut line: Vec<u8>, regex: &Regex, game_id: GameId) -> Result<String, Error> {
+fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<String> {
     if game_id == GameId::Morrowind {
         line = regex.captures(&line).and_then(|c| c.get(1)).map_or(
-            Vec::new(),
-            |m| {
-                m.as_bytes().to_vec()
-            },
+            &line[0..0],
+            |m| m.as_str(),
         );
     }
 
-    WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
-        |e| {
-            Error::DecodeError(e)
-        },
-    )
+    if line.is_empty() || line.starts_with('#') {
+        None
+    } else {
+        Some(line.to_owned())
+    }
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {

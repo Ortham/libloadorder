@@ -18,14 +18,19 @@
  */
 
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::Read;
 use std::mem;
+use std::path::Path;
 
+use encoding::all::WINDOWS_1252;
+use encoding::{DecoderTrap, Encoding};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
 use enums::Error;
 use game_settings::GameSettings;
-use load_order::{find_first_non_master_position, read_plugin_names};
+use load_order::find_first_non_master_position;
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
@@ -206,8 +211,8 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
 where
-    T: MutableLoadOrder,
-    F: Fn(Vec<u8>) -> Result<String, Error>,
+    T: MutableLoadOrder + Sync,
+    F: Fn(&str) -> Option<String>,
 {
     load_order.deactivate_all();
 
@@ -216,11 +221,45 @@ where
         line_mapper,
     )?;
 
-    for plugin_name in plugin_names {
-        load_order.activate_unvalidated(&plugin_name)?;
+    let plugin_indices: Vec<usize> = plugin_names
+        .par_iter()
+        .filter_map(|p| load_order.index_of(p))
+        .collect();
+
+    for index in plugin_indices {
+        load_order.plugins_mut()[index].activate()?;
     }
 
     Ok(())
+}
+
+pub fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    if !file_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut content: Vec<u8> = Vec::new();
+    let mut file = File::open(file_path)?;
+    file.read_to_end(&mut content)?;
+
+    let content = WINDOWS_1252.decode(&content, DecoderTrap::Strict).map_err(
+        |e| {
+            Error::DecodeError(e)
+        },
+    )?;
+
+    Ok(content.lines().filter_map(line_mapper).collect())
+}
+
+pub fn plugin_line_mapper(line: &str) -> Option<String> {
+    if line.is_empty() || line.starts_with('#') {
+        None
+    } else {
+        Some(line.to_owned())
+    }
 }
 
 fn validate_index<T: MutableLoadOrder + ?Sized>(

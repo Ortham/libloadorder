@@ -18,15 +18,15 @@
  */
 use std::fs::File;
 use std::io::Write;
-use encoding::{DecoderTrap, Encoding, EncoderTrap};
+use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
-use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
-use load_order::mutable::MutableLoadOrder;
+use load_order::{create_parent_dirs, find_first_non_master_position};
+use load_order::mutable::{MutableLoadOrder, plugin_line_mapper, read_plugin_names};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -174,12 +174,6 @@ fn plugin_line_splitter(line: &str) -> (&str, bool) {
     } else {
         (&line[..], false)
     }
-}
-
-fn plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
-    WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
-        Error::DecodeError,
-    )
 }
 
 #[cfg(test)]

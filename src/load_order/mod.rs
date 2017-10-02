@@ -26,8 +26,7 @@ mod timestamp_based;
 #[cfg(test)]
 mod tests;
 
-use std::fs::{create_dir_all, File};
-use std::io::{BufReader, BufRead};
+use std::fs::create_dir_all;
 use std::path::Path;
 
 use enums::Error;
@@ -40,37 +39,6 @@ use plugin::Plugin;
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())
-}
-
-fn trim_cr(mut buffer: Vec<u8>) -> Vec<u8> {
-    if buffer.last() == Some(&b'\r') {
-        buffer.pop();
-    }
-    buffer
-}
-
-fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
-where
-    F: Fn(Vec<u8>) -> Result<String, Error>,
-{
-    if !file_path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let input = File::open(file_path)?;
-    let buffered = BufReader::new(input);
-
-    let mut names: Vec<String> = Vec::new();
-    for line in buffered.split(b'\n') {
-        let line = line_mapper(trim_cr(line?))?;
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-
-        names.push(line);
-    }
-
-    Ok(names)
 }
 
 fn create_parent_dirs(path: &Path) -> Result<(), Error> {

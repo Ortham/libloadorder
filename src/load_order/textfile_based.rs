@@ -17,16 +17,19 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::fs::File;
-use std::io::Write;
-use encoding::{DecoderTrap, Encoding, EncoderTrap};
+use std::io::{Read, Write};
+use std::path::Path;
+
+use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::{Plugin, trim_dot_ghost};
-use load_order::{create_parent_dirs, find_first_non_master_position, read_plugin_names};
-use load_order::mutable::{load_active_plugins, MutableLoadOrder};
+use load_order::{create_parent_dirs, find_first_non_master_position};
+use load_order::mutable::{load_active_plugins, plugin_line_mapper, read_plugin_names};
+use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -95,7 +98,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         self.add_missing_plugins();
 
         if !active_plugins_file_parsed {
-            load_active_plugins(self, active_plugin_line_mapper)?;
+            load_active_plugins(self, plugin_line_mapper)?;
         }
 
         self.add_implicitly_active_plugins()?;
@@ -140,12 +143,12 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
                 }
 
                 // First get load order according to loadorder.txt.
-                let load_order_plugin_names = read_plugin_names(x, load_order_line_mapper)?;
+                let load_order_plugin_names = read_utf8_plugin_names(x, plugin_line_mapper)?;
 
                 // Get load order from plugins.txt.
                 let active_plugin_names = read_plugin_names(
                     self.game_settings().active_plugins_file(),
-                    active_plugin_line_mapper,
+                    plugin_line_mapper,
                 )?;
 
                 let are_equal = load_order_plugin_names
@@ -162,9 +165,24 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 }
 
+pub fn read_utf8_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    if !file_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut content: String = String::new();
+    let mut file = File::open(file_path)?;
+    file.read_to_string(&mut content)?;
+
+    Ok(content.lines().filter_map(line_mapper).collect())
+}
+
 fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     let plugin_names = if let Some(file_path) = load_order.game_settings().load_order_file() {
-        read_plugin_names(file_path, load_order_line_mapper)?
+        read_utf8_plugin_names(file_path, plugin_line_mapper)?
     } else {
         Vec::new()
     };
@@ -180,7 +198,7 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
 
     let plugin_names = read_plugin_names(
         load_order.game_settings().active_plugins_file(),
-        active_plugin_line_mapper,
+        plugin_line_mapper,
     )?;
 
     for plugin_name in plugin_names {
@@ -190,18 +208,6 @@ fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Res
     }
 
     Ok(())
-}
-
-fn load_order_line_mapper(line: Vec<u8>) -> Result<String, Error> {
-    String::from_utf8(line).map_err(Error::from)
-}
-
-fn active_plugin_line_mapper(line: Vec<u8>) -> Result<String, Error> {
-    WINDOWS_1252.decode(&line, DecoderTrap::Strict).map_err(
-        |e| {
-            Error::DecodeError(e)
-        },
-    )
 }
 
 fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
@@ -507,10 +513,9 @@ mod tests {
         load_order.save().unwrap();
 
         let expected_filenames = vec!["Skyrim.esm", "Blank.esp", "Blank - Different.esp"];
-        let line_mapper = |l| String::from_utf8(l).map_err(Error::from);
-        let plugin_names = read_plugin_names(
+        let plugin_names = read_utf8_plugin_names(
             load_order.game_settings().load_order_file().unwrap(),
-            line_mapper,
+            plugin_line_mapper,
         ).unwrap();
         assert_eq!(expected_filenames, plugin_names);
     }
