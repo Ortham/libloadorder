@@ -28,7 +28,10 @@ use enums::Error;
 use game_settings::GameSettings;
 use plugin::{Plugin, trim_dot_ghost};
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{load_active_plugins, plugin_line_mapper, read_plugin_names};
+use load_order::mutable::add_missing_plugins;
+use load_order::mutable::load_active_plugins;
+use load_order::mutable::plugin_line_mapper;
+use load_order::mutable::read_plugin_names;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
@@ -75,6 +78,10 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
 
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
+    }
+
+    fn add_missing_plugins(&mut self) {
+        add_missing_plugins(self)
     }
 }
 

@@ -26,13 +26,12 @@ use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
 use rayon::prelude::*;
 use regex::Regex;
-use walkdir::WalkDir;
 
 use enums::{Error, GameId};
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{load_active_plugins, MutableLoadOrder};
+use load_order::mutable::{add_missing_plugins, load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -71,6 +70,10 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
+    }
+
+    fn add_missing_plugins(&mut self) {
+        add_missing_plugins(self)
     }
 }
 
@@ -129,12 +132,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 }
 
 fn load_plugins_from_dir<T: MutableLoadOrder>(load_order: &T) -> Vec<Plugin> {
-    let filenames: Vec<String> = WalkDir::new(load_order.game_settings().plugins_directory())
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
-        .collect();
+    let filenames = load_order.find_plugins_in_dir();
 
     load_order.load_plugins_if_valid(filenames)
 }

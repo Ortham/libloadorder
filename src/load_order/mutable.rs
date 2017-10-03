@@ -41,6 +41,8 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
+    fn add_missing_plugins(&mut self);
+
     fn insert(&mut self, plugin: Plugin) -> usize {
         match self.insert_position(&plugin) {
             Some(position) => {
@@ -72,28 +74,13 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             .collect()
     }
 
-    fn add_missing_plugins(&mut self) {
-        let filenames: Vec<String> = WalkDir::new(self.game_settings().plugins_directory())
-            .sort_by(|a, b| a.cmp(b))
+    fn find_plugins_in_dir(&self) -> Vec<String> {
+        WalkDir::new(self.game_settings().plugins_directory())
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
-            .filter_map(|e| {
-                e.file_name().to_str().and_then(
-                    |f| if !self.game_settings().is_implicitly_active(f) &&
-                        self.index_of(f).is_none()
-                    {
-                        Some(f.to_owned())
-                    } else {
-                        None
-                    },
-                )
-            })
-            .collect();
-
-        for plugin in self.load_plugins_if_valid(filenames) {
-            self.insert(plugin);
-        }
+            .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
+            .collect()
     }
 
     fn activate_unvalidated(&mut self, filename: &str) -> Result<(), Error> {
@@ -209,10 +196,28 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     }
 }
 
+pub fn add_missing_plugins<T>(load_order: &mut T)
+where
+    T: MutableLoadOrder + Sync,
+{
+    let mut filenames: Vec<String> = load_order
+        .find_plugins_in_dir()
+        .into_par_iter()
+        .filter(|f| {
+            !load_order.game_settings().is_implicitly_active(f) && load_order.index_of(f).is_none()
+        })
+        .collect();
+    filenames.par_sort();
+
+    for plugin in load_order.load_plugins_if_valid(filenames) {
+        load_order.insert(plugin);
+    }
+}
+
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
 where
     T: MutableLoadOrder + Sync,
-    F: Fn(&str) -> Option<String>,
+    F: Fn(&str) -> Option<String> + Send + Sync,
 {
     load_order.deactivate_all();
 
@@ -233,9 +238,10 @@ where
     Ok(())
 }
 
-pub fn read_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
+pub fn read_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
 where
-    F: Fn(&str) -> Option<String>,
+    F: Fn(&str) -> Option<T> + Send + Sync,
+    T: Send,
 {
     if !file_path.exists() {
         return Ok(Vec::new());
@@ -251,7 +257,7 @@ where
         },
     )?;
 
-    Ok(content.lines().filter_map(line_mapper).collect())
+    Ok(content.par_lines().filter_map(line_mapper).collect())
 }
 
 pub fn plugin_line_mapper(line: &str) -> Option<String> {

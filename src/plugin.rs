@@ -37,14 +37,24 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn new(filename: &str, game_settings: &GameSettings) -> Result<Plugin, Error> {
+        Plugin::with_active(filename, game_settings, false)
+    }
+
+    pub fn with_active(
+        filename: &str,
+        game_settings: &GameSettings,
+        active: bool,
+    ) -> Result<Plugin, Error> {
         if !has_valid_extension(filename) {
             return Err(Error::InvalidPlugin(filename.to_owned()));
         }
 
-        let filepath = game_settings
-            .plugins_directory()
-            .join(filename)
-            .resolve_path()?;
+        let filepath = game_settings.plugins_directory().join(filename);
+
+        let filepath = match active {
+            true => filepath.unghost()?,
+            false => filepath.resolve_path()?,
+        };
 
         let file = File::open(&filepath)?;
         let modification_time = file.metadata()?.modified()?;
@@ -54,7 +64,7 @@ impl Plugin {
 
         Ok(Plugin {
             game: game_settings.id(),
-            active: false,
+            active,
             modification_time,
             data,
         })

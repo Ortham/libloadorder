@@ -120,6 +120,7 @@ mod tests {
     use tempdir::TempDir;
     use enums::GameId;
     use game_settings::GameSettings;
+    use load_order::mutable::add_missing_plugins;
     use load_order::readable::ReadableLoadOrder;
     use load_order::tests::mock_game_files;
     use tests::copy_to_test_dir;
@@ -150,6 +151,10 @@ mod tests {
 
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
+        }
+
+        fn add_missing_plugins(&mut self) {
+            add_missing_plugins(self)
         }
     }
 

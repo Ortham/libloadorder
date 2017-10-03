@@ -16,17 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
+
 use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
+use rayon::prelude::*;
 use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{MutableLoadOrder, plugin_line_mapper, read_plugin_names};
+use load_order::mutable::{add_missing_plugins, MutableLoadOrder, read_plugin_names};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -83,13 +86,17 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
+
+    fn add_missing_plugins(&mut self) {
+        add_missing_plugins(self)
+    }
 }
 
 impl WritableLoadOrder for AsteriskBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        load_from_active_plugins_file(self)?;
+        self.load_from_active_plugins_file()?;
 
         self.add_missing_plugins();
 
@@ -147,32 +154,52 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 }
 
-fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    load_order.deactivate_all();
+impl AsteriskBasedLoadOrder {
+    fn load_from_active_plugins_file(&mut self) -> Result<(), Error> {
+        let plugin_tuples = read_plugin_names(
+            self.game_settings().active_plugins_file(),
+            plugin_line_mapper,
+        )?;
 
-    let plugin_names = read_plugin_names(
-        load_order.game_settings().active_plugins_file(),
-        plugin_line_mapper,
-    )?;
+        let plugins: Vec<Plugin> = {
+            let game_settings = self.game_settings();
 
-    for plugin_name in plugin_names {
-        let (plugin_name, active) = plugin_line_splitter(&plugin_name);
+            remove_duplicates_icase(plugin_tuples)
+                .into_par_iter()
+                .filter_map(|(filename, active)| {
+                    Plugin::with_active(&filename, game_settings, active).ok()
+                })
+                .collect()
+        };
 
-        if let Some(x) = load_order.move_or_insert_plugin_if_valid(plugin_name)? {
-            if active {
-                load_order.plugins_mut()[x].activate()?;
-            }
+        for plugin in plugins {
+            self.insert(plugin);
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
-fn plugin_line_splitter(line: &str) -> (&str, bool) {
-    if line.as_bytes()[0] == b'*' {
-        (&line[1..], true)
+fn remove_duplicates_icase(strings: Vec<(String, bool)>) -> Vec<(String, bool)> {
+    let mut set: HashSet<String> = HashSet::new();
+    let mut unique: Vec<(String, bool)> = strings
+        .into_iter()
+        .rev()
+        .filter(|&(ref string, _)| set.insert(string.to_lowercase()))
+        .collect();
+
+    unique.reverse();
+
+    unique
+}
+
+fn plugin_line_mapper(line: &str) -> Option<(String, bool)> {
+    if line.is_empty() || line.starts_with('#') {
+        None
+    } else if line.as_bytes()[0] == b'*' {
+        Some((line[1..].to_owned(), true))
     } else {
-        (&line[..], false)
+        Some((line.to_owned(), false))
     }
 }
 
