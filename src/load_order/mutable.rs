@@ -41,8 +41,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
-    fn add_missing_plugins(&mut self);
-
     fn insert(&mut self, plugin: Plugin) -> usize {
         match self.insert_position(&plugin) {
             Some(position) => {
@@ -159,20 +157,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         }
     }
 
-    fn move_or_insert_plugin_if_valid(
-        &mut self,
-        plugin_name: &str,
-    ) -> Result<Option<usize>, Error> {
-        // Exit successfully without changes if the plugin is invalid.
-        let plugin = match get_plugin_to_insert(self, plugin_name) {
-            Ok(x) => x,
-            Err(Error::InvalidPlugin(_)) => return Ok(None),
-            Err(x) => return Err(x),
-        };
-
-        Ok(Some(self.insert(plugin)))
-    }
-
     fn move_or_insert_plugin_with_index(
         &mut self,
         plugin_name: &str,
@@ -195,22 +179,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         Ok(())
     }
 
-    fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        validate_plugin_names(plugin_names, self.game_settings())?;
-
-        let mut plugins = map_to_plugins(self, plugin_names)?;
-
-        if !is_partitioned_by_master_flag(&plugins) {
-            return Err(Error::NonMasterBeforeMaster);
-        }
-
-        mem::swap(&mut plugins, self.plugins_mut());
-
-        self.add_missing_plugins();
-
-        self.add_implicitly_active_plugins()
-    }
-
     fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {
         self.plugins_mut().iter_mut().find(
             |p| p.name_matches(plugin_name),
@@ -224,21 +192,23 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     }
 }
 
-pub fn add_missing_plugins<T>(load_order: &mut T)
+pub fn replace_plugins<T>(load_order: &mut T, plugin_names: &[&str]) -> Result<(), Error>
 where
     T: MutableLoadOrder + Sync,
 {
-    let filenames: Vec<String> = load_order
-        .find_plugins_in_dir_sorted()
-        .into_par_iter()
-        .filter(|f| {
-            !load_order.game_settings().is_implicitly_active(f) && load_order.index_of(f).is_none()
-        })
-        .collect();
+    validate_plugin_names(plugin_names, load_order.game_settings())?;
 
-    for plugin in load_order.load_plugins_if_valid(filenames) {
-        load_order.insert(plugin);
+    let mut plugins = map_to_plugins(load_order, plugin_names)?;
+
+    if !is_partitioned_by_master_flag(&plugins) {
+        return Err(Error::NonMasterBeforeMaster);
     }
+
+    mem::swap(&mut plugins, load_order.plugins_mut());
+
+    add_missing_plugins(load_order);
+
+    load_order.add_implicitly_active_plugins()
 }
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
@@ -292,6 +262,23 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
         None
     } else {
         Some(line.to_owned())
+    }
+}
+
+fn add_missing_plugins<T>(load_order: &mut T)
+where
+    T: MutableLoadOrder + Sync,
+{
+    let filenames: Vec<String> = load_order
+        .find_plugins_in_dir_sorted()
+        .into_par_iter()
+        .filter(|f| {
+            !load_order.game_settings().is_implicitly_active(f) && load_order.index_of(f).is_none()
+        })
+        .collect();
+
+    for plugin in load_order.load_plugins_if_valid(filenames) {
+        load_order.insert(plugin);
     }
 }
 
@@ -353,23 +340,6 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
         let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
         validate_index(load_order, insert_position, plugin.is_master_file())?;
-
-        Ok(plugin)
-    }
-}
-
-fn get_plugin_to_insert<T: MutableLoadOrder + ?Sized>(
-    load_order: &mut T,
-    plugin_name: &str,
-) -> Result<Plugin, Error> {
-    if let Some(p) = load_order.index_of(plugin_name) {
-        Ok(load_order.plugins_mut().remove(p))
-    } else {
-        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
-            return Err(Error::InvalidPlugin(plugin_name.to_string()));
-        }
-
-        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
         Ok(plugin)
     }

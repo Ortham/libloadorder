@@ -27,7 +27,7 @@ use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{add_missing_plugins, MutableLoadOrder, read_plugin_names};
+use load_order::mutable::{MutableLoadOrder, read_plugin_names, replace_plugins};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -84,10 +84,6 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
-
-    fn add_missing_plugins(&mut self) {
-        add_missing_plugins(self)
-    }
 }
 
 impl WritableLoadOrder for AsteriskBasedLoadOrder {
@@ -132,7 +128,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             return Err(Error::GameMasterMustLoadFirst);
         }
 
-        self.replace_plugins(plugin_names)
+        replace_plugins(self, plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
