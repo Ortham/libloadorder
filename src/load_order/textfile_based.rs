@@ -94,17 +94,16 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             .map(|p| p.exists())
             .unwrap_or(false);
 
-        let mut active_plugins_file_parsed = false;
-        if load_order_file_exists {
-            load_from_load_order_file(self)?;
+        let plugin_tuples = if load_order_file_exists {
+            self.read_from_load_order_file()?
         } else {
-            load_from_active_plugins_file(self)?;
-            active_plugins_file_parsed = true;
-        }
+            self.read_from_active_plugins_file()?
+        };
 
-        self.add_missing_plugins();
+        let filenames = self.find_plugins_in_dir_sorted();
+        self.load_unique_plugins(plugin_tuples, filenames);
 
-        if !active_plugins_file_parsed {
+        if load_order_file_exists {
             load_active_plugins(self, plugin_line_mapper)?;
         }
 
@@ -116,8 +115,8 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        save_load_order(self)?;
-        save_active_plugins(self)
+        self.save_load_order()?;
+        self.save_active_plugins()
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
@@ -172,9 +171,52 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 }
 
-pub fn read_utf8_plugin_names<F>(file_path: &Path, line_mapper: F) -> Result<Vec<String>, Error>
+impl TextfileBasedLoadOrder {
+    fn read_from_load_order_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        match self.game_settings().load_order_file() {
+            Some(file_path) => read_utf8_plugin_names(file_path, load_order_line_mapper),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        read_plugin_names(
+            self.game_settings().active_plugins_file(),
+            active_plugin_line_mapper,
+        )
+    }
+
+    fn save_load_order(&self) -> Result<(), Error> {
+        if let Some(file_path) = self.game_settings().load_order_file() {
+            create_parent_dirs(file_path)?;
+
+            let mut file = File::create(file_path)?;
+            for plugin_name in self.plugin_names() {
+                writeln!(file, "{}", plugin_name)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn save_active_plugins(&self) -> Result<(), Error> {
+        create_parent_dirs(self.game_settings().active_plugins_file())?;
+
+        let mut file = File::create(self.game_settings().active_plugins_file())?;
+        for plugin_name in self.active_plugin_names() {
+            file.write_all(&WINDOWS_1252
+                .encode(&plugin_name, EncoderTrap::Strict)
+                .map_err(Error::EncodeError)?)?;
+            writeln!(file, "")?;
+        }
+
+        Ok(())
+    }
+}
+
+pub fn read_utf8_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
 where
-    F: Fn(&str) -> Option<String>,
+    F: Fn(&str) -> Option<T> + Send + Sync,
+    T: Send,
 {
     if !file_path.exists() {
         return Ok(Vec::new());
@@ -187,60 +229,12 @@ where
     Ok(content.lines().filter_map(line_mapper).collect())
 }
 
-fn load_from_load_order_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    let plugin_names = if let Some(file_path) = load_order.game_settings().load_order_file() {
-        read_utf8_plugin_names(file_path, plugin_line_mapper)?
-    } else {
-        Vec::new()
-    };
-    for plugin_name in plugin_names {
-        load_order.move_or_insert_plugin_if_valid(&plugin_name)?;
-    }
-
-    Ok(())
+fn load_order_line_mapper(line: &str) -> Option<(String, bool)> {
+    plugin_line_mapper(line).map(|s| (s, false))
 }
 
-fn load_from_active_plugins_file<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    load_order.deactivate_all();
-
-    let plugin_names = read_plugin_names(
-        load_order.game_settings().active_plugins_file(),
-        plugin_line_mapper,
-    )?;
-
-    for plugin_name in plugin_names {
-        if let Some(x) = load_order.move_or_insert_plugin_if_valid(&plugin_name)? {
-            load_order.plugins_mut()[x].activate()?;
-        }
-    }
-
-    Ok(())
-}
-
-fn save_load_order<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    if let Some(file_path) = load_order.game_settings().load_order_file() {
-        create_parent_dirs(file_path)?;
-
-        let mut file = File::create(file_path)?;
-        for plugin_name in load_order.plugin_names() {
-            writeln!(file, "{}", plugin_name)?;
-        }
-    }
-    Ok(())
-}
-
-fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    create_parent_dirs(load_order.game_settings().active_plugins_file())?;
-
-    let mut file = File::create(load_order.game_settings().active_plugins_file())?;
-    for plugin_name in load_order.active_plugin_names() {
-        file.write_all(&WINDOWS_1252
-            .encode(&plugin_name, EncoderTrap::Strict)
-            .map_err(Error::EncodeError)?)?;
-        writeln!(file, "")?;
-    }
-
-    Ok(())
+fn active_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
+    plugin_line_mapper(line).map(|s| (s, true))
 }
 
 fn plugin_names_match(name1: &str, name2: &str) -> bool {

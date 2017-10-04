@@ -16,13 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
 use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
-use rayon::prelude::*;
 use unicase::eq;
 
 use enums::Error;
@@ -96,9 +94,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        self.load_from_active_plugins_file()?;
+        let plugin_tuples = self.read_from_active_plugins_file()?;
+        let filenames = self.find_plugins_in_dir_sorted();
 
-        self.add_missing_plugins();
+        self.load_unique_plugins(plugin_tuples, filenames);
 
         self.add_implicitly_active_plugins()?;
 
@@ -155,42 +154,12 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 }
 
 impl AsteriskBasedLoadOrder {
-    fn load_from_active_plugins_file(&mut self) -> Result<(), Error> {
-        let plugin_tuples = read_plugin_names(
+    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        read_plugin_names(
             self.game_settings().active_plugins_file(),
             plugin_line_mapper,
-        )?;
-
-        let plugins: Vec<Plugin> = {
-            let game_settings = self.game_settings();
-
-            remove_duplicates_icase(plugin_tuples)
-                .into_par_iter()
-                .filter_map(|(filename, active)| {
-                    Plugin::with_active(&filename, game_settings, active).ok()
-                })
-                .collect()
-        };
-
-        for plugin in plugins {
-            self.insert(plugin);
-        }
-
-        Ok(())
+        )
     }
-}
-
-fn remove_duplicates_icase(strings: Vec<(String, bool)>) -> Vec<(String, bool)> {
-    let mut set: HashSet<String> = HashSet::new();
-    let mut unique: Vec<(String, bool)> = strings
-        .into_iter()
-        .rev()
-        .filter(|&(ref string, _)| set.insert(string.to_lowercase()))
-        .collect();
-
-    unique.reverse();
-
-    unique
 }
 
 fn plugin_line_mapper(line: &str) -> Option<(String, bool)> {

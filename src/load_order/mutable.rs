@@ -83,6 +83,34 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             .collect()
     }
 
+    fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
+        let mut filenames = self.find_plugins_in_dir();
+        filenames.par_sort();
+
+        filenames
+    }
+
+    fn load_unique_plugins(
+        &mut self,
+        plugin_name_tuples: Vec<(String, bool)>,
+        installed_filenames: Vec<String>,
+    ) {
+        let plugins: Vec<Plugin> = {
+            let game_settings = self.game_settings();
+
+            remove_duplicates_icase(plugin_name_tuples, installed_filenames)
+                .into_par_iter()
+                .filter_map(|(filename, active)| {
+                    Plugin::with_active(&filename, game_settings, active).ok()
+                })
+                .collect()
+        };
+
+        for plugin in plugins {
+            self.insert(plugin);
+        }
+    }
+
     fn activate_unvalidated(&mut self, filename: &str) -> Result<(), Error> {
         let index = {
             let index = self.index_of(filename);
@@ -200,14 +228,13 @@ pub fn add_missing_plugins<T>(load_order: &mut T)
 where
     T: MutableLoadOrder + Sync,
 {
-    let mut filenames: Vec<String> = load_order
-        .find_plugins_in_dir()
+    let filenames: Vec<String> = load_order
+        .find_plugins_in_dir_sorted()
         .into_par_iter()
         .filter(|f| {
             !load_order.game_settings().is_implicitly_active(f) && load_order.index_of(f).is_none()
         })
         .collect();
-    filenames.par_sort();
 
     for plugin in load_order.load_plugins_if_valid(filenames) {
         load_order.insert(plugin);
@@ -266,6 +293,30 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
     } else {
         Some(line.to_owned())
     }
+}
+
+fn remove_duplicates_icase(
+    plugin_tuples: Vec<(String, bool)>,
+    filenames: Vec<String>,
+) -> Vec<(String, bool)> {
+    let mut set: HashSet<String> = HashSet::with_capacity(filenames.len());
+
+    let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
+        .into_iter()
+        .rev()
+        .filter(|&(ref string, _)| set.insert(string.to_lowercase()))
+        .collect();
+
+    unique_tuples.reverse();
+
+    let unique_file_tuples_iter = filenames
+        .into_iter()
+        .filter(|ref string| set.insert(string.to_lowercase()))
+        .map(|f| (f, false));
+
+    unique_tuples.extend(unique_file_tuples_iter);
+
+    unique_tuples
 }
 
 fn validate_index<T: MutableLoadOrder + ?Sized>(
