@@ -415,6 +415,36 @@ mod tests {
     }
 
     #[test]
+    fn load_should_not_duplicate_a_plugin_that_has_a_ghosted_duplicate() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        use std::fs::copy;
+
+        copy(
+            load_order.game_settings().plugins_directory().join(
+                "Blank.esm",
+            ),
+            load_order.game_settings().plugins_directory().join(
+                "Blank.esm.ghost",
+            ),
+        ).unwrap();
+
+        load_order.load().unwrap();
+
+        let expected_filenames = vec![
+            load_order.game_settings().master_file(),
+            "Blank.esm",
+            "Blàñk.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blank.esp",
+        ];
+
+        assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
     fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());

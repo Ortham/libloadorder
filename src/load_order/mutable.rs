@@ -32,7 +32,7 @@ use enums::Error;
 use game_settings::GameSettings;
 use load_order::find_first_non_master_position;
 use load_order::readable::ReadableLoadOrder;
-use plugin::Plugin;
+use plugin::{trim_dot_ghost, Plugin};
 
 pub const MAX_ACTIVE_PLUGINS: usize = 255;
 
@@ -73,11 +73,16 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
     }
 
     fn find_plugins_in_dir(&self) -> Vec<String> {
+        let mut set: HashSet<String> = HashSet::new();
+
         WalkDir::new(self.game_settings().plugins_directory())
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_file())
             .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
+            .filter(|ref filename| {
+                set.insert(trim_dot_ghost(&filename).to_lowercase())
+            })
             .collect()
     }
 
@@ -291,14 +296,18 @@ fn remove_duplicates_icase(
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .into_iter()
         .rev()
-        .filter(|&(ref string, _)| set.insert(string.to_lowercase()))
+        .filter(|&(ref string, _)| {
+            set.insert(trim_dot_ghost(&string).to_lowercase())
+        })
         .collect();
 
     unique_tuples.reverse();
 
     let unique_file_tuples_iter = filenames
         .into_iter()
-        .filter(|ref string| set.insert(string.to_lowercase()))
+        .filter(|ref string| {
+            set.insert(trim_dot_ghost(&string).to_lowercase())
+        })
         .map(|f| (f, false));
 
     unique_tuples.extend(unique_file_tuples_iter);
@@ -312,12 +321,12 @@ fn validate_index<T: MutableLoadOrder + ?Sized>(
     is_master: bool,
 ) -> Result<(), Error> {
     match find_first_non_master_position(load_order.plugins()) {
-        None if !is_master && index < load_order.plugins().len() => Err(
-            Error::NonMasterBeforeMaster,
-        ),
-        Some(i) if is_master && index > i || !is_master && index < i => Err(
-            Error::NonMasterBeforeMaster,
-        ),
+        None if !is_master && index < load_order.plugins().len() => {
+            Err(Error::NonMasterBeforeMaster)
+        }
+        Some(i) if is_master && index > i || !is_master && index < i => {
+            Err(Error::NonMasterBeforeMaster)
+        }
         _ => Ok(()),
     }
 }

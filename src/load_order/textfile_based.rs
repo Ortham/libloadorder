@@ -503,6 +503,47 @@ mod tests {
     }
 
     #[test]
+    fn load_should_not_duplicate_a_plugin_that_is_ghosted_and_in_load_order_file() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        use std::fs::rename;
+
+        rename(
+            load_order.game_settings().plugins_directory().join(
+                "Blank.esm",
+            ),
+            load_order.game_settings().plugins_directory().join(
+                "Blank.esm.ghost",
+            ),
+        ).unwrap();
+
+        let expected_filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Blàñk.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blank.esp",
+            "missing.esp",
+        ];
+        write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        load_order.load().unwrap();
+
+        let expected_filenames = vec![
+            load_order.game_settings().master_file(),
+            "Blank.esm",
+            "Blàñk.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blank.esp",
+        ];
+
+        assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
     fn save_should_write_all_plugins_to_load_order_file() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
