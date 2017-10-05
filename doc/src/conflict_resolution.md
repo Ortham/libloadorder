@@ -1,0 +1,7 @@
+## Conflict Resolution
+
+The game can only apply one version of any one entry (this is known as the *rule of one*). Therefore, when more than one plugin changes the same entry, the load order is used to decide which plugin's changes are applied. Put simply, the last loaded plugin's changes are applied. The one exception to the rule of one is that the contents of cells (the physical space in which your character moves) can be changed by any number of plugins, so different plugins can add objects to cells all will see their changes applied by the game.
+
+By changing the load order, you can change which plugins override and which are overridden, and so reduce detrimental conflicts. You cannot actually reduce how much is overridden through load order alone, but it is often the case that some overrides are acceptable while others cause problems in game. Setting a good load order is the process by which you seek to maximise the former instead of the latter.
+
+Further compatibility between mods is then possible through the use of patches, which are made to address incompatibilities between specific mods. Dynamic patches such as Wrye Bash's *Bashed Patch* exist that allow you to select between types of changes for different mods. For example, two mods change a piece of armour, but one changes how it looks and the other changes its effectiveness: through load order alone you could only ever get one change, but using a Bashed Patch you can get both, because they change different things in the same armour entry.

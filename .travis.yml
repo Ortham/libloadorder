@@ -1,33 +1,38 @@
 sudo: false
-language: cpp
-compiler:
-  - clang
-  - gcc
+language: rust
 
+# Dependencies of kcov, used by coverage
 addons:
   apt:
-    sources:
-      - llvm-toolchain-precise-3.8
-      - ubuntu-toolchain-r-test
     packages:
-      - gcc-5
-      - g++-5
-      - clang-3.8
-      - libstdc++-5-dev
-cache:
-  directories:
-    - $HOME/boost_1_61_0/boost
-    - $HOME/boost_1_61_0/stage/lib
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+      - cmake
+    sources:
+      - kalakris-cmake
+
+cache: cargo
 
 install:
-  # Use the latest version of Clang/GCC.
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
-  - wget https://raw.githubusercontent.com/WrinklyNinja/ci-scripts/1.0.0/install_boost.py
-  - python install_boost.py --directory ~ --boost-version 1.61.0 filesystem iostreams locale system
+  - cargo install rustfmt || true
+  - cargo install cargo-travis || true
 
 before_script:
-  - mkdir build && cd build
-  - cmake .. -DBOOST_ROOT=~/boost_1_61_0
+  - wget https://github.com/WrinklyNinja/testing-plugins/archive/1.2.0.tar.gz
+  - tar -xf 1.2.0.tar.gz
+  - mv testing-plugins-1.2.0 testing-plugins
 
-script: make && ./tests
+script:
+  - cargo fmt --all -- --write-mode=diff
+  - cargo test --all --all-features
+  - cargo coveralls -p libloadorder
+  # Need to rebuild the FFI wrapper so that its binary is given a filename
+  # without a hash.
+  - cargo build -p libloadorder-ffi
+  - mkdir ffi/build
+  - cd ffi/build
+  - cmake ..
+  - make
+  - make test
