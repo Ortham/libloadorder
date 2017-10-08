@@ -56,10 +56,11 @@ impl GameId {
         match *self {
             GameId::Morrowind => EspmId::Morrowind,
             GameId::Oblivion => EspmId::Oblivion,
-            GameId::Skyrim | GameId::SkyrimSE => EspmId::Skyrim,
+            GameId::Skyrim => EspmId::Skyrim,
             GameId::Fallout3 => EspmId::Fallout3,
             GameId::FalloutNV => EspmId::FalloutNV,
             GameId::Fallout4 => EspmId::Fallout4,
+            GameId::SkyrimSE => EspmId::SkyrimSE,
         }
     }
 }
@@ -224,7 +225,7 @@ mod tests {
         assert_eq!(EspmId::Morrowind, GameId::Morrowind.to_esplugin_id());
         assert_eq!(EspmId::Oblivion, GameId::Oblivion.to_esplugin_id());
         assert_eq!(EspmId::Skyrim, GameId::Skyrim.to_esplugin_id());
-        assert_eq!(EspmId::Skyrim, GameId::SkyrimSE.to_esplugin_id());
+        assert_eq!(EspmId::SkyrimSE, GameId::SkyrimSE.to_esplugin_id());
         assert_eq!(EspmId::Fallout3, GameId::Fallout3.to_esplugin_id());
         assert_eq!(EspmId::FalloutNV, GameId::FalloutNV.to_esplugin_id());
         assert_eq!(EspmId::Fallout4, GameId::Fallout4.to_esplugin_id());

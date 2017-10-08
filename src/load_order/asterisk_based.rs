@@ -427,6 +427,18 @@ mod tests {
     }
 
     #[test]
+    fn load_should_recognise_light_master_plugins() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "ccTest.esl", &load_order.game_settings());
+
+        load_order.load().unwrap();
+
+        assert!(load_order.plugin_names().contains(&"ccTest.esl".to_owned()));
+    }
+
+    #[test]
     fn load_should_add_missing_implicitly_active_plugins_in_their_hardcoded_positions() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());

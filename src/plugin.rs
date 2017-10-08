@@ -27,6 +27,17 @@ use enums::{Error, GameId};
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 
+const VALID_EXTENSIONS: &'static [&'static str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
+
+const VALID_EXTENSIONS_WITH_ESL: &'static [&'static str] = &[
+    ".esp",
+    ".esm",
+    ".esp.ghost",
+    ".esm.ghost",
+    ".esl",
+    ".esl.ghost",
+];
+
 #[derive(Clone, Debug)]
 pub struct Plugin {
     game: GameId,
@@ -45,7 +56,7 @@ impl Plugin {
         game_settings: &GameSettings,
         active: bool,
     ) -> Result<Plugin, Error> {
-        if !has_valid_extension(filename) {
+        if !has_valid_extension(filename, game_settings.id()) {
             return Err(Error::InvalidPlugin(filename.to_owned()));
         }
 
@@ -97,6 +108,10 @@ impl Plugin {
         self.data.is_master_file()
     }
 
+    pub fn is_light_master_file(&self) -> bool {
+        self.data.is_light_master_file()
+    }
+
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
         let atime = FileTime::from_last_access_time(&self.data.path().metadata()?);
         let mtime =
@@ -128,7 +143,7 @@ impl Plugin {
     }
 
     pub fn is_valid(filename: &str, game_settings: &GameSettings) -> bool {
-        if !has_valid_extension(filename) {
+        if !has_valid_extension(filename, game_settings.id()) {
             return false;
         }
 
@@ -142,10 +157,13 @@ impl Plugin {
     }
 }
 
-fn has_valid_extension(filename: &str) -> bool {
-    const VALID_EXTENSIONS: &'static [&'static str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
+fn has_valid_extension(filename: &str, game: GameId) -> bool {
+    let valid_extensions = match game {
+        GameId::Fallout4 | GameId::SkyrimSE => VALID_EXTENSIONS_WITH_ESL,
+        _ => VALID_EXTENSIONS,
+    };
 
-    VALID_EXTENSIONS.iter().any(
+    valid_extensions.iter().any(
         |e| iends_with_ascii(filename, e),
     )
 }
@@ -307,6 +325,35 @@ mod tests {
     }
 
     #[test]
+    fn is_light_master_file_should_be_true_for_esl_files_only() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings =
+            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default());
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let plugin = Plugin::new("Blank.esp", &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
+        let plugin = Plugin::new("Blank.esm", &settings).unwrap();
+
+        assert!(!plugin.is_light_master_file());
+
+        copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
+        let plugin = Plugin::new("Blank.esl", &settings).unwrap();
+
+        assert!(plugin.is_light_master_file());
+
+        copy_to_test_dir("Blank - Different.esp", "Blank - Different.esl", &settings);
+        let plugin = Plugin::new("Blank - Different.esl", &settings).unwrap();
+
+        assert!(plugin.is_light_master_file());
+    }
+
+    #[test]
     fn set_modification_time_should_update_the_file_modification_time() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let game_dir = tmp_dir.path();
@@ -380,6 +427,9 @@ mod tests {
         copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
         assert!(Plugin::is_valid("Blank.esm", &settings));
 
+        copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
+        assert!(!Plugin::is_valid("Blank.esl", &settings));
+
         copy_to_test_dir(
             "Blank - Different.esp",
             "Blank - Different.esp.ghost",
@@ -393,6 +443,12 @@ mod tests {
             &settings,
         );
         assert!(Plugin::is_valid("Blank - Different.esm", &settings));
+
+        let settings =
+            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default());
+
+        copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
+        assert!(Plugin::is_valid("Blank.esl", &settings));
     }
 
     #[test]
