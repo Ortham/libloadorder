@@ -86,36 +86,11 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
 
-    write_active_plugins_file(
-        &settings,
-        &["#Blank.esp", "Blàñk.esp", "Blank.esm\r", "missing.esp"],
-    );
-
-    set_timestamps(
-        &settings.plugins_directory(),
-        &[
-            "Blank - Master Dependent.esp",
-            "Blank.esm",
-            "Blank - Different.esp",
-            "Blank.esp",
-            settings.master_file(),
-        ],
-    );
-    // Give two files the same timestamp.
-    set_file_times(
-        &settings.plugins_directory().join("Blank.esp"),
-        FileTime::zero(),
-        FileTime::from_seconds_since_1970(2, 0),
-    ).unwrap();
-
-    let mut plugins = vec![
+    let plugins = vec![
         Plugin::new(settings.master_file(), &settings).unwrap(),
-        Plugin::new("Blank.esp", &settings).unwrap(),
+        Plugin::with_active("Blank.esp", &settings, true).unwrap(),
         Plugin::new("Blank - Different.esp", &settings).unwrap(),
     ];
-
-    // Activate a plugin that isn't going to be in the active plugins file.
-    plugins[1].activate().unwrap();
 
     (settings, plugins)
 }

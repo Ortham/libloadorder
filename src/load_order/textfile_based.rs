@@ -241,7 +241,7 @@ fn plugin_names_match(name1: &str, name2: &str) -> bool {
 mod tests {
     use super::*;
 
-    use std::fs::{File, remove_dir_all, remove_file};
+    use std::fs::{File, remove_dir_all};
     use std::io::Write;
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
@@ -381,15 +381,20 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blank.esp", "Blank - Master Dependent.esp"],
+        );
+
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             load_order.game_settings().master_file(),
             "Blank.esm",
-            "Blàñk.esp",
-            "Blank - Different.esp",
-            "Blank - Master Dependent.esp",
             "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -446,6 +451,69 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blank.esm", "Blank - Master Dependent.esp"],
+        );
+
+        load_order.load().unwrap();
+        let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blank - Master Dependent.esp"];
+
+        assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_decode_active_plugins_file_from_windows_1252() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+
+        load_order.load().unwrap();
+        let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
+
+        assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_handle_crlf_and_lf_in_active_plugins_file() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
+
+        load_order.load().unwrap();
+        let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
+
+        assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_ignore_active_plugins_file_lines_starting_with_a_hash() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["#Blank.esp", "Blàñk.esp", "Blank.esm"],
+        );
+
+        load_order.load().unwrap();
+        let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
+
+        assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_ignore_plugins_in_active_plugins_file_that_are_not_installed() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+        );
+
         load_order.load().unwrap();
         let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
 
@@ -456,8 +524,6 @@ mod tests {
     fn load_should_succeed_when_load_order_and_active_plugins_files_are_missing() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        remove_file(load_order.game_settings().active_plugins_file()).unwrap();
 
         assert!(load_order.load().is_ok());
         assert_eq!(1, load_order.active_plugin_names().len());
@@ -695,7 +761,6 @@ mod tests {
 
         let expected_filenames = vec!["Skyrim.esm", "Blank - Master Dependent.esp"];
         write_load_order_file(load_order.game_settings(), &expected_filenames);
-        remove_file(load_order.game_settings().active_plugins_file()).unwrap();
 
         assert!(load_order.is_self_consistent().unwrap());
     }
@@ -704,6 +769,11 @@ mod tests {
     fn is_self_consistent_should_return_false_when_load_order_and_active_plugins_files_mismatch() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+        );
 
         let expected_filenames = vec!["Blàñk.esp", "missing.esp", "Blank.esm\r"];
         write_load_order_file(load_order.game_settings(), &expected_filenames);
@@ -715,6 +785,11 @@ mod tests {
     fn is_self_consistent_should_return_true_when_load_order_and_active_plugins_files_match() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+        );
 
         // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
         let expected_filenames = vec!["Skyrim.esm", "Blàñk.esp", "Blank.esm\r", "missing.esp"];
