@@ -74,7 +74,7 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
             }
         }
 
-        if plugin.is_master_file() {
+        if plugin.is_master_file() || plugin.is_light_master_file() {
             find_first_non_master_position(self.plugins())
         } else {
             None
@@ -244,6 +244,32 @@ mod tests {
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
+    }
+
+    #[test]
+    fn insert_position_should_return_the_first_non_master_index_if_given_a_light_master() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Blank.esl", load_order.game_settings());
+        let plugin = Plugin::new("Blank.esl", &load_order.game_settings()).unwrap();
+
+        load_order.plugins_mut().insert(1, plugin);
+
+        let position = load_order.insert_position(&load_order.plugins()[1]);
+
+        assert_eq!(2, position.unwrap());
+
+        copy_to_test_dir(
+            "Blank.esp",
+            "Blank - Different.esl",
+            load_order.game_settings(),
+        );
+        let plugin = Plugin::new("Blank - Different.esl", &load_order.game_settings()).unwrap();
+
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(2, position.unwrap());
     }
 
     #[test]
