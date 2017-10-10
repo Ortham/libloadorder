@@ -173,7 +173,6 @@ mod tests {
     use super::*;
 
     use std::fs::{File, remove_dir_all};
-    use std::io::Write;
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
     use tempdir::TempDir;
@@ -189,9 +188,18 @@ mod tests {
         }
     }
 
-    fn write_file(path: &Path) {
-        let mut file = File::create(&path).unwrap();
-        writeln!(file, "").unwrap();
+    fn prepare_bulk_plugins(game_settings: &GameSettings) -> Vec<String> {
+        let mut plugins: Vec<String> = vec![game_settings.master_file().to_string()];
+        plugins.extend((0..260).map(|i| format!("Blank{}.esm", i)));
+        plugins.extend((0..5000).map(|i| format!("Blank{}.esl", i)));
+
+        for plugin in &plugins {
+            copy_to_test_dir("Blank - Different.esm", &plugin, game_settings);
+        }
+
+        write_active_plugins_file(game_settings, &plugins);
+
+        plugins
     }
 
     #[test]
@@ -300,13 +308,13 @@ mod tests {
         let plugin_path = load_order.game_settings().plugins_directory().join(
             "Blank.esp",
         );
-        write_file(&plugin_path);
+        File::create(&plugin_path).unwrap();
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
         let plugin_path = load_order.game_settings().plugins_directory().join(
             "Blank - Different.esp",
         );
-        write_file(&plugin_path);
+        File::create(&plugin_path).unwrap();
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
         load_order.load().unwrap();
@@ -509,42 +517,18 @@ mod tests {
     }
 
     #[test]
-    fn load_should_deactivate_excess_plugins_not_including_implicitly_active_plugins() {
+    fn load_should_deactivate_excess_normal_plugins_and_light_masters_using_separate_limits() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let mut plugins: Vec<String> = Vec::new();
-        plugins.push(load_order.game_settings().master_file().to_string());
-        plugins.push("Update.esm".to_string());
-        for i in 0..260 {
-            plugins.push(format!("Blank{}.esm", i));
-            copy_to_test_dir(
-                "Blank.esm",
-                &plugins.last().unwrap(),
-                load_order.game_settings(),
-            );
-        }
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-
-        {
-            let plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
-            write_active_plugins_file(load_order.game_settings(), &plugins_as_ref);
-            set_timestamps(
-                &load_order.game_settings().plugins_directory(),
-                &plugins_as_ref,
-            );
-        }
-
-        plugins = plugins[0..255].to_vec();
+        let plugins = prepare_bulk_plugins(load_order.game_settings());
 
         load_order.load().unwrap();
         let active_plugin_names = load_order.active_plugin_names();
 
-        assert_eq!(255, active_plugin_names.len());
-        for i in 0..255 {
-            assert_eq!(plugins[i], active_plugin_names[i]);
-        }
-        assert_eq!(plugins, active_plugin_names);
+        assert_eq!(4351, active_plugin_names.len());
+        assert_eq!(plugins[..255], active_plugin_names[..255]);
+        assert_eq!(plugins[261..4357], active_plugin_names[255..]);
     }
 
     #[test]
@@ -705,5 +689,63 @@ mod tests {
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn activate_should_check_normal_plugins_and_light_masters_active_limits_separately() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let plugins = prepare_bulk_plugins(load_order.game_settings());
+
+        for i in 0..253 {
+            assert!(load_order.activate(&plugins[i]).is_ok());
+            assert!(load_order.is_active(&plugins[i]));
+        }
+
+        for i in 261..4357 {
+            assert!(load_order.activate(&plugins[i]).is_ok());
+            assert!(load_order.is_active(&plugins[i]));
+        }
+
+        let i = 253;
+        assert!(load_order.activate(&plugins[i]).is_ok());
+        assert!(load_order.is_active(&plugins[i]));
+
+        let i = 254;
+        assert!(load_order.activate(&plugins[i]).is_err());
+        assert!(!load_order.is_active(&plugins[i]));
+
+        let i = 4358;
+        assert!(load_order.activate(&plugins[i]).is_err());
+        assert!(!load_order.is_active(&plugins[i]));
+    }
+
+    #[test]
+    fn set_active_plugins_should_count_light_masters_and_normal_plugins_separately() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let plugins = prepare_bulk_plugins(load_order.game_settings());
+
+        let mut plugin_refs: Vec<&str> = plugins[..255].iter().map(AsRef::as_ref).collect();
+        plugin_refs.extend(plugins[261..4357].iter().map(|s| s.as_str()));
+
+        assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
+        assert_eq!(4351, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_error_if_given_more_than_4096_light_masters() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let plugins = prepare_bulk_plugins(load_order.game_settings());
+
+        let mut plugin_refs: Vec<&str> = plugins[..255].iter().map(AsRef::as_ref).collect();
+        plugin_refs.extend(plugins[261..4358].iter().map(|s| s.as_str()));
+
+        assert!(load_order.set_active_plugins(&plugin_refs).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
     }
 }

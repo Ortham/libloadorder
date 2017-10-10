@@ -34,7 +34,8 @@ use load_order::find_first_non_master_position;
 use load_order::readable::ReadableLoadOrder;
 use plugin::{trim_dot_ghost, Plugin};
 
-pub const MAX_ACTIVE_PLUGINS: usize = 255;
+pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
+pub const MAX_ACTIVE_LIGHT_MASTERS: usize = 4096;
 
 pub trait MutableLoadOrder: ReadableLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
@@ -60,8 +61,18 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
         Ok(self.insert(plugin))
     }
 
-    fn count_active_plugins(&self) -> usize {
-        self.plugins().iter().filter(|p| p.is_active()).count()
+    fn count_active_normal_plugins(&self) -> usize {
+        self.plugins()
+            .iter()
+            .filter(|p| !p.is_light_master_file() && p.is_active())
+            .count()
+    }
+
+    fn count_active_light_masters(&self) -> usize {
+        self.plugins()
+            .iter()
+            .filter(|p| p.is_light_master_file() && p.is_active())
+            .count()
     }
 
     fn load_plugins_if_valid(&self, filenames: Vec<String>) -> Vec<Plugin> {
@@ -145,19 +156,31 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
 
     fn deactivate_excess_plugins(&mut self) {
         let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
-        let mut count = self.count_active_plugins();
+        let mut normal_active_count = self.count_active_normal_plugins();
+        let mut light_master_active_count = self.count_active_light_masters();
 
         for plugin in self.plugins_mut().iter_mut().rev() {
-            if count <= MAX_ACTIVE_PLUGINS {
+            if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS &&
+                light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
+            {
                 break;
             }
-            if plugin.is_active() &&
+            let can_deactivate = plugin.is_active() &&
                 !implicitly_active_plugins.iter().any(
                     |i| plugin.name_matches(i),
-                )
-            {
-                plugin.deactivate();
-                count -= 1;
+                );
+            if can_deactivate {
+                if plugin.is_light_master_file() &&
+                    light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
+                {
+                    plugin.deactivate();
+                    light_master_active_count -= 1;
+                } else if !plugin.is_light_master_file() &&
+                           normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
+                {
+                    plugin.deactivate();
+                    normal_active_count -= 1;
+                }
             }
         }
     }

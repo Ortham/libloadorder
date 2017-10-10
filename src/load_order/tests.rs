@@ -17,6 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -30,7 +31,10 @@ use game_settings::GameSettings;
 use plugin::Plugin;
 use tests::copy_to_test_dir;
 
-pub fn write_load_order_file(game_settings: &GameSettings, filenames: &[&str]) {
+pub fn write_load_order_file<T: AsRef<str> + Display>(
+    game_settings: &GameSettings,
+    filenames: &[T],
+) {
     let mut file = File::create(&game_settings.load_order_file().unwrap()).unwrap();
 
     for filename in filenames {
@@ -38,7 +42,7 @@ pub fn write_load_order_file(game_settings: &GameSettings, filenames: &[&str]) {
     }
 }
 
-pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str]) {
+pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
     let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
 
     if game_settings.id() == GameId::Morrowind {
@@ -52,16 +56,18 @@ pub fn write_active_plugins_file(game_settings: &GameSettings, filenames: &[&str
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
         }
-        file.write_all(&WINDOWS_1252.encode(filename, EncoderTrap::Strict).unwrap())
+        file.write_all(&WINDOWS_1252
+            .encode(filename.as_ref(), EncoderTrap::Strict)
+            .unwrap())
             .unwrap();
         writeln!(file, "").unwrap();
     }
 }
 
-pub fn set_timestamps(plugins_directory: &Path, filenames: &[&str]) {
+pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
     for (index, filename) in filenames.iter().enumerate() {
         set_file_times(
-            &plugins_directory.join(filename),
+            &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
             FileTime::from_seconds_since_1970(index as u64, 0),
         ).unwrap();

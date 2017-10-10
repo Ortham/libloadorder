@@ -19,10 +19,10 @@
 
 use unicase::eq;
 
-use enums::Error;
-use load_order::mutable::{MAX_ACTIVE_PLUGINS, MutableLoadOrder};
+use enums::{Error, GameId};
+use load_order::mutable::{MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
-use plugin::Plugin;
+use plugin::{iends_with_ascii, Plugin};
 
 pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn load(&mut self) -> Result<(), Error>;
@@ -43,7 +43,10 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
             self.add_to_load_order(plugin_name)?;
         }
 
-        let at_max_active_plugins = self.count_active_plugins() == MAX_ACTIVE_PLUGINS;
+        let at_max_active_normal_plugins = self.count_active_normal_plugins() ==
+            MAX_ACTIVE_NORMAL_PLUGINS;
+        let at_max_active_light_masters = self.count_active_light_masters() ==
+            MAX_ACTIVE_LIGHT_MASTERS;
 
         let plugin = self.find_plugin_mut(plugin_name).ok_or(
             Error::PluginNotFound(
@@ -51,7 +54,10 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
             ),
         )?;
 
-        if !plugin.is_active() && at_max_active_plugins {
+        if !plugin.is_active() &&
+            ((!plugin.is_light_master_file() && at_max_active_normal_plugins) ||
+                 (plugin.is_light_master_file() && at_max_active_light_masters))
+        {
             Err(Error::TooManyActivePlugins)
         } else {
             plugin.activate()
@@ -69,7 +75,9 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     }
 
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
-        if active_plugin_names.len() > MAX_ACTIVE_PLUGINS {
+        if count_normal_plugins(active_plugin_names) > MAX_ACTIVE_NORMAL_PLUGINS ||
+            count_light_masters(self, active_plugin_names) > MAX_ACTIVE_LIGHT_MASTERS
+        {
             return Err(Error::TooManyActivePlugins);
         }
 
@@ -109,6 +117,28 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         Ok(())
+    }
+}
+
+fn count_normal_plugins(plugin_names: &[&str]) -> usize {
+    plugin_names
+        .iter()
+        .filter(|p| !iends_with_ascii(p, ".esl"))
+        .count()
+}
+
+fn count_light_masters<T: ReadableLoadOrder + ?Sized>(
+    load_order: &T,
+    plugin_names: &[&str],
+) -> usize {
+    match load_order.game_settings().id() {
+        GameId::Fallout4 | GameId::SkyrimSE => {
+            plugin_names
+                .iter()
+                .filter(|p| iends_with_ascii(p, ".esl"))
+                .count()
+        }
+        _ => 0,
     }
 }
 
@@ -243,7 +273,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_order.activate(&plugin).unwrap();
@@ -258,7 +288,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_order.activate(&plugin).unwrap();
