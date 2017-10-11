@@ -2,6 +2,8 @@
 
 The textfile-based load order standard was developed by Lojack (Wrye Bash), WrinklyNinja (BOSS), Kaburke (Nexus Mod Manager) and Dark0ne (owner of the Nexus sites) to serve the community's need for the ability to assign load order positions to all installed plugins in Skyrim (not the Special Edition).
 
+Unlike the other games, Skyrim (but not the Special Edition) does not define the load order of inactive plugins. The game only cares about the order of the plugins it loads, but third-party dynamnic patchers can import changes from inactive plugins, so a load order including all plugins is required to resolve any dependencies and conflicts involving inactive plugins. As such, it becomes necessary to re-implement a system that assigns a load order position to all installed plugins, hence the textfile-based load order standard.
+
 The standard dictates that:
 
 - An installed plugin is defined to be a plugin that is located at the location which the game scans to detect plugins.
