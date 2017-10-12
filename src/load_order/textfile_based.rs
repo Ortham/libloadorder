@@ -539,7 +539,7 @@ mod tests {
         for i in 0..260 {
             plugins.push(format!("Blank{}.esm", i));
             copy_to_test_dir(
-                "Blank.esm",
+                "Blank - Different.esm",
                 &plugins.last().unwrap(),
                 load_order.game_settings(),
             );
