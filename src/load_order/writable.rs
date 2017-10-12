@@ -35,25 +35,21 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn is_self_consistent(&self) -> Result<bool, Error>;
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        if self.index_of(plugin_name).is_none() {
-            if !Plugin::is_valid(plugin_name, self.game_settings()) {
-                return Err(Error::InvalidPlugin(plugin_name.to_string()));
+        let index = match self.index_of(plugin_name) {
+            Some(i) => i,
+            None => {
+                self.add_to_load_order(plugin_name).map_err(|_| {
+                    Error::InvalidPlugin(plugin_name.to_string())
+                })?
             }
-
-            self.add_to_load_order(plugin_name)?;
-        }
+        };
 
         let at_max_active_normal_plugins = self.count_active_normal_plugins() ==
             MAX_ACTIVE_NORMAL_PLUGINS;
         let at_max_active_light_masters = self.count_active_light_masters() ==
             MAX_ACTIVE_LIGHT_MASTERS;
 
-        let plugin = self.find_plugin_mut(plugin_name).ok_or(
-            Error::PluginNotFound(
-                plugin_name.to_string(),
-            ),
-        )?;
-
+        let plugin = &mut self.plugins_mut()[index];
         if !plugin.is_active() &&
             ((!plugin.is_light_master_file() && at_max_active_normal_plugins) ||
                  (plugin.is_light_master_file() && at_max_active_light_masters))
