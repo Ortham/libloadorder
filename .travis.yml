@@ -26,7 +26,7 @@ before_script:
 
 script:
   - cargo fmt --all -- --write-mode=diff
-  - cargo test --all --all-features
+  - cargo check --all --all-features
   - cargo coveralls -p libloadorder
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
