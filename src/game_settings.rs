@@ -45,6 +45,7 @@ pub struct GameSettings {
 
 const SKYRIM_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &["Skyrim.esm", "Update.esm"];
 
+// Exhaustive as of Skyrim SE v1.5.3.0.8.
 const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
     "Skyrim.esm",
     "Update.esm",
@@ -63,6 +64,7 @@ const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
     "ccQDRSSE001-SurvivalMode.esl",
 ];
 
+// Exhaustive as of Fallout 4 v1.10.26.0.0.
 const FALLOUT4_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
     "Fallout4.esm",
     "DLCRobot.esm",
