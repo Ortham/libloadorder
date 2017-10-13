@@ -17,6 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use rayon::prelude::*;
 use unicase::eq;
 
 use enums::{Error, GameId};
@@ -35,14 +36,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn is_self_consistent(&self) -> Result<bool, Error>;
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        let index = match self.index_of(plugin_name) {
-            Some(i) => i,
-            None => {
-                self.add_to_load_order(plugin_name).map_err(|_| {
-                    Error::InvalidPlugin(plugin_name.to_string())
-                })?
-            }
-        };
+        let index = find_or_add(self, plugin_name)?;
 
         let at_max_active_normal_plugins = self.count_active_normal_plugins() ==
             MAX_ACTIVE_NORMAL_PLUGINS;
@@ -77,12 +71,8 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
             return Err(Error::TooManyActivePlugins);
         }
 
-        for plugin_name in active_plugin_names {
-            if self.index_of(plugin_name).is_none() &&
-                !Plugin::is_valid(plugin_name, self.game_settings())
-            {
-                return Err(Error::InvalidPlugin(plugin_name.to_string()));
-            }
+        if let Some(n) = find_any_invalid_plugin(self, active_plugin_names) {
+            return Err(Error::InvalidPlugin(n.to_string()));
         }
 
         for plugin_name in self.game_settings().implicitly_active_plugins() {
@@ -100,16 +90,9 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         for plugin_name in active_plugin_names {
-            let plugin_exists = self.plugins_mut().iter_mut().any(
-                |p| p.name_matches(plugin_name),
-            );
-            if !plugin_exists {
-                self.add_to_load_order(plugin_name)?;
-            }
+            let index = find_or_add(self, plugin_name)?;
 
-            if let Some(p) = self.find_plugin_mut(plugin_name) {
-                p.activate()?;
-            }
+            self.plugins_mut()[index].activate()?;
         }
 
         Ok(())
@@ -135,6 +118,29 @@ fn count_light_masters<T: ReadableLoadOrder + ?Sized>(
                 .count()
         }
         _ => 0,
+    }
+}
+
+fn find_any_invalid_plugin<'a, 'b, T: WritableLoadOrder + ?Sized>(
+    load_order: &T,
+    plugin_names: &'a [&'b str],
+) -> Option<&'a &'b str> {
+    plugin_names.par_iter().find_any(|n| {
+        load_order.index_of(n).is_none() && !Plugin::is_valid(n, load_order.game_settings())
+    })
+}
+
+fn find_or_add<T: WritableLoadOrder + ?Sized>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<usize, Error> {
+    match load_order.index_of(plugin_name) {
+        Some(i) => Ok(i),
+        None => {
+            load_order.add_to_load_order(plugin_name).map_err(|_| {
+                Error::InvalidPlugin(plugin_name.to_string())
+            })
+        }
     }
 }
 
