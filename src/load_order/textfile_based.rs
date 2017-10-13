@@ -31,7 +31,6 @@ use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::mutable::load_active_plugins;
 use load_order::mutable::plugin_line_mapper;
 use load_order::mutable::read_plugin_names;
-use load_order::mutable::replace_plugins;
 use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
@@ -120,7 +119,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             return Err(Error::GameMasterMustLoadFirst);
         }
 
-        replace_plugins(self, plugin_names)
+        self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {

@@ -37,7 +37,7 @@ use plugin::{trim_dot_ghost, Plugin};
 pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
 pub const MAX_ACTIVE_LIGHT_MASTERS: usize = 4096;
 
-pub trait MutableLoadOrder: ReadableLoadOrder {
+pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
@@ -218,25 +218,35 @@ pub trait MutableLoadOrder: ReadableLoadOrder {
             plugin.deactivate();
         }
     }
-}
 
-pub fn replace_plugins<T>(load_order: &mut T, plugin_names: &[&str]) -> Result<(), Error>
-where
-    T: MutableLoadOrder + Sync,
-{
-    validate_plugin_names(plugin_names, load_order.game_settings())?;
+    fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
+        validate_plugin_names(plugin_names, self.game_settings())?;
 
-    let mut plugins = map_to_plugins(load_order, plugin_names)?;
+        let mut plugins = map_to_plugins(self, plugin_names)?;
 
-    if !is_partitioned_by_master_flag(&plugins) {
-        return Err(Error::NonMasterBeforeMaster);
+        if !is_partitioned_by_master_flag(&plugins) {
+            return Err(Error::NonMasterBeforeMaster);
+        }
+
+        mem::swap(&mut plugins, self.plugins_mut());
+
+        self.add_missing_plugins();
+
+        self.add_implicitly_active_plugins()
     }
 
-    mem::swap(&mut plugins, load_order.plugins_mut());
+    fn add_missing_plugins(&mut self) {
+        let filenames: Vec<String> = self.find_plugins_in_dir_sorted()
+            .into_par_iter()
+            .filter(|f| {
+                !self.game_settings().is_implicitly_active(f) && self.index_of(f).is_none()
+            })
+            .collect();
 
-    add_missing_plugins(load_order);
-
-    load_order.add_implicitly_active_plugins()
+        for plugin in self.load_plugins_if_valid(filenames) {
+            self.insert(plugin);
+        }
+    }
 }
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
@@ -290,23 +300,6 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
         None
     } else {
         Some(line.to_owned())
-    }
-}
-
-fn add_missing_plugins<T>(load_order: &mut T)
-where
-    T: MutableLoadOrder + Sync,
-{
-    let filenames: Vec<String> = load_order
-        .find_plugins_in_dir_sorted()
-        .into_par_iter()
-        .filter(|f| {
-            !load_order.game_settings().is_implicitly_active(f) && load_order.index_of(f).is_none()
-        })
-        .collect();
-
-    for plugin in load_order.load_plugins_if_valid(filenames) {
-        load_order.insert(plugin);
     }
 }
 

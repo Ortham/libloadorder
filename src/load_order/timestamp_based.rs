@@ -31,7 +31,7 @@ use enums::{Error, GameId};
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{load_active_plugins, MutableLoadOrder, replace_plugins};
+use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -115,7 +115,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        replace_plugins(self, plugin_names)
+        self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
