@@ -358,11 +358,8 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 
         Ok(load_order.plugins_mut().remove(p))
     } else {
-        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
-            return Err(Error::InvalidPlugin(plugin_name.to_string()));
-        }
-
-        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
+        let plugin = Plugin::new(plugin_name, load_order.game_settings())
+            .map_err(|_| Error::InvalidPlugin(plugin_name.to_string()))?;
 
         validate_index(load_order, insert_position, plugin.is_master_file())?;
 
