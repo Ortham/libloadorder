@@ -698,25 +698,24 @@ mod tests {
 
         let plugins = prepare_bulk_plugins(load_order.game_settings());
 
-        for i in 0..253 {
-            assert!(load_order.activate(&plugins[i]).is_ok());
-            assert!(load_order.is_active(&plugins[i]));
-        }
+        let mut plugin_refs: Vec<&str> = plugins[..254].iter().map(AsRef::as_ref).collect();
+        plugin_refs.extend(plugins[261..4356].iter().map(|s| s.as_str()));
 
-        for i in 261..4357 {
-            assert!(load_order.activate(&plugins[i]).is_ok());
-            assert!(load_order.is_active(&plugins[i]));
-        }
+        assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
 
-        let i = 253;
+        let i = 4356;
         assert!(load_order.activate(&plugins[i]).is_ok());
         assert!(load_order.is_active(&plugins[i]));
 
         let i = 254;
+        assert!(load_order.activate(&plugins[i]).is_ok());
+        assert!(load_order.is_active(&plugins[i]));
+
+        let i = 256;
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
 
-        let i = 4358;
+        let i = 4357;
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
     }
