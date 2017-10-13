@@ -9,9 +9,6 @@ addons:
       - libelf-dev
       - libdw-dev
       - binutils-dev
-      - cmake
-    sources:
-      - kalakris-cmake
 
 cache: cargo
 
