@@ -12,3 +12,5 @@ Libloadorder is a free software library for manipulating the load order and acti
 * Fallout 3
 * Fallout: New Vegas
 * Fallout 4
+
+This repository hosts two Rust crates: `libloadorder` is the Rust implementation, and `libloadorder-ffi` is the C FFI that wraps it. The `doc` directory also hosts an mdbook that provides a general introduction to load orders.
