@@ -22,22 +22,6 @@ use libc::c_uint;
 use loadorder::GameId;
 use loadorder::LoadOrderMethod;
 
-// Old return codes that have since been removed/replaced:
-//
-// LIBLO_WARN_BAD_FILENAME = 1
-//      Folded into LIBLO_ERROR_TEXT_ENCODE_FAIL
-// LIBLO_ERROR_FILE_READ_FAIL = 3
-//      Folded into LIBLO_ERROR_IO_ERROR
-// LIBLO_ERROR_FILE_WRITE_FAIL = 4
-//      Split into LIBLO_ERROR_IO_ERROR, LIBLO_ERROR_IO_PERMISSION_DENIED and
-//      LIBLO_ERROR_TEXT_DECODE_FAIL
-// LIBLO_ERROR_TIMESTAMP_READ_FAIL = 8
-//      Folded into LIBLO_ERROR_IO_ERROR
-// LIBLO_ERROR_NO_MEM = 11
-//      No replacement, Rust panics on memory allocation failure
-// LIBLO_WARN_INVALID_LIST = 13
-//      No replacement, was unused for many releases
-
 /// Success return code.
 #[no_mangle]
 pub static LIBLO_OK: c_uint = 0;

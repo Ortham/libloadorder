@@ -43,14 +43,11 @@ fn map_io_error(err: &io::Error) -> c_uint {
     match err.kind() {
         NotFound => LIBLO_ERROR_FILE_NOT_FOUND,
         AlreadyExists => LIBLO_ERROR_FILE_RENAME_FAIL,
-        // Could be a read, but less likely.
         PermissionDenied => LIBLO_ERROR_IO_PERMISSION_DENIED,
         _ => LIBLO_ERROR_IO_ERROR,
     }
 }
 
-// This function has pretty lossy semantics, due to the delta
-// between the C++ library's error handling and the Rust library's.
 fn map_error(err: &Error) -> c_uint {
     use Error::*;
     match err {
