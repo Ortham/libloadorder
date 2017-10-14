@@ -6,7 +6,7 @@ build = "build.rs"
 
 [dependencies]
 libloadorder = { version = "10.0.0", path = ".." }
-libc = "*"
+libc = "0.2"
 
 [lib]
 name = "loadorder_ffi"
