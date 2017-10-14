@@ -3,6 +3,17 @@ name = "libloadorder-ffi"
 version = "10.0.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 build = "build.rs"
+description = "A wrapper library providing a C FFI for libloadorder."
+documentation = "https://docs.rs/libloadorder-ffi"
+repository = "https://github.com/WrinklyNinja/libloadorder.git"
+readme = "../README.md"
+categories = ["games"]
+license = "GPL-3.0"
+exclude = [
+    "build/*",
+    "include/*",
+    "target/*",
+]
 
 [dependencies]
 libloadorder = { version = "10.0.0", path = ".." }
