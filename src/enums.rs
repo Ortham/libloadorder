@@ -33,14 +33,14 @@ use regex;
 #[cfg(windows)]
 use app_dirs;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum LoadOrderMethod {
     Timestamp,
     Textfile,
     Asterisk,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum GameId {
     Morrowind = 1,
     Oblivion,

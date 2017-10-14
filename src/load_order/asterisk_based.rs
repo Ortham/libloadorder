@@ -31,6 +31,7 @@ use load_order::mutable::{MutableLoadOrder, read_plugin_names};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
+#[derive(Clone, Debug)]
 pub struct AsteriskBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,

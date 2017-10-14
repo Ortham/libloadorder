@@ -35,6 +35,7 @@ use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
+#[derive(Clone, Debug)]
 pub struct TextfileBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,

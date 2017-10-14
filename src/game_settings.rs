@@ -35,7 +35,7 @@ use load_order::AsteriskBasedLoadOrder;
 use load_order::TextfileBasedLoadOrder;
 use load_order::TimestampBasedLoadOrder;
 
-#[derive(Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
     id: GameId,
     game_path: PathBuf,
