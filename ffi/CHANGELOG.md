@@ -1,6 +1,12 @@
 # Changelog
 
-## [10.0.0] - Unreleased
+## [10.0.1] - 2017-10-27
+
+### Changed
+
+- Improved performance of setting and saving load order.
+
+## [10.0.0] - 2017-10-14
 
 ### Added
 
