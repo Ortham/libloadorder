@@ -27,9 +27,9 @@ use enums::{Error, GameId};
 use game_settings::GameSettings;
 use ghostable_path::GhostablePath;
 
-const VALID_EXTENSIONS: &'static [&'static str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
+const VALID_EXTENSIONS: &[&str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
 
-const VALID_EXTENSIONS_WITH_ESL: &'static [&'static str] = &[
+const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
     ".esp",
     ".esm",
     ".esp.ghost",

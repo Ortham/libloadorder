@@ -35,6 +35,8 @@ use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
+const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
+
 #[derive(Clone, Debug)]
 pub struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
@@ -188,13 +190,12 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
         let input = File::open(game_settings.active_plugins_file())?;
         let buffered = BufReader::new(input);
 
-        let game_files_header: &'static [u8] = b"[Game Files]";
         for line in buffered.split(b'\n') {
             let line = line?;
             prelude.append(&mut line.clone());
             prelude.push(b'\n');
 
-            if line.starts_with(game_files_header) {
+            if line.starts_with(GAME_FILES_HEADER) {
                 break;
             }
         }

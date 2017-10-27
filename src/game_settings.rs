@@ -43,10 +43,10 @@ pub struct GameSettings {
     load_order_path: Option<PathBuf>,
 }
 
-const SKYRIM_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &["Skyrim.esm", "Update.esm"];
+const SKYRIM_IMPLICITLY_ACTIVE_PLUGINS: &[&str] = &["Skyrim.esm", "Update.esm"];
 
 // Exhaustive as of Skyrim SE v1.5.3.0.8.
-const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
+const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &[&str] = &[
     "Skyrim.esm",
     "Update.esm",
     "Dawnguard.esm",
@@ -65,7 +65,7 @@ const SKYRIMSE_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
 ];
 
 // Exhaustive as of Fallout 4 v1.10.26.0.0.
-const FALLOUT4_IMPLICITLY_ACTIVE_PLUGINS: &'static [&'static str] = &[
+const FALLOUT4_IMPLICITLY_ACTIVE_PLUGINS: &[&str] = &[
     "Fallout4.esm",
     "DLCRobot.esm",
     "DLCworkshop01.esm",
@@ -196,7 +196,7 @@ impl GameSettings {
     }
 }
 
-fn appdata_folder_name(game_id: &GameId) -> Option<&'static str> {
+fn appdata_folder_name(game_id: &GameId) -> Option<&str> {
     use enums::GameId::*;
     match *game_id {
         Morrowind => None,
