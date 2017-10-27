@@ -1,5 +1,13 @@
 # Changelog
 
+## [10.0.2] - 2017-10-27
+
+### Fixed
+
+- Ghosted plugins being written to `plugins.txt` with their `.ghost` file
+  extension, when saving a Fallout 4 or Skyrim Special Edition load order. This
+  was broken in v10.0.1.
+
 ## [10.0.1] - 2017-10-27
 
 ### Changed
