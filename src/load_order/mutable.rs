@@ -220,9 +220,14 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        validate_plugin_names(plugin_names, self.game_settings())?;
+        if !are_plugin_names_unique(plugin_names) {
+            return Err(Error::DuplicatePlugin);
+        }
 
-        let mut plugins = map_to_plugins(self, plugin_names)?;
+        let mut plugins = match map_to_plugins(self, plugin_names) {
+            Err(x) => return Err(Error::InvalidPlugin(x.to_string())),
+            Ok(x) => x,
+        };
 
         if !is_partitioned_by_master_flag(&plugins) {
             return Err(Error::NonMasterBeforeMaster);
@@ -367,22 +372,11 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     }
 }
 
-fn validate_plugin_names(plugin_names: &[&str], game_settings: &GameSettings) -> Result<(), Error> {
+fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
     let unique_plugin_names: HashSet<String> =
-        plugin_names.iter().map(|s| s.to_lowercase()).collect();
+        plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
 
-    if unique_plugin_names.len() != plugin_names.len() {
-        return Err(Error::DuplicatePlugin);
-    }
-
-    let invalid_plugin = plugin_names.iter().find(
-        |p| !Plugin::is_valid(p, game_settings),
-    );
-
-    match invalid_plugin {
-        Some(x) => Err(Error::InvalidPlugin(x.to_string())),
-        None => Ok(()),
-    }
+    unique_plugin_names.len() == plugin_names.len()
 }
 
 fn to_plugin(
@@ -390,9 +384,11 @@ fn to_plugin(
     existing_plugins: &[Plugin],
     game_settings: &GameSettings,
 ) -> Result<Plugin, Error> {
-    match existing_plugins.iter().find(
+    let existing_plugin = existing_plugins.par_iter().find_any(
         |p| p.name_matches(plugin_name),
-    ) {
+    );
+
+    match existing_plugin {
         None => Ok(Plugin::new(plugin_name, game_settings)?),
         Some(x) => Ok(x.clone()),
     }
