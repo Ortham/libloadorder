@@ -109,7 +109,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         for plugin in self.plugins() {
-            let name = match plugin.name() {
+            let name = match plugin.unghosted_name() {
                 Some(x) => x,
                 None => continue,
             };
@@ -180,6 +180,8 @@ mod tests {
     use super::*;
 
     use std::fs::{File, remove_dir_all};
+    use std::io;
+    use std::io::{BufRead, BufReader};
     use std::path::Path;
     use filetime::{FileTime, set_file_times};
     use tempdir::TempDir;
@@ -604,6 +606,36 @@ mod tests {
         assert_eq!(
             vec!["Skyrim.esm", "Blank.esp"],
             load_order.active_plugin_names()
+        );
+    }
+
+    #[test]
+    fn save_should_write_unghosted_plugin_names() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "ghosted.esm.ghost",
+            &load_order.game_settings(),
+        );
+        let plugin = Plugin::new("ghosted.esm.ghost", &load_order.game_settings()).unwrap();
+        load_order.plugins_mut().push(plugin);
+
+        load_order.save().unwrap();
+
+        let reader = BufReader::new(
+            File::open(load_order.game_settings().active_plugins_file()).unwrap(),
+        );
+
+        let lines = reader
+            .lines()
+            .collect::<Result<Vec<String>, io::Error>>()
+            .unwrap();
+
+        assert_eq!(
+            vec!["*Blank.esp", "Blank - Different.esp", "ghosted.esm"],
+            lines
         );
     }
 
