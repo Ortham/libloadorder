@@ -19,7 +19,7 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Write};
+use std::io::{BufReader, BufRead, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use encoding::{Encoding, EncoderTrap};
@@ -169,16 +169,17 @@ fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Er
 
     let prelude = get_file_prelude(load_order.game_settings())?;
 
-    let mut file = File::create(&load_order.game_settings().active_plugins_file())?;
-    file.write_all(&prelude)?;
+    let file = File::create(&load_order.game_settings().active_plugins_file())?;
+    let mut writer = BufWriter::new(file);
+    writer.write_all(&prelude)?;
     for (index, plugin_name) in load_order.active_plugin_names().iter().enumerate() {
         if load_order.game_settings().id() == GameId::Morrowind {
-            write!(file, "GameFile{}=", index)?;
+            write!(writer, "GameFile{}=", index)?;
         }
-        file.write_all(&WINDOWS_1252
+        writer.write_all(&WINDOWS_1252
             .encode(plugin_name, EncoderTrap::Strict)
             .map_err(Error::EncodeError)?)?;
-        writeln!(file, "")?;
+        writeln!(writer, "")?;
     }
 
     Ok(())

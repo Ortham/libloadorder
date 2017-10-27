@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 use encoding::{Encoding, EncoderTrap};
@@ -186,9 +186,10 @@ impl TextfileBasedLoadOrder {
         if let Some(file_path) = self.game_settings().load_order_file() {
             create_parent_dirs(file_path)?;
 
-            let mut file = File::create(file_path)?;
+            let file = File::create(file_path)?;
+            let mut writer = BufWriter::new(file);
             for plugin_name in self.plugin_names() {
-                writeln!(file, "{}", plugin_name)?;
+                writeln!(writer, "{}", plugin_name)?;
             }
         }
         Ok(())
@@ -197,12 +198,13 @@ impl TextfileBasedLoadOrder {
     fn save_active_plugins(&self) -> Result<(), Error> {
         create_parent_dirs(self.game_settings().active_plugins_file())?;
 
-        let mut file = File::create(self.game_settings().active_plugins_file())?;
+        let file = File::create(self.game_settings().active_plugins_file())?;
+        let mut writer = BufWriter::new(file);
         for plugin_name in self.active_plugin_names() {
-            file.write_all(&WINDOWS_1252
+            writer.write_all(&WINDOWS_1252
                 .encode(&plugin_name, EncoderTrap::Strict)
                 .map_err(Error::EncodeError)?)?;
-            writeln!(file, "")?;
+            writeln!(writer, "")?;
         }
 
         Ok(())

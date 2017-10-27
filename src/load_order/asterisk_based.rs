@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufWriter, Write};
 
 use encoding::{Encoding, EncoderTrap};
 use encoding::all::WINDOWS_1252;
@@ -106,19 +106,25 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     fn save(&mut self) -> Result<(), Error> {
         create_parent_dirs(self.game_settings().active_plugins_file())?;
 
-        let mut file = File::create(self.game_settings().active_plugins_file())?;
-        for plugin_name in self.plugin_names() {
-            if self.game_settings().is_implicitly_active(&plugin_name) {
+        let file = File::create(self.game_settings().active_plugins_file())?;
+        let mut writer = BufWriter::new(file);
+        for plugin in self.plugins() {
+            let name = match plugin.name() {
+                Some(x) => x,
+                None => continue,
+            };
+
+            if self.game_settings().is_implicitly_active(&name) {
                 continue;
             }
 
-            if self.is_active(&plugin_name) {
-                write!(file, "*")?;
+            if plugin.is_active() {
+                write!(writer, "*")?;
             }
-            file.write_all(&WINDOWS_1252
-                .encode(&plugin_name, EncoderTrap::Strict)
+            writer.write_all(&WINDOWS_1252
+                .encode(&name, EncoderTrap::Strict)
                 .map_err(Error::EncodeError)?)?;
-            writeln!(file, "")?;
+            writeln!(writer, "")?;
         }
 
         Ok(())
