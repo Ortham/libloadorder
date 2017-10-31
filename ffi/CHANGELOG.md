@@ -1,5 +1,12 @@
 # Changelog
 
+## [10.0.3] - 2017-10-31
+
+### Fixed
+
+- Panic that could occur when loading state and implicitly-active plugins were
+  not loaded in the order they appear in the load order.
+
 ## [10.0.2] - 2017-10-27
 
 ### Fixed
