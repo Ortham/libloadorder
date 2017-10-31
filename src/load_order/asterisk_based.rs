@@ -60,16 +60,18 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if let Some(name) = plugin.name() {
             if self.game_settings().is_implicitly_active(&name) {
-                let mut installed_plugin_count = 0;
+                if self.plugins().is_empty() {
+                    return None;
+                }
+
+                let mut loaded_plugin_count = 0;
                 for plugin_name in self.game_settings().implicitly_active_plugins() {
                     if eq(name.as_str(), plugin_name) {
-                        return Some(installed_plugin_count);
+                        return Some(loaded_plugin_count);
                     }
 
-                    if self.index_of(plugin_name).is_some() ||
-                        Plugin::is_valid(plugin_name, self.game_settings())
-                    {
-                        installed_plugin_count += 1;
+                    if self.index_of(plugin_name).is_some() {
+                        loaded_plugin_count += 1;
                     }
                 }
             }
@@ -212,6 +214,19 @@ mod tests {
     }
 
     #[test]
+    fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        load_order.plugins_mut().clear();
+
+        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert!(position.is_none());
+    }
+
+    #[test]
     fn insert_position_should_return_the_hardcoded_index_of_an_implicitly_active_plugin() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -219,6 +234,19 @@ mod tests {
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
         load_order.plugins_mut().insert(1, plugin);
 
+        copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());
+        let plugin = Plugin::new("Hearthfires.esm", &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(1, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_not_count_installed_unloaded_implicitly_active_plugins() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
         copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());
         let plugin = Plugin::new("Hearthfires.esm", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);

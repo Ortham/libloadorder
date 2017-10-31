@@ -68,7 +68,11 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
             .unwrap_or(false);
 
         if is_game_master {
-            Some(0)
+            if self.plugins.is_empty() {
+                None
+            } else {
+                Some(0)
+            }
         } else if plugin.is_master_file() {
             find_first_non_master_position(self.plugins())
         } else {
@@ -274,6 +278,19 @@ mod tests {
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(0, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        load_order.plugins_mut().clear();
+
+        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert!(position.is_none());
     }
 
     #[test]
