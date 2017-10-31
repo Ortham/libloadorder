@@ -35,43 +35,43 @@ void test_lo_get_version() {
 
 void test_lo_get_error_message() {
   printf("testing lo_get_error_message()...\n");
-  const char * message = NULL;
+  const char * message = nullptr;
   unsigned int return_code = lo_get_error_message(&message);
 
   assert(return_code == 0);
-  assert(message == NULL);
+  assert(message == nullptr);
 
-  message = NULL;
-  return_code = lo_get_version(NULL, NULL, NULL);
+  message = nullptr;
+  return_code = lo_get_version(nullptr, nullptr, nullptr);
   assert(return_code == LIBLO_ERROR_INVALID_ARGS);
 
   return_code = lo_get_error_message(&message);
   assert(return_code == 0);
-  assert(message != NULL);
+  assert(message != nullptr);
   assert(strcmp(message, "Null pointer(s) passed") == 0);
 }
 
 void test_lo_free_string() {
   printf("testing lo_free_string()...\n");
-  char * plugin = NULL;
+  char * plugin = nullptr;
   lo_free_string(plugin);
 }
 
 void test_lo_free_string_array() {
   printf("testing lo_free_string_array()...\n");
-  char ** plugins = NULL;
+  char ** plugins = nullptr;
   lo_free_string_array(plugins, 0);
 }
 
 lo_game_handle create_handle() {
-  lo_game_handle handle = NULL;
+  lo_game_handle handle = nullptr;
   unsigned int return_code = lo_create_handle(&handle,
     LIBLO_GAME_TES4,
     "../../testing-plugins/Oblivion",
     "../../testing-plugins/Oblivion");
 
   assert(return_code == 0);
-  assert(handle != NULL);
+  assert(handle != nullptr);
 
   return_code = lo_load_current_state(handle);
   assert(return_code == 0);
@@ -110,7 +110,7 @@ void test_lo_get_active_plugins() {
   printf("testing lo_fix_plugin_list()...\n");
   lo_game_handle handle = create_handle();
 
-  char ** plugins = NULL;
+  char ** plugins = nullptr;
   size_t num_plugins = 0;
   unsigned int return_code = lo_get_active_plugins(handle, &plugins, &num_plugins);
 
@@ -178,7 +178,7 @@ void test_lo_get_load_order() {
   printf("testing lo_get_load_order()...\n");
   lo_game_handle handle = create_handle();
 
-  char ** plugins = NULL;
+  char ** plugins = nullptr;
   size_t num_plugins = 0;
   unsigned int return_code = lo_get_load_order(handle, &plugins, &num_plugins);
 
@@ -216,7 +216,7 @@ void test_lo_get_indexed_plugin() {
   printf("testing lo_get_indexed_plugin()...\n");
   lo_game_handle handle = create_handle();
 
-  char * plugin = NULL;
+  char * plugin = nullptr;
   unsigned int return_code = lo_get_indexed_plugin(handle, 0, &plugin);
 
   assert(return_code == 0);
