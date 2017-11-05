@@ -83,14 +83,19 @@ pub static LIBLO_ERROR_TEXT_ENCODE_FAIL: c_uint = 17;
 pub static LIBLO_ERROR_TEXT_DECODE_FAIL: c_uint = 18;
 
 /// The library encountered an error that should not have been possible to encounter.
+#[no_mangle]
 pub static LIBLO_ERROR_INTERNAL_LOGIC_ERROR: c_uint = 19;
+
+/// Something panicked.
+#[no_mangle]
+pub static ESP_ERROR_PANICKED: c_uint = 20;
 
 /// Matches the value of the highest-numbered return code.
 ///
 /// Provided in case clients wish to incorporate additional return codes in their implementation
 /// and desire some method of avoiding value conflicts.
 #[no_mangle]
-pub static LIBLO_RETURN_MAX: c_uint = 19;
+pub static LIBLO_RETURN_MAX: c_uint = 20;
 
 /// The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3
 /// and Fallout: New Vegas all use this system.

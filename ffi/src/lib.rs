@@ -115,6 +115,7 @@ extern crate libc;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::io;
+use std::panic::catch_unwind;
 use std::ptr;
 use libc::{c_char, c_uint, size_t};
 use loadorder::Error;
@@ -145,7 +146,9 @@ pub unsafe extern "C" fn lo_get_version(
     minor: *mut c_uint,
     patch: *mut c_uint,
 ) -> c_uint {
-    if major.is_null() || minor.is_null() || patch.is_null() {
+    catch_unwind(|| if major.is_null() || minor.is_null() ||
+        patch.is_null()
+    {
         error(LIBLO_ERROR_INVALID_ARGS, "Null pointer(s) passed")
     } else {
         match env!("CARGO_PKG_VERSION_MAJOR").parse::<c_uint>() {
@@ -177,7 +180,7 @@ pub unsafe extern "C" fn lo_get_version(
         }
 
         LIBLO_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Get the message for the last error or warning encountered.
@@ -189,7 +192,7 @@ pub unsafe extern "C" fn lo_get_version(
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_uint {
-    if message.is_null() {
+    catch_unwind(|| if message.is_null() {
         error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed")
     } else {
         ERROR_MESSAGE.with(|f| if f.borrow().as_bytes().is_empty() {
@@ -199,7 +202,7 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
         });
 
         LIBLO_OK
-    }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Free memory allocated to string output.

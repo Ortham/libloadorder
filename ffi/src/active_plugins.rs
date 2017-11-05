@@ -18,6 +18,7 @@
  */
 
 use std::error::Error;
+use std::panic::catch_unwind;
 use std::ptr;
 use libc::{c_char, size_t, c_uint};
 
@@ -37,32 +38,34 @@ pub unsafe extern "C" fn lo_get_active_plugins(
     plugins: *mut *mut *mut c_char,
     num_plugins: *mut size_t,
 ) -> c_uint {
-    if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
-
-    *plugins = ptr::null_mut();
-    *num_plugins = 0;
-
-    let active_plugins = handle.active_plugin_names();
-
-    if active_plugins.is_empty() {
-        return LIBLO_OK;
-    }
-
-    match to_c_string_array(active_plugins) {
-        Ok((pointer, size)) => {
-            *plugins = pointer;
-            *num_plugins = size;
+    catch_unwind(|| {
+        if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
-        Err(x) => return error(x, "A filename contained a null byte"),
-    }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    LIBLO_OK
+        *plugins = ptr::null_mut();
+        *num_plugins = 0;
+
+        let active_plugins = handle.active_plugin_names();
+
+        if active_plugins.is_empty() {
+            return LIBLO_OK;
+        }
+
+        match to_c_string_array(active_plugins) {
+            Ok((pointer, size)) => {
+                *plugins = pointer;
+                *num_plugins = size;
+            }
+            Err(x) => return error(x, "A filename contained a null byte"),
+        }
+
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Sets the list of currently active plugins.
@@ -79,29 +82,31 @@ pub unsafe extern "C" fn lo_set_active_plugins(
     plugins: *const *const c_char,
     num_plugins: size_t,
 ) -> c_uint {
-    if handle.is_null() || plugins.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugins.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugins: Vec<&str> = match to_str_vec(plugins, num_plugins) {
-        Ok(x) => x,
-        Err(x) => return error(x, "A filename contained a null byte"),
-    };
+        let plugins: Vec<&str> = match to_str_vec(plugins, num_plugins) {
+            Ok(x) => x,
+            Err(x) => return error(x, "A filename contained a null byte"),
+        };
 
-    if let Err(x) = handle.set_active_plugins(&plugins) {
-        return handle_error(x);
-    }
+        if let Err(x) = handle.set_active_plugins(&plugins) {
+            return handle_error(x);
+        }
 
-    if let Err(x) = handle.save() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.save() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Activates or deactivates a given plugin.
@@ -120,35 +125,37 @@ pub unsafe extern "C" fn lo_set_plugin_active(
     plugin: *const c_char,
     active: bool,
 ) -> c_uint {
-    if handle.is_null() || plugin.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugin.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugin = match to_str(plugin) {
-        Ok(x) => x,
-        Err(x) => return error(x, "The filename contained a null byte"),
-    };
+        let plugin = match to_str(plugin) {
+            Ok(x) => x,
+            Err(x) => return error(x, "The filename contained a null byte"),
+        };
 
-    let result = if active {
-        handle.activate(plugin)
-    } else {
-        handle.deactivate(plugin)
-    };
+        let result = if active {
+            handle.activate(plugin)
+        } else {
+            handle.deactivate(plugin)
+        };
 
-    if let Err(x) = result {
-        return handle_error(x);
-    }
+        if let Err(x) = result {
+            return handle_error(x);
+        }
 
-    if let Err(x) = handle.save() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.save() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Checks if a given plugin is active.
@@ -162,20 +169,22 @@ pub unsafe extern "C" fn lo_get_plugin_active(
     plugin: *const c_char,
     result: *mut bool,
 ) -> c_uint {
-    if handle.is_null() || plugin.is_null() || result.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugin.is_null() || result.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugin = match to_str(plugin) {
-        Ok(x) => x,
-        Err(x) => return error(x, "The filename contained a null byte"),
-    };
+        let plugin = match to_str(plugin) {
+            Ok(x) => x,
+            Err(x) => return error(x, "The filename contained a null byte"),
+        };
 
-    *result = handle.is_active(plugin);
+        *result = handle.is_active(plugin);
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }

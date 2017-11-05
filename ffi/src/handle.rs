@@ -20,12 +20,12 @@ extern crate loadorder;
 extern crate libc;
 
 use std::error::Error;
+use std::panic::catch_unwind;
 use std::path::Path;
 use std::sync::RwLock;
 use libc::{c_char, c_uint};
 use loadorder::GameId;
 use loadorder::GameSettings;
-use loadorder::LoadOrderMethod;
 use loadorder::WritableLoadOrder;
 
 use constants::*;
@@ -75,72 +75,74 @@ pub unsafe extern "C" fn lo_create_handle(
     game_path: *const c_char,
     local_path: *const c_char,
 ) -> c_uint {
-    if handle.is_null() || game_path.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer(s) passed");
-    }
-
-    let game_id = match map_game_id(game_id) {
-        Ok(x) => x,
-        Err(x) => return error(x, "Invalid game specified"),
-    };
-
-    let game_path = match to_str(game_path) {
-        Ok(x) => Path::new(x),
-        Err(x) => return x,
-    };
-
-    if !game_path.is_dir() {
-        return error(
-            LIBLO_ERROR_INVALID_ARGS,
-            &format!(
-                "Given game path \"{:?}\" is not a valid directory",
-                game_path
-            ),
-        );
-    }
-
-    let load_order: Box<WritableLoadOrder>;
-    if local_path.is_null() {
-        #[cfg(not(windows))]
-        return error(
-            LIBLO_ERROR_INVALID_ARGS,
-            "A local data path must be supplied on non-Windows platforms",
-        );
-
-        #[cfg(windows)]
-        match GameSettings::new(game_id, game_path) {
-            Ok(x) => load_order = x.into_load_order(),
-            Err(x) => return handle_error(x),
+    catch_unwind(|| {
+        if handle.is_null() || game_path.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer(s) passed");
         }
-    } else {
-        let local_path = match to_str(local_path) {
+
+        let game_id = match map_game_id(game_id) {
+            Ok(x) => x,
+            Err(x) => return error(x, "Invalid game specified"),
+        };
+
+        let game_path = match to_str(game_path) {
             Ok(x) => Path::new(x),
             Err(x) => return x,
         };
 
-        if !local_path.is_dir() {
+        if !game_path.is_dir() {
             return error(
                 LIBLO_ERROR_INVALID_ARGS,
                 &format!(
-                    "Given local data path \"{:?}\" is not a valid directory",
-                    local_path
+                    "Given game path \"{:?}\" is not a valid directory",
+                    game_path
                 ),
             );
         }
 
-        load_order = GameSettings::with_local_path(game_id, game_path, local_path)
-            .into_load_order();
-    }
+        let load_order: Box<WritableLoadOrder>;
+        if local_path.is_null() {
+            #[cfg(not(windows))]
+            return error(
+                LIBLO_ERROR_INVALID_ARGS,
+                "A local data path must be supplied on non-Windows platforms",
+            );
 
-    let is_self_consistent = load_order.is_self_consistent();
+            #[cfg(windows)]
+            match GameSettings::new(game_id, game_path) {
+                Ok(x) => load_order = x.into_load_order(),
+                Err(x) => return handle_error(x),
+            }
+        } else {
+            let local_path = match to_str(local_path) {
+                Ok(x) => Path::new(x),
+                Err(x) => return x,
+            };
 
-    *handle = Box::into_raw(Box::new(Box::new(RwLock::new(load_order))));
+            if !local_path.is_dir() {
+                return error(
+                    LIBLO_ERROR_INVALID_ARGS,
+                    &format!(
+                        "Given local data path \"{:?}\" is not a valid directory",
+                        local_path
+                    ),
+                );
+            }
 
-    match is_self_consistent {
-        Ok(true) => LIBLO_OK,
-        Ok(false) => LIBLO_WARN_LO_MISMATCH,
-        Err(x) => handle_error(x),
-    }
+            load_order = GameSettings::with_local_path(game_id, game_path, local_path)
+                .into_load_order();
+        }
+
+        let is_self_consistent = load_order.is_self_consistent();
+
+        *handle = Box::into_raw(Box::new(Box::new(RwLock::new(load_order))));
+
+        match is_self_consistent {
+            Ok(true) => LIBLO_OK,
+            Ok(false) => LIBLO_WARN_LO_MISMATCH,
+            Err(x) => handle_error(x),
+        }
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Destroy an existing game handle.
@@ -160,20 +162,22 @@ pub unsafe extern "C" fn lo_destroy_handle(handle: lo_game_handle) {
 /// changes, so that cached state is updated to reflect the changes.
 #[no_mangle]
 pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint {
-    if handle.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.load() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Fix up the text file(s) used by the load order and active plugins systems.
@@ -195,23 +199,25 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
-    if handle.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    if let Err(x) = handle.load() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.load() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    if let Err(x) = handle.save() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.save() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }

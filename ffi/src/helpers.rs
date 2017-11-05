@@ -78,13 +78,13 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
 
     let rust_c_string = CStr::from_ptr(c_string);
 
-    Ok(rust_c_string.to_str().map_err(|e| {
+    Ok(rust_c_string.to_str().map_err(|_| {
         error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed")
     })?)
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    let c_string_name = CString::new(string.to_string()).map_err(|e| {
+    let c_string_name = CString::new(string.to_string()).map_err(|_| {
         LIBLO_ERROR_TEXT_ENCODE_FAIL
     })?;
 

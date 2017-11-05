@@ -18,6 +18,7 @@
  */
 
 use std::error::Error;
+use std::panic::catch_unwind;
 use std::ptr;
 use libc::{c_char, size_t, c_uint};
 use loadorder::LoadOrderMethod;
@@ -36,21 +37,23 @@ pub unsafe extern "C" fn lo_get_load_order_method(
     handle: lo_game_handle,
     method: *mut c_uint,
 ) -> c_uint {
-    if handle.is_null() || method.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || method.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    *method = match handle.game_settings().load_order_method() {
-        LoadOrderMethod::Timestamp => LIBLO_METHOD_TIMESTAMP,
-        LoadOrderMethod::Textfile => LIBLO_METHOD_TEXTFILE,
-        LoadOrderMethod::Asterisk => LIBLO_METHOD_ASTERISK,
-    };
+        *method = match handle.game_settings().load_order_method() {
+            LoadOrderMethod::Timestamp => LIBLO_METHOD_TIMESTAMP,
+            LoadOrderMethod::Textfile => LIBLO_METHOD_TEXTFILE,
+            LoadOrderMethod::Asterisk => LIBLO_METHOD_ASTERISK,
+        };
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Get the current load order.
@@ -65,32 +68,34 @@ pub unsafe extern "C" fn lo_get_load_order(
     plugins: *mut *mut *mut c_char,
     num_plugins: *mut size_t,
 ) -> c_uint {
-    if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
-
-    *plugins = ptr::null_mut();
-    *num_plugins = 0;
-
-    let plugin_names = handle.plugin_names();
-
-    if plugin_names.is_empty() {
-        return LIBLO_OK;
-    }
-
-    match to_c_string_array(plugin_names) {
-        Ok((pointer, size)) => {
-            *plugins = pointer;
-            *num_plugins = size;
+    catch_unwind(|| {
+        if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
-        Err(x) => return error(x, "A filename contained a null byte"),
-    }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    LIBLO_OK
+        *plugins = ptr::null_mut();
+        *num_plugins = 0;
+
+        let plugin_names = handle.plugin_names();
+
+        if plugin_names.is_empty() {
+            return LIBLO_OK;
+        }
+
+        match to_c_string_array(plugin_names) {
+            Ok((pointer, size)) => {
+                *plugins = pointer;
+                *num_plugins = size;
+            }
+            Err(x) => return error(x, "A filename contained a null byte"),
+        }
+
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 
@@ -110,32 +115,34 @@ pub unsafe extern "C" fn lo_set_load_order(
     plugins: *const *const c_char,
     num_plugins: size_t,
 ) -> c_uint {
-    if handle.is_null() || plugins.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    if num_plugins == 0 {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugins.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        if num_plugins == 0 {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugins: Vec<&str> = match to_str_vec(plugins, num_plugins) {
-        Ok(x) => x,
-        Err(x) => return error(x, "A filename contained a null byte"),
-    };
+        let plugins: Vec<&str> = match to_str_vec(plugins, num_plugins) {
+            Ok(x) => x,
+            Err(x) => return error(x, "A filename contained a null byte"),
+        };
 
-    if let Err(x) = handle.set_load_order(&plugins) {
-        return handle_error(x);
-    }
+        if let Err(x) = handle.set_load_order(&plugins) {
+            return handle_error(x);
+        }
 
-    if let Err(x) = handle.save() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.save() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 
@@ -151,25 +158,27 @@ pub unsafe extern "C" fn lo_get_plugin_position(
     plugin: *const c_char,
     index: *mut size_t,
 ) -> c_uint {
-    if handle.is_null() || plugin.is_null() || index.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugin.is_null() || index.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugin = match to_str(plugin) {
-        Ok(x) => x,
-        Err(x) => return error(x, "The filename contained a null byte"),
-    };
+        let plugin = match to_str(plugin) {
+            Ok(x) => x,
+            Err(x) => return error(x, "The filename contained a null byte"),
+        };
 
-    match handle.index_of(plugin) {
-        Some(x) => *index = x,
-        None => return error(LIBLO_ERROR_FILE_NOT_FOUND, "Plugin not found"),
-    }
+        match handle.index_of(plugin) {
+            Some(x) => *index = x,
+            None => return error(LIBLO_ERROR_FILE_NOT_FOUND, "Plugin not found"),
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 
@@ -187,29 +196,31 @@ pub unsafe extern "C" fn lo_set_plugin_position(
     plugin: *const c_char,
     index: size_t,
 ) -> c_uint {
-    if handle.is_null() || plugin.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let mut handle = match (*handle).write() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugin.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    let plugin = match to_str(plugin) {
-        Ok(x) => x,
-        Err(x) => return error(x, "The filename contained a null byte"),
-    };
+        let plugin = match to_str(plugin) {
+            Ok(x) => x,
+            Err(x) => return error(x, "The filename contained a null byte"),
+        };
 
-    if let Err(x) = handle.set_plugin_index(plugin, index) {
-        return handle_error(x);
-    }
+        if let Err(x) = handle.set_plugin_index(plugin, index) {
+            return handle_error(x);
+        }
 
-    if let Err(x) = handle.save() {
-        handle.plugins_mut().clear();
-        return handle_error(x);
-    }
+        if let Err(x) = handle.save() {
+            handle.plugins_mut().clear();
+            return handle_error(x);
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
 
 /// Get filename of the plugin at a specific load order position.
@@ -224,25 +235,27 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
     index: size_t,
     plugin: *mut *mut c_char,
 ) -> c_uint {
-    if handle.is_null() || plugin.is_null() {
-        return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-    }
-    let handle = match (*handle).read() {
-        Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
-        Ok(h) => h,
-    };
+    catch_unwind(|| {
+        if handle.is_null() || plugin.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Ok(h) => h,
+        };
 
-    *plugin = ptr::null_mut();
+        *plugin = ptr::null_mut();
 
-    let plugin_name = match handle.plugin_at(index) {
-        Some(x) => x,
-        None => return error(LIBLO_ERROR_INVALID_ARGS, "Plugin is not in the load order"),
-    };
+        let plugin_name = match handle.plugin_at(index) {
+            Some(x) => x,
+            None => return error(LIBLO_ERROR_INVALID_ARGS, "Plugin is not in the load order"),
+        };
 
-    match to_c_string(&plugin_name) {
-        Ok(x) => *plugin = x,
-        Err(x) => return error(x, "The filename contained a null byte"),
-    }
+        match to_c_string(&plugin_name) {
+            Ok(x) => *plugin = x,
+            Err(x) => return error(x, "The filename contained a null byte"),
+        }
 
-    LIBLO_OK
+        LIBLO_OK
+    }).unwrap_or(ESP_ERROR_PANICKED)
 }
