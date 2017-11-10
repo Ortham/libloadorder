@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn insert_position_should_not_count_installed_unloaded_implicitly_active_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
         copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());

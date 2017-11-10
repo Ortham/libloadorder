@@ -143,23 +143,27 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        for filename in self.game_settings().implicitly_active_plugins() {
-            if self.is_active(filename) {
-                continue;
-            }
+        let plugin_names: Vec<String> = self.game_settings()
+            .implicitly_active_plugins()
+            .iter()
+            .filter(|p| !self.is_active(p))
+            .cloned()
+            .collect();
 
-            self.activate_unvalidated(filename)?;
+        for plugin_name in plugin_names {
+            self.activate_unvalidated(&plugin_name)?;
         }
 
         Ok(())
     }
 
-    fn deactivate_excess_plugins(&mut self) {
+    fn get_excess_active_plugin_indices(&self) -> Vec<usize> {
         let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
         let mut normal_active_count = self.count_active_normal_plugins();
         let mut light_master_active_count = self.count_active_light_masters();
 
-        for plugin in self.plugins_mut().iter_mut().rev() {
+        let mut plugin_indices: Vec<usize> = Vec::new();
+        for (index, plugin) in self.plugins().iter().enumerate().rev() {
             if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS &&
                 light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
             {
@@ -173,15 +177,23 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
                 if plugin.is_light_master_file() &&
                     light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
                 {
-                    plugin.deactivate();
+                    plugin_indices.push(index);
                     light_master_active_count -= 1;
                 } else if !plugin.is_light_master_file() &&
                            normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
                 {
-                    plugin.deactivate();
+                    plugin_indices.push(index);
                     normal_active_count -= 1;
                 }
             }
+        }
+
+        plugin_indices
+    }
+
+    fn deactivate_excess_plugins(&mut self) {
+        for index in self.get_excess_active_plugin_indices() {
+            self.plugins_mut()[index].deactivate();
         }
     }
 

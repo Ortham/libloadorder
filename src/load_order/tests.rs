@@ -79,7 +79,7 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
 
     let local_path = game_dir.join("local");
     create_dir(&local_path).unwrap();
-    let settings = GameSettings::with_local_path(game_id, game_dir, &local_path);
+    let settings = GameSettings::with_local_path(game_id, game_dir, &local_path).unwrap();
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);

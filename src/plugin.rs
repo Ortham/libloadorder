@@ -200,7 +200,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp.ghost", &settings).unwrap();
@@ -221,7 +222,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -238,7 +240,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esm", "Blank.esm.GHoST", &settings);
         let plugin = Plugin::new("Blank.esm.GHoST", &settings).unwrap();
@@ -249,7 +252,8 @@ mod tests {
     fn name_matches_should_ignore_plugin_ghost_extension() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let settings =
-            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default());
+            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default())
+                .unwrap();
         copy_to_test_dir("Blank.esp", "BlanK.esp.GHoSt", &settings);
 
         let plugin = Plugin::new("BlanK.esp.GHoSt", &settings).unwrap();
@@ -260,7 +264,8 @@ mod tests {
     fn name_matches_should_ignore_string_ghost_suffix() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let settings =
-            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default());
+            GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default())
+                .unwrap();
         copy_to_test_dir("Blank.esp", "BlanK.esp", &settings);
 
         let plugin = Plugin::new("BlanK.esp", &settings).unwrap();
@@ -273,7 +278,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin_path = game_dir.join("Data").join("Blank.esp");
@@ -289,7 +295,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -303,7 +310,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
@@ -317,7 +325,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -331,7 +340,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -360,7 +370,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -385,7 +396,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -403,7 +415,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
@@ -420,7 +433,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         assert!(Plugin::is_valid("Blank.esp", &settings));
@@ -446,7 +460,8 @@ mod tests {
         assert!(Plugin::is_valid("Blank - Different.esm", &settings));
 
         let settings =
-            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
         assert!(Plugin::is_valid("Blank.esl", &settings));
@@ -458,7 +473,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.esp", "Blank.pse", &settings);
         assert!(!Plugin::is_valid("Blank.pse", &settings));
@@ -470,7 +486,8 @@ mod tests {
         let game_dir = tmp_dir.path();
 
         let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default());
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
 
         copy_to_test_dir("Blank.bsa", "Blank.esp", &settings);
         assert!(!Plugin::is_valid("Blank.esp", &settings));

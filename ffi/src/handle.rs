@@ -129,8 +129,10 @@ pub unsafe extern "C" fn lo_create_handle(
                 );
             }
 
-            load_order = GameSettings::with_local_path(game_id, game_path, local_path)
-                .into_load_order();
+            match GameSettings::with_local_path(game_id, game_path, local_path) {
+                Ok(x) => load_order = x.into_load_order(),
+                Err(x) => return handle_error(x),
+            }
         }
 
         let is_self_consistent = load_order.is_self_consistent();
