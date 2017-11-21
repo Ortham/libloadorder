@@ -65,7 +65,7 @@ pub unsafe extern "C" fn lo_get_active_plugins(
         }
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Sets the list of currently active plugins.
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn lo_set_active_plugins(
         }
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Activates or deactivates a given plugin.
@@ -155,7 +155,7 @@ pub unsafe extern "C" fn lo_set_plugin_active(
         }
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Checks if a given plugin is active.
@@ -186,5 +186,5 @@ pub unsafe extern "C" fn lo_get_plugin_active(
         *result = handle.is_active(plugin);
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }

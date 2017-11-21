@@ -180,7 +180,7 @@ pub unsafe extern "C" fn lo_get_version(
         }
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get the message for the last error or warning encountered.
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
         });
 
         LIBLO_OK
-    }).unwrap_or(ESP_ERROR_PANICKED)
+    }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Free memory allocated to string output.

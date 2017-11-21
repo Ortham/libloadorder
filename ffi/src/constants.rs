@@ -88,7 +88,7 @@ pub static LIBLO_ERROR_INTERNAL_LOGIC_ERROR: c_uint = 19;
 
 /// Something panicked.
 #[no_mangle]
-pub static ESP_ERROR_PANICKED: c_uint = 20;
+pub static LIBLO_ERROR_PANICKED: c_uint = 20;
 
 /// Matches the value of the highest-numbered return code.
 ///
