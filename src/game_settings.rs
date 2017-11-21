@@ -71,11 +71,7 @@ impl GameSettings {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,
         };
-        Ok(GameSettings::with_local_path(
-            game_id,
-            game_path,
-            &local_path,
-        ))
+        GameSettings::with_local_path(game_id, game_path, &local_path)
     }
 
     pub fn with_local_path(
