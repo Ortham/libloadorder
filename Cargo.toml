@@ -1,6 +1,6 @@
 [package]
 name = "libloadorder"
-version = "10.0.3"
+version = "10.0.4"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 description = "A free software library for manipulating the load order and active status of plugins for TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3, Fallout: New Vegas and Fallout 4."
 documentation = "https://docs.rs/libloadorder"

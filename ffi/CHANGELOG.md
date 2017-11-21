@@ -1,5 +1,17 @@
 # Changelog
 
+## [10.0.4] - 2017-11-21
+
+### Added
+
+- `LIBLO_ERROR_PANICKED` return code for indicating that a panic was caught.
+
+### Changed
+
+- Identify Creation Club plugins using `.ccc` files instead of hardcoding them.
+- Unwinding panics are now caught at the FFI boundary.
+- Updated to esplugin v1.0.7.
+
 ## [10.0.3] - 2017-10-31
 
 ### Fixed
