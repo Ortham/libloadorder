@@ -49,6 +49,7 @@ pub enum GameId {
     FalloutNV,
     Fallout4,
     SkyrimSE,
+    Fallout4VR,
 }
 
 impl GameId {
@@ -61,6 +62,7 @@ impl GameId {
             GameId::FalloutNV => EspmId::FalloutNV,
             GameId::Fallout4 => EspmId::Fallout4,
             GameId::SkyrimSE => EspmId::SkyrimSE,
+            GameId::Fallout4VR => EspmId::Fallout4,
         }
     }
 }
@@ -229,5 +231,6 @@ mod tests {
         assert_eq!(EspmId::Fallout3, GameId::Fallout3.to_esplugin_id());
         assert_eq!(EspmId::FalloutNV, GameId::FalloutNV.to_esplugin_id());
         assert_eq!(EspmId::Fallout4, GameId::Fallout4.to_esplugin_id());
+        assert_eq!(EspmId::Fallout4, GameId::Fallout4VR.to_esplugin_id());
     }
 }

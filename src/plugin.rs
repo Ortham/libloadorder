@@ -159,7 +159,9 @@ impl Plugin {
 
 fn has_valid_extension(filename: &str, game: GameId) -> bool {
     let valid_extensions = match game {
-        GameId::Fallout4 | GameId::SkyrimSE => VALID_EXTENSIONS_WITH_ESL,
+        GameId::Fallout4 |
+        GameId::Fallout4VR |
+        GameId::SkyrimSE => VALID_EXTENSIONS_WITH_ESL,
         _ => VALID_EXTENSIONS,
     };
 

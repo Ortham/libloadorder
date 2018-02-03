@@ -137,3 +137,7 @@ pub static LIBLO_GAME_FO4: c_uint = GameId::Fallout4 as c_uint;
 /// Game code for The Elder Scrolls V: Skyrim Special Edition.
 #[no_mangle]
 pub static LIBLO_GAME_TES5SE: c_uint = GameId::SkyrimSE as c_uint;
+
+/// Game code for Fallout 4 VR.
+#[no_mangle]
+pub static LIBLO_GAME_FO4VR: c_uint = GameId::Fallout4VR as c_uint;

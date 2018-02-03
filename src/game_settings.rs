@@ -63,6 +63,8 @@ const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
     "DLCNukaWorld.esm",
 ];
 
+const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm"];
+
 impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
@@ -101,7 +103,7 @@ impl GameSettings {
         match self.id {
             Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
-            SkyrimSE | Fallout4 => LoadOrderMethod::Asterisk,
+            SkyrimSE | Fallout4 | Fallout4VR => LoadOrderMethod::Asterisk,
         }
     }
 
@@ -121,7 +123,7 @@ impl GameSettings {
             Skyrim | SkyrimSE => "Skyrim.esm",
             Fallout3 => "Fallout3.esm",
             FalloutNV => "FalloutNV.esm",
-            Fallout4 => "Fallout4.esm",
+            Fallout4 | Fallout4VR => "Fallout4.esm",
         }
     }
 
@@ -166,6 +168,7 @@ fn appdata_folder_name(game_id: &GameId) -> Option<&str> {
         Fallout3 => Some("Fallout3"),
         FalloutNV => Some("FalloutNV"),
         Fallout4 => Some("Fallout4"),
+        Fallout4VR => Some("Fallout4VR"),
     }
 }
 
@@ -229,6 +232,7 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
         GameId::Skyrim => SKYRIM_HARDCODED_PLUGINS,
         GameId::SkyrimSE => SKYRIMSE_HARDCODED_PLUGINS,
         GameId::Fallout4 => FALLOUT4_HARDCODED_PLUGINS,
+        GameId::Fallout4VR => FALLOUT4VR_HARDCODED_PLUGINS,
         _ => &[],
     }
 }
@@ -346,7 +350,7 @@ mod tests {
     }
 
     #[test]
-    fn load_order_method_should_be_asterisk_for_tes5se_and_fo4() {
+    fn load_order_method_should_be_asterisk_for_tes5se_fo4_and_fo4vr() {
         let mut settings = GameSettings::with_local_path(
             GameId::SkyrimSE,
             &PathBuf::default(),
@@ -356,6 +360,13 @@ mod tests {
 
         settings = GameSettings::with_local_path(
             GameId::Fallout4,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
+
+        settings = GameSettings::with_local_path(
+            GameId::Fallout4VR,
             &PathBuf::default(),
             &PathBuf::default(),
         ).unwrap();
@@ -410,6 +421,13 @@ mod tests {
             &PathBuf::default(),
         ).unwrap();
         assert_eq!("Fallout4.esm", settings.master_file());
+
+        settings = GameSettings::with_local_path(
+            GameId::Fallout4VR,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!("Fallout4.esm", settings.master_file());
     }
 
     #[test]
@@ -433,6 +451,9 @@ mod tests {
 
         folder = appdata_folder_name(&GameId::Fallout4).unwrap();
         assert_eq!("Fallout4", folder);
+
+        folder = appdata_folder_name(&GameId::Fallout4VR).unwrap();
+        assert_eq!("Fallout4VR", folder);
     }
 
     #[test]
@@ -639,6 +660,14 @@ mod tests {
             &PathBuf::default(),
         ).unwrap();
         assert!(settings.implicitly_active_plugins().is_empty());
+
+        settings = GameSettings::with_local_path(
+            GameId::Fallout4VR,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        plugins = vec!["Fallout4.esm", "Fallout4_VR.esm"];
+        assert_eq!(plugins, settings.implicitly_active_plugins());
     }
 
     #[test]

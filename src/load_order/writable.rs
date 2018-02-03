@@ -111,7 +111,9 @@ fn count_light_masters<T: ReadableLoadOrder + ?Sized>(
     plugin_names: &[&str],
 ) -> usize {
     match load_order.game_settings().id() {
-        GameId::Fallout4 | GameId::SkyrimSE => {
+        GameId::Fallout4 |
+        GameId::Fallout4VR |
+        GameId::SkyrimSE => {
             plugin_names
                 .iter()
                 .filter(|p| iends_with_ascii(p, ".esl"))
