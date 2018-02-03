@@ -169,7 +169,6 @@ fn has_valid_extension(filename: &str, game: GameId) -> bool {
 }
 
 pub fn iends_with_ascii(string: &str, suffix: &str) -> bool {
-    use std::ascii::AsciiExt;
     string.len() >= suffix.len() &&
         string.chars().rev().zip(suffix.chars().rev()).all(
             |(c1, c2)| {
