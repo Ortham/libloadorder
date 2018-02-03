@@ -22,7 +22,7 @@ extern crate libc;
 use std::error::Error;
 use std::panic::catch_unwind;
 use std::path::Path;
-use std::sync::RwLock;
+use std::sync::{LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use libc::{c_char, c_uint};
 use loadorder::GameId;
 use loadorder::GameSettings;
@@ -37,7 +37,19 @@ use helpers::{error, handle_error, to_str};
 /// state while still providing type safety across the library.
 // NOTE: The outer Box is to appease cbindgen, but it probably just needs support for RwLock added.
 #[allow(non_camel_case_types)]
-pub type lo_game_handle = *mut Box<RwLock<Box<WritableLoadOrder>>>;
+pub type lo_game_handle = *mut GameHandle;
+
+pub struct GameHandle(RwLock<Box<WritableLoadOrder>>);
+
+impl GameHandle {
+    pub fn read(&self) -> LockResult<RwLockReadGuard<Box<WritableLoadOrder>>> {
+        self.0.read()
+    }
+
+    pub fn write(&self) -> LockResult<RwLockWriteGuard<Box<WritableLoadOrder>>> {
+        self.0.write()
+    }
+}
 
 fn map_game_id(game_id: u32) -> Result<GameId, u32> {
     match game_id {
@@ -137,7 +149,7 @@ pub unsafe extern "C" fn lo_create_handle(
 
         let is_self_consistent = load_order.is_self_consistent();
 
-        *handle = Box::into_raw(Box::new(Box::new(RwLock::new(load_order))));
+        *handle = Box::into_raw(Box::new(GameHandle(RwLock::new(load_order))));
 
         match is_self_consistent {
             Ok(true) => LIBLO_OK,
