@@ -1,5 +1,15 @@
 # Changelog
 
+## [10.1.0] - 2018-02-04
+
+### Added
+
+- Support for Fallout 4 VR using the `LIBLO_GAME_FO4VR` game code.
+
+### Changed
+
+- Updated esplugin, walkdir, rayon and cbindgen dependencies.
+
 ## [10.0.4] - 2017-11-21
 
 ### Added
