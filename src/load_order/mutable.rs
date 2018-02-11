@@ -18,7 +18,7 @@
  */
 
 use std::collections::HashSet;
-use std::fs::File;
+use std::fs::{File, read_dir};
 use std::io::Read;
 use std::mem;
 use std::path::Path;
@@ -26,7 +26,6 @@ use std::path::Path;
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
 use rayon::prelude::*;
-use walkdir::WalkDir;
 
 use enums::Error;
 use game_settings::GameSettings;
@@ -84,12 +83,16 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn find_plugins_in_dir(&self) -> Vec<String> {
+        let entries = match read_dir(&self.game_settings().plugins_directory()) {
+            Ok(x) => x,
+            _ => return Vec::new(),
+        };
+
         let mut set: HashSet<String> = HashSet::new();
 
-        WalkDir::new(self.game_settings().plugins_directory())
-            .into_iter()
+        entries
             .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
+            .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
             .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
             .filter(|ref filename| {
                 set.insert(trim_dot_ghost(&filename).to_lowercase())

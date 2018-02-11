@@ -21,13 +21,14 @@ encoding = "0.2"
 filetime = "0.1.10"
 esplugin = "1.0.8"
 regex = "0.2"
-tempdir = "0.3"
 unicase = "2.0.0"
-walkdir = "2"
 rayon = "0.9.0"
 
 [target.'cfg(windows)'.dependencies]
 app_dirs = "1.1.1"
+
+[dev-dependencies]
+tempdir = "0.3"
 
 [lib]
 name = "loadorder"

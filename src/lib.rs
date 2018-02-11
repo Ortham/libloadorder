@@ -23,7 +23,6 @@ extern crate filetime;
 extern crate rayon;
 extern crate regex;
 extern crate unicase;
-extern crate walkdir;
 #[cfg(windows)]
 extern crate app_dirs;
 #[cfg(test)]
