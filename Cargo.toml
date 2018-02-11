@@ -28,6 +28,7 @@ rayon = "0.9.0"
 app_dirs = "1.1.1"
 
 [dev-dependencies]
+criterion = "0.2.0"
 tempdir = "0.3"
 
 [lib]
@@ -35,3 +36,7 @@ name = "loadorder"
 
 [workspace]
 members = ["ffi"]
+
+[[bench]]
+name = "load_order"
+harness = false
