@@ -113,10 +113,11 @@ impl Plugin {
     }
 
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
-        let atime = FileTime::from_last_access_time(&self.data.path().metadata()?);
-        let mtime =
-            FileTime::from_seconds_since_1970(time.duration_since(UNIX_EPOCH)?.as_secs(), 0);
-        set_file_times(&self.data.path(), atime, mtime)?;
+        set_file_times(
+            &self.data.path(),
+            to_filetime(SystemTime::now())?,
+            to_filetime(time)?,
+        )?;
 
         self.modification_time = time;
         Ok(())
@@ -185,6 +186,14 @@ pub fn trim_dot_ghost(string: &str) -> &str {
     } else {
         string
     }
+}
+
+fn to_filetime(time: SystemTime) -> Result<FileTime, Error> {
+    let duration = time.duration_since(UNIX_EPOCH)?;
+    Ok(FileTime::from_seconds_since_1970(
+        duration.as_secs(),
+        duration.subsec_nanos(),
+    ))
 }
 
 #[cfg(test)]
