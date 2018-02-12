@@ -17,7 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{BufReader, BufRead, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -97,24 +96,20 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        let mut timestamps: BTreeSet<SystemTime> = self.plugins()
-            .iter()
-            .map(Plugin::modification_time)
+        let timestamps = padded_unique_timestamps(self.plugins());
+
+        let result: Result<Vec<()>, Error> = self.plugins_mut()
+            .par_iter_mut()
+            .zip(timestamps.into_par_iter())
+            .map(|(ref mut plugin, timestamp)| {
+                plugin.set_modification_time(timestamp)
+            })
             .collect();
 
-        while timestamps.len() < self.plugins().len() {
-            let timestamp = *timestamps.iter().rev().nth(0).unwrap_or(&UNIX_EPOCH) +
-                Duration::from_secs(60);
-            timestamps.insert(timestamp);
+        match result {
+            Ok(_) => save_active_plugins(self),
+            Err(e) => Err(e),
         }
-
-        for (plugin, timestamp) in self.plugins_mut().iter_mut().zip(timestamps.into_iter()) {
-            plugin.set_modification_time(timestamp)?;
-        }
-
-        save_active_plugins(self)?;
-
-        Ok(())
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
@@ -162,6 +157,20 @@ fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<
     } else {
         Some(line.to_owned())
     }
+}
+
+fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
+    let mut timestamps: Vec<SystemTime> = plugins.iter().map(Plugin::modification_time).collect();
+
+    timestamps.sort();
+    timestamps.dedup();
+
+    while timestamps.len() < plugins.len() {
+        let timestamp = *timestamps.last().unwrap_or(&UNIX_EPOCH) + Duration::from_secs(60);
+        timestamps.push(timestamp);
+    }
+
+    timestamps
 }
 
 fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
