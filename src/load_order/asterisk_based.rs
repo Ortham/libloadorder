@@ -58,21 +58,19 @@ impl ReadableLoadOrder for AsteriskBasedLoadOrder {
 
 impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        if let Some(name) = plugin.name() {
-            if self.game_settings().is_implicitly_active(&name) {
-                if self.plugins().is_empty() {
-                    return None;
+        if self.game_settings().is_implicitly_active(plugin.name()) {
+            if self.plugins().is_empty() {
+                return None;
+            }
+
+            let mut loaded_plugin_count = 0;
+            for plugin_name in self.game_settings().implicitly_active_plugins() {
+                if eq(plugin.name(), plugin_name) {
+                    return Some(loaded_plugin_count);
                 }
 
-                let mut loaded_plugin_count = 0;
-                for plugin_name in self.game_settings().implicitly_active_plugins() {
-                    if eq(name.as_str(), plugin_name) {
-                        return Some(loaded_plugin_count);
-                    }
-
-                    if self.index_of(plugin_name).is_some() {
-                        loaded_plugin_count += 1;
-                    }
+                if self.index_of(plugin_name).is_some() {
+                    loaded_plugin_count += 1;
                 }
             }
         }
@@ -111,12 +109,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         for plugin in self.plugins() {
-            let name = match plugin.unghosted_name() {
-                Some(x) => x,
-                None => continue,
-            };
-
-            if self.game_settings().is_implicitly_active(&name) {
+            if self.game_settings().is_implicitly_active(plugin.name()) {
                 continue;
             }
 
@@ -124,7 +117,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 write!(writer, "*")?;
             }
             writer.write_all(&WINDOWS_1252
-                .encode(&name, EncoderTrap::Strict)
+                .encode(plugin.name(), EncoderTrap::Strict)
                 .map_err(Error::EncodeError)?)?;
             writeln!(writer, "")?;
         }

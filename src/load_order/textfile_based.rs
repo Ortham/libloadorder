@@ -62,10 +62,7 @@ impl ReadableLoadOrder for TextfileBasedLoadOrder {
 
 impl MutableLoadOrder for TextfileBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        let is_game_master = plugin
-            .name()
-            .map(|n| eq(n.as_str(), self.game_settings().master_file()))
-            .unwrap_or(false);
+        let is_game_master = eq(plugin.name(), self.game_settings().master_file());
 
         if is_game_master {
             if self.plugins.is_empty() {

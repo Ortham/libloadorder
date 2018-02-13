@@ -27,7 +27,7 @@ pub trait ReadableLoadOrder {
     fn plugin_names(&self) -> Vec<String> {
         self.plugins()
             .iter()
-            .filter_map(|p| p.unghosted_name())
+            .map(|p| p.name().to_string())
             .collect()
     }
 
@@ -38,17 +38,14 @@ pub trait ReadableLoadOrder {
     }
 
     fn plugin_at(&self, index: usize) -> Option<String> {
-        if index >= self.plugins().len() {
-            None
-        } else {
-            self.plugins()[index].unghosted_name()
-        }
+        self.plugins().get(index).map(|p| p.name().to_string())
     }
 
     fn active_plugin_names(&self) -> Vec<String> {
         self.plugins()
             .iter()
-            .filter_map(|p| if p.is_active() { p.name() } else { None })
+            .filter(|p| p.is_active())
+            .map(|p| p.name().to_string())
             .collect()
     }
 

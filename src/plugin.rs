@@ -44,6 +44,7 @@ pub struct Plugin {
     active: bool,
     modification_time: SystemTime,
     data: esplugin::Plugin,
+    name: String,
 }
 
 impl Plugin {
@@ -78,22 +79,16 @@ impl Plugin {
             active,
             modification_time,
             data,
+            name: trim_dot_ghost(filename).to_string(),
         })
     }
 
-    pub fn name(&self) -> Option<String> {
-        self.data.filename()
-    }
-
-    pub fn unghosted_name(&self) -> Option<String> {
-        self.data.filename().map(|f| trim_dot_ghost(&f).to_string())
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn name_matches(&self, string: &str) -> bool {
-        match self.unghosted_name() {
-            None => false,
-            Some(n) => eq(n.as_str(), trim_dot_ghost(string)),
-        }
+        eq(self.name(), trim_dot_ghost(string))
     }
 
     pub fn modification_time(&self) -> SystemTime {
@@ -205,7 +200,7 @@ mod tests {
     use tests::copy_to_test_dir;
 
     #[test]
-    fn name_should_return_the_plugin_filename_that_exists() {
+    fn name_should_return_the_plugin_filename_without_any_ghost_extension() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let game_dir = tmp_dir.path();
 
@@ -215,47 +210,15 @@ mod tests {
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp.ghost", &settings).unwrap();
-        assert_eq!("Blank.esp", plugin.name().unwrap());
+        assert_eq!("Blank.esp", plugin.name());
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();
-        assert_eq!("Blank.esp", plugin.name().unwrap());
+        assert_eq!("Blank.esp", plugin.name());
 
         copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
-        assert_eq!("Blank.esm.ghost", plugin.name().unwrap());
-    }
-
-    #[test]
-    fn unghosted_name_should_return_the_plugin_filename_without_any_ghost_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-        let plugin = Plugin::new("Blank.esp", &settings).unwrap();
-        assert_eq!("Blank.esp", plugin.unghosted_name().unwrap());
-
-        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &settings);
-        let plugin = Plugin::new("Blank.esm", &settings).unwrap();
-        assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
-    }
-
-    #[test]
-    fn unghosted_name_should_check_ghost_extension_case_insensitively() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.esm", "Blank.esm.GHoST", &settings);
-        let plugin = Plugin::new("Blank.esm.GHoST", &settings).unwrap();
-        assert_eq!("Blank.esm", plugin.unghosted_name().unwrap());
+        assert_eq!("Blank.esm", plugin.name());
     }
 
     #[test]
@@ -415,7 +378,7 @@ mod tests {
         plugin.activate().unwrap();
 
         assert!(plugin.is_active());
-        assert_eq!("Blank.esp", plugin.name().unwrap());
+        assert_eq!("Blank.esp", plugin.name());
         assert!(game_dir.join("Data").join("Blank.esp").exists());
     }
 
