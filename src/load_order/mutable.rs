@@ -414,7 +414,7 @@ fn map_to_plugins<T: MutableLoadOrder + ?Sized>(
     plugin_names: &[&str],
 ) -> Result<Vec<Plugin>, Error> {
     plugin_names
-        .iter()
+        .par_iter()
         .map(|n| {
             to_plugin(n, load_order.plugins(), load_order.game_settings())
         })
