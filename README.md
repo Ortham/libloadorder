@@ -1,7 +1,10 @@
 # Libloadorder
 
-[![Build Status](https://travis-ci.org/WrinklyNinja/libloadorder.svg?branch=master)](https://travis-ci.org/WrinklyNinja/libloadorder)
+
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/WrinklyNinja/libloadorder?branch=master&svg=true)](https://ci.appveyor.com/project/WrinklyNinja/libloadorder)
+[![Travis Build Status](https://travis-ci.org/WrinklyNinja/libloadorder.svg?branch=master)](https://travis-ci.org/WrinklyNinja/libloadorder)
 [![Coverage Status](https://coveralls.io/repos/github/WrinklyNinja/libloadorder/badge.svg?branch=master)](https://coveralls.io/github/WrinklyNinja/libloadorder?branch=master)
+[![dependency status](https://deps.rs/repo/github/WrinklyNinja/libloadorder/status.svg)](https://deps.rs/repo/github/WrinklyNinja/libloadorder)
 
 Libloadorder is a free software library for manipulating the load order and active status of plugins for the following games:
 
