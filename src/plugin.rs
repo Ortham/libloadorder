@@ -16,6 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
+#[allow(unused_imports)]
+use std::ascii::AsciiExt;
 use std::fs::File;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
