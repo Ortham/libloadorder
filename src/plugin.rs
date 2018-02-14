@@ -108,6 +108,11 @@ impl Plugin {
     }
 
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
+        // Always write the file time. This has a huge performance impact, but
+        // is important for correctness, as otherwise external changes to plugin
+        // timestamps between calls to WritableLoadOrder::load() and
+        // WritableLoadOrder::save() could lead to libloadorder not setting all
+        // the timestamps it needs to and producing an incorrect load order.
         set_file_times(
             &self.data.path(),
             to_filetime(SystemTime::now())?,
