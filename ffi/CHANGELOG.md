@@ -1,5 +1,32 @@
 # Changelog
 
+## [10.1.1] - 2018-02-14
+
+### Added
+
+- Benchmarks for some `ReadableLoadOrder` and `WritableLoadOrder` methods, built
+  using [Criterion.rs](https://github.com/japaric/criterion.rs), and which can
+  be run using `cargo bench`.
+
+### Changed
+
+- Various optimisations that have improved performance in general, with
+  improvements of between 2x to 19x observed for the benchmarked functions.
+
+### Fixed
+
+- The plugins directory was being searched for plugins recursively, which was
+  totally unnecessary and had a potentially huge performance impact (~ 500x for
+  the user who reported the issue). Fixing this also removed the WalkDir
+  dependency.
+- `WritableLoadOrder::set_active_plugins()` was counting normal plugins and
+  light masters according to their file extension, so it wouldn't count
+  false-flagged plugins correctly when validating against the active plugin
+  limits.
+- Saving a timestamp-based load order would preserve the plugins' existing
+  access times, for correctness the access times are now set to the current time
+  when setting the modification time.
+
 ## [10.1.0] - 2018-02-04
 
 ### Added
