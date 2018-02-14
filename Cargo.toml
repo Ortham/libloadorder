@@ -2,7 +2,7 @@
 name = "libloadorder"
 version = "10.1.1"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
-description = "A free software library for manipulating the load order and active status of plugins for TES III: Morrowind, TES IV: Oblivion, TES V: Skyrim, Fallout 3, Fallout: New Vegas and Fallout 4."
+description = "A cross-platform library for manipulating the load order and active status of plugins for the Elder Scrolls and Fallout games."
 documentation = "https://docs.rs/libloadorder"
 repository = "https://github.com/WrinklyNinja/libloadorder.git"
 readme = "README.md"
@@ -13,6 +13,7 @@ exclude = [
 ]
 
 [badges]
+appveyor = { repository = "WrinklyNinja/libloadorder" }
 travis-ci = { repository = "WrinklyNinja/libloadorder" }
 coveralls = { repository = "WrinklyNinja/libloadorder" }
 

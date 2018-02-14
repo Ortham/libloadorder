@@ -22,13 +22,14 @@
 //! libloadorder-ffi provides a C API wrapper around libloadorder, a free software library for
 //! manipulating the load order and active status of plugins for the following games:
 //!
-//! * TES III: Morrowind
-//! * TES IV: Oblivion
-//! * TES V: Skyrim
-//! * TES V: Skyrim Special Edition
-//! * Fallout 3
-//! * Fallout: New Vegas
-//! * Fallout 4
+//! - TES III: Morrowind
+//! - TES IV: Oblivion
+//! - TES V: Skyrim
+//! - TES V: Skyrim Special Edition
+//! - Fallout 3
+//! - Fallout: New Vegas
+//! - Fallout 4
+//! - Fallout 4 VR
 //!
 //! ## Variable Types
 //!
@@ -42,7 +43,7 @@
 //! ## Thread Safety
 //!
 //! libloadorder-ffi is thread-safe. Reading and writing data for a single game handle is protected
-//! by mutual exclusion, and error messages are stored thread-locally.
+//! by a reader-writer lock, and error messages are stored thread-locally.
 //!
 //! Game handles operate independently, so using more than one game handle for a single game across
 //! multiple threads is not advised, as filesystem changes made when writing data are not atomic
@@ -51,20 +52,19 @@
 //! ## Data Caching
 //!
 //! libloadorder caches plugin data to improve performance. Each game handle has its own unique
-//! cache, and change detection is performed whenever an API function that takes a game handle is
-//! called. If changes are detected, the necessary data are reloaded before the function operates
-//! on the data.
+//! cache, which is cleared when
 //!
-//! Edits made to a plugin will only be detected if they that plugin's timestamp changes. If edits
-//! are made and the timestamp is unchanged, the changes can only be detected by destroying the
-//! existing game handle and creating a new game handle to use.
+//! - calling `lo_load_current_state()`
+//! - calling `lo_fix_plugin_lists()`
+//! - an error is encountered writing a change.
 //!
 //! ## Plugin Validity
 //!
 //! Where libloadorder functions take one or more plugin filenames, it checks that these filenames
 //! correspond to valid plugins. libloadorder defines a valid plugin as one that:
 //!
-//! - Ends with `.esp`, `.esm`, `.esp.ghost` or `.esm.ghost`.
+//! - Ends with `.esp`, `.esm`, `.esp.ghost` or `.esm.ghost` (or `.esl` or `.esl.ghost` for Skyrim
+//!   Special Edition, Fallout 4 and Fallout 4 VR).
 //! - Contains a header record with:
 //!
 //!     - The correct type (`TES3` for Morrowind, `TES4` otherwise).
@@ -80,34 +80,26 @@
 //! and activated, which may cause game issues, but protecting against such circumstances is beyond
 //! the scope of libloadorder.
 //!
-//! ## Valid Active Plugin Lists
-//!
-//! Any active plugin list that is set using libloadorder must be valid,
-//! ie. it must meet all the following conditions:
-//!
-//! - Contains only installed plugins.
-//! - Contains no duplicate entries.
-//! - Contains no more than 255 plugins.
-//! - If a Skyrim or Fallout 4 load order, contains `Skyrim.esm` or `Fallout4.esm` respectively.
-//! - If a Skyrim load order and `Update.esm` is installed, contains `Update.esm`.
-//!
-//! Libloadorder is less strict when loading active plugin lists. If loading a Skyrim or Fallout 4
-//! list and the relevant main master file is missing, it will be inferred to load first.
-//!
-//! Similarly, if Update.esm is installed but not in the active list, it will be inferred to load
-//! after all other master files.
-//!
 //! ## Valid Load Orders
 //!
-//! Any load order that is set using libloadorder must be valid, ie. it must meet all the following
-//! conditions:
+//! Any load order that is set using libloadorder must meet all the following conditions:
 //!
 //! - Contains only installed plugins.
 //! - Contains no duplicate entries.
-//! - Loads all master files before all plugin files. Master bit flag value, rather than file
-//!   extension, is checked.
-//! - For Skyrim or Fallout 4, the first plugin in the load order must be `Skyrim.esm` or
-//!   `Fallout4.esm` respectively.
+//! - Loads all master files (including light masters and false-flagged plugins) before all plugin
+//!   files.
+//! - Contains no more than 255 active plugins, excluding light masters.
+//! - Contains no more than 4096 active light masters.
+//! - Contains all the game's implicitly active plugins that are installed (e.g. `Skyrim.esm` and
+//!   `Update.esm` for Skyrim).
+//! - Starts with the game's main master file (Skyrim, Skyrim SE, Fallout 4 and Fallout 4 VR only).
+//!
+//! Libloadorder considers a load order that fulfills all the above conditions to be valid, though
+//! there are additional conditions that may be enforced by the game (e.g. a plugin must load after
+//! all the plugins it depends on).
+//!
+//! Libloadorder is less strict when loading load orders and will adjust them at load time to be
+//! valid, similar to game behaviour.
 
 extern crate loadorder;
 extern crate libc;
