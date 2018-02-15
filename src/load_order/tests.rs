@@ -100,3 +100,7 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
 
     (settings, plugins)
 }
+
+pub fn to_owned(strs: Vec<&str>) -> Vec<String> {
+    strs.into_iter().map(String::from).collect()
+}

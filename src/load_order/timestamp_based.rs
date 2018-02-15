@@ -633,7 +633,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "blank.esp"];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
@@ -644,7 +644,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "missing.esp"];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
@@ -655,7 +655,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "Blank.esm"];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
@@ -691,7 +691,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(
             load_order
                 .set_plugin_index("Blank - Master Dependent.esp", 0)
@@ -705,7 +705,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Blank.esp", 0).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -715,7 +715,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Blank.esm", 2).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -725,7 +725,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Morrowind.esm", 2).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -735,7 +735,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("missing.esm", 0).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }

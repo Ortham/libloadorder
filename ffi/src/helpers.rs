@@ -73,29 +73,25 @@ fn map_error(err: &Error) -> c_uint {
 
 pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
-        return Err(error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed"));
+        Err(error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed"))
+    } else {
+        CStr::from_ptr(c_string)
+            .to_str()
+            .map_err(|_| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))
     }
-
-    let rust_c_string = CStr::from_ptr(c_string);
-
-    rust_c_string
-        .to_str()
-        .map_err(|_| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    let c_string_name = CString::new(string.to_string()).map_err(|_| LIBLO_ERROR_TEXT_ENCODE_FAIL)?;
-
-    Ok(c_string_name.into_raw())
+    CString::new(string)
+        .map(CString::into_raw)
+        .map_err(|_| LIBLO_ERROR_TEXT_ENCODE_FAIL)
 }
 
-pub fn to_c_string_array(strings: Vec<String>) -> Result<(*mut *mut c_char, size_t), u32> {
-    let c_strings = strings.iter().map(|s| to_c_string(s)).collect();
-
-    let mut c_strings: Vec<*mut c_char> = match c_strings {
-        Ok(x) => x,
-        Err(x) => return Err(x),
-    };
+pub fn to_c_string_array(strings: &[&str]) -> Result<(*mut *mut c_char, size_t), u32> {
+    let mut c_strings = strings
+        .iter()
+        .map(|s| to_c_string(s))
+        .collect::<Result<Vec<*mut c_char>, u32>>()?;
 
     c_strings.shrink_to_fit();
 

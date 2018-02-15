@@ -24,11 +24,8 @@ pub trait ReadableLoadOrder {
     fn game_settings(&self) -> &GameSettings;
     fn plugins(&self) -> &Vec<Plugin>;
 
-    fn plugin_names(&self) -> Vec<String> {
-        self.plugins()
-            .iter()
-            .map(|p| p.name().to_string())
-            .collect()
+    fn plugin_names(&self) -> Vec<&str> {
+        self.plugins().iter().map(Plugin::name).collect()
     }
 
     fn index_of(&self, plugin_name: &str) -> Option<usize> {
@@ -37,15 +34,15 @@ pub trait ReadableLoadOrder {
             .position(|p| p.name_matches(plugin_name))
     }
 
-    fn plugin_at(&self, index: usize) -> Option<String> {
-        self.plugins().get(index).map(|p| p.name().to_string())
+    fn plugin_at(&self, index: usize) -> Option<&str> {
+        self.plugins().get(index).map(Plugin::name)
     }
 
-    fn active_plugin_names(&self) -> Vec<String> {
+    fn active_plugin_names(&self) -> Vec<&str> {
         self.plugins()
             .iter()
             .filter(|p| p.is_active())
-            .map(|p| p.name().to_string())
+            .map(Plugin::name)
             .collect()
     }
 

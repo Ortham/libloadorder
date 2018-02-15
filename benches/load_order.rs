@@ -113,6 +113,10 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     write_active_plugins_file(&game_settings, &plugins_as_ref);
 }
 
+fn to_owned(strs: Vec<&str>) -> Vec<String> {
+    strs.into_iter().map(String::from).collect()
+}
+
 #[derive(Clone)]
 struct Parameters {
     settings: GameSettings,
@@ -259,7 +263,7 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            let plugins = load_order.plugin_names();
+            let plugins = to_owned(load_order.plugin_names());
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_load_order(&plugin_refs).unwrap())
@@ -339,7 +343,7 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            let plugins = load_order.active_plugin_names();
+            let plugins = to_owned(load_order.active_plugin_names());
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_active_plugins(&plugin_refs).unwrap())

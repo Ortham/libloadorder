@@ -56,7 +56,7 @@ pub unsafe extern "C" fn lo_get_active_plugins(
             return LIBLO_OK;
         }
 
-        match to_c_string_array(active_plugins) {
+        match to_c_string_array(&active_plugins) {
             Ok((pointer, size)) => {
                 *plugins = pointer;
                 *num_plugins = size;

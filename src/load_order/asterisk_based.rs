@@ -502,7 +502,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert!(load_order.plugin_names().contains(&"ccTest.esl".to_owned()));
+        assert!(load_order.plugin_names().contains(&"ccTest.esl"));
     }
 
     #[test]
@@ -669,7 +669,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec![];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
@@ -680,7 +680,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp"];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
@@ -721,7 +721,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Skyrim.esm", 1).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -731,7 +731,7 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let existing_filenames = load_order.plugin_names();
+        let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Blank.esm", 0).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
