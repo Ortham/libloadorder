@@ -18,7 +18,7 @@
  */
 
 use std::collections::HashSet;
-use std::fs::{File, read_dir};
+use std::fs::{read_dir, File};
 use std::io::Read;
 use std::mem;
 use std::path::Path;
@@ -94,9 +94,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
             .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
-            .filter(|ref filename| {
-                set.insert(trim_dot_ghost(&filename).to_lowercase())
-            })
+            .filter(|ref filename| set.insert(trim_dot_ghost(&filename).to_lowercase()))
             .collect()
     }
 
@@ -167,23 +165,23 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
 
         let mut plugin_indices: Vec<usize> = Vec::new();
         for (index, plugin) in self.plugins().iter().enumerate().rev() {
-            if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS &&
-                light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
+            if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
+                && light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
             {
                 break;
             }
-            let can_deactivate = plugin.is_active() &&
-                !implicitly_active_plugins.iter().any(
-                    |i| plugin.name_matches(i),
-                );
+            let can_deactivate = plugin.is_active()
+                && !implicitly_active_plugins
+                    .iter()
+                    .any(|i| plugin.name_matches(i));
             if can_deactivate {
-                if plugin.is_light_master_file() &&
-                    light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
+                if plugin.is_light_master_file()
+                    && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
                 {
                     plugin_indices.push(index);
                     light_master_active_count -= 1;
-                } else if !plugin.is_light_master_file() &&
-                           normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
+                } else if !plugin.is_light_master_file()
+                    && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
                 {
                     plugin_indices.push(index);
                     normal_active_count -= 1;
@@ -223,9 +221,9 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {
-        self.plugins_mut().iter_mut().find(
-            |p| p.name_matches(plugin_name),
-        )
+        self.plugins_mut()
+            .iter_mut()
+            .find(|p| p.name_matches(plugin_name))
     }
 
     fn deactivate_all(&mut self) {
@@ -258,9 +256,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     fn add_missing_plugins(&mut self) {
         let filenames: Vec<String> = self.find_plugins_in_dir_sorted()
             .into_par_iter()
-            .filter(|f| {
-                !self.game_settings().is_implicitly_active(f) && self.index_of(f).is_none()
-            })
+            .filter(|f| !self.game_settings().is_implicitly_active(f) && self.index_of(f).is_none())
             .collect();
 
         for plugin in self.load_plugins_if_valid(filenames) {
@@ -306,11 +302,9 @@ where
     let mut file = File::open(file_path)?;
     file.read_to_end(&mut content)?;
 
-    let content = WINDOWS_1252.decode(&content, DecoderTrap::Strict).map_err(
-        |e| {
-            Error::DecodeError(e)
-        },
-    )?;
+    let content = WINDOWS_1252
+        .decode(&content, DecoderTrap::Strict)
+        .map_err(|e| Error::DecodeError(e))?;
 
     Ok(content.par_lines().filter_map(line_mapper).collect())
 }
@@ -332,18 +326,14 @@ fn remove_duplicates_icase(
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .into_iter()
         .rev()
-        .filter(|&(ref string, _)| {
-            set.insert(trim_dot_ghost(&string).to_lowercase())
-        })
+        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(&string).to_lowercase()))
         .collect();
 
     unique_tuples.reverse();
 
     let unique_file_tuples_iter = filenames
         .into_iter()
-        .filter(|ref string| {
-            set.insert(trim_dot_ghost(&string).to_lowercase())
-        })
+        .filter(|ref string| set.insert(trim_dot_ghost(&string).to_lowercase()))
         .map(|f| (f, false));
 
     unique_tuples.extend(unique_file_tuples_iter);
@@ -399,9 +389,9 @@ fn to_plugin(
     existing_plugins: &[Plugin],
     game_settings: &GameSettings,
 ) -> Result<Plugin, Error> {
-    let existing_plugin = existing_plugins.par_iter().find_any(
-        |p| p.name_matches(plugin_name),
-    );
+    let existing_plugin = existing_plugins
+        .par_iter()
+        .find_any(|p| p.name_matches(plugin_name));
 
     match existing_plugin {
         None => Ok(Plugin::new(plugin_name, game_settings)?),
@@ -415,9 +405,7 @@ fn map_to_plugins<T: MutableLoadOrder + ?Sized>(
 ) -> Result<Vec<Plugin>, Error> {
     plugin_names
         .par_iter()
-        .map(|n| {
-            to_plugin(n, load_order.plugins(), load_order.game_settings())
-        })
+        .map(|n| to_plugin(n, load_order.plugins(), load_order.game_settings()))
         .collect()
 }
 

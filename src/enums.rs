@@ -127,8 +127,9 @@ impl From<esplugin::Error> for Error {
         match error {
             esplugin::Error::IoError(x) => Error::IoError(x),
             esplugin::Error::NoFilename => Error::NoFilename,
-            esplugin::Error::ParsingIncomplete |
-            esplugin::Error::ParsingError => Error::PluginParsingError,
+            esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError => {
+                Error::PluginParsingError
+            }
             esplugin::Error::DecodeError(x) => Error::DecodeError(x),
         }
     }
@@ -151,30 +152,24 @@ impl fmt::Display for Error {
                 write!(f, "The plugin \"{}\" is not in the load order", x)
             }
             Error::TooManyActivePlugins => write!(f, "Maximum number of active plugins exceeded"),
-            Error::InvalidRegex => {
-                write!(
-                    f,
-                    "Internal error: regex used to parse Morrowind.ini is invalid"
-                )
-            }
+            Error::InvalidRegex => write!(
+                f,
+                "Internal error: regex used to parse Morrowind.ini is invalid"
+            ),
             Error::DuplicatePlugin => write!(f, "The given plugin list contains duplicates"),
-            Error::NonMasterBeforeMaster => {
-                write!(
-                    f,
-                    "Attempted to load a non-master plugin before a master plugin"
-                )
-            }
+            Error::NonMasterBeforeMaster => write!(
+                f,
+                "Attempted to load a non-master plugin before a master plugin"
+            ),
             Error::GameMasterMustLoadFirst => {
                 write!(f, "The game's main master file must load first")
             }
             Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
-            Error::ImplicitlyActivePlugin(ref x) => {
-                write!(
-                    f,
-                    "The implicitly active plugin \"{}\" cannot be deactivated",
-                    x
-                )
-            }
+            Error::ImplicitlyActivePlugin(ref x) => write!(
+                f,
+                "The implicitly active plugin \"{}\" cannot be deactivated",
+                x
+            ),
             Error::NoLocalAppData => {
                 write!(f, "The game's local app data folder could not be detected")
             }

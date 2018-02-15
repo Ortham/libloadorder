@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-extern crate loadorder;
 extern crate libc;
+extern crate loadorder;
 
 use std::error::Error;
 use std::panic::catch_unwind;

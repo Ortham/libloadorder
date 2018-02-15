@@ -25,7 +25,7 @@ use std::path::PathBuf;
 #[cfg(windows)]
 use app_dirs;
 
-use encoding::{Encoding, DecoderTrap};
+use encoding::{DecoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 
 use enums::{Error, GameId, LoadOrderMethod};
@@ -133,9 +133,9 @@ impl GameSettings {
 
     pub fn is_implicitly_active(&self, plugin: &str) -> bool {
         use unicase::eq;
-        self.implicitly_active_plugins().iter().any(|p| {
-            eq(p.as_str(), plugin)
-        })
+        self.implicitly_active_plugins()
+            .iter()
+            .any(|p| eq(p.as_str(), plugin))
     }
 
     pub fn plugins_directory(&self) -> PathBuf {
@@ -182,13 +182,11 @@ fn load_order_path(game_id: &GameId, local_path: &Path) -> Option<PathBuf> {
 fn plugins_file_path(game_id: &GameId, game_path: &Path, local_path: &Path) -> PathBuf {
     let ini_path = game_path.join("Oblivion.ini");
     match *game_id {
-        GameId::Oblivion if ini_path.exists() => {
-            if use_my_games_directory(&ini_path) {
-                local_path
-            } else {
-                game_path
-            }.join("plugins.txt")
-        }
+        GameId::Oblivion if ini_path.exists() => if use_my_games_directory(&ini_path) {
+            local_path
+        } else {
+            game_path
+        }.join("plugins.txt"),
         GameId::Morrowind => game_path.join("Morrowind.ini"),
         _ => local_path.join("plugins.txt"),
     }
@@ -209,11 +207,10 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
     // Decoding should never fail, since we're just replacing
     // invalid characters and Windows-1252 is a single-byte
     // encoding, but treat it as a 'false' result anyway.
-    match WINDOWS_1252.decode(&contents, DecoderTrap::Replace).map(
-        |s| {
-            s.find("bUseMyGamesDirectory=1")
-        },
-    ) {
+    match WINDOWS_1252
+        .decode(&contents, DecoderTrap::Replace)
+        .map(|s| s.find("bUseMyGamesDirectory=1"))
+    {
         Err(_) | Ok(None) => false,
         Ok(Some(_)) => true,
     }
@@ -248,9 +245,8 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
             let reader = BufReader::new(File::open(file_path)?);
 
             let lines = reader.lines().filter_map(|line| {
-                line.ok().and_then(
-                    |l| if l.is_empty() { None } else { Some(l) },
-                )
+                line.ok()
+                    .and_then(|l| if l.is_empty() { None } else { Some(l) })
             });
 
             plugin_names.extend(lines);

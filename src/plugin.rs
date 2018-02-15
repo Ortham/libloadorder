@@ -22,7 +22,7 @@ use std::fs::File;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use esplugin;
-use filetime::{FileTime, set_file_times};
+use filetime::{set_file_times, FileTime};
 use unicase::eq;
 
 use enums::{Error, GameId};
@@ -153,7 +153,8 @@ impl Plugin {
         match game_settings
             .plugins_directory()
             .join(filename)
-            .resolve_path() {
+            .resolve_path()
+        {
             Err(_) => false,
             Ok(ref x) => esplugin::Plugin::is_valid(game_settings.id().to_esplugin_id(), x, true),
         }
@@ -162,28 +163,24 @@ impl Plugin {
 
 fn has_valid_extension(filename: &str, game: GameId) -> bool {
     let valid_extensions = match game {
-        GameId::Fallout4 |
-        GameId::Fallout4VR |
-        GameId::SkyrimSE => VALID_EXTENSIONS_WITH_ESL,
+        GameId::Fallout4 | GameId::Fallout4VR | GameId::SkyrimSE => VALID_EXTENSIONS_WITH_ESL,
         _ => VALID_EXTENSIONS,
     };
 
-    valid_extensions.iter().any(
-        |e| iends_with_ascii(filename, e),
-    )
+    valid_extensions
+        .iter()
+        .any(|e| iends_with_ascii(filename, e))
 }
 
 fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     // as_bytes().into_iter() is faster than bytes().
-    string.len() >= suffix.len() &&
-        string
+    string.len() >= suffix.len()
+        && string
             .as_bytes()
             .into_iter()
             .rev()
             .zip(suffix.as_bytes().into_iter().rev())
-            .all(|(string_byte, suffix_byte)| {
-                string_byte.eq_ignore_ascii_case(&suffix_byte)
-            })
+            .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(&suffix_byte))
 }
 
 pub fn trim_dot_ghost(string: &str) -> &str {

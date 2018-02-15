@@ -19,7 +19,7 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use encoding::{Encoding, EncoderTrap};
+use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
@@ -27,7 +27,7 @@ use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
 use load_order::{create_parent_dirs, find_first_non_master_position};
-use load_order::mutable::{MutableLoadOrder, read_plugin_names};
+use load_order::mutable::{read_plugin_names, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 
@@ -134,8 +134,8 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
-        if position != 0 && !self.plugins().is_empty() &&
-            eq(plugin_name, self.game_settings().master_file())
+        if position != 0 && !self.plugins().is_empty()
+            && eq(plugin_name, self.game_settings().master_file())
         {
             return Err(Error::GameMasterMustLoadFirst);
         }
@@ -174,11 +174,11 @@ fn plugin_line_mapper(line: &str) -> Option<(String, bool)> {
 mod tests {
     use super::*;
 
-    use std::fs::{File, remove_dir_all};
+    use std::fs::{remove_dir_all, File};
     use std::io;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
-    use filetime::{FileTime, set_file_times};
+    use filetime::{set_file_times, FileTime};
     use tempdir::TempDir;
     use enums::GameId;
     use load_order::tests::*;
@@ -252,8 +252,8 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        let plugin = Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings())
-            .unwrap();
+        let plugin =
+            Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
@@ -317,9 +317,10 @@ mod tests {
 
         assert!(!load_order.plugins()[1].is_master_file());
         copy_to_test_dir("Blank.esm", "Blank.esp", &load_order.game_settings());
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
         load_order.load().unwrap();
@@ -335,15 +336,17 @@ mod tests {
         assert!(load_order.index_of("Blank.esp").is_some());
         assert!(load_order.index_of("Blank - Different.esp").is_some());
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         File::create(&plugin_path).unwrap();
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank - Different.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank - Different.esp");
         File::create(&plugin_path).unwrap();
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
@@ -569,12 +572,14 @@ mod tests {
         use std::fs::copy;
 
         copy(
-            load_order.game_settings().plugins_directory().join(
-                "Blank.esm",
-            ),
-            load_order.game_settings().plugins_directory().join(
-                "Blank.esm.ghost",
-            ),
+            load_order
+                .game_settings()
+                .plugins_directory()
+                .join("Blank.esm"),
+            load_order
+                .game_settings()
+                .plugins_directory()
+                .join("Blank.esm.ghost"),
         ).unwrap();
 
         load_order.load().unwrap();
@@ -645,9 +650,8 @@ mod tests {
 
         load_order.save().unwrap();
 
-        let reader = BufReader::new(
-            File::open(load_order.game_settings().active_plugins_file()).unwrap(),
-        );
+        let reader =
+            BufReader::new(File::open(load_order.game_settings().active_plugins_file()).unwrap());
 
         let lines = reader
             .lines()

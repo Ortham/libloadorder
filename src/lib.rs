@@ -17,16 +17,16 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#[cfg(windows)]
+extern crate app_dirs;
 extern crate encoding;
 extern crate esplugin;
 extern crate filetime;
 extern crate rayon;
 extern crate regex;
-extern crate unicase;
-#[cfg(windows)]
-extern crate app_dirs;
 #[cfg(test)]
 extern crate tempdir;
+extern crate unicase;
 
 mod enums;
 mod game_settings;

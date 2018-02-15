@@ -97,13 +97,12 @@ impl GhostablePath for Path {
         if !self.is_ghosted() {
             Ok(self.to_path_buf())
         } else {
-            self.file_stem().map(|f| self.with_file_name(f)).ok_or(
-                Error::InvalidPath(self.to_path_buf()),
-            )
+            self.file_stem()
+                .map(|f| self.with_file_name(f))
+                .ok_or(Error::InvalidPath(self.to_path_buf()))
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

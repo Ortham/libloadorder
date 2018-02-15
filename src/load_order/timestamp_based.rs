@@ -18,10 +18,10 @@
  */
 use std::cmp::Ordering;
 use std::fs::File;
-use std::io::{BufReader, BufRead, BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use encoding::{Encoding, EncoderTrap};
+use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 use rayon::prelude::*;
 use regex::Regex;
@@ -101,9 +101,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         let result: Result<Vec<()>, Error> = self.plugins_mut()
             .par_iter_mut()
             .zip(timestamps.into_par_iter())
-            .map(|(ref mut plugin, timestamp)| {
-                plugin.set_modification_time(timestamp)
-            })
+            .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
             .collect();
 
         match result {
@@ -146,10 +144,10 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
 
 fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<String> {
     if game_id == GameId::Morrowind {
-        line = regex.captures(&line).and_then(|c| c.get(1)).map_or(
-            &line[0..0],
-            |m| m.as_str(),
-        );
+        line = regex
+            .captures(&line)
+            .and_then(|c| c.get(1))
+            .map_or(&line[0..0], |m| m.as_str());
     }
 
     if line.is_empty() || line.starts_with('#') {
@@ -209,7 +207,6 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
                 break;
             }
         }
-
     }
 
     Ok(prelude)
@@ -219,12 +216,12 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 mod tests {
     use super::*;
 
-    use std::fs::{File, remove_dir_all};
+    use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};
     use std::path::Path;
     use tempdir::TempDir;
     use enums::GameId;
-    use filetime::{FileTime, set_file_times};
+    use filetime::{set_file_times, FileTime};
     use load_order::tests::*;
     use tests::copy_to_test_dir;
 
@@ -246,8 +243,8 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        let plugin = Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings())
-            .unwrap();
+        let plugin =
+            Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
@@ -285,9 +282,10 @@ mod tests {
 
         assert!(!load_order.plugins()[1].is_master_file());
         copy_to_test_dir("Blank.esm", "Blank.esp", &load_order.game_settings());
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
         load_order.load().unwrap();
@@ -303,15 +301,17 @@ mod tests {
         assert!(load_order.index_of("Blank.esp").is_some());
         assert!(load_order.index_of("Blank - Different.esp").is_some());
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         write_file(&plugin_path);
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank - Different.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank - Different.esp");
         write_file(&plugin_path);
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
@@ -788,7 +788,6 @@ mod tests {
             .unwrap();
         load_order.set_plugin_index("Blank.esp", 2).unwrap();
         assert!(load_order.is_active("Blank.esp"));
-
 
         load_order
             .set_plugin_index("Blank - Different.esp", 2)

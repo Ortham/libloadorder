@@ -101,8 +101,8 @@
 //! Libloadorder is less strict when loading load orders and will adjust them at load time to be
 //! valid, similar to game behaviour.
 
-extern crate loadorder;
 extern crate libc;
+extern crate loadorder;
 
 use std::cell::RefCell;
 use std::ffi::CString;
@@ -138,40 +138,40 @@ pub unsafe extern "C" fn lo_get_version(
     minor: *mut c_uint,
     patch: *mut c_uint,
 ) -> c_uint {
-    catch_unwind(|| if major.is_null() || minor.is_null() ||
-        patch.is_null()
-    {
-        error(LIBLO_ERROR_INVALID_ARGS, "Null pointer(s) passed")
-    } else {
-        match env!("CARGO_PKG_VERSION_MAJOR").parse::<c_uint>() {
-            Ok(x) => *major = x,
-            Err(_) => {
-                return error(
-                    LIBLO_ERROR_INVALID_ARGS,
-                    "Failed to parse major version number",
-                )
+    catch_unwind(|| {
+        if major.is_null() || minor.is_null() || patch.is_null() {
+            error(LIBLO_ERROR_INVALID_ARGS, "Null pointer(s) passed")
+        } else {
+            match env!("CARGO_PKG_VERSION_MAJOR").parse::<c_uint>() {
+                Ok(x) => *major = x,
+                Err(_) => {
+                    return error(
+                        LIBLO_ERROR_INVALID_ARGS,
+                        "Failed to parse major version number",
+                    )
+                }
             }
-        }
-        match env!("CARGO_PKG_VERSION_MINOR").parse::<c_uint>() {
-            Ok(x) => *minor = x,
-            Err(_) => {
-                return error(
-                    LIBLO_ERROR_INVALID_ARGS,
-                    "Failed to parse minor version number",
-                )
+            match env!("CARGO_PKG_VERSION_MINOR").parse::<c_uint>() {
+                Ok(x) => *minor = x,
+                Err(_) => {
+                    return error(
+                        LIBLO_ERROR_INVALID_ARGS,
+                        "Failed to parse minor version number",
+                    )
+                }
             }
-        }
-        match env!("CARGO_PKG_VERSION_PATCH").parse::<c_uint>() {
-            Ok(x) => *patch = x,
-            Err(_) => {
-                return error(
-                    LIBLO_ERROR_INVALID_ARGS,
-                    "Failed to parse patch version number",
-                )
+            match env!("CARGO_PKG_VERSION_PATCH").parse::<c_uint>() {
+                Ok(x) => *patch = x,
+                Err(_) => {
+                    return error(
+                        LIBLO_ERROR_INVALID_ARGS,
+                        "Failed to parse patch version number",
+                    )
+                }
             }
-        }
 
-        LIBLO_OK
+            LIBLO_OK
+        }
     }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
@@ -184,16 +184,20 @@ pub unsafe extern "C" fn lo_get_version(
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_uint {
-    catch_unwind(|| if message.is_null() {
-        error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed")
-    } else {
-        ERROR_MESSAGE.with(|f| if f.borrow().as_bytes().is_empty() {
-            *message = ptr::null();
+    catch_unwind(|| {
+        if message.is_null() {
+            error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed")
         } else {
-            *message = f.borrow().as_ptr() as *const i8;
-        });
+            ERROR_MESSAGE.with(|f| {
+                if f.borrow().as_bytes().is_empty() {
+                    *message = ptr::null();
+                } else {
+                    *message = f.borrow().as_ptr() as *const i8;
+                }
+            });
 
-        LIBLO_OK
+            LIBLO_OK
+        }
     }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 

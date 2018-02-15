@@ -20,13 +20,13 @@ use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
-use encoding::{Encoding, EncoderTrap};
+use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
-use plugin::{Plugin, trim_dot_ghost};
+use plugin::{trim_dot_ghost, Plugin};
 use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::mutable::load_active_plugins;
 use load_order::mutable::plugin_line_mapper;
@@ -125,8 +125,8 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
-        if position != 0 && !self.plugins().is_empty() &&
-            eq(plugin_name, self.game_settings().master_file())
+        if position != 0 && !self.plugins().is_empty()
+            && eq(plugin_name, self.game_settings().master_file())
         {
             return Err(Error::GameMasterMustLoadFirst);
         }
@@ -156,9 +156,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
                 let are_equal = load_order_plugin_names
                     .iter()
-                    .filter(|l| {
-                        active_plugin_names.iter().any(|a| plugin_names_match(a, l))
-                    })
+                    .filter(|l| active_plugin_names.iter().any(|a| plugin_names_match(a, l)))
                     .zip(active_plugin_names.iter())
                     .all(|(l, a)| plugin_names_match(&l, &a));
 
@@ -244,10 +242,10 @@ fn plugin_names_match(name1: &str, name2: &str) -> bool {
 mod tests {
     use super::*;
 
-    use std::fs::{File, remove_dir_all};
+    use std::fs::{remove_dir_all, File};
     use std::io::Write;
     use std::path::Path;
-    use filetime::{FileTime, set_file_times};
+    use filetime::{set_file_times, FileTime};
     use tempdir::TempDir;
     use enums::GameId;
     use load_order::tests::*;
@@ -295,8 +293,8 @@ mod tests {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
-        let plugin = Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings())
-            .unwrap();
+        let plugin =
+            Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
@@ -334,9 +332,10 @@ mod tests {
 
         assert!(!load_order.plugins()[1].is_master_file());
         copy_to_test_dir("Blank.esm", "Blank.esp", &load_order.game_settings());
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
         load_order.load().unwrap();
@@ -352,15 +351,17 @@ mod tests {
         assert!(load_order.index_of("Blank.esp").is_some());
         assert!(load_order.index_of("Blank - Different.esp").is_some());
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank.esp");
         write_file(&plugin_path);
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
-        let plugin_path = load_order.game_settings().plugins_directory().join(
-            "Blank - Different.esp",
-        );
+        let plugin_path = load_order
+            .game_settings()
+            .plugins_directory()
+            .join("Blank - Different.esp");
         write_file(&plugin_path);
         set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
 
@@ -592,12 +593,14 @@ mod tests {
         use std::fs::rename;
 
         rename(
-            load_order.game_settings().plugins_directory().join(
-                "Blank.esm",
-            ),
-            load_order.game_settings().plugins_directory().join(
-                "Blank.esm.ghost",
-            ),
+            load_order
+                .game_settings()
+                .plugins_directory()
+                .join("Blank.esm"),
+            load_order
+                .game_settings()
+                .plugins_directory()
+                .join("Blank.esm.ghost"),
         ).unwrap();
 
         let expected_filenames = vec![

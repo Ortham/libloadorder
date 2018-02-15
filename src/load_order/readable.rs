@@ -32,9 +32,9 @@ pub trait ReadableLoadOrder {
     }
 
     fn index_of(&self, plugin_name: &str) -> Option<usize> {
-        self.plugins().iter().position(
-            |p| p.name_matches(plugin_name),
-        )
+        self.plugins()
+            .iter()
+            .position(|p| p.name_matches(plugin_name))
     }
 
     fn plugin_at(&self, index: usize) -> Option<String> {

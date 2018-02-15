@@ -20,7 +20,7 @@
 use std::error::Error;
 use std::panic::catch_unwind;
 use std::ptr;
-use libc::{c_char, size_t, c_uint};
+use libc::{c_char, c_uint, size_t};
 use loadorder::LoadOrderMethod;
 
 use constants::*;
@@ -98,7 +98,6 @@ pub unsafe extern "C" fn lo_get_load_order(
     }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
-
 /// Set the load order.
 ///
 /// Sets the load order to the passed plugin array, then scans the plugins directory and inserts
@@ -145,7 +144,6 @@ pub unsafe extern "C" fn lo_set_load_order(
     }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
-
 /// Get the load order position of a plugin.
 ///
 /// Load order positions are zero-based, so the first plugin in the load order has a position of
@@ -180,7 +178,6 @@ pub unsafe extern "C" fn lo_get_plugin_position(
         LIBLO_OK
     }).unwrap_or(LIBLO_ERROR_PANICKED)
 }
-
 
 /// Set the load order position of a plugin.
 ///

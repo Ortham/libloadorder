@@ -22,7 +22,7 @@ use rayon::prelude::*;
 use unicase::eq;
 
 use enums::{Error, GameId};
-use load_order::mutable::{MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS, MutableLoadOrder};
+use load_order::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
@@ -39,15 +39,15 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         let index = find_or_add(self, plugin_name)?;
 
-        let at_max_active_normal_plugins = self.count_active_normal_plugins() ==
-            MAX_ACTIVE_NORMAL_PLUGINS;
-        let at_max_active_light_masters = self.count_active_light_masters() ==
-            MAX_ACTIVE_LIGHT_MASTERS;
+        let at_max_active_normal_plugins =
+            self.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
+        let at_max_active_light_masters =
+            self.count_active_light_masters() == MAX_ACTIVE_LIGHT_MASTERS;
 
         let plugin = &mut self.plugins_mut()[index];
-        if !plugin.is_active() &&
-            ((!plugin.is_light_master_file() && at_max_active_normal_plugins) ||
-                 (plugin.is_light_master_file() && at_max_active_light_masters))
+        if !plugin.is_active()
+            && ((!plugin.is_light_master_file() && at_max_active_normal_plugins)
+                || (plugin.is_light_master_file() && at_max_active_light_masters))
         {
             Err(Error::TooManyActivePlugins)
         } else {
@@ -68,10 +68,10 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         let (existing_plugin_indices, new_plugins) = lookup_plugins(self, active_plugin_names)?;
 
-        if count_normal_plugins(self, &existing_plugin_indices, &new_plugins) >
-            MAX_ACTIVE_NORMAL_PLUGINS ||
-            count_light_masters(self, &existing_plugin_indices, &new_plugins) >
-                MAX_ACTIVE_LIGHT_MASTERS
+        if count_normal_plugins(self, &existing_plugin_indices, &new_plugins)
+            > MAX_ACTIVE_NORMAL_PLUGINS
+            || count_light_masters(self, &existing_plugin_indices, &new_plugins)
+                > MAX_ACTIVE_LIGHT_MASTERS
         {
             return Err(Error::TooManyActivePlugins);
         }
@@ -107,9 +107,11 @@ fn lookup_plugins<T: WritableLoadOrder + ?Sized>(
 ) -> Result<(Vec<usize>, Vec<Plugin>), Error> {
     let (existing_plugin_indices, new_plugin_names): (Vec<usize>, Vec<&str>) =
         active_plugin_names.into_par_iter().partition_map(|n| {
-            match load_order.plugins().par_iter().position_any(
-                |p| p.name_matches(n),
-            ) {
+            match load_order
+                .plugins()
+                .par_iter()
+                .position_any(|p| p.name_matches(n))
+            {
                 Some(x) => Either::Left(x),
                 None => Either::Right(n),
             }
@@ -118,9 +120,8 @@ fn lookup_plugins<T: WritableLoadOrder + ?Sized>(
     let new_plugins = new_plugin_names
         .into_par_iter()
         .map(|n| {
-            Plugin::new(n, load_order.game_settings()).map_err(|_| {
-                Error::InvalidPlugin(n.to_string())
-            })
+            Plugin::new(n, load_order.game_settings())
+                .map_err(|_| Error::InvalidPlugin(n.to_string()))
         })
         .collect::<Result<Vec<Plugin>, Error>>()?;
 
@@ -140,9 +141,7 @@ fn count_plugins<T: WritableLoadOrder + ?Sized>(
 
     let existing_count = existing_plugin_indices
         .into_iter()
-        .filter(|i| {
-            load_order.plugins()[**i].is_light_master_file() == count_light_masters
-        })
+        .filter(|i| load_order.plugins()[**i].is_light_master_file() == count_light_masters)
         .count();
 
     new_count + existing_count
@@ -162,9 +161,9 @@ fn count_light_masters<T: WritableLoadOrder + ?Sized>(
     new_plugins: &[Plugin],
 ) -> usize {
     match load_order.game_settings().id() {
-        GameId::Fallout4 |
-        GameId::Fallout4VR |
-        GameId::SkyrimSE => count_plugins(load_order, existing_plugin_indices, new_plugins, true),
+        GameId::Fallout4 | GameId::Fallout4VR | GameId::SkyrimSE => {
+            count_plugins(load_order, existing_plugin_indices, new_plugins, true)
+        }
         _ => 0,
     }
 }
@@ -175,11 +174,9 @@ fn find_or_add<T: WritableLoadOrder + ?Sized>(
 ) -> Result<usize, Error> {
     match load_order.index_of(plugin_name) {
         Some(i) => Ok(i),
-        None => {
-            load_order.add_to_load_order(plugin_name).map_err(|_| {
-                Error::InvalidPlugin(plugin_name.to_string())
-            })
-        }
+        None => load_order
+            .add_to_load_order(plugin_name)
+            .map_err(|_| Error::InvalidPlugin(plugin_name.to_string())),
     }
 }
 
@@ -408,7 +405,8 @@ mod tests {
     }
 
     #[test]
-fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_active_plugins(){
+    fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_active_plugins()
+    {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 

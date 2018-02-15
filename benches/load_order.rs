@@ -10,9 +10,9 @@ use std::fs::{copy, create_dir, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use criterion::Criterion;
-use encoding::{Encoding, EncoderTrap};
+use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
-use filetime::{FileTime, set_file_times};
+use filetime::{set_file_times, FileTime};
 use tempdir::TempDir;
 
 use loadorder::GameId;
@@ -60,7 +60,6 @@ fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
     }
 }
 
-
 fn testing_plugins_dir(game_id: GameId) -> PathBuf {
     let game_folder = match game_id {
         GameId::Morrowind => "Morrowind",
@@ -73,9 +72,9 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
         _ => "Data",
     };
 
-    Path::new("testing-plugins").join(game_folder).join(
-        plugins_folder,
-    )
+    Path::new("testing-plugins")
+        .join(game_folder)
+        .join(plugins_folder)
 }
 
 fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {

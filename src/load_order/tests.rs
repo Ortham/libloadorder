@@ -21,9 +21,9 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use encoding::{Encoding, EncoderTrap};
+use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
-use filetime::{FileTime, set_file_times};
+use filetime::{set_file_times, FileTime};
 
 use enums::GameId;
 use enums::LoadOrderMethod;
