@@ -86,9 +86,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
             }
         }
 
-        for plugin in self.plugins_mut() {
-            plugin.deactivate();
-        }
+        self.deactivate_all();
 
         for index in existing_plugin_indices {
             self.plugins_mut()[index].activate()?;
