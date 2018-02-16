@@ -100,7 +100,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
 
     fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
         let mut filenames = self.find_plugins_in_dir();
-        filenames.par_sort();
+        filenames.sort();
 
         filenames
     }
@@ -306,7 +306,7 @@ where
         .decode(&content, DecoderTrap::Strict)
         .map_err(|e| Error::DecodeError(e))?;
 
-    Ok(content.par_lines().filter_map(line_mapper).collect())
+    Ok(content.lines().filter_map(line_mapper).collect())
 }
 
 pub fn plugin_line_mapper(line: &str) -> Option<String> {
