@@ -11,6 +11,7 @@ use std::fs::{copy, create_dir, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::Duration;
 use criterion::Criterion;
 use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
@@ -233,7 +234,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
     );
 }
 
-fn writable_load_order_benchmark(c: &mut Criterion) {
+fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
     let load_orders: Vec<Parameters> = vec![
         Parameters::new(GameId::Oblivion, 20, 20),
         Parameters::new(GameId::Oblivion, 500, 250),
@@ -265,6 +266,27 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         },
         load_orders.clone(),
     );
+
+    c.bench_function_over_inputs(
+        "WritableLoadOrder.save()",
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
+
+            b.iter(|| load_order.save().unwrap())
+        },
+        load_orders.clone(),
+    );
+}
+
+fn writable_load_order_benchmark(c: &mut Criterion) {
+    let load_orders: Vec<Parameters> = vec![
+        Parameters::new(GameId::Oblivion, 20, 20),
+        Parameters::new(GameId::Oblivion, 500, 250),
+        Parameters::new(GameId::Skyrim, 20, 20),
+        Parameters::new(GameId::Skyrim, 500, 250),
+        Parameters::new(GameId::Fallout4, 20, 20),
+        Parameters::new(GameId::Fallout4, 500, 250),
+    ];
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.set_plugin_index()",
@@ -324,21 +346,20 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         },
         load_orders.clone(),
     );
-
-    c.bench_function_over_inputs(
-        "WritableLoadOrder.save()",
-        |b, parameters| {
-            let mut load_order = parameters.loaded_load_order();
-
-            b.iter(|| load_order.save().unwrap())
-        },
-        load_orders.clone(),
-    );
 }
 
-criterion_group!(
-    benches,
-    readable_load_order_benchmark,
-    writable_load_order_benchmark
-);
-criterion_main!(benches);
+criterion_group!{
+    name = benches;
+    config = Criterion::default()
+        .warm_up_time(Duration::from_secs(1))
+        .measurement_time(Duration::from_secs(2));
+    targets = readable_load_order_benchmark, writable_load_order_benchmark
+}
+criterion_group!{
+    name = slow_benches;
+    config = Criterion::default()
+        .warm_up_time(Duration::from_secs(2))
+        .sample_size(25);
+    targets = benchmarks_writable_load_order_slow
+}
+criterion_main!(benches, slow_benches);
