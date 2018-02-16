@@ -5,10 +5,12 @@ extern crate filetime;
 extern crate loadorder;
 extern crate tempdir;
 
+use std::fmt;
 use std::fmt::Display;
 use std::fs::{copy, create_dir, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use criterion::Criterion;
 use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
@@ -86,12 +88,6 @@ fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
 
-fn game_settings(game_id: GameId, game_dir: &Path) -> GameSettings {
-    let local_path = game_dir.join("local");
-    create_dir(&local_path).unwrap();
-    GameSettings::with_local_path(game_id, game_dir, &local_path).unwrap()
-}
-
 fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plugins_count: u16) {
     let mut plugins: Vec<String> = Vec::new();
 
@@ -116,273 +112,227 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     write_active_plugins_file(&game_settings, &plugins_as_ref);
 }
 
-fn prepare(
-    game_id: GameId,
-    game_dir: &Path,
+#[derive(Clone)]
+struct Parameters {
+    settings: GameSettings,
     plugins_count: u16,
     active_plugins_count: u16,
-) -> Box<WritableLoadOrder> {
-    let game_settings = game_settings(game_id, game_dir);
+    directory: Rc<TempDir>,
+}
 
-    initialise_state(&game_settings, plugins_count, active_plugins_count);
+impl Parameters {
+    fn new(game_id: GameId, plugins_count: u16, active_plugins_count: u16) -> Parameters {
+        let directory = TempDir::new("libloadorder_test_").unwrap();
+        let local_path = directory.path().join("local");
 
-    game_settings.into_load_order()
+        create_dir(&local_path).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(game_id, directory.path(), &local_path).unwrap();
+
+        initialise_state(&settings, plugins_count, active_plugins_count);
+
+        Parameters {
+            settings,
+            plugins_count,
+            active_plugins_count,
+            directory: Rc::new(directory),
+        }
+    }
+
+    fn load_order(&self) -> Box<WritableLoadOrder> {
+        self.settings.clone().into_load_order()
+    }
+
+    fn loaded_load_order(&self) -> Box<WritableLoadOrder> {
+        let mut load_order = self.load_order();
+        load_order.load().unwrap();
+
+        load_order
+    }
+}
+
+impl fmt::Debug for Parameters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "({:?}, {} plugins, {} active)",
+            self.settings.id(),
+            self.plugins_count,
+            self.active_plugins_count
+        )
+    }
 }
 
 fn readable_load_order_benchmark(c: &mut Criterion) {
     // ReadableLoadOrder methods are the same for all games, so just benchmark one.
-    const LOAD_ORDERS: &[(u16, u16)] = &[(20, 20), (500, 250)];
+    let load_orders: Vec<Parameters> = vec![
+        Parameters::new(GameId::Fallout4, 20, 20),
+        Parameters::new(GameId::Fallout4, 500, 250),
+    ];
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.plugin_names()",
-        |b, &&(plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                GameId::Fallout4,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.load_order();
 
             load_order.load().unwrap();
 
             b.iter(|| load_order.plugin_names())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.index_of()",
-        |b, &&(plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                GameId::Fallout4,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
-            let plugin = load_order.plugin_at(plugins_count as usize).unwrap();
+            let plugin = load_order
+                .plugin_at(parameters.plugins_count as usize)
+                .unwrap();
 
             b.iter(|| load_order.index_of(&plugin))
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.plugin_at()",
-        |b, &&(plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                GameId::Fallout4,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
-
-            load_order.load().unwrap();
+        |b, parameters| {
+            let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.plugin_at(10))
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.active_plugin_names()",
-        |b, &&(plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                GameId::Fallout4,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
-
-            load_order.load().unwrap();
+        |b, parameters| {
+            let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.active_plugin_names())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.is_active()",
-        |b, &&(plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                GameId::Fallout4,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, ref parameters| {
+            let load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
-            let plugin = load_order.plugin_at(plugins_count as usize).unwrap();
+            let plugin = load_order
+                .plugin_at(parameters.plugins_count as usize)
+                .unwrap()
+                .to_owned();
 
             b.iter(|| load_order.is_active(&plugin))
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 }
 
 fn writable_load_order_benchmark(c: &mut Criterion) {
-    const LOAD_ORDERS: &[(GameId, u16, u16)] = &[
-        (GameId::Fallout4, 20, 20),
-        (GameId::Fallout4, 500, 250),
-        (GameId::Skyrim, 20, 20),
-        (GameId::Skyrim, 500, 250),
-        (GameId::Oblivion, 20, 20),
-        (GameId::Oblivion, 500, 250),
+    let load_orders: Vec<Parameters> = vec![
+        Parameters::new(GameId::Oblivion, 20, 20),
+        Parameters::new(GameId::Oblivion, 500, 250),
+        Parameters::new(GameId::Skyrim, 20, 20),
+        Parameters::new(GameId::Skyrim, 500, 250),
+        Parameters::new(GameId::Fallout4, 20, 20),
+        Parameters::new(GameId::Fallout4, 500, 250),
     ];
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.load()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.load_order();
 
-            b.iter(|| load_order.load().unwrap())
+            b.iter(|| load_order.load())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.set_load_order()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
             let plugins = load_order.plugin_names();
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_load_order(&plugin_refs).unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.set_plugin_index()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.set_plugin_index(&plugin_name, 10).unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.is_self_consistent()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
-
-            load_order.load().unwrap();
+        |b, parameters| {
+            let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.is_self_consistent().unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.activate()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.activate(&plugin_name).unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.deactivate()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.deactivate(&plugin_name).unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.set_active_plugins()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
-            load_order.load().unwrap();
             let plugins = load_order.active_plugin_names();
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_active_plugins(&plugin_refs).unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 
     c.bench_function_over_inputs(
         "WritableLoadOrder.save()",
-        |b, &&(game_id, plugins_count, active_plugins_count)| {
-            let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
-            let mut load_order = prepare(
-                game_id,
-                &tmp_dir.path(),
-                plugins_count,
-                active_plugins_count,
-            );
-
-            load_order.load().unwrap();
+        |b, parameters| {
+            let mut load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.save().unwrap())
         },
-        LOAD_ORDERS,
+        load_orders.clone(),
     );
 }
 
