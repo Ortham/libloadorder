@@ -394,7 +394,7 @@ fn to_plugin(
         .find_any(|p| p.name_matches(plugin_name));
 
     match existing_plugin {
-        None => Ok(Plugin::new(plugin_name, game_settings)?),
+        None => Plugin::new(plugin_name, game_settings),
         Some(x) => Ok(x.clone()),
     }
 }

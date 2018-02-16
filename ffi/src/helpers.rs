@@ -78,9 +78,9 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
 
     let rust_c_string = CStr::from_ptr(c_string);
 
-    Ok(rust_c_string
+    rust_c_string
         .to_str()
-        .map_err(|_| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))?)
+        .map_err(|_| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))
 }
 
 pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
@@ -110,9 +110,8 @@ pub unsafe fn to_str_vec<'a>(
     array: *const *const c_char,
     array_size: usize,
 ) -> Result<Vec<&'a str>, u32> {
-    let plugins: &[*const c_char] = slice::from_raw_parts(array, array_size);
-
-    let plugins: Result<Vec<&str>, u32> = plugins.iter().map(|c| to_str(*c)).collect();
-
-    Ok(plugins?)
+    slice::from_raw_parts(array, array_size)
+        .iter()
+        .map(|c| to_str(*c))
+        .collect::<Result<Vec<&str>, u32>>()
 }
