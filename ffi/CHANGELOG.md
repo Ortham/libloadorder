@@ -1,5 +1,20 @@
 # Changelog
 
+## [11.0.0] - 2018-02-16
+
+### Changed
+
+- `ReadableLoadOrder` methods now return strings as string slices, making the
+  API more symmetrical and improving performance.
+- `WritableLoadOrder::set_load_order()` now errors if passed a load order that
+  does not include all installed plugins. Previously any missing plugins would
+  be appended to the passed load order, which could cause unexpected results.
+  This also applies to the FFI's `lo_set_load_order()`.
+- Extended benchmarks to cover all `ReadableLoadOrder` and `WritableLoadOrder`
+  methods, and significantly reduced their running time.
+- Updated Rayon dependency to 1.0.0.
+- Updated documentation, fixing several inaccuracies.
+
 ## [10.1.1] - 2018-02-14
 
 ### Added
@@ -22,7 +37,7 @@
 - `WritableLoadOrder::set_active_plugins()` was counting normal plugins and
   light masters according to their file extension, so it wouldn't count
   false-flagged plugins correctly when validating against the active plugin
-  limits.
+  limits. This also applies to the FFI's `lo_set_active_plugins()`.
 - Saving a timestamp-based load order would preserve the plugins' existing
   access times, for correctness the access times are now set to the current time
   when setting the modification time.
