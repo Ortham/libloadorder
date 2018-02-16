@@ -233,24 +233,43 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        if !are_plugin_names_unique(plugin_names) {
-            return Err(Error::DuplicatePlugin);
-        }
+        self.validate_plugin_names(plugin_names)?;
 
         let mut plugins = match map_to_plugins(self, plugin_names) {
             Err(x) => return Err(Error::InvalidPlugin(x.to_string())),
             Ok(x) => x,
         };
 
-        if !is_partitioned_by_master_flag(&plugins) {
-            return Err(Error::NonMasterBeforeMaster);
+        if is_partitioned_by_master_flag(&plugins) {
+            mem::swap(&mut plugins, self.plugins_mut());
+            Ok(())
+        } else {
+            Err(Error::NonMasterBeforeMaster)
+        }
+    }
+
+    fn validate_plugin_names(&self, plugin_names: &[&str]) -> Result<(), Error> {
+        let unique_plugin_names: HashSet<String> =
+            plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
+
+        if unique_plugin_names.len() != plugin_names.len() {
+            return Err(Error::DuplicatePlugin);
         }
 
-        mem::swap(&mut plugins, self.plugins_mut());
+        self.find_plugins_in_dir()
+            .par_iter()
+            .map(|filename: &String| {
+                if !unique_plugin_names.contains(&filename.to_lowercase())
+                    && Plugin::is_valid(&filename, self.game_settings())
+                {
+                    Err(Error::PluginNotFound(filename.clone()))
+                } else {
+                    Ok(())
+                }
+            })
+            .collect::<Result<Vec<()>, Error>>()?;
 
-        self.add_missing_plugins();
-
-        self.add_implicitly_active_plugins()
+        Ok(())
     }
 
     fn add_missing_plugins(&mut self) {
@@ -375,13 +394,6 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 
         Ok(plugin)
     }
-}
-
-fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
-    let unique_plugin_names: HashSet<String> =
-        plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
-
-    unique_plugin_names.len() == plugin_names.len()
 }
 
 fn to_plugin(

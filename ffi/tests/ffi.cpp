@@ -167,8 +167,12 @@ void test_lo_set_load_order() {
     "Blank - Different Master Dependent.esm",
     "Blank.esp",
     "Blank - Different.esp",
+    "Blank - Plugin Dependent.esp",
+    "Blank - Master Dependent.esp",
+    "Blank - Different Master Dependent.esp",
+    "Blank - Different Plugin Dependent.esp",
   };
-  size_t num_plugins = 6;
+  size_t num_plugins = 10;
   unsigned int return_code = lo_set_load_order(handle, plugins, num_plugins);
 
   assert(return_code == 0);

@@ -687,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_add_and_activate_implicitly_active_plugins() {
+    fn set_load_order_should_error_if_an_installed_plugin_is_missing() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -698,22 +698,11 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
         ];
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        load_order.plugins_mut().remove(0); // Remove the existing Skyrim.esm entry.
-        load_order.set_load_order(&filenames).unwrap();
 
-        let expected_filenames = vec![
-            "Skyrim.esm",
-            "Update.esm",
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-        assert_eq!(expected_filenames, load_order.plugin_names());
-        assert!(load_order.is_active("Skyrim.esm"));
-        assert!(load_order.is_active("Update.esm"));
+        match load_order.set_load_order(&filenames).unwrap_err() {
+            Error::PluginNotFound(x) => assert_eq!("Blàñk.esp", x),
+            e => panic!("Wrong error type: {:?}", e),
+        }
     }
 
     #[test]

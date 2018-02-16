@@ -662,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
+    fn set_load_order_should_error_if_an_installed_plugin_is_missing() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
@@ -671,12 +671,33 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        match load_order.set_load_order(&filenames).unwrap_err() {
+            Error::PluginNotFound(x) => assert_eq!("Morrowind.esm", x),
+            e => panic!("Wrong error type: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec![
+            "Morrowind.esm",
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
         ];
         load_order.set_load_order(&filenames).unwrap();
 
         let expected_filenames = vec![
-            "Blank.esm",
             "Morrowind.esm",
+            "Blank.esm",
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
