@@ -93,24 +93,24 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     let mut plugins: Vec<String> = Vec::new();
 
     plugins.push(game_settings.master_file().to_string());
-    copy_to_test_dir("Blank.esm", game_settings.master_file(), &game_settings);
+    copy_to_test_dir("Blank.esm", game_settings.master_file(), game_settings);
 
     for i in 0..plugins_count {
         plugins.push(format!("Blank{}.esm", i));
         copy_to_test_dir(
             "Blank - Different.esm",
-            &plugins.last().unwrap(),
-            &game_settings,
+            plugins.last().unwrap(),
+            game_settings,
         );
     }
 
     let mut plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
     if game_settings.load_order_file().is_some() {
-        write_load_order_file(&game_settings, &plugins_as_ref);
+        write_load_order_file(game_settings, &plugins_as_ref);
     }
     set_timestamps(&game_settings.plugins_directory(), &plugins_as_ref);
     plugins_as_ref.truncate(active_plugins_count as usize);
-    write_active_plugins_file(&game_settings, &plugins_as_ref);
+    write_active_plugins_file(game_settings, &plugins_as_ref);
 }
 
 fn to_owned(strs: Vec<&str>) -> Vec<String> {
@@ -197,7 +197,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
                 .plugin_at(parameters.plugins_count as usize)
                 .unwrap();
 
-            b.iter(|| load_order.index_of(&plugin))
+            b.iter(|| load_order.index_of(plugin))
         },
         load_orders.clone(),
     );
@@ -224,7 +224,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
 
     c.bench_function_over_inputs(
         "ReadableLoadOrder.is_active()",
-        |b, ref parameters| {
+        |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
             let plugin = load_order
