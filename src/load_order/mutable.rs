@@ -249,8 +249,10 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
     }
 
     fn validate_plugin_names(&self, plugin_names: &[&str]) -> Result<(), Error> {
-        let unique_plugin_names: HashSet<String> =
-            plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
+        let unique_plugin_names: HashSet<String> = plugin_names
+            .par_iter()
+            .map(|s| trim_dot_ghost(s).to_lowercase())
+            .collect();
 
         if unique_plugin_names.len() != plugin_names.len() {
             return Err(Error::DuplicatePlugin);
@@ -259,7 +261,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
         self.find_plugins_in_dir()
             .par_iter()
             .map(|filename: &String| {
-                if !unique_plugin_names.contains(&filename.to_lowercase())
+                if !unique_plugin_names.contains(&trim_dot_ghost(filename).to_lowercase())
                     && Plugin::is_valid(&filename, self.game_settings())
                 {
                     Err(Error::PluginNotFound(filename.clone()))

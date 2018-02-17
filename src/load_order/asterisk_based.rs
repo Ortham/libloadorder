@@ -706,6 +706,30 @@ mod tests {
     }
 
     #[test]
+    fn set_load_order_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "ghosted.esm.ghost",
+            &load_order.game_settings(),
+        );
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "ghosted.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert!(load_order.set_load_order(&filenames).is_ok());
+    }
+
+    #[test]
     fn set_plugin_index_should_error_if_setting_the_game_master_index_to_non_zero_in_bounds() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());

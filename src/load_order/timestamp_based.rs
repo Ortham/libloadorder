@@ -681,6 +681,30 @@ mod tests {
     }
 
     #[test]
+    fn set_load_order_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "ghosted.esm.ghost",
+            &load_order.game_settings(),
+        );
+
+        let filenames = vec![
+            "Morrowind.esm",
+            "Blank.esm",
+            "ghosted.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert!(load_order.set_load_order(&filenames).is_ok());
+    }
+
+    #[test]
     fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
         let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
