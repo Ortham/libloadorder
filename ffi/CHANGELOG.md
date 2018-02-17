@@ -1,5 +1,14 @@
 # Changelog
 
+## [11.0.1] - 2018-02-17
+
+### Fixed
+
+- `WritableLoadOrder::set_load_order()` would error if given an unghosted plugin
+  name for an installed plugin that was ghosted. It now treats unghosted and
+  ghosted plugin names as equivalent, so they can be used interchangeably.
+  This also applies to the FFI's `lo_set_load_order()`.
+
 ## [11.0.0] - 2018-02-16
 
 ### Changed
