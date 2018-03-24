@@ -20,7 +20,6 @@
 use std::ascii::AsciiExt;
 use std::fs::File;
 use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 use esplugin;
 use filetime::{set_file_times, FileTime};
 use unicase::eq;
@@ -117,8 +116,8 @@ impl Plugin {
         // the timestamps it needs to and producing an incorrect load order.
         set_file_times(
             &self.data.path(),
-            to_filetime(SystemTime::now())?,
-            to_filetime(time)?,
+            FileTime::from_system_time(SystemTime::now()),
+            FileTime::from_system_time(time),
         )?;
 
         self.modification_time = time;
@@ -191,19 +190,12 @@ pub fn trim_dot_ghost(string: &str) -> &str {
     }
 }
 
-fn to_filetime(time: SystemTime) -> Result<FileTime, Error> {
-    let duration = time.duration_since(UNIX_EPOCH)?;
-    Ok(FileTime::from_seconds_since_1970(
-        duration.as_secs(),
-        duration.subsec_nanos(),
-    ))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use std::path::PathBuf;
+    use std::time::{Duration, UNIX_EPOCH};
     use tempdir::TempDir;
     use tests::copy_to_test_dir;
 
@@ -369,6 +361,33 @@ mod tests {
 
         assert_eq!(UNIX_EPOCH, plugin.modification_time());
         assert_eq!(UNIX_EPOCH, new_mtime);
+    }
+
+    #[test]
+    fn set_modification_time_should_be_able_to_handle_pre_unix_timestamps() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
+                .unwrap();
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
+        let target_mtime = UNIX_EPOCH - Duration::from_secs(1);
+
+        assert_ne!(target_mtime, plugin.modification_time());
+        plugin.set_modification_time(target_mtime).unwrap();
+        let new_mtime = game_dir
+            .join("Data")
+            .join("Blank.esp")
+            .metadata()
+            .unwrap()
+            .modified()
+            .unwrap();
+
+        assert_eq!(target_mtime, plugin.modification_time());
+        assert_eq!(target_mtime, new_mtime);
     }
 
     #[test]

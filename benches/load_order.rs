@@ -58,7 +58,7 @@ fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
         set_file_times(
             &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
-            FileTime::from_seconds_since_1970(index as u64, 0),
+            FileTime::from_unix_time(index as i64, 0),
         ).unwrap();
     }
 }
