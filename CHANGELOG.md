@@ -3,6 +3,13 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.0.2] - 2018-03-29
+
+### Fixed
+
+- Setting a load order for Morrowind, Oblivion, Fallout 3 and Fallout: New Vegas
+  with plugin timestamps earlier than the Unix epoch would fail.
+
 ## [11.0.1] - 2018-02-17
 
 ### Fixed
