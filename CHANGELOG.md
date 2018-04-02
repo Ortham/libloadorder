@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.1.0] - 2018-04-02
+
+### Changed
+
+- `WritableLoadOrder::load()` now falls back to reading `loadorder.txt` as
+  encoded in Windows-1252 if it is not encoded in valid UTF-8, for compatibility
+  with utilities that incorrectly encode it in Windows-1252.
+
 ## [11.0.2] - 2018-03-29
 
 ### Fixed
