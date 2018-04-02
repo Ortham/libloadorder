@@ -169,7 +169,8 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 impl TextfileBasedLoadOrder {
     fn read_from_load_order_file(&self) -> Result<Vec<(String, bool)>, Error> {
         match self.game_settings().load_order_file() {
-            Some(file_path) => read_utf8_plugin_names(file_path, load_order_line_mapper),
+            Some(file_path) => read_utf8_plugin_names(file_path, load_order_line_mapper)
+                .or_else(|_| read_plugin_names(file_path, load_order_line_mapper)),
             None => Ok(Vec::new()),
         }
     }
@@ -385,6 +386,39 @@ mod tests {
             "missing.esp",
         ];
         write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        load_order.load().unwrap();
+        assert_eq!(
+            &expected_filenames[..6],
+            load_order.plugin_names().as_slice()
+        );
+    }
+
+    #[test]
+    fn load_should_read_load_order_file_as_windows_1252_if_not_utf8() {
+        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let expected_filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Blàñk.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blank.esp",
+            "missing.esp",
+        ];
+
+        let mut file =
+            File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
+
+        for filename in &expected_filenames {
+            file.write_all(&WINDOWS_1252
+                .encode(filename.as_ref(), EncoderTrap::Strict)
+                .unwrap())
+                .unwrap();
+            writeln!(file, "").unwrap();
+        }
 
         load_order.load().unwrap();
         assert_eq!(
