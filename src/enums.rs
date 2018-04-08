@@ -50,6 +50,7 @@ pub enum GameId {
     Fallout4,
     SkyrimSE,
     Fallout4VR,
+    SkyrimVR,
 }
 
 impl GameId {
@@ -58,11 +59,20 @@ impl GameId {
             GameId::Morrowind => EspmId::Morrowind,
             GameId::Oblivion => EspmId::Oblivion,
             GameId::Skyrim => EspmId::Skyrim,
+            GameId::SkyrimSE => EspmId::SkyrimSE,
+            GameId::SkyrimVR => EspmId::SkyrimSE,
             GameId::Fallout3 => EspmId::Fallout3,
             GameId::FalloutNV => EspmId::FalloutNV,
             GameId::Fallout4 => EspmId::Fallout4,
-            GameId::SkyrimSE => EspmId::SkyrimSE,
             GameId::Fallout4VR => EspmId::Fallout4,
+        }
+    }
+
+    pub fn supports_light_masters(&self) -> bool {
+        use enums::GameId::*;
+        match *self {
+            Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => true,
+            _ => false,
         }
     }
 }
@@ -223,9 +233,23 @@ mod tests {
         assert_eq!(EspmId::Oblivion, GameId::Oblivion.to_esplugin_id());
         assert_eq!(EspmId::Skyrim, GameId::Skyrim.to_esplugin_id());
         assert_eq!(EspmId::SkyrimSE, GameId::SkyrimSE.to_esplugin_id());
+        assert_eq!(EspmId::SkyrimSE, GameId::SkyrimVR.to_esplugin_id());
         assert_eq!(EspmId::Fallout3, GameId::Fallout3.to_esplugin_id());
         assert_eq!(EspmId::FalloutNV, GameId::FalloutNV.to_esplugin_id());
         assert_eq!(EspmId::Fallout4, GameId::Fallout4.to_esplugin_id());
         assert_eq!(EspmId::Fallout4, GameId::Fallout4VR.to_esplugin_id());
+    }
+
+    #[test]
+    fn game_id_supports_light_masters_should_be_false_until_fallout_4() {
+        assert!(!GameId::Morrowind.supports_light_masters());
+        assert!(!GameId::Oblivion.supports_light_masters());
+        assert!(!GameId::Skyrim.supports_light_masters());
+        assert!(GameId::SkyrimSE.supports_light_masters());
+        assert!(GameId::SkyrimVR.supports_light_masters());
+        assert!(!GameId::Fallout3.supports_light_masters());
+        assert!(!GameId::FalloutNV.supports_light_masters());
+        assert!(GameId::Fallout4.supports_light_masters());
+        assert!(GameId::Fallout4VR.supports_light_masters());
     }
 }

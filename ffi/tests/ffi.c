@@ -16,6 +16,7 @@ void test_game_id_values() {
   assert(LIBLO_GAME_FO4 == 6);
   assert(LIBLO_GAME_TES5SE == 7);
   assert(LIBLO_GAME_FO4VR == 8);
+  assert(LIBLO_GAME_TES5VR == 9);
 }
 
 void test_lo_get_version() {

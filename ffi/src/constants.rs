@@ -138,6 +138,28 @@ pub static LIBLO_GAME_FO4: c_uint = GameId::Fallout4 as c_uint;
 #[no_mangle]
 pub static LIBLO_GAME_TES5SE: c_uint = GameId::SkyrimSE as c_uint;
 
+/// Game code for The Elder Scrolls V: Skyrim VR.
+#[no_mangle]
+pub static LIBLO_GAME_TES5VR: c_uint = GameId::SkyrimVR as c_uint;
+
 /// Game code for Fallout 4 VR.
 #[no_mangle]
 pub static LIBLO_GAME_FO4VR: c_uint = GameId::Fallout4VR as c_uint;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn game_constants_should_have_expected_integer_values() {
+        assert_eq!(1, LIBLO_GAME_TES3);
+        assert_eq!(2, LIBLO_GAME_TES4);
+        assert_eq!(3, LIBLO_GAME_TES5);
+        assert_eq!(4, LIBLO_GAME_FO3);
+        assert_eq!(5, LIBLO_GAME_FNV);
+        assert_eq!(6, LIBLO_GAME_FO4);
+        assert_eq!(7, LIBLO_GAME_TES5SE);
+        assert_eq!(8, LIBLO_GAME_FO4VR);
+        assert_eq!(9, LIBLO_GAME_TES5VR);
+    }
+}

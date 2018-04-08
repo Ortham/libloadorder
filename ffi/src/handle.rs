@@ -57,6 +57,7 @@ fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == LIBLO_GAME_TES4 => Ok(GameId::Oblivion),
         x if x == LIBLO_GAME_TES5 => Ok(GameId::Skyrim),
         x if x == LIBLO_GAME_TES5SE => Ok(GameId::SkyrimSE),
+        x if x == LIBLO_GAME_TES5VR => Ok(GameId::SkyrimVR),
         x if x == LIBLO_GAME_FO3 => Ok(GameId::Fallout3),
         x if x == LIBLO_GAME_FNV => Ok(GameId::FalloutNV),
         x if x == LIBLO_GAME_FO4 => Ok(GameId::Fallout4),

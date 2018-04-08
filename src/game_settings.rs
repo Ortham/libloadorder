@@ -45,12 +45,21 @@ pub struct GameSettings {
 
 const SKYRIM_HARDCODED_PLUGINS: &[&str] = &["Skyrim.esm", "Update.esm"];
 
-const SKYRIMSE_HARDCODED_PLUGINS: &[&str] = &[
+const SKYRIM_SE_HARDCODED_PLUGINS: &[&str] = &[
     "Skyrim.esm",
     "Update.esm",
     "Dawnguard.esm",
     "Hearthfires.esm",
     "Dragonborn.esm",
+];
+
+const SKYRIM_VR_HARDCODED_PLUGINS: &[&str] = &[
+    "Skyrim.esm",
+    "Update.esm",
+    "Dawnguard.esm",
+    "Hearthfires.esm",
+    "Dragonborn.esm",
+    "SkyrimVR.esm",
 ];
 
 const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
@@ -103,7 +112,7 @@ impl GameSettings {
         match self.id {
             Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
-            SkyrimSE | Fallout4 | Fallout4VR => LoadOrderMethod::Asterisk,
+            SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR => LoadOrderMethod::Asterisk,
         }
     }
 
@@ -120,7 +129,7 @@ impl GameSettings {
         match self.id {
             Morrowind => "Morrowind.esm",
             Oblivion => "Oblivion.esm",
-            Skyrim | SkyrimSE => "Skyrim.esm",
+            Skyrim | SkyrimSE | SkyrimVR => "Skyrim.esm",
             Fallout3 => "Fallout3.esm",
             FalloutNV => "FalloutNV.esm",
             Fallout4 | Fallout4VR => "Fallout4.esm",
@@ -165,6 +174,7 @@ fn appdata_folder_name(game_id: &GameId) -> Option<&str> {
         Oblivion => Some("Oblivion"),
         Skyrim => Some("Skyrim"),
         SkyrimSE => Some("Skyrim Special Edition"),
+        SkyrimVR => Some("Skyrim VR"),
         Fallout3 => Some("Fallout3"),
         FalloutNV => Some("FalloutNV"),
         Fallout4 => Some("Fallout4"),
@@ -227,7 +237,8 @@ fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
 fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
     match game_id {
         GameId::Skyrim => SKYRIM_HARDCODED_PLUGINS,
-        GameId::SkyrimSE => SKYRIMSE_HARDCODED_PLUGINS,
+        GameId::SkyrimSE => SKYRIM_SE_HARDCODED_PLUGINS,
+        GameId::SkyrimVR => SKYRIM_VR_HARDCODED_PLUGINS,
         GameId::Fallout4 => FALLOUT4_HARDCODED_PLUGINS,
         GameId::Fallout4VR => FALLOUT4VR_HARDCODED_PLUGINS,
         _ => &[],
@@ -346,9 +357,16 @@ mod tests {
     }
 
     #[test]
-    fn load_order_method_should_be_asterisk_for_tes5se_fo4_and_fo4vr() {
+    fn load_order_method_should_be_asterisk_for_tes5se_tes5vr_fo4_and_fo4vr() {
         let mut settings = GameSettings::with_local_path(
             GameId::SkyrimSE,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
+
+        settings = GameSettings::with_local_path(
+            GameId::SkyrimVR,
             &PathBuf::default(),
             &PathBuf::default(),
         ).unwrap();
@@ -398,6 +416,13 @@ mod tests {
         assert_eq!("Skyrim.esm", settings.master_file());
 
         settings = GameSettings::with_local_path(
+            GameId::SkyrimVR,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!("Skyrim.esm", settings.master_file());
+
+        settings = GameSettings::with_local_path(
             GameId::Fallout3,
             &PathBuf::default(),
             &PathBuf::default(),
@@ -438,6 +463,9 @@ mod tests {
 
         folder = appdata_folder_name(&GameId::SkyrimSE).unwrap();
         assert_eq!("Skyrim Special Edition", folder);
+
+        folder = appdata_folder_name(&GameId::SkyrimVR).unwrap();
+        assert_eq!("Skyrim VR", folder);
 
         folder = appdata_folder_name(&GameId::Fallout3).unwrap();
         assert_eq!("Fallout3", folder);
@@ -481,6 +509,13 @@ mod tests {
         assert_eq!("Data", settings.plugins_folder_name());
 
         settings = GameSettings::with_local_path(
+            GameId::SkyrimVR,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!("Data", settings.plugins_folder_name());
+
+        settings = GameSettings::with_local_path(
             GameId::Fallout3,
             &PathBuf::default(),
             &PathBuf::default(),
@@ -496,6 +531,13 @@ mod tests {
 
         settings = GameSettings::with_local_path(
             GameId::Fallout4,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        assert_eq!("Data", settings.plugins_folder_name());
+
+        settings = GameSettings::with_local_path(
+            GameId::Fallout4VR,
             &PathBuf::default(),
             &PathBuf::default(),
         ).unwrap();
@@ -543,6 +585,16 @@ mod tests {
         );
 
         settings = GameSettings::with_local_path(
+            GameId::SkyrimVR,
+            &Path::new("game"),
+            &Path::new("local"),
+        ).unwrap();
+        assert_eq!(
+            Path::new("local/plugins.txt"),
+            settings.active_plugins_file()
+        );
+
+        settings = GameSettings::with_local_path(
             GameId::Fallout3,
             &Path::new("game"),
             &Path::new("local"),
@@ -564,6 +616,16 @@ mod tests {
 
         settings = GameSettings::with_local_path(
             GameId::Fallout4,
+            &Path::new("game"),
+            &Path::new("local"),
+        ).unwrap();
+        assert_eq!(
+            Path::new("local/plugins.txt"),
+            settings.active_plugins_file()
+        );
+
+        settings = GameSettings::with_local_path(
+            GameId::Fallout4VR,
             &Path::new("game"),
             &Path::new("local"),
         ).unwrap();
@@ -610,6 +672,21 @@ mod tests {
             "Dawnguard.esm",
             "Hearthfires.esm",
             "Dragonborn.esm",
+        ];
+        assert_eq!(plugins, settings.implicitly_active_plugins());
+
+        settings = GameSettings::with_local_path(
+            GameId::SkyrimVR,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        ).unwrap();
+        plugins = vec![
+            "Skyrim.esm",
+            "Update.esm",
+            "Dawnguard.esm",
+            "Hearthfires.esm",
+            "Dragonborn.esm",
+            "SkyrimVR.esm",
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 

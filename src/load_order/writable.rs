@@ -21,7 +21,7 @@ use rayon::iter::Either;
 use rayon::prelude::*;
 use unicase::eq;
 
-use enums::{Error, GameId};
+use enums::Error;
 use load_order::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
 use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
@@ -160,11 +160,10 @@ fn count_light_masters<T: WritableLoadOrder + ?Sized>(
     existing_plugin_indices: &[usize],
     new_plugins: &[Plugin],
 ) -> usize {
-    match load_order.game_settings().id() {
-        GameId::Fallout4 | GameId::Fallout4VR | GameId::SkyrimSE => {
-            count_plugins(load_order, existing_plugin_indices, new_plugins, true)
-        }
-        _ => 0,
+    if load_order.game_settings().id().supports_light_masters() {
+        count_plugins(load_order, existing_plugin_indices, new_plugins, true)
+    } else {
+        0
     }
 }
 
