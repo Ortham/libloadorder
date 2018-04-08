@@ -3,6 +3,12 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.2.0] - 2018-04-08
+
+### Added
+
+- Support for Skyrim VR using `GameId::SkyrimVR`.
+
 ## [11.1.0] - 2018-04-02
 
 ### Changed

@@ -3,6 +3,16 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [11.2.0] - 2018-04-08
+
+### Added
+
+- Support for Skyrim VR using `LIBLO_GAME_SKYRIMVR`.
+
+### Changed
+
+- Updated to libloadorder v11.2.0.
+
 ## [11.1.0] - 2018-04-02
 
 ### Changed
