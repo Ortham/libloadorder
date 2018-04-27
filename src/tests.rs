@@ -32,14 +32,16 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
 }
 
 fn testing_plugins_dir(game_id: GameId) -> PathBuf {
+    use GameId::*;
     let game_folder = match game_id {
-        GameId::Morrowind => "Morrowind",
-        GameId::Oblivion => "Oblivion",
+        Morrowind => "Morrowind",
+        Oblivion => "Oblivion",
+        Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => "SkyrimSE",
         _ => "Skyrim",
     };
 
     let plugins_folder = match game_id {
-        GameId::Morrowind => "Data Files",
+        Morrowind => "Data Files",
         _ => "Data",
     };
 

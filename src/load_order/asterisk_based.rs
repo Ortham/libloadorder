@@ -75,7 +75,9 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
             }
         }
 
-        if plugin.is_master_file() || plugin.is_light_master_file() {
+        if plugin.is_master_file()
+            || (plugin.is_light_master_file() && !plugin.name().to_lowercase().ends_with(".esp"))
+        {
             find_first_non_master_position(self.plugins())
         } else {
             None
@@ -589,6 +591,28 @@ mod tests {
             "Blank.esm",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
+            "Blank.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn load_should_not_move_light_master_esp_files_before_non_masters() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esl", "Blank.esl.esp", &load_order.game_settings());
+
+        load_order.load().unwrap();
+
+        let expected_filenames = vec![
+            load_order.game_settings().master_file(),
+            "Blank.esm",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blank.esl.esp",
             "Blank.esp",
             "Blàñk.esp",
         ];
