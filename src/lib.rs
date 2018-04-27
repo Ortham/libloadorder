@@ -25,7 +25,7 @@ extern crate filetime;
 extern crate rayon;
 extern crate regex;
 #[cfg(test)]
-extern crate tempdir;
+extern crate tempfile;
 extern crate unicase;
 
 mod enums;

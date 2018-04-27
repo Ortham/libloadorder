@@ -179,7 +179,7 @@ mod tests {
     use std::io::{BufRead, BufReader};
     use std::path::Path;
     use filetime::{set_file_times, FileTime};
-    use tempdir::TempDir;
+    use tempfile::tempdir;
     use enums::GameId;
     use load_order::tests::*;
     use tests::copy_to_test_dir;
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         load_order.plugins_mut().clear();
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_the_hardcoded_index_of_an_implicitly_active_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_not_count_installed_unloaded_implicitly_active_plugins() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_none_if_given_a_non_master_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugin =
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_the_first_non_master_plugin_index_if_given_a_master_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_none_if_no_non_masters_are_present() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         // Remove non-master plugins from the load order.
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn insert_position_should_return_the_first_non_master_index_if_given_a_light_master() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Blank.esl", load_order.game_settings());
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn load_should_reload_existing_plugins() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(!load_order.plugins()[1].is_master_file());
@@ -330,7 +330,7 @@ mod tests {
 
     #[test]
     fn load_should_remove_plugins_that_fail_to_load() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esp").is_some());
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn load_should_get_load_order_from_active_plugins_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn load_should_decode_active_plugins_file_from_windows_1252() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn load_should_handle_crlf_and_lf_in_active_plugins_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn load_should_ignore_active_plugins_file_lines_starting_with_a_hash() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn load_should_ignore_plugins_in_active_plugins_file_that_are_not_installed() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn load_should_add_missing_plugins() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esm").is_none());
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn load_should_recognise_light_master_plugins() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "ccTest.esl", &load_order.game_settings());
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn load_should_add_missing_implicitly_active_plugins_in_their_hardcoded_positions() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn load_should_empty_the_load_order_if_the_plugins_directory_does_not_exist() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
         tmp_dir.close().unwrap();
 
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn load_should_load_plugin_states_from_active_plugins_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn load_should_succeed_when_active_plugins_file_is_missing() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.load().is_ok());
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn load_should_deactivate_excess_normal_plugins_and_light_masters_using_separate_limits() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugins = prepare_bulk_plugins(load_order.game_settings());
@@ -566,7 +566,7 @@ mod tests {
 
     #[test]
     fn load_should_not_duplicate_a_plugin_that_has_a_ghosted_duplicate() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         use std::fs::copy;
@@ -598,7 +598,7 @@ mod tests {
 
     #[test]
     fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         remove_dir_all(
@@ -623,7 +623,7 @@ mod tests {
 
     #[test]
     fn save_should_write_active_plugins_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         load_order.save().unwrap();
@@ -637,7 +637,7 @@ mod tests {
 
     #[test]
     fn save_should_write_unghosted_plugin_names() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir(
@@ -666,7 +666,7 @@ mod tests {
 
     #[test]
     fn set_load_order_should_error_if_given_an_empty_list() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
@@ -677,7 +677,7 @@ mod tests {
 
     #[test]
     fn set_load_order_should_error_if_the_first_element_given_is_not_the_game_master() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
@@ -688,7 +688,7 @@ mod tests {
 
     #[test]
     fn set_load_order_should_error_if_an_installed_plugin_is_missing() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let filenames = vec![
@@ -707,7 +707,7 @@ mod tests {
 
     #[test]
     fn set_load_order_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir(
@@ -731,7 +731,7 @@ mod tests {
 
     #[test]
     fn set_plugin_index_should_error_if_setting_the_game_master_index_to_non_zero_in_bounds() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
@@ -741,7 +741,7 @@ mod tests {
 
     #[test]
     fn set_plugin_index_should_error_if_setting_a_zero_index_for_a_non_game_master_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
@@ -751,7 +751,7 @@ mod tests {
 
     #[test]
     fn set_plugin_index_should_insert_a_new_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn is_self_consistent_should_return_true() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
@@ -770,7 +770,7 @@ mod tests {
 
     #[test]
     fn activate_should_check_normal_plugins_and_light_masters_active_limits_separately() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugins = prepare_bulk_plugins(load_order.game_settings());
@@ -799,7 +799,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_count_light_masters_and_normal_plugins_separately() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugins = prepare_bulk_plugins(load_order.game_settings());
@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_error_if_given_more_than_4096_light_masters() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let plugins = prepare_bulk_plugins(load_order.game_settings());

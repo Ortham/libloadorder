@@ -197,12 +197,12 @@ mod tests {
 
     use std::path::PathBuf;
     use std::time::{Duration, UNIX_EPOCH};
-    use tempdir::TempDir;
+    use tempfile::tempdir;
     use tests::copy_to_test_dir;
 
     #[test]
     fn name_should_return_the_plugin_filename_without_any_ghost_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn name_matches_should_ignore_plugin_ghost_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let settings =
             GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default())
                 .unwrap();
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn name_matches_should_ignore_string_ghost_suffix() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let settings =
             GameSettings::with_local_path(GameId::Skyrim, tmp_dir.path(), &PathBuf::default())
                 .unwrap();
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn modification_time_should_return_the_plugin_modification_time_at_creation() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn is_active_should_be_false() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn is_master_file_should_be_true_if_the_plugin_is_a_master_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn is_master_file_should_be_false_if_the_plugin_is_not_a_master_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn is_light_master_file_should_be_true_for_esl_files_only() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn set_modification_time_should_update_the_file_modification_time() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn set_modification_time_should_be_able_to_handle_pre_unix_timestamps() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -393,7 +393,7 @@ mod tests {
 
     #[test]
     fn activate_should_unghost_a_ghosted_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_not_ghost_a_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -430,7 +430,7 @@ mod tests {
 
     #[test]
     fn is_valid_should_return_true_for_a_valid_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn is_valid_should_return_false_if_the_plugin_does_not_have_a_esp_or_esm_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =
@@ -483,7 +483,7 @@ mod tests {
 
     #[test]
     fn is_valid_should_return_false_if_the_path_given_is_not_a_valid_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
         let settings =

@@ -272,7 +272,7 @@ mod tests {
     #[cfg(windows)]
     use std::env;
     use std::io::Write;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     use super::*;
 
@@ -637,7 +637,7 @@ mod tests {
 
     #[test]
     fn active_plugins_file_should_be_in_game_path_for_oblivion_if_ini_setting_is_not_1() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
         let ini_path = game_path.join("Oblivion.ini");
         let mut file = File::create(&ini_path).unwrap();
@@ -745,7 +745,7 @@ mod tests {
 
     #[test]
     fn implicitly_active_plugins_should_include_plugins_loaded_from_ccc_file() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
         let mut plugins = vec![
@@ -879,7 +879,7 @@ mod tests {
 
     #[test]
     fn use_my_games_directory_should_be_false_if_the_ini_setting_value_is_not_1() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
         let mut file = File::create(&ini_path).unwrap();
         file.write_all("...\nbUseMyGamesDirectory=0\n...".as_bytes())
@@ -890,7 +890,7 @@ mod tests {
 
     #[test]
     fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_1() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
         let mut file = File::create(&ini_path).unwrap();
         file.write_all("...\nbUseMyGamesDirectory=1\n...".as_bytes())

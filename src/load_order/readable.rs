@@ -59,7 +59,7 @@ mod tests {
     use super::*;
 
     use std::path::Path;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
     use enums::GameId;
     use load_order::tests::mock_game_files;
     use tests::copy_to_test_dir;
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn plugin_names_should_return_filenames_for_plugins_in_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         let expected_plugin_names = vec!["Oblivion.esm", "Blank.esp", "Blank - Different.esp"];
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn plugin_names_should_return_unghosted_filenames() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare_with_ghosted_plugin(&tmp_dir.path());
 
         let expected_plugin_names = vec![
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn index_of_should_return_none_if_the_plugin_is_not_in_the_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esm").is_none());
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn index_of_should_return_some_index_if_the_plugin_is_in_the_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert_eq!(1, load_order.index_of("Blank.esp").unwrap());
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn index_of_should_be_case_insensitive() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert_eq!(1, load_order.index_of("blank.esp").unwrap());
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn plugin_at_should_return_none_if_given_an_out_of_bounds_index() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(load_order.plugin_at(3).is_none());
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn plugin_at_should_return_some_filename_if_given_an_in_bounds_index() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert_eq!("Blank.esp", load_order.plugin_at(1).unwrap());
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn plugin_at_should_return_some_unghosted_filename() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare_with_ghosted_plugin(&tmp_dir.path());
 
         assert_eq!("Blank - Different.esm", load_order.plugin_at(1).unwrap());
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn active_plugin_names_should_return_filenames_for_active_plugins_in_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         let expected_plugin_names = vec!["Blank.esp"];
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn is_active_should_return_false_for_an_inactive_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(!load_order.is_active("Blank - Different.esp"));
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn is_active_should_return_false_a_plugin_not_in_the_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(!load_order.is_active("missing.esp"));
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn is_active_should_return_true_for_an_active_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(load_order.is_active("Blank.esp"));
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn is_active_should_be_case_insensitive() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
         assert!(load_order.is_active("blank.esp"));

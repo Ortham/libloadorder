@@ -109,7 +109,7 @@ mod tests {
     use super::*;
 
     use std::fs::{copy, create_dir};
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     fn copy_to_test_dir(from_file: &str, to_file: &str, game_dir: &Path) {
         let testing_plugins_dir = Path::new("testing-plugins/Oblivion/Data");
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn ghost_should_rename_the_path_with_a_ghost_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn ghost_should_do_nothing_if_the_path_is_already_ghosted() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn unghost_should_rename_the_path_with_no_ghost_extension() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn unghost_should_do_nothing_if_the_path_is_already_unghosted() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn resolve_path_should_return_the_path_that_exists() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 

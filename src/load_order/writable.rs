@@ -184,7 +184,7 @@ mod tests {
     use super::*;
 
     use std::path::Path;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
     use enums::GameId;
     use game_settings::GameSettings;
     use load_order::readable::ReadableLoadOrder;
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn activate_should_activate_the_plugin_with_the_given_filename() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("Blank - Different.esp").is_ok());
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn activate_should_error_if_the_plugin_is_not_valid() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("missing.esp").is_err());
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn activate_should_insert_a_master_before_non_masters_if_it_is_not_present() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("Blank.esm").is_ok());
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn activate_should_append_a_non_master_if_it_is_not_present() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("Blank - Master Dependent.esp").is_ok());
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn activate_should_be_case_insensitive() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.activate("Blank - different.esp").is_ok());
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn activate_should_throw_if_increasing_the_number_of_active_plugins_past_the_limit() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_already_active() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_deactivate_the_plugin_with_the_given_filename() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.is_active("Blank.esp"));
@@ -347,7 +347,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_error_if_the_plugin_is_not_in_the_load_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.deactivate("missing.esp").is_err());
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_error_if_given_an_implicitly_active_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         assert!(load_order.activate("Skyrim.esm").is_ok());
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_error_if_given_a_missing_implicitly_active_plugin() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         assert!(load_order.deactivate("Update.esm").is_err());
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn deactivate_should_do_nothing_if_the_plugin_is_inactive() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         assert!(!load_order.is_active("Blank - Different.esp"));
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_error_if_given_more_plugins_than_the_max_limit() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = [""; 256];
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_error_if_passed_an_invalid_plugin_name() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["missing.esp"];
@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_active_plugins()
     {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let active_plugins = ["Blank.esp"];
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_error_if_a_missing_implicitly_active_plugin_is_given() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let active_plugins = ["Skyrim.esm", "Update.esm"];
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_deactivate_all_plugins_not_given() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["Blank - Different.esp"];
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_activate_all_given_plugins() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["Blank - Different.esp"];
@@ -448,7 +448,7 @@ mod tests {
 
     #[test]
     fn set_active_plugins_should_add_given_plugins_not_in_the_load_order_in_the_given_order() {
-        let tmp_dir = TempDir::new("libloadorder_test_").unwrap();
+        let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];

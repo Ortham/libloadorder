@@ -3,7 +3,7 @@ extern crate criterion;
 extern crate encoding;
 extern crate filetime;
 extern crate loadorder;
-extern crate tempdir;
+extern crate tempfile;
 
 use std::fmt;
 use std::fmt::Display;
@@ -16,7 +16,7 @@ use criterion::Criterion;
 use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
 use filetime::{set_file_times, FileTime};
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use loadorder::GameId;
 use loadorder::GameSettings;
@@ -127,7 +127,7 @@ struct Parameters {
 
 impl Parameters {
     fn new(game_id: GameId, plugins_count: u16, active_plugins_count: u16) -> Parameters {
-        let directory = TempDir::new("libloadorder_test_").unwrap();
+        let directory = TempDir::new().unwrap();
         let local_path = directory.path().join("local");
 
         create_dir(&local_path).unwrap();
