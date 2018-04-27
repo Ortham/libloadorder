@@ -3,6 +3,13 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [11.2.1] - 2018-04-27
+
+### Changed
+
+- Updated to libloadorder v11.2.1.
+- Updated to cbindgen v0.6.
+
 ## [11.2.0] - 2018-04-08
 
 ### Added

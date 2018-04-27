@@ -3,6 +3,19 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.2.1] - 2018-04-27
+
+### Changed
+
+- Switched from tempfile to tempdir for creating temporary directories for
+  tests.
+
+### Fixed
+
+- `WritableLoadOrder::load()` would incorrectly move light-master-flagged
+  plugins with the `.esp` file extension to load before non-masters. It now
+  allows such plugins to load in amongst non-masters.
+
 ## [11.2.0] - 2018-04-08
 
 ### Added
