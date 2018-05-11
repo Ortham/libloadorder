@@ -184,7 +184,9 @@ mod tests {
     use super::*;
 
     use std::path::Path;
+
     use tempfile::tempdir;
+
     use enums::GameId;
     use game_settings::GameSettings;
     use load_order::readable::ReadableLoadOrder;

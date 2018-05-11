@@ -20,11 +20,12 @@ use std::ffi::{CStr, CString};
 use std::io;
 use std::mem;
 use std::slice;
+
 use libc::{c_char, c_uint, size_t};
 use loadorder::Error;
 
-use constants::*;
 use super::ERROR_MESSAGE;
+use constants::*;
 
 pub fn error(code: c_uint, message: &str) -> c_uint {
     ERROR_MESSAGE.with(|f| {

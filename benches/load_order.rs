@@ -12,9 +12,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
+
 use criterion::Criterion;
-use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
+use encoding::{EncoderTrap, Encoding};
 use filetime::{set_file_times, FileTime};
 use tempfile::TempDir;
 

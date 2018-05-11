@@ -19,17 +19,17 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
+use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
-use plugin::Plugin;
-use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::mutable::{read_plugin_names, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
+use load_order::{create_parent_dirs, find_first_non_master_position};
+use plugin::Plugin;
 
 #[derive(Clone, Debug)]
 pub struct AsteriskBasedLoadOrder {
@@ -176,14 +176,14 @@ fn plugin_line_mapper(line: &str) -> Option<(String, bool)> {
 mod tests {
     use super::*;
 
+    use enums::GameId;
+    use filetime::{set_file_times, FileTime};
+    use load_order::tests::*;
     use std::fs::{remove_dir_all, File};
     use std::io;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
-    use filetime::{set_file_times, FileTime};
     use tempfile::tempdir;
-    use enums::GameId;
-    use load_order::tests::*;
     use tests::copy_to_test_dir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> AsteriskBasedLoadOrder {

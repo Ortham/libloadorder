@@ -20,20 +20,20 @@
 mod asterisk_based;
 mod mutable;
 mod readable;
-mod writable;
-mod textfile_based;
-mod timestamp_based;
 #[cfg(test)]
 mod tests;
+mod textfile_based;
+mod timestamp_based;
+mod writable;
 
 use std::fs::create_dir_all;
 use std::path::Path;
 
 use enums::Error;
 pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
+pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::textfile_based::TextfileBasedLoadOrder;
 pub use load_order::timestamp_based::TimestampBasedLoadOrder;
-pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::writable::WritableLoadOrder;
 use plugin::Plugin;
 

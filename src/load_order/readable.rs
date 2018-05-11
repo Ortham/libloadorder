@@ -59,7 +59,9 @@ mod tests {
     use super::*;
 
     use std::path::Path;
+
     use tempfile::tempdir;
+
     use enums::GameId;
     use load_order::tests::mock_game_files;
     use tests::copy_to_test_dir;

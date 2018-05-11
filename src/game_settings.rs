@@ -25,14 +25,14 @@ use std::path::PathBuf;
 #[cfg(windows)]
 use app_dirs;
 
-use encoding::{DecoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
+use encoding::{DecoderTrap, Encoding};
 
 use enums::{Error, GameId, LoadOrderMethod};
-use load_order::WritableLoadOrder;
 use load_order::AsteriskBasedLoadOrder;
 use load_order::TextfileBasedLoadOrder;
 use load_order::TimestampBasedLoadOrder;
+use load_order::WritableLoadOrder;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {

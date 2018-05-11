@@ -109,6 +109,7 @@ use std::ffi::CString;
 use std::io;
 use std::panic::catch_unwind;
 use std::ptr;
+
 use libc::{c_char, c_uint, size_t};
 use loadorder::Error;
 

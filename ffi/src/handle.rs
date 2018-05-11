@@ -23,6 +23,7 @@ use std::error::Error;
 use std::panic::catch_unwind;
 use std::path::Path;
 use std::sync::{LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
 use libc::{c_char, c_uint};
 use loadorder::GameId;
 use loadorder::GameSettings;

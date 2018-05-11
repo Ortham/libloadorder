@@ -20,11 +20,12 @@
 use std::error::Error;
 use std::panic::catch_unwind;
 use std::ptr;
+
 use libc::{c_char, c_uint, size_t};
 
+use super::lo_game_handle;
 use constants::*;
 use helpers::{error, handle_error, to_c_string_array, to_str, to_str_vec};
-use super::lo_game_handle;
 
 /// Gets the list of currently active plugins.
 ///

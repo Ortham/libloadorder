@@ -21,18 +21,18 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use encoding::{EncoderTrap, Encoding};
 use encoding::all::WINDOWS_1252;
+use encoding::{EncoderTrap, Encoding};
 use rayon::prelude::*;
 use regex::Regex;
 
 use enums::{Error, GameId};
 use game_settings::GameSettings;
-use plugin::Plugin;
-use load_order::{create_parent_dirs, find_first_non_master_position};
 use load_order::mutable::{load_active_plugins, MutableLoadOrder};
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
+use load_order::{create_parent_dirs, find_first_non_master_position};
+use plugin::Plugin;
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 
@@ -216,13 +216,13 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 mod tests {
     use super::*;
 
+    use enums::GameId;
+    use filetime::{set_file_times, FileTime};
+    use load_order::tests::*;
     use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};
     use std::path::Path;
     use tempfile::tempdir;
-    use enums::GameId;
-    use filetime::{set_file_times, FileTime};
-    use load_order::tests::*;
     use tests::copy_to_test_dir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TimestampBasedLoadOrder {
