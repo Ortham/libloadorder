@@ -3,6 +3,17 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.2.2] - 2018-05-26
+
+### Changed
+
+- Updated regex dependency.
+
+### Fixed
+
+- Check that hardcoded plugins load in their correct positions in the load order
+  passed to `WritableLoadOrder::set_load_order()`.
+
 ## [11.2.1] - 2018-04-27
 
 ### Changed
