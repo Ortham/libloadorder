@@ -132,6 +132,22 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             return Err(Error::GameMasterMustLoadFirst);
         }
 
+        // Check that all implicitly active plugins that are present load in
+        // their hardcoded order.
+        let mut missing_plugins_count = 0;
+        for (i, plugin_name) in self.game_settings()
+            .implicitly_active_plugins()
+            .iter()
+            .enumerate()
+        {
+            match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
+                Some(pos) => if pos != i - missing_plugins_count {
+                    return Err(Error::GameMasterMustLoadFirst);
+                },
+                None => missing_plugins_count += 1,
+            }
+        }
+
         self.replace_plugins(plugin_names)
     }
 
@@ -727,6 +743,49 @@ mod tests {
             Error::PluginNotFound(x) => assert_eq!("Blàñk.esp", x),
             e => panic!("Wrong error type: {:?}", e),
         }
+    }
+
+    #[test]
+    fn set_load_order_should_error_if_an_implicitly_active_plugin_loads_after_another_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Update.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        match load_order.set_load_order(&filenames).unwrap_err() {
+            Error::GameMasterMustLoadFirst => {}
+            e => panic!("Wrong error type: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn set_load_order_should_not_error_if_an_implicitly_active_plugin_is_missing() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Dragonborn.esm",
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert!(load_order.set_load_order(&filenames).is_ok());
     }
 
     #[test]

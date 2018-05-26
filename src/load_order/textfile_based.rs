@@ -758,6 +758,26 @@ mod tests {
     }
 
     #[test]
+    fn set_load_order_should_not_error_if_update_esm_loads_after_another_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Update.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert!(load_order.set_load_order(&filenames).is_ok());
+    }
+
+    #[test]
     fn set_load_order_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
