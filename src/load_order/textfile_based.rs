@@ -26,10 +26,10 @@ use unicase::eq;
 
 use enums::Error;
 use game_settings::GameSettings;
-use load_order::mutable::MutableLoadOrder;
 use load_order::mutable::load_active_plugins;
 use load_order::mutable::plugin_line_mapper;
 use load_order::mutable::read_plugin_names;
+use load_order::mutable::MutableLoadOrder;
 use load_order::readable::ReadableLoadOrder;
 use load_order::writable::WritableLoadOrder;
 use load_order::{create_parent_dirs, find_first_non_master_position};
