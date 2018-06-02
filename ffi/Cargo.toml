@@ -1,6 +1,6 @@
 [package]
 name = "libloadorder-ffi"
-version = "11.2.2"
+version = "11.3.0"
 authors = ["Oliver Hamlet <oliver.hamlet@gmail.com>"]
 build = "build.rs"
 description = "A wrapper library providing a C FFI for libloadorder."
@@ -16,7 +16,7 @@ exclude = [
 ]
 
 [dependencies]
-libloadorder = { version = "11.2.2", path = ".." }
+libloadorder = { version = "11.2.3", path = ".." }
 libc = "0.2"
 
 [lib]

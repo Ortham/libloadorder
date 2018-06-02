@@ -3,6 +3,17 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [11.3.0] - 2018-06-02
+
+### Added
+
+- `lo_get_implicitly_active_plugins()` for getting the current game handle's
+  implicitly active plugins in their hardcoded load order.
+
+### Changed
+
+- Updated to libloadorder v11.2.3.
+
 ## [11.2.2] - 2018-05-26
 
 ### Changed
