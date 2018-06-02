@@ -171,9 +171,10 @@ impl fmt::Display for Error {
                 f,
                 "Attempted to load a non-master plugin before a master plugin"
             ),
-            Error::GameMasterMustLoadFirst => {
-                write!(f, "The game's main master file must load first")
-            }
+            Error::GameMasterMustLoadFirst => write!(
+                f,
+                "The game's implicitly active plugins must load in their harcoded positions"
+            ),
             Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
             Error::ImplicitlyActivePlugin(ref x) => write!(
                 f,
@@ -207,7 +208,9 @@ impl error::Error for Error {
             Error::NonMasterBeforeMaster => {
                 "Attempted to load a non-master plugin before a master plugin"
             }
-            Error::GameMasterMustLoadFirst => "The game's main master file must load first",
+            Error::GameMasterMustLoadFirst => {
+                "The game's implicitly active plugins must load in their harcoded positions"
+            }
             Error::InvalidPlugin(_) => "The plugin file is invalid",
             Error::ImplicitlyActivePlugin(_) => "Implicitly active plugins cannot be deactivated",
             Error::NoLocalAppData => "The game's local app data folder could not be detected",
