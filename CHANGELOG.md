@@ -3,6 +3,15 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.2.3] - 2018-06-02
+
+### Changed
+
+- Updated message for `Error::GameMasterMustLoadFirst` to more accurately
+  reflect that it is now used for incorrectly positioned hardcoded plugins in
+  general.
+- Updated esplugin dependency to 1.0.10.
+
 ## [11.2.2] - 2018-05-26
 
 ### Changed
