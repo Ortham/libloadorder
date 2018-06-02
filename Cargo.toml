@@ -20,7 +20,7 @@ coveralls = { repository = "WrinklyNinja/libloadorder" }
 [dependencies]
 encoding = "0.2"
 filetime = "0.2"
-esplugin = "1.0.8"
+esplugin = "1.0.10"
 regex = "1.0.0"
 unicase = "2.0.0"
 rayon = "1.0.0"
