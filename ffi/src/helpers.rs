@@ -82,13 +82,13 @@ pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     }
 }
 
-pub fn to_c_string(string: &str) -> Result<*mut c_char, u32> {
-    CString::new(string)
+pub fn to_c_string<S: AsRef<str>>(string: S) -> Result<*mut c_char, u32> {
+    CString::new(string.as_ref())
         .map(CString::into_raw)
         .map_err(|_| LIBLO_ERROR_TEXT_ENCODE_FAIL)
 }
 
-pub fn to_c_string_array(strings: &[&str]) -> Result<(*mut *mut c_char, size_t), u32> {
+pub fn to_c_string_array<S: AsRef<str>>(strings: &[S]) -> Result<(*mut *mut c_char, size_t), u32> {
     let mut c_strings = strings
         .iter()
         .map(|s| to_c_string(s))

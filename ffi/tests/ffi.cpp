@@ -81,6 +81,22 @@ lo_game_handle create_handle() {
   return handle;
 }
 
+lo_game_handle create_fo4_handle() {
+  lo_game_handle handle = nullptr;
+  unsigned int return_code = lo_create_handle(&handle,
+    LIBLO_GAME_FO4,
+    "../../testing-plugins/SkyrimSE",
+    "../../testing-plugins/SkyrimSE");
+
+  assert(return_code == 0);
+  assert(handle != nullptr);
+
+  return_code = lo_load_current_state(handle);
+  assert(return_code == 0);
+
+  return handle;
+}
+
 void test_lo_create_handle() {
   printf("testing lo_create_handle()...\n");
   lo_game_handle handle = create_handle();
@@ -94,6 +110,22 @@ void test_lo_fix_plugin_lists() {
   unsigned int return_code = lo_fix_plugin_lists(handle);
 
   assert(return_code == 0);
+  lo_destroy_handle(handle);
+}
+
+void test_lo_get_implicitly_active_plugins() {
+  printf("testing lo_get_load_order()...\n");
+  lo_game_handle handle = create_fo4_handle();
+
+  char ** plugins = nullptr;
+  size_t num_plugins = 0;
+  unsigned int return_code = lo_get_implicitly_active_plugins(handle, &plugins, &num_plugins);
+
+  assert(return_code == 0);
+  assert(num_plugins == 7);
+  assert(strcmp(plugins[0], "Fallout4.esm") == 0);
+  assert(strcmp(plugins[4], "DLCworkshop02.esm") == 0);
+  lo_free_string_array(plugins, num_plugins);
   lo_destroy_handle(handle);
 }
 
@@ -262,6 +294,7 @@ int main(void) {
 
   test_lo_create_handle();
   test_lo_fix_plugin_lists();
+  test_lo_get_implicitly_active_plugins();
 
   test_lo_set_active_plugins();
   test_lo_get_active_plugins();
