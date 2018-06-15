@@ -61,7 +61,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
         }
 
         self.find_plugin_mut(plugin_name)
-            .ok_or(Error::PluginNotFound(plugin_name.to_string()))
+            .ok_or_else(|| Error::PluginNotFound(plugin_name.to_string()))
             .map(|p| p.deactivate())
     }
 

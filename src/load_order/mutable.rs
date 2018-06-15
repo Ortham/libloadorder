@@ -325,7 +325,7 @@ where
 
     let content = WINDOWS_1252
         .decode(&content, DecoderTrap::Strict)
-        .map_err(|e| Error::DecodeError(e))?;
+        .map_err(Error::DecodeError)?;
 
     Ok(content.lines().filter_map(line_mapper).collect())
 }

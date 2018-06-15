@@ -121,7 +121,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             writer.write_all(&WINDOWS_1252
                 .encode(plugin.name(), EncoderTrap::Strict)
                 .map_err(Error::EncodeError)?)?;
-            writeln!(writer, "")?;
+            writeln!(writer)?;
         }
 
         Ok(())

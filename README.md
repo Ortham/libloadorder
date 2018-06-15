@@ -24,7 +24,7 @@ This repository hosts two Rust crates: `libloadorder` is the Rust library, and
 introduction to load orders.
 
 To build libloadorder and its C FFI and generate C/C++ headers for it, install
-[Rust 1.20+](https://www.rust-lang.org/) and run
+[Rust](https://www.rust-lang.org/) and run
 `cargo build --release --all --all-features`.
 
 ## Tests

@@ -204,7 +204,7 @@ impl TextfileBasedLoadOrder {
             writer.write_all(&WINDOWS_1252
                 .encode(&plugin_name, EncoderTrap::Strict)
                 .map_err(Error::EncodeError)?)?;
-            writeln!(writer, "")?;
+            writeln!(writer)?;
         }
 
         Ok(())

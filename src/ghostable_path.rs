@@ -84,7 +84,7 @@ impl GhostablePath for Path {
             Ok(self.to_path_buf())
         } else {
             self.file_name()
-                .ok_or(Error::InvalidPath(self.to_path_buf()))
+                .ok_or_else(|| Error::InvalidPath(self.to_path_buf()))
                 .map(|x| {
                     let mut filename = x.to_os_string();
                     filename.push(".ghost");
@@ -100,7 +100,7 @@ impl GhostablePath for Path {
         } else {
             self.file_stem()
                 .map(|f| self.with_file_name(f))
-                .ok_or(Error::InvalidPath(self.to_path_buf()))
+                .ok_or_else(|| Error::InvalidPath(self.to_path_buf()))
         }
     }
 }
