@@ -273,17 +273,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
 
         Ok(())
     }
-
-    fn add_missing_plugins(&mut self) {
-        let filenames: Vec<String> = self.find_plugins_in_dir_sorted()
-            .into_par_iter()
-            .filter(|f| !self.game_settings().is_implicitly_active(f) && self.index_of(f).is_none())
-            .collect();
-
-        for plugin in self.load_plugins_if_valid(filenames) {
-            self.insert(plugin);
-        }
-    }
 }
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
