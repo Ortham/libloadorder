@@ -180,7 +180,8 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
-        if position != 0 && !self.plugins().is_empty()
+        if position != 0
+            && !self.plugins().is_empty()
             && eq(plugin_name, self.game_settings().master_file())
         {
             return Err(Error::GameMasterMustLoadFirst);
