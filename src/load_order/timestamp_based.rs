@@ -686,6 +686,22 @@ mod tests {
     }
 
     #[test]
+    fn set_load_order_should_not_insert_missing_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let filenames = vec![
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+        ];
+        load_order.set_load_order(&filenames).unwrap();
+
+        assert_eq!(filenames, load_order.plugin_names());
+    }
+
+    #[test]
     fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
@@ -698,15 +714,6 @@ mod tests {
         ];
         load_order.set_load_order(&filenames).unwrap();
 
-        let expected_filenames = vec![
-            "Blank.esm",
-            "Morrowind.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-        assert_eq!(expected_filenames, load_order.plugin_names());
         assert!(load_order.is_active("Blank.esp"));
     }
 

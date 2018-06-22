@@ -248,20 +248,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
 
         mem::swap(&mut plugins, self.plugins_mut());
 
-        self.add_missing_plugins();
-
-        self.add_implicitly_active_plugins()
-    }
-
-    fn add_missing_plugins(&mut self) {
-        let filenames: Vec<String> = self.find_plugins_in_dir_sorted()
-            .into_par_iter()
-            .filter(|f| !self.game_settings().is_implicitly_active(f) && self.index_of(f).is_none())
-            .collect();
-
-        for plugin in self.load_plugins_if_valid(filenames) {
-            self.insert(plugin);
-        }
+        Ok(())
     }
 }
 

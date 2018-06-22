@@ -727,36 +727,6 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_add_and_activate_implicitly_active_plugins() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        let filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-        ];
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        load_order.plugins_mut().remove(0); // Remove the existing Skyrim.esm entry.
-        load_order.set_load_order(&filenames).unwrap();
-
-        let expected_filenames = vec![
-            "Skyrim.esm",
-            "Update.esm",
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-        assert_eq!(expected_filenames, load_order.plugin_names());
-        assert!(load_order.is_active("Skyrim.esm"));
-        assert!(load_order.is_active("Update.esm"));
-    }
-
-    #[test]
     fn set_load_order_should_error_if_an_implicitly_active_plugin_loads_after_another_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -821,6 +791,40 @@ mod tests {
         ];
 
         assert!(load_order.set_load_order(&filenames).is_ok());
+    }
+
+    #[test]
+    fn set_load_order_should_not_insert_missing_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+        ];
+        load_order.set_load_order(&filenames).unwrap();
+
+        assert_eq!(filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+        ];
+        load_order.set_load_order(&filenames).unwrap();
+
+        assert!(load_order.is_active("Blank.esp"));
     }
 
     #[test]
