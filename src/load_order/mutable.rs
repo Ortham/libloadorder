@@ -18,7 +18,7 @@
  */
 
 use std::collections::HashSet;
-use std::fs::{read_dir, File};
+use std::fs::File;
 use std::io::Read;
 use std::mem;
 use std::path::Path;
@@ -27,170 +27,13 @@ use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
 use rayon::prelude::*;
 
+use super::find_first_non_master_position;
+use super::readable::ReadableLoadOrderExt;
 use enums::Error;
-use game_settings::GameSettings;
-use load_order::find_first_non_master_position;
-use load_order::readable::ReadableLoadOrder;
-use plugin::{trim_dot_ghost, Plugin};
+use plugin::Plugin;
 
-pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
-pub const MAX_ACTIVE_LIGHT_MASTERS: usize = 4096;
-
-pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
+pub trait MutableLoadOrder: ReadableLoadOrderExt {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
-
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
-
-    fn insert(&mut self, plugin: Plugin) -> usize {
-        match self.insert_position(&plugin) {
-            Some(position) => {
-                self.plugins_mut().insert(position, plugin);
-                position
-            }
-            None => {
-                self.plugins_mut().push(plugin);
-                self.plugins().len() - 1
-            }
-        }
-    }
-
-    fn add_to_load_order(&mut self, plugin_name: &str) -> Result<usize, Error> {
-        let plugin = Plugin::new(plugin_name, self.game_settings())?;
-
-        Ok(self.insert(plugin))
-    }
-
-    fn count_active_normal_plugins(&self) -> usize {
-        self.plugins()
-            .iter()
-            .filter(|p| !p.is_light_master_file() && p.is_active())
-            .count()
-    }
-
-    fn count_active_light_masters(&self) -> usize {
-        self.plugins()
-            .iter()
-            .filter(|p| p.is_light_master_file() && p.is_active())
-            .count()
-    }
-
-    fn load_plugins_if_valid(&self, filenames: Vec<String>) -> Vec<Plugin> {
-        let game_settings = self.game_settings();
-        filenames
-            .par_iter()
-            .filter_map(|f| Plugin::new(&f, game_settings).ok())
-            .collect()
-    }
-
-    fn find_plugins_in_dir(&self) -> Vec<String> {
-        let entries = match read_dir(&self.game_settings().plugins_directory()) {
-            Ok(x) => x,
-            _ => return Vec::new(),
-        };
-
-        let mut set: HashSet<String> = HashSet::new();
-
-        entries
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
-            .filter_map(|e| e.file_name().to_str().and_then(|f| Some(f.to_owned())))
-            .filter(|ref filename| set.insert(trim_dot_ghost(&filename).to_lowercase()))
-            .collect()
-    }
-
-    fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
-        let mut filenames = self.find_plugins_in_dir();
-        filenames.sort();
-
-        filenames
-    }
-
-    fn load_unique_plugins(
-        &mut self,
-        plugin_name_tuples: Vec<(String, bool)>,
-        installed_filenames: Vec<String>,
-    ) {
-        let plugins: Vec<Plugin> = {
-            let game_settings = self.game_settings();
-
-            remove_duplicates_icase(plugin_name_tuples, installed_filenames)
-                .into_par_iter()
-                .filter_map(|(filename, active)| {
-                    Plugin::with_active(&filename, game_settings, active).ok()
-                })
-                .collect()
-        };
-
-        for plugin in plugins {
-            self.insert(plugin);
-        }
-    }
-
-    fn activate_unvalidated(&mut self, filename: &str) -> Result<(), Error> {
-        let index = {
-            let index = self.index_of(filename);
-            if index.is_none() && Plugin::is_valid(&filename, self.game_settings()) {
-                Some(self.add_to_load_order(filename)?)
-            } else {
-                index
-            }
-        };
-
-        if let Some(x) = index {
-            self.plugins_mut()[x].activate()?;
-        }
-
-        Ok(())
-    }
-
-    fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        let plugin_names: Vec<String> = self.game_settings()
-            .implicitly_active_plugins()
-            .iter()
-            .filter(|p| !self.is_active(p))
-            .cloned()
-            .collect();
-
-        for plugin_name in plugin_names {
-            self.activate_unvalidated(&plugin_name)?;
-        }
-
-        Ok(())
-    }
-
-    fn get_excess_active_plugin_indices(&self) -> Vec<usize> {
-        let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
-        let mut normal_active_count = self.count_active_normal_plugins();
-        let mut light_master_active_count = self.count_active_light_masters();
-
-        let mut plugin_indices: Vec<usize> = Vec::new();
-        for (index, plugin) in self.plugins().iter().enumerate().rev() {
-            if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
-                && light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
-            {
-                break;
-            }
-            let can_deactivate = plugin.is_active()
-                && !implicitly_active_plugins
-                    .iter()
-                    .any(|i| plugin.name_matches(i));
-            if can_deactivate {
-                if plugin.is_light_master_file()
-                    && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
-                {
-                    plugin_indices.push(index);
-                    light_master_active_count -= 1;
-                } else if !plugin.is_light_master_file()
-                    && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
-                {
-                    plugin_indices.push(index);
-                    normal_active_count -= 1;
-                }
-            }
-        }
-
-        plugin_indices
-    }
 
     fn deactivate_excess_plugins(&mut self) {
         for index in self.get_excess_active_plugin_indices() {
@@ -220,12 +63,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
         Ok(())
     }
 
-    fn find_plugin_mut<'a>(&'a mut self, plugin_name: &str) -> Option<&'a mut Plugin> {
-        self.plugins_mut()
-            .iter_mut()
-            .find(|p| p.name_matches(plugin_name))
-    }
-
     fn deactivate_all(&mut self) {
         for plugin in self.plugins_mut() {
             plugin.deactivate();
@@ -237,7 +74,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
             return Err(Error::DuplicatePlugin);
         }
 
-        let mut plugins = match map_to_plugins(self, plugin_names) {
+        let mut plugins = match self.map_to_plugins(plugin_names) {
             Err(x) => return Err(Error::InvalidPlugin(x.to_string())),
             Ok(x) => x,
         };
@@ -254,7 +91,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
 
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
 where
-    T: MutableLoadOrder + Sync,
+    T: MutableLoadOrder,
     F: Fn(&str) -> Option<String> + Send + Sync,
 {
     load_order.deactivate_all();
@@ -304,46 +141,6 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
     }
 }
 
-fn remove_duplicates_icase(
-    plugin_tuples: Vec<(String, bool)>,
-    filenames: Vec<String>,
-) -> Vec<(String, bool)> {
-    let mut set: HashSet<String> = HashSet::with_capacity(filenames.len());
-
-    let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
-        .into_iter()
-        .rev()
-        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(&string).to_lowercase()))
-        .collect();
-
-    unique_tuples.reverse();
-
-    let unique_file_tuples_iter = filenames
-        .into_iter()
-        .filter(|ref string| set.insert(trim_dot_ghost(&string).to_lowercase()))
-        .map(|f| (f, false));
-
-    unique_tuples.extend(unique_file_tuples_iter);
-
-    unique_tuples
-}
-
-fn validate_index<T: MutableLoadOrder + ?Sized>(
-    load_order: &T,
-    index: usize,
-    is_master: bool,
-) -> Result<(), Error> {
-    match find_first_non_master_position(load_order.plugins()) {
-        None if !is_master && index < load_order.plugins().len() => {
-            Err(Error::NonMasterBeforeMaster)
-        }
-        Some(i) if is_master && index > i || !is_master && index < i => {
-            Err(Error::NonMasterBeforeMaster)
-        }
-        _ => Ok(()),
-    }
-}
-
 fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     plugin_name: &str,
@@ -351,14 +148,14 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 ) -> Result<Plugin, Error> {
     if let Some(p) = load_order.index_of(plugin_name) {
         let is_master = load_order.plugins()[p].is_master_file();
-        validate_index(load_order, insert_position, is_master)?;
+        load_order.validate_index(insert_position, is_master)?;
 
         Ok(load_order.plugins_mut().remove(p))
     } else {
         let plugin = Plugin::new(plugin_name, load_order.game_settings())
             .map_err(|_| Error::InvalidPlugin(plugin_name.to_string()))?;
 
-        validate_index(load_order, insert_position, plugin.is_master_file())?;
+        load_order.validate_index(insert_position, plugin.is_master_file())?;
 
         Ok(plugin)
     }
@@ -369,31 +166,6 @@ fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
         plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
 
     unique_plugin_names.len() == plugin_names.len()
-}
-
-fn to_plugin(
-    plugin_name: &str,
-    existing_plugins: &[Plugin],
-    game_settings: &GameSettings,
-) -> Result<Plugin, Error> {
-    let existing_plugin = existing_plugins
-        .par_iter()
-        .find_any(|p| p.name_matches(plugin_name));
-
-    match existing_plugin {
-        None => Plugin::new(plugin_name, game_settings),
-        Some(x) => Ok(x.clone()),
-    }
-}
-
-fn map_to_plugins<T: MutableLoadOrder + ?Sized>(
-    load_order: &T,
-    plugin_names: &[&str],
-) -> Result<Vec<Plugin>, Error> {
-    plugin_names
-        .par_iter()
-        .map(|n| to_plugin(n, load_order.plugins(), load_order.game_settings()))
-        .collect()
 }
 
 fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> bool {

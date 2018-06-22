@@ -24,15 +24,18 @@ use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
+use super::insertable::InsertableLoadOrder;
+use super::mutable::{
+    load_active_plugins, plugin_line_mapper, read_plugin_names, MutableLoadOrder,
+};
+use super::readable::{
+    active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
+    ReadableLoadOrderExt,
+};
+use super::writable::{activate, deactivate, set_active_plugins, WritableLoadOrder};
+use super::{create_parent_dirs, find_first_non_master_position};
 use enums::Error;
 use game_settings::GameSettings;
-use load_order::mutable::load_active_plugins;
-use load_order::mutable::plugin_line_mapper;
-use load_order::mutable::read_plugin_names;
-use load_order::mutable::MutableLoadOrder;
-use load_order::readable::ReadableLoadOrder;
-use load_order::writable::WritableLoadOrder;
-use load_order::{create_parent_dirs, find_first_non_master_position};
 use plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug)]
@@ -42,8 +45,8 @@ pub struct TextfileBasedLoadOrder {
 }
 
 impl TextfileBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> TextfileBasedLoadOrder {
-        TextfileBasedLoadOrder {
+    pub fn new(game_settings: GameSettings) -> Self {
+        Self {
             game_settings,
             plugins: Vec::new(),
         }
@@ -55,17 +58,45 @@ impl ReadableLoadOrder for TextfileBasedLoadOrder {
         &self.game_settings
     }
 
+    fn plugin_names(&self) -> Vec<&str> {
+        plugin_names(self.plugins())
+    }
+
+    fn index_of(&self, plugin_name: &str) -> Option<usize> {
+        index_of(self.plugins(), plugin_name)
+    }
+
+    fn plugin_at(&self, index: usize) -> Option<&str> {
+        plugin_at(self.plugins(), index)
+    }
+
+    fn active_plugin_names(&self) -> Vec<&str> {
+        active_plugin_names(self.plugins())
+    }
+
+    fn is_active(&self, plugin_name: &str) -> bool {
+        is_active(self.plugins(), plugin_name)
+    }
+}
+
+impl ReadableLoadOrderExt for TextfileBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
 }
 
 impl MutableLoadOrder for TextfileBasedLoadOrder {
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
+        &mut self.plugins
+    }
+}
+
+impl InsertableLoadOrder for TextfileBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         let is_game_master = eq(plugin.name(), self.game_settings().master_file());
 
         if is_game_master {
-            if self.plugins.is_empty() {
+            if self.plugins().is_empty() {
                 None
             } else {
                 Some(0)
@@ -75,10 +106,6 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
         } else {
             None
         }
-    }
-
-    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
-        &mut self.plugins
     }
 }
 
@@ -163,6 +190,18 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
                 Ok(are_equal)
             }
         }
+    }
+
+    fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        activate(self, plugin_name)
+    }
+
+    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        deactivate(self, plugin_name)
+    }
+
+    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
+        set_active_plugins(self, active_plugin_names)
     }
 }
 

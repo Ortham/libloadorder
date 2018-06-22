@@ -23,12 +23,16 @@ use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
+use super::insertable::InsertableLoadOrder;
+use super::mutable::{read_plugin_names, MutableLoadOrder};
+use super::readable::{
+    active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
+    ReadableLoadOrderExt,
+};
+use super::writable::{activate, deactivate, set_active_plugins, WritableLoadOrder};
+use super::{create_parent_dirs, find_first_non_master_position};
 use enums::Error;
 use game_settings::GameSettings;
-use load_order::mutable::{read_plugin_names, MutableLoadOrder};
-use load_order::readable::ReadableLoadOrder;
-use load_order::writable::WritableLoadOrder;
-use load_order::{create_parent_dirs, find_first_non_master_position};
 use plugin::Plugin;
 
 #[derive(Clone, Debug)]
@@ -38,8 +42,8 @@ pub struct AsteriskBasedLoadOrder {
 }
 
 impl AsteriskBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> AsteriskBasedLoadOrder {
-        AsteriskBasedLoadOrder {
+    pub fn new(game_settings: GameSettings) -> Self {
+        Self {
             game_settings,
             plugins: Vec::new(),
         }
@@ -51,12 +55,40 @@ impl ReadableLoadOrder for AsteriskBasedLoadOrder {
         &self.game_settings
     }
 
+    fn plugin_names(&self) -> Vec<&str> {
+        plugin_names(self.plugins())
+    }
+
+    fn index_of(&self, plugin_name: &str) -> Option<usize> {
+        index_of(self.plugins(), plugin_name)
+    }
+
+    fn plugin_at(&self, index: usize) -> Option<&str> {
+        plugin_at(self.plugins(), index)
+    }
+
+    fn active_plugin_names(&self) -> Vec<&str> {
+        active_plugin_names(self.plugins())
+    }
+
+    fn is_active(&self, plugin_name: &str) -> bool {
+        is_active(self.plugins(), plugin_name)
+    }
+}
+
+impl ReadableLoadOrderExt for AsteriskBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
 }
 
 impl MutableLoadOrder for AsteriskBasedLoadOrder {
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
+        &mut self.plugins
+    }
+}
+
+impl InsertableLoadOrder for AsteriskBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if self.game_settings().is_implicitly_active(plugin.name()) {
             if self.plugins().is_empty() {
@@ -82,10 +114,6 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
         } else {
             None
         }
-    }
-
-    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
-        &mut self.plugins
     }
 }
 
@@ -166,6 +194,18 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
     fn is_self_consistent(&self) -> Result<bool, Error> {
         Ok(true)
+    }
+
+    fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        activate(self, plugin_name)
+    }
+
+    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        deactivate(self, plugin_name)
+    }
+
+    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
+        set_active_plugins(self, active_plugin_names)
     }
 }
 

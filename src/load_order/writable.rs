@@ -17,17 +17,17 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use rayon::iter::Either;
-use rayon::prelude::*;
 use unicase::eq;
 
+use super::insertable::InsertableLoadOrder;
+use super::mutable::MutableLoadOrder;
+use super::readable::{ReadableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
 use enums::Error;
-use load_order::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
-use load_order::readable::ReadableLoadOrder;
 use plugin::Plugin;
 
-pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
+pub trait WritableLoadOrder: ReadableLoadOrder {
     fn load(&mut self) -> Result<(), Error>;
+
     fn save(&mut self) -> Result<(), Error>;
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error>;
@@ -36,147 +36,84 @@ pub trait WritableLoadOrder: ReadableLoadOrder + MutableLoadOrder {
 
     fn is_self_consistent(&self) -> Result<bool, Error>;
 
-    fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        let index = find_or_add(self, plugin_name)?;
+    fn activate(&mut self, plugin_name: &str) -> Result<(), Error>;
 
-        let at_max_active_normal_plugins =
-            self.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
-        let at_max_active_light_masters =
-            self.count_active_light_masters() == MAX_ACTIVE_LIGHT_MASTERS;
+    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error>;
 
-        let plugin = &mut self.plugins_mut()[index];
-        if !plugin.is_active()
-            && ((!plugin.is_light_master_file() && at_max_active_normal_plugins)
-                || (plugin.is_light_master_file() && at_max_active_light_masters))
-        {
-            Err(Error::TooManyActivePlugins)
-        } else {
-            plugin.activate()
-        }
-    }
-
-    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
-        if self.game_settings().is_implicitly_active(plugin_name) {
-            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
-        }
-
-        self.find_plugin_mut(plugin_name)
-            .ok_or_else(|| Error::PluginNotFound(plugin_name.to_string()))
-            .map(|p| p.deactivate())
-    }
-
-    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
-        let (existing_plugin_indices, new_plugins) = lookup_plugins(self, active_plugin_names)?;
-
-        if count_normal_plugins(self, &existing_plugin_indices, &new_plugins)
-            > MAX_ACTIVE_NORMAL_PLUGINS
-            || count_light_masters(self, &existing_plugin_indices, &new_plugins)
-                > MAX_ACTIVE_LIGHT_MASTERS
-        {
-            return Err(Error::TooManyActivePlugins);
-        }
-
-        for plugin_name in self.game_settings().implicitly_active_plugins() {
-            if !Plugin::is_valid(plugin_name, self.game_settings()) {
-                continue;
-            }
-
-            if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
-                return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
-            }
-        }
-
-        self.deactivate_all();
-
-        for index in existing_plugin_indices {
-            self.plugins_mut()[index].activate()?;
-        }
-
-        for mut plugin in new_plugins {
-            plugin.activate()?;
-            self.insert(plugin);
-        }
-
-        Ok(())
-    }
+    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error>;
 }
 
-fn lookup_plugins<T: WritableLoadOrder + ?Sized>(
-    load_order: &mut T,
-    active_plugin_names: &[&str],
-) -> Result<(Vec<usize>, Vec<Plugin>), Error> {
-    let (existing_plugin_indices, new_plugin_names): (Vec<usize>, Vec<&str>) =
-        active_plugin_names.into_par_iter().partition_map(|n| {
-            match load_order
-                .plugins()
-                .par_iter()
-                .position_any(|p| p.name_matches(n))
-            {
-                Some(x) => Either::Left(x),
-                None => Either::Right(n),
-            }
-        });
-
-    let new_plugins = new_plugin_names
-        .into_par_iter()
-        .map(|n| {
-            Plugin::new(n, load_order.game_settings())
-                .map_err(|_| Error::InvalidPlugin(n.to_string()))
-        })
-        .collect::<Result<Vec<Plugin>, Error>>()?;
-
-    Ok((existing_plugin_indices, new_plugins))
-}
-
-fn count_plugins<T: WritableLoadOrder + ?Sized>(
-    load_order: &mut T,
-    existing_plugin_indices: &[usize],
-    new_plugins: &[Plugin],
-    count_light_masters: bool,
-) -> usize {
-    let new_count = new_plugins
-        .iter()
-        .filter(|p| p.is_light_master_file() == count_light_masters)
-        .count();
-
-    let existing_count = existing_plugin_indices
-        .into_iter()
-        .filter(|i| load_order.plugins()[**i].is_light_master_file() == count_light_masters)
-        .count();
-
-    new_count + existing_count
-}
-
-fn count_normal_plugins<T: WritableLoadOrder + ?Sized>(
-    load_order: &mut T,
-    existing_plugin_indices: &[usize],
-    new_plugins: &[Plugin],
-) -> usize {
-    count_plugins(load_order, existing_plugin_indices, new_plugins, false)
-}
-
-fn count_light_masters<T: WritableLoadOrder + ?Sized>(
-    load_order: &mut T,
-    existing_plugin_indices: &[usize],
-    new_plugins: &[Plugin],
-) -> usize {
-    if load_order.game_settings().id().supports_light_masters() {
-        count_plugins(load_order, existing_plugin_indices, new_plugins, true)
-    } else {
-        0
-    }
-}
-
-fn find_or_add<T: WritableLoadOrder + ?Sized>(
+pub fn activate<T: InsertableLoadOrder>(
     load_order: &mut T,
     plugin_name: &str,
-) -> Result<usize, Error> {
-    match load_order.index_of(plugin_name) {
-        Some(i) => Ok(i),
-        None => load_order
-            .add_to_load_order(plugin_name)
-            .map_err(|_| Error::InvalidPlugin(plugin_name.to_string())),
+) -> Result<(), Error> {
+    let index = load_order.find_or_add(plugin_name)?;
+
+    let at_max_active_normal_plugins =
+        load_order.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
+    let at_max_active_light_masters =
+        load_order.count_active_light_masters() == MAX_ACTIVE_LIGHT_MASTERS;
+
+    let plugin = &mut load_order.plugins_mut()[index];
+    if !plugin.is_active()
+        && ((!plugin.is_light_master_file() && at_max_active_normal_plugins)
+            || (plugin.is_light_master_file() && at_max_active_light_masters))
+    {
+        Err(Error::TooManyActivePlugins)
+    } else {
+        plugin.activate()
     }
+}
+
+pub fn deactivate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
+    if load_order.game_settings().is_implicitly_active(plugin_name) {
+        return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+    }
+
+    load_order
+        .plugins_mut()
+        .iter_mut()
+        .find(|p| p.name_matches(plugin_name))
+        .ok_or_else(|| Error::PluginNotFound(plugin_name.to_string()))
+        .map(|p| p.deactivate())
+}
+
+pub fn set_active_plugins<T: InsertableLoadOrder>(
+    load_order: &mut T,
+    active_plugin_names: &[&str],
+) -> Result<(), Error> {
+    let (existing_plugin_indices, new_plugins) = load_order.lookup_plugins(active_plugin_names)?;
+
+    if load_order.count_normal_plugins(&existing_plugin_indices, &new_plugins)
+        > MAX_ACTIVE_NORMAL_PLUGINS
+        || load_order.count_light_masters(&existing_plugin_indices, &new_plugins)
+            > MAX_ACTIVE_LIGHT_MASTERS
+    {
+        return Err(Error::TooManyActivePlugins);
+    }
+
+    for plugin_name in load_order.game_settings().implicitly_active_plugins() {
+        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
+            continue;
+        }
+
+        if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
+            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+        }
+    }
+
+    load_order.deactivate_all();
+
+    for index in existing_plugin_indices {
+        load_order.plugins_mut()[index].activate()?;
+    }
+
+    for mut plugin in new_plugins {
+        plugin.activate()?;
+        load_order.insert(plugin);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -189,7 +126,10 @@ mod tests {
 
     use enums::GameId;
     use game_settings::GameSettings;
-    use load_order::readable::ReadableLoadOrder;
+    use load_order::readable::{
+        active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
+        ReadableLoadOrderExt,
+    };
     use load_order::tests::mock_game_files;
     use tests::copy_to_test_dir;
 
@@ -203,49 +143,46 @@ mod tests {
             &self.game_settings
         }
 
+        fn plugin_names(&self) -> Vec<&str> {
+            plugin_names(&self.plugins)
+        }
+
+        fn index_of(&self, plugin_name: &str) -> Option<usize> {
+            index_of(&self.plugins, plugin_name)
+        }
+
+        fn plugin_at(&self, index: usize) -> Option<&str> {
+            plugin_at(&self.plugins, index)
+        }
+
+        fn active_plugin_names(&self) -> Vec<&str> {
+            active_plugin_names(&self.plugins)
+        }
+
+        fn is_active(&self, plugin_name: &str) -> bool {
+            is_active(&self.plugins, plugin_name)
+        }
+    }
+
+    impl ReadableLoadOrderExt for TestLoadOrder {
         fn plugins(&self) -> &Vec<Plugin> {
             &self.plugins
         }
     }
 
     impl MutableLoadOrder for TestLoadOrder {
+        fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
+            &mut self.plugins
+        }
+    }
+
+    impl InsertableLoadOrder for TestLoadOrder {
         fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
             if plugin.is_master_file() {
                 Some(1)
             } else {
                 None
             }
-        }
-
-        fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
-            &mut self.plugins
-        }
-    }
-
-    impl WritableLoadOrder for TestLoadOrder {
-        // Dummy method, unused.
-        fn load(&mut self) -> Result<(), Error> {
-            Ok(())
-        }
-
-        // Dummy method, unused.
-        fn save(&mut self) -> Result<(), Error> {
-            Ok(())
-        }
-
-        // Dummy method, unused.
-        fn set_load_order(&mut self, _: &[&str]) -> Result<(), Error> {
-            Ok(())
-        }
-
-        // Dummy method, unused.
-        fn set_plugin_index(&mut self, _: &str, _: usize) -> Result<(), Error> {
-            Ok(())
-        }
-
-        // Dummy method, unused.
-        fn is_self_consistent(&self) -> Result<bool, Error> {
-            Ok(true)
         }
     }
 
@@ -262,7 +199,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.activate("Blank - Different.esp").is_ok());
+        assert!(activate(&mut load_order, "Blank - Different.esp").is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
     }
 
@@ -271,7 +208,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.activate("missing.esp").is_err());
+        assert!(activate(&mut load_order, "missing.esp").is_err());
         assert!(load_order.index_of("missing.esp").is_none());
     }
 
@@ -280,7 +217,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.activate("Blank.esm").is_ok());
+        assert!(activate(&mut load_order, "Blank.esm").is_ok());
         assert!(load_order.is_active("Blank.esm"));
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
     }
@@ -290,7 +227,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.activate("Blank - Master Dependent.esp").is_ok());
+        assert!(activate(&mut load_order, "Blank - Master Dependent.esp").is_ok());
         assert!(load_order.is_active("Blank - Master Dependent.esp"));
         assert_eq!(
             3,
@@ -303,7 +240,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.activate("Blank - different.esp").is_ok());
+        assert!(activate(&mut load_order, "Blank - different.esp").is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
     }
 
@@ -315,10 +252,10 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.activate(&plugin).unwrap();
+            activate(&mut load_order, &plugin).unwrap();
         }
 
-        assert!(load_order.activate("Blank - Different.esp").is_err());
+        assert!(activate(&mut load_order, "Blank - Different.esp").is_err());
         assert!(!load_order.is_active("Blank - Different.esp"));
     }
 
@@ -330,11 +267,11 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.activate(&plugin).unwrap();
+            activate(&mut load_order, &plugin).unwrap();
         }
 
         assert!(load_order.is_active("Blank.esp"));
-        assert!(load_order.activate("Blank.esp").is_ok());
+        assert!(activate(&mut load_order, "Blank.esp").is_ok());
     }
 
     #[test]
@@ -343,7 +280,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         assert!(load_order.is_active("Blank.esp"));
-        assert!(load_order.deactivate("Blank.esp").is_ok());
+        assert!(deactivate(&mut load_order, "Blank.esp").is_ok());
         assert!(!load_order.is_active("Blank.esp"));
     }
 
@@ -352,7 +289,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(load_order.deactivate("missing.esp").is_err());
+        assert!(deactivate(&mut load_order, "missing.esp").is_err());
         assert!(load_order.index_of("missing.esp").is_none());
     }
 
@@ -361,8 +298,8 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
-        assert!(load_order.activate("Skyrim.esm").is_ok());
-        assert!(load_order.deactivate("Skyrim.esm").is_err());
+        assert!(activate(&mut load_order, "Skyrim.esm").is_ok());
+        assert!(deactivate(&mut load_order, "Skyrim.esm").is_err());
         assert!(load_order.is_active("Skyrim.esm"));
     }
 
@@ -371,7 +308,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
-        assert!(load_order.deactivate("Update.esm").is_err());
+        assert!(deactivate(&mut load_order, "Update.esm").is_err());
         assert!(load_order.index_of("Update.esm").is_none());
     }
 
@@ -381,7 +318,7 @@ mod tests {
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         assert!(!load_order.is_active("Blank - Different.esp"));
-        assert!(load_order.deactivate("Blank - Different.esp").is_ok());
+        assert!(deactivate(&mut load_order, "Blank - Different.esp").is_ok());
         assert!(!load_order.is_active("Blank - Different.esp"));
     }
 
@@ -391,7 +328,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = [""; 256];
-        assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
@@ -401,7 +338,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["missing.esp"];
-        assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
@@ -412,7 +349,7 @@ mod tests {
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let active_plugins = ["Blank.esp"];
-        assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
@@ -422,7 +359,7 @@ mod tests {
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let active_plugins = ["Skyrim.esm", "Update.esm"];
-        assert!(load_order.set_active_plugins(&active_plugins).is_err());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
 
@@ -433,7 +370,7 @@ mod tests {
 
         let active_plugins = ["Blank - Different.esp"];
         assert!(load_order.is_active("Blank.esp"));
-        assert!(load_order.set_active_plugins(&active_plugins).is_ok());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
         assert!(!load_order.is_active("Blank.esp"));
     }
 
@@ -444,7 +381,7 @@ mod tests {
 
         let active_plugins = ["Blank - Different.esp"];
         assert!(!load_order.is_active("Blank - Different.esp"));
-        assert!(load_order.set_active_plugins(&active_plugins).is_ok());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
     }
 
@@ -454,7 +391,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
         let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
-        assert!(load_order.set_active_plugins(&active_plugins).is_ok());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
         assert!(load_order.is_active("Blank - Master Dependent.esp"));
         assert_eq!(
             3,

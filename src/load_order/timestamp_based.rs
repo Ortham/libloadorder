@@ -26,12 +26,16 @@ use encoding::{EncoderTrap, Encoding};
 use rayon::prelude::*;
 use regex::Regex;
 
+use super::insertable::InsertableLoadOrder;
+use super::mutable::{load_active_plugins, MutableLoadOrder};
+use super::readable::{
+    active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
+    ReadableLoadOrderExt,
+};
+use super::writable::{activate, deactivate, set_active_plugins, WritableLoadOrder};
+use super::{create_parent_dirs, find_first_non_master_position};
 use enums::{Error, GameId};
 use game_settings::GameSettings;
-use load_order::mutable::{load_active_plugins, MutableLoadOrder};
-use load_order::readable::ReadableLoadOrder;
-use load_order::writable::WritableLoadOrder;
-use load_order::{create_parent_dirs, find_first_non_master_position};
 use plugin::Plugin;
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
@@ -43,8 +47,8 @@ pub struct TimestampBasedLoadOrder {
 }
 
 impl TimestampBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> TimestampBasedLoadOrder {
-        TimestampBasedLoadOrder {
+    pub fn new(game_settings: GameSettings) -> Self {
+        Self {
             game_settings,
             plugins: Vec::new(),
         }
@@ -56,22 +60,46 @@ impl ReadableLoadOrder for TimestampBasedLoadOrder {
         &self.game_settings
     }
 
+    fn plugin_names(&self) -> Vec<&str> {
+        plugin_names(self.plugins())
+    }
+
+    fn index_of(&self, plugin_name: &str) -> Option<usize> {
+        index_of(self.plugins(), plugin_name)
+    }
+
+    fn plugin_at(&self, index: usize) -> Option<&str> {
+        plugin_at(self.plugins(), index)
+    }
+
+    fn active_plugin_names(&self) -> Vec<&str> {
+        active_plugin_names(self.plugins())
+    }
+
+    fn is_active(&self, plugin_name: &str) -> bool {
+        is_active(self.plugins(), plugin_name)
+    }
+}
+
+impl ReadableLoadOrderExt for TimestampBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
 }
 
 impl MutableLoadOrder for TimestampBasedLoadOrder {
+    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
+        &mut self.plugins
+    }
+}
+
+impl InsertableLoadOrder for TimestampBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if plugin.is_master_file() {
             find_first_non_master_position(self.plugins())
         } else {
             None
         }
-    }
-
-    fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
-        &mut self.plugins
     }
 }
 
@@ -121,12 +149,28 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn is_self_consistent(&self) -> Result<bool, Error> {
         Ok(true)
     }
+
+    fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        activate(self, plugin_name)
+    }
+
+    fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error> {
+        deactivate(self, plugin_name)
+    }
+
+    fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
+        set_active_plugins(self, active_plugin_names)
+    }
 }
 
-fn load_plugins_from_dir<T: MutableLoadOrder>(load_order: &T) -> Vec<Plugin> {
+fn load_plugins_from_dir<T: ReadableLoadOrderExt>(load_order: &T) -> Vec<Plugin> {
     let filenames = load_order.find_plugins_in_dir();
+    let game_settings = load_order.game_settings();
 
-    load_order.load_plugins_if_valid(filenames)
+    filenames
+        .par_iter()
+        .filter_map(|f| Plugin::new(&f, game_settings).ok())
+        .collect()
 }
 
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
@@ -171,7 +215,7 @@ fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
     timestamps
 }
 
-fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
+fn save_active_plugins<T: ReadableLoadOrderExt>(load_order: &mut T) -> Result<(), Error> {
     create_parent_dirs(load_order.game_settings().active_plugins_file())?;
 
     let prelude = get_file_prelude(load_order.game_settings())?;
