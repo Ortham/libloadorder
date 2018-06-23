@@ -18,7 +18,7 @@ install:
   - |
     if [[ $(cargo tarpaulin --version) != *0.6.1 ]]
     then
-      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/0.6.1/travis-install.sh)
+      RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force --version 0.6.1 cargo-tarpaulin
     fi
 
 before_script:
