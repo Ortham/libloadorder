@@ -137,7 +137,6 @@ pub unsafe extern "C" fn lo_set_load_order(
         }
 
         if let Err(x) = handle.save() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 
@@ -213,7 +212,6 @@ pub unsafe extern "C" fn lo_set_plugin_position(
         }
 
         if let Err(x) = handle.save() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 

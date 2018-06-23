@@ -190,7 +190,6 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
         };
 
         if let Err(x) = handle.load() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 
@@ -227,12 +226,10 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
         };
 
         if let Err(x) = handle.load() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 
         if let Err(x) = handle.save() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 

@@ -102,7 +102,6 @@ pub unsafe extern "C" fn lo_set_active_plugins(
         }
 
         if let Err(x) = handle.save() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 
@@ -151,7 +150,6 @@ pub unsafe extern "C" fn lo_set_plugin_active(
         }
 
         if let Err(x) = handle.save() {
-            handle.plugins_mut().clear();
             return handle_error(x);
         }
 
