@@ -3,6 +3,25 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [11.4.0] - 2018-06-24
+
+### Changed
+
+- `WritableLoadOrder::set_load_order()` no longer errors if given a load order
+  that doesn't include all installed plugins, as libloadorder might wrongly
+  detect invalid plugins as valid when expecting them to be present. Instead,
+  the load order is set as given, so missing plugins' load order positions are
+  left undefined.
+- Updated esplugin dependency to 2.0.0.
+
+### Removed
+
+- `WritableLoadOrder` no longer has the private trait `MutableLoadOrder` as a
+  supertrait. Instead, it has `ReadableLoadOrder` as a supertrait (which was
+  previously a supertrait of `MutableLoadOrder`).
+- `ReadableLoadOrder::plugins()`, as it returned the private `Plugin` type and
+  should not have been exposed.
+
 ## [11.2.3] - 2018-06-02
 
 ### Changed

@@ -3,6 +3,17 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [11.4.0] - 2018-06-24
+
+### Changed
+
+- If loading or saving the load order during `lo_set_active_plugins()`,
+  `lo_set_plugin_active()`, `lo_load_current_state()`, `lo_fix_plugin_lists()`,
+  `lo_set_load_order()` or `lo_set_plugin_position()` fails, the current state
+  will no longer be cleared. This is now consistent with other failure state
+  handling and simplifies retries.
+- Updated to libloadorder v11.4.0.
+
 ## [11.3.0] - 2018-06-02
 
 ### Added
