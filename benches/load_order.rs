@@ -46,10 +46,11 @@ fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filena
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
         }
-        file.write_all(&WINDOWS_1252
-            .encode(filename.as_ref(), EncoderTrap::Strict)
-            .unwrap())
-            .unwrap();
+        file.write_all(
+            &WINDOWS_1252
+                .encode(filename.as_ref(), EncoderTrap::Strict)
+                .unwrap(),
+        ).unwrap();
         writeln!(file, "").unwrap();
     }
 }

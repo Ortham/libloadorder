@@ -146,9 +146,11 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             if plugin.is_active() {
                 write!(writer, "*")?;
             }
-            writer.write_all(&WINDOWS_1252
-                .encode(plugin.name(), EncoderTrap::Strict)
-                .map_err(Error::EncodeError)?)?;
+            writer.write_all(
+                &WINDOWS_1252
+                    .encode(plugin.name(), EncoderTrap::Strict)
+                    .map_err(Error::EncodeError)?,
+            )?;
             writeln!(writer)?;
         }
 
@@ -163,7 +165,8 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         // Check that all implicitly active plugins that are present load in
         // their hardcoded order.
         let mut missing_plugins_count = 0;
-        for (i, plugin_name) in self.game_settings()
+        for (i, plugin_name) in self
+            .game_settings()
             .implicitly_active_plugins()
             .iter()
             .enumerate()

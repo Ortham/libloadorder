@@ -126,7 +126,8 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn save(&mut self) -> Result<(), Error> {
         let timestamps = padded_unique_timestamps(self.plugins());
 
-        let result: Result<Vec<()>, Error> = self.plugins_mut()
+        let result: Result<Vec<()>, Error> = self
+            .plugins_mut()
             .par_iter_mut()
             .zip(timestamps.into_par_iter())
             .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
@@ -227,9 +228,11 @@ fn save_active_plugins<T: ReadableLoadOrderExt>(load_order: &mut T) -> Result<()
         if load_order.game_settings().id() == GameId::Morrowind {
             write!(writer, "GameFile{}=", index)?;
         }
-        writer.write_all(&WINDOWS_1252
-            .encode(plugin_name, EncoderTrap::Strict)
-            .map_err(Error::EncodeError)?)?;
+        writer.write_all(
+            &WINDOWS_1252
+                .encode(plugin_name, EncoderTrap::Strict)
+                .map_err(Error::EncodeError)?,
+        )?;
         writeln!(writer)?;
     }
 

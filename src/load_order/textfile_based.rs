@@ -113,7 +113,8 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        let load_order_file_exists = self.game_settings()
+        let load_order_file_exists = self
+            .game_settings()
             .load_order_file()
             .map(|p| p.exists())
             .unwrap_or(false);
@@ -241,9 +242,11 @@ impl TextfileBasedLoadOrder {
         let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         for plugin_name in self.active_plugin_names() {
-            writer.write_all(&WINDOWS_1252
-                .encode(&plugin_name, EncoderTrap::Strict)
-                .map_err(Error::EncodeError)?)?;
+            writer.write_all(
+                &WINDOWS_1252
+                    .encode(&plugin_name, EncoderTrap::Strict)
+                    .map_err(Error::EncodeError)?,
+            )?;
             writeln!(writer)?;
         }
 
@@ -453,10 +456,11 @@ mod tests {
             File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
 
         for filename in &expected_filenames {
-            file.write_all(&WINDOWS_1252
-                .encode(filename.as_ref(), EncoderTrap::Strict)
-                .unwrap())
-                .unwrap();
+            file.write_all(
+                &WINDOWS_1252
+                    .encode(filename.as_ref(), EncoderTrap::Strict)
+                    .unwrap(),
+            ).unwrap();
             writeln!(file, "").unwrap();
         }
 

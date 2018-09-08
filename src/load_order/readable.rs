@@ -168,7 +168,8 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
     ) -> Result<(Vec<usize>, Vec<Plugin>), Error> {
         let (existing_plugin_indices, new_plugin_names): (Vec<usize>, Vec<&str>) =
             active_plugin_names.into_par_iter().partition_map(|n| {
-                match self.plugins()
+                match self
+                    .plugins()
                     .par_iter()
                     .position_any(|p| p.name_matches(n))
                 {

@@ -49,7 +49,8 @@ pub trait InsertableLoadOrder: MutableLoadOrder {
     fn find_or_add(&mut self, plugin_name: &str) -> Result<usize, Error> {
         match self.index_of(plugin_name) {
             Some(i) => Ok(i),
-            None => self.add_to_load_order(plugin_name)
+            None => self
+                .add_to_load_order(plugin_name)
                 .map_err(|_| Error::InvalidPlugin(plugin_name.to_string())),
         }
     }
@@ -76,7 +77,8 @@ pub trait InsertableLoadOrder: MutableLoadOrder {
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        let plugin_names: Vec<String> = self.game_settings()
+        let plugin_names: Vec<String> = self
+            .game_settings()
             .implicitly_active_plugins()
             .iter()
             .filter(|p| !self.is_active(p))
