@@ -70,6 +70,7 @@ const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
     "DLCworkshop02.esm",
     "DLCworkshop03.esm",
     "DLCNukaWorld.esm",
+    "DLCUltraHighResolution.esm",
 ];
 
 const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm"];
@@ -703,6 +704,7 @@ mod tests {
             "DLCworkshop02.esm",
             "DLCworkshop03.esm",
             "DLCNukaWorld.esm",
+            "DLCUltraHighResolution.esm",
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 
@@ -776,6 +778,7 @@ mod tests {
             "DLCworkshop02.esm",
             "DLCworkshop03.esm",
             "DLCNukaWorld.esm",
+            "DLCUltraHighResolution.esm",
             "ccBGSFO4001-PipBoy(Black).esl",
             "ccBGSFO4002-PipBoy(Blue).esl",
             "ccBGSFO4003-PipBoy(Camo01).esl",

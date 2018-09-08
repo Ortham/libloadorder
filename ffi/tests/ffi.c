@@ -119,7 +119,7 @@ void test_lo_get_implicitly_active_plugins() {
   unsigned int return_code = lo_get_implicitly_active_plugins(handle, &plugins, &num_plugins);
 
   assert(return_code == 0);
-  assert(num_plugins == 7);
+  assert(num_plugins == 8);
   assert(strcmp(plugins[0], "Fallout4.esm") == 0);
   assert(strcmp(plugins[4], "DLCworkshop02.esm") == 0);
   lo_free_string_array(plugins, num_plugins);

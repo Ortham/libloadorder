@@ -3,6 +3,13 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [?] - 2018-??-??
+
+### Added
+
+- Fallout 4's Ultra High Resolution DLC plugin is now recognised as always
+  being active if installed.
+
 ## [11.4.0] - 2018-06-24
 
 ### Changed
