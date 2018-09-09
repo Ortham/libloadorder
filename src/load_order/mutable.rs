@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::mem;
@@ -141,6 +141,70 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
     }
 }
 
+/// If an ESM has an ESP as a master, the ESP will be loaded directly before the
+/// ESM instead of in its usual position. This function "hoists" such ESPs
+/// further up the load order.
+pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
+    // Store plugins' current positions and where they need to move to.
+    // Use a BTreeMap so that if a plugin needs to move for more than one ESM,
+    // it will move for the earlier one and so also satisfy the later one, and
+    // so that it's possible to iterate over content in order.
+    let mut from_to_map: BTreeMap<usize, usize> = BTreeMap::new();
+
+    for (index, plugin) in plugins.iter().enumerate() {
+        if !plugin.is_master_file() {
+            break;
+        }
+
+        for master in plugin.masters()? {
+            let pos = plugins
+                .iter()
+                .position(|p| p.name_matches(&master))
+                .unwrap_or(0);
+            if pos > index && !plugins[pos].is_master_file() {
+                // Need to move the plugin to index, but can't do that while
+                // iterating, so store it for later.
+                from_to_map.insert(pos, index);
+            }
+        }
+    }
+
+    move_elements(plugins, from_to_map);
+
+    Ok(())
+}
+
+fn move_elements<T>(vec: &mut Vec<T>, mut from_to_indices: BTreeMap<usize, usize>) {
+    // Move elements around. Moving elements doesn't change from_index values,
+    // as we're iterating from earliest index to latest, but to_index values can
+    // become incorrect, e.g. (5, 2), (6, 3), (7, 1) will insert an element
+    // before index 3 so that should become 4, but 1 is still correct.
+    // Keeping track of what indices need offsets is probably not worth it as
+    // this function is likely to be called with empty or very small maps, so
+    // just loop through it after each move and increment any affected to_index
+    // values.
+    while !from_to_indices.is_empty() {
+        // This is a bit gnarly, but it's just popping of the front element.
+        let from_index = *from_to_indices
+            .iter()
+            .next()
+            .expect("map should not be empty")
+            .0;
+        let to_index = from_to_indices
+            .remove(&from_index)
+            .expect("map key should exist");
+
+        let element = vec.remove(from_index);
+        vec.insert(to_index, element);
+
+        for value in from_to_indices.values_mut() {
+            if *value > to_index {
+                *value += 1;
+            }
+        }
+    }
+}
+
 fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     plugin_name: &str,
@@ -176,5 +240,23 @@ fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> bool {
     match plugins.iter().rposition(|p| p.is_master_file()) {
         None => true,
         Some(master_pos) => master_pos < plugin_pos,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn move_elements_should_correct_later_indices_to_account_for_earlier_moves() {
+        let mut vec = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut from_to_indices = BTreeMap::new();
+        from_to_indices.insert(6, 3);
+        from_to_indices.insert(5, 2);
+        from_to_indices.insert(7, 1);
+
+        move_elements(&mut vec, from_to_indices);
+
+        assert_eq!(vec![0, 7, 1, 5, 2, 6, 3, 4, 8], vec);
     }
 }
