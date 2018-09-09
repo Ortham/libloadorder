@@ -108,6 +108,10 @@ impl Plugin {
         self.data.is_light_master_file()
     }
 
+    pub fn masters(&self) -> Result<Vec<String>, Error> {
+        self.data.masters().map_err(Error::from)
+    }
+
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
         // Always write the file time. This has a huge performance impact, but
         // is important for correctness, as otherwise external changes to plugin
