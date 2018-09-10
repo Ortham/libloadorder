@@ -18,8 +18,8 @@
  */
 
 use std::fmt::Display;
-use std::fs::{File, OpenOptions};
-use std::io::{self, Seek, Write};
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 use encoding::all::WINDOWS_1252;
@@ -105,16 +105,4 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
 
 pub fn to_owned(strs: Vec<&str>) -> Vec<String> {
     strs.into_iter().map(String::from).collect()
-}
-
-/// Set the master flag to be present or not for the given plugin.
-/// Only valid for plugins for games other than Morrowind.
-pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
-    let mut file = OpenOptions::new().write(true).open(plugin)?;
-    file.seek(io::SeekFrom::Start(8))?;
-
-    let value = if present { 1 } else { 0 };
-    file.write(&[value])?;
-
-    Ok(())
 }

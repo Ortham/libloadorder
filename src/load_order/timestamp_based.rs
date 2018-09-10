@@ -27,7 +27,7 @@ use rayon::prelude::*;
 use regex::Regex;
 
 use super::insertable::InsertableLoadOrder;
-use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
+use super::mutable::{load_active_plugins, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
@@ -109,7 +109,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.plugins = load_plugins_from_dir(self);
         self.plugins.par_sort_by(plugin_sorter);
-        hoist_masters(&mut self.plugins)?;
 
         let regex = Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")?;
         let game_id = self.game_settings().id();
@@ -388,53 +387,6 @@ mod tests {
 
         let expected_filenames = vec![
             "Blank.esm",
-            load_order.game_settings().master_file(),
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blank.esp",
-            "Blàñk.esp",
-        ];
-
-        assert_eq!(expected_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
-        copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
-            load_order.game_settings(),
-        );
-
-        set_timestamps(
-            &load_order.game_settings().plugins_directory(),
-            &[
-                "Blank - Master Dependent.esp",
-                "Blank.esm",
-                "Blank - Different Master Dependent.esm",
-                "Blank - Different.esp",
-                "Blank.esp",
-                load_order.game_settings().master_file(),
-                "Blank - Different.esm",
-            ],
-        );
-
-        load_order.load().unwrap();
-
-        let expected_filenames = vec![
-            "Blank.esm",
-            "Blank - Different.esm",
-            "Blank - Different Master Dependent.esm",
             load_order.game_settings().master_file(),
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",

@@ -26,7 +26,7 @@ use unicase::eq;
 
 use super::insertable::InsertableLoadOrder;
 use super::mutable::{
-    hoist_masters, load_active_plugins, plugin_line_mapper, read_plugin_names, MutableLoadOrder,
+    load_active_plugins, plugin_line_mapper, read_plugin_names, MutableLoadOrder,
 };
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
@@ -131,8 +131,6 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         if load_order_file_exists {
             load_active_plugins(self, plugin_line_mapper)?;
         }
-
-        hoist_masters(&mut self.plugins)?;
 
         self.add_implicitly_active_plugins()?;
 
@@ -437,51 +435,6 @@ mod tests {
             &expected_filenames[..6],
             load_order.plugin_names().as_slice()
         );
-    }
-
-    #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
-        copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
-            load_order.game_settings(),
-        );
-
-        let expected_filenames = vec![
-            "Blank - Master Dependent.esp",
-            "Blank.esm",
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-            "Blank.esp",
-            "Skyrim.esm",
-        ];
-        write_load_order_file(load_order.game_settings(), &expected_filenames);
-
-        load_order.load().unwrap();
-
-        let expected_filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "Blank - Different.esm",
-            "Blank - Different Master Dependent.esm",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-            "Blank.esp",
-        ];
-
-        assert_eq!(expected_filenames, load_order.plugin_names());
     }
 
     #[test]

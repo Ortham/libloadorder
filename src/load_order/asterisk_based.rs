@@ -24,7 +24,7 @@ use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use super::insertable::InsertableLoadOrder;
-use super::mutable::{hoist_masters, read_plugin_names, MutableLoadOrder};
+use super::mutable::{read_plugin_names, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
@@ -125,7 +125,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         let filenames = self.find_plugins_in_dir_sorted();
 
         self.load_unique_plugins(plugin_tuples, filenames);
-        hoist_masters(&mut self.plugins)?;
 
         self.add_implicitly_active_plugins()?;
 
@@ -434,49 +433,6 @@ mod tests {
             load_order.game_settings().master_file(),
             "Blank.esm",
             "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-
-        assert_eq!(expected_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        // .esm plugins are loaded as ESMs, .esl plugins are loaded as ESMs and
-        // ESLs, ignoring their actual flags, so only worth testing a .esp that
-        // has the ESM flag set that has another (normal) .esp as a master.
-
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        copy_to_test_dir(
-            "Blank - Plugin Dependent.esp",
-            "Blank - Plugin Dependent.esp",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Plugin Dependent.esp"), true).unwrap();
-
-        let expected_filenames = vec![
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-            "Blank.esp",
-            "Skyrim.esm",
-            "Blank - Plugin Dependent.esp",
-            "Blank.esm",
-        ];
-        write_active_plugins_file(load_order.game_settings(), &expected_filenames);
-
-        load_order.load().unwrap();
-
-        let expected_filenames = vec![
-            "Skyrim.esm",
-            "Blank.esp",
-            "Blank - Plugin Dependent.esp",
-            "Blank.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blàñk.esp",
