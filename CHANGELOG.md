@@ -5,7 +5,7 @@ changelog does not include libloadorder-ffi changes.
 
 ## [11.4.1] - 2018-09-10
 
-### Added
+### Fixed
 
 - Fallout 4's Ultra High Resolution DLC plugin is now recognised as always
   being active if installed.
