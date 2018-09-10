@@ -24,7 +24,8 @@ build: false
 
 test_script:
   - cargo fmt --all -- --check
-  - cargo test --all --all-features
+  # Run all tests and run the benchmarks once without measurement or analysis.
+  - cargo bench --all --all-features -- --test
 
   # Need to rebuild the FFI wrapper so that its binary is given a filename
   # without a hash.
@@ -34,6 +35,3 @@ test_script:
   - cmake .. -G "Visual Studio 15 2017 Win64"
   - cmake --build .
   - ctest
-
-  - cd ../..
-  - cargo bench
