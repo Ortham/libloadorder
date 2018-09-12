@@ -107,9 +107,7 @@ impl InsertableLoadOrder for AsteriskBasedLoadOrder {
             }
         }
 
-        if plugin.is_master_file()
-            || (plugin.is_light_master_file() && !plugin.name().to_lowercase().ends_with(".esp"))
-        {
+        if plugin.is_master_file() {
             find_first_non_master_position(self.plugins())
         } else {
             None
