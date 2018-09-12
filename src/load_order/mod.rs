@@ -39,9 +39,7 @@ pub use load_order::writable::WritableLoadOrder;
 use plugin::Plugin;
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
-    plugins
-        .iter()
-        .position(|p| !p.is_master_file() && !p.is_light_master_file())
+    plugins.iter().position(|p| !p.is_master_file())
 }
 
 fn create_parent_dirs(path: &Path) -> Result<(), Error> {
