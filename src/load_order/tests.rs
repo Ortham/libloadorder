@@ -77,10 +77,15 @@ pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) 
     }
 }
 
-pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
-    let local_path = game_dir.join("local");
+pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
+    let local_path = game_path.join("local");
     create_dir(&local_path).unwrap();
-    let settings = GameSettings::with_local_path(game_id, game_dir, &local_path).unwrap();
+
+    GameSettings::with_local_path(game_id, game_path, &local_path).unwrap()
+}
+
+pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
+    let settings = game_settings_for_test(game_id, game_dir);
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
@@ -119,10 +124,7 @@ pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
 }
 
 fn prepare(game_path: &Path, blank_esp_source: &str) -> Vec<Plugin> {
-    let local_path = game_path.join("local");
-
-    create_dir(&local_path).unwrap();
-    let settings = GameSettings::with_local_path(GameId::SkyrimSE, game_path, &local_path).unwrap();
+    let settings = game_settings_for_test(GameId::SkyrimSE, game_path);
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir(blank_esp_source, "Blank.esp", &settings);

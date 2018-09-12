@@ -813,6 +813,39 @@ mod tests {
     }
 
     #[test]
+    fn set_load_order_should_accept_hoisted_non_masters() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm",
+            load_order.game_settings(),
+        );
+        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        copy_to_test_dir(
+            "Blank - Different Master Dependent.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        );
+
+        let filenames = vec![
+            "Blank.esm",
+            "Blank - Different.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings().master_file(),
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blank.esp",
+            "Blàñk.esp",
+        ];
+
+        load_order.set_load_order(&filenames).unwrap();
+        assert_eq!(filenames, load_order.plugin_names());
+    }
+
+    #[test]
     fn set_plugin_index_should_error_if_inserting_a_non_master_before_a_master() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
