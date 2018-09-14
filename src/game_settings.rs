@@ -79,7 +79,7 @@ impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
         let local_app_data_path = app_dirs::get_data_root(app_dirs::AppDataType::UserCache)?;
-        let local_path = match appdata_folder_name(&game_id) {
+        let local_path = match appdata_folder_name(game_id) {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,
         };
@@ -91,8 +91,8 @@ impl GameSettings {
         game_path: &Path,
         local_path: &Path,
     ) -> Result<GameSettings, Error> {
-        let plugins_file_path = plugins_file_path(&game_id, game_path, local_path);
-        let load_order_path = load_order_path(&game_id, local_path);
+        let plugins_file_path = plugins_file_path(game_id, game_path, local_path);
+        let load_order_path = load_order_path(game_id, local_path);
         let implicitly_active_plugins = implicitly_active_plugins(game_id, game_path)?;
 
         Ok(GameSettings {
@@ -168,9 +168,9 @@ impl GameSettings {
     }
 }
 
-fn appdata_folder_name(game_id: &GameId) -> Option<&str> {
+fn appdata_folder_name(game_id: GameId) -> Option<&'static str> {
     use enums::GameId::*;
-    match *game_id {
+    match game_id {
         Morrowind => None,
         Oblivion => Some("Oblivion"),
         Skyrim => Some("Skyrim"),
@@ -183,16 +183,16 @@ fn appdata_folder_name(game_id: &GameId) -> Option<&str> {
     }
 }
 
-fn load_order_path(game_id: &GameId, local_path: &Path) -> Option<PathBuf> {
-    match *game_id {
+fn load_order_path(game_id: GameId, local_path: &Path) -> Option<PathBuf> {
+    match game_id {
         GameId::Skyrim => Some(local_path.join("loadorder.txt")),
         _ => None,
     }
 }
 
-fn plugins_file_path(game_id: &GameId, game_path: &Path, local_path: &Path) -> PathBuf {
+fn plugins_file_path(game_id: GameId, game_path: &Path, local_path: &Path) -> PathBuf {
     let ini_path = game_path.join("Oblivion.ini");
-    match *game_id {
+    match game_id {
         GameId::Oblivion if ini_path.exists() => if use_my_games_directory(&ini_path) {
             local_path
         } else {
@@ -454,30 +454,30 @@ mod tests {
 
     #[test]
     fn appdata_folder_name_should_be_mapped_from_game_id() {
-        assert!(appdata_folder_name(&GameId::Morrowind).is_none());
+        assert!(appdata_folder_name(GameId::Morrowind).is_none());
 
-        let mut folder = appdata_folder_name(&GameId::Oblivion).unwrap();
+        let mut folder = appdata_folder_name(GameId::Oblivion).unwrap();
         assert_eq!("Oblivion", folder);
 
-        folder = appdata_folder_name(&GameId::Skyrim).unwrap();
+        folder = appdata_folder_name(GameId::Skyrim).unwrap();
         assert_eq!("Skyrim", folder);
 
-        folder = appdata_folder_name(&GameId::SkyrimSE).unwrap();
+        folder = appdata_folder_name(GameId::SkyrimSE).unwrap();
         assert_eq!("Skyrim Special Edition", folder);
 
-        folder = appdata_folder_name(&GameId::SkyrimVR).unwrap();
+        folder = appdata_folder_name(GameId::SkyrimVR).unwrap();
         assert_eq!("Skyrim VR", folder);
 
-        folder = appdata_folder_name(&GameId::Fallout3).unwrap();
+        folder = appdata_folder_name(GameId::Fallout3).unwrap();
         assert_eq!("Fallout3", folder);
 
-        folder = appdata_folder_name(&GameId::FalloutNV).unwrap();
+        folder = appdata_folder_name(GameId::FalloutNV).unwrap();
         assert_eq!("FalloutNV", folder);
 
-        folder = appdata_folder_name(&GameId::Fallout4).unwrap();
+        folder = appdata_folder_name(GameId::Fallout4).unwrap();
         assert_eq!("Fallout4", folder);
 
-        folder = appdata_folder_name(&GameId::Fallout4VR).unwrap();
+        folder = appdata_folder_name(GameId::Fallout4VR).unwrap();
         assert_eq!("Fallout4VR", folder);
     }
 

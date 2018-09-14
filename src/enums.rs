@@ -54,8 +54,8 @@ pub enum GameId {
 }
 
 impl GameId {
-    pub fn to_esplugin_id(&self) -> EspmId {
-        match *self {
+    pub fn to_esplugin_id(self) -> EspmId {
+        match self {
             GameId::Morrowind => EspmId::Morrowind,
             GameId::Oblivion => EspmId::Oblivion,
             GameId::Skyrim => EspmId::Skyrim,
@@ -68,9 +68,9 @@ impl GameId {
         }
     }
 
-    pub fn supports_light_masters(&self) -> bool {
+    pub fn supports_light_masters(self) -> bool {
         use enums::GameId::*;
-        match *self {
+        match self {
             Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => true,
             _ => false,
         }

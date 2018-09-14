@@ -305,7 +305,7 @@ mod tests {
 
     fn write_file(path: &Path) {
         let mut file = File::create(&path).unwrap();
-        writeln!(file, "").unwrap();
+        writeln!(file).unwrap();
     }
 
     #[test]
@@ -461,7 +461,7 @@ mod tests {
                     .encode(filename.as_ref(), EncoderTrap::Strict)
                     .unwrap(),
             ).unwrap();
-            writeln!(file, "").unwrap();
+            writeln!(file).unwrap();
         }
 
         load_order.load().unwrap();
