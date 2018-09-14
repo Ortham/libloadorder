@@ -67,8 +67,7 @@ pub trait InsertableLoadOrder: MutableLoadOrder {
                 .into_par_iter()
                 .filter_map(|(filename, active)| {
                     Plugin::with_active(&filename, game_settings, active).ok()
-                })
-                .collect()
+                }).collect()
         };
 
         for plugin in plugins {

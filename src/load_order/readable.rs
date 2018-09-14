@@ -123,10 +123,9 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
             {
                 break;
             }
-            let can_deactivate = plugin.is_active()
-                && !implicitly_active_plugins
-                    .iter()
-                    .any(|i| plugin.name_matches(i));
+            let can_deactivate = plugin.is_active() && !implicitly_active_plugins
+                .iter()
+                .any(|i| plugin.name_matches(i));
             if can_deactivate {
                 if plugin.is_light_master_file()
                     && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
@@ -183,8 +182,7 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
             .map(|n| {
                 Plugin::new(n, self.game_settings())
                     .map_err(|_| Error::InvalidPlugin(n.to_string()))
-            })
-            .collect::<Result<Vec<Plugin>, Error>>()?;
+            }).collect::<Result<Vec<Plugin>, Error>>()?;
 
         Ok((existing_plugin_indices, new_plugins))
     }
