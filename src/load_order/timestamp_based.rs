@@ -281,6 +281,25 @@ mod tests {
         }
     }
 
+    fn prepare_hoisted(game_id: GameId, game_path: &Path) -> TimestampBasedLoadOrder {
+        let load_order = prepare(game_id, game_path);
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm",
+            load_order.game_settings(),
+        );
+        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        copy_to_test_dir(
+            "Blank - Different Master Dependent.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        );
+
+        load_order
+    }
+
     fn write_file(path: &Path) {
         let mut file = File::create(&path).unwrap();
         writeln!(file).unwrap();
@@ -401,20 +420,7 @@ mod tests {
     #[test]
     fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
-        copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
-            load_order.game_settings(),
-        );
+        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
 
         set_timestamps(
             &load_order.game_settings().plugins_directory(),
@@ -815,20 +821,7 @@ mod tests {
     #[test]
     fn set_load_order_should_accept_hoisted_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
-        copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
-            load_order.game_settings(),
-        );
+        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
 
         let filenames = vec![
             "Blank.esm",
@@ -907,6 +900,43 @@ mod tests {
         let num_plugins = load_order.plugins().len();
         load_order.set_plugin_index("Blank.esm", 1).unwrap();
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
+        assert_eq!(num_plugins + 1, load_order.plugins().len());
+    }
+
+    #[test]
+    fn set_plugin_index_should_allow_non_masters_to_be_hoisted() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+
+        let filenames = vec!["Blank.esm", "Blank - Different Master Dependent.esm"];
+
+        load_order.set_load_order(&filenames).unwrap();
+        assert_eq!(filenames, load_order.plugin_names());
+
+        let num_plugins = load_order.plugins().len();
+        load_order
+            .set_plugin_index("Blank - Different.esm", 1)
+            .unwrap();
+        assert_eq!(1, load_order.index_of("Blank - Different.esm").unwrap());
+        assert_eq!(num_plugins + 1, load_order.plugins().len());
+    }
+
+    #[test]
+    fn set_plugin_index_should_allow_a_master_file_to_load_after_another_that_hoists_non_masters() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+
+        let filenames = vec![
+            "Blank - Different.esm",
+            "Blank - Different Master Dependent.esm",
+        ];
+
+        load_order.set_load_order(&filenames).unwrap();
+        assert_eq!(filenames, load_order.plugin_names());
+
+        let num_plugins = load_order.plugins().len();
+        load_order.set_plugin_index("Blank.esm", 2).unwrap();
+        assert_eq!(2, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
     }
 

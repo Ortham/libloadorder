@@ -96,6 +96,8 @@ pub enum Error {
     InvalidPlugin(String),
     ImplicitlyActivePlugin(String),
     NoLocalAppData,
+    /// First string is the plugin, second is the master.
+    UnrepresentedHoist(String, String),
 }
 
 #[cfg(windows)]
@@ -184,39 +186,16 @@ impl fmt::Display for Error {
             Error::NoLocalAppData => {
                 write!(f, "The game's local app data folder could not be detected")
             }
+            Error::UnrepresentedHoist(ref plugin, ref master) => write!(
+                f,
+                "The plugin \"{}\" is a master of \"{}\", which will hoist it",
+                plugin, master
+            ),
         }
     }
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::InvalidPath(_) => "The path is invalid",
-            Error::IoError(ref x) => x.description(),
-            Error::NoFilename => "The plugin path has no filename part",
-            Error::SystemTimeError(ref x) => x.description(),
-            Error::NotUtf8(_) => {
-                "Expected a UTF-8 string, but encountered an invalid byte sequence"
-            }
-            Error::DecodeError(_) => "Plugin string content could not be decoded from Windows-1252",
-            Error::EncodeError(_) => "Text could not be represented in Windows-1252",
-            Error::PluginParsingError => "An error was encountered while parsing a plugin",
-            Error::PluginNotFound(_) => "The plugin is not in the load order",
-            Error::TooManyActivePlugins => "Active plugins limit exceeded",
-            Error::InvalidRegex => "Internal error: regex used to parse Morrowind.ini is invalid",
-            Error::DuplicatePlugin => "The given plugin list contains duplicates",
-            Error::NonMasterBeforeMaster => {
-                "Attempted to load a non-master plugin before a master plugin"
-            }
-            Error::GameMasterMustLoadFirst => {
-                "The game's implicitly active plugins must load in their harcoded positions"
-            }
-            Error::InvalidPlugin(_) => "The plugin file is invalid",
-            Error::ImplicitlyActivePlugin(_) => "Implicitly active plugins cannot be deactivated",
-            Error::NoLocalAppData => "The game's local app data folder could not be detected",
-        }
-    }
-
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             Error::IoError(ref x) => Some(x),

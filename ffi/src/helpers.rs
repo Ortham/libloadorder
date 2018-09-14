@@ -69,6 +69,7 @@ fn map_error(err: &Error) -> c_uint {
         &InvalidPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         &ImplicitlyActivePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         &NoLocalAppData => LIBLO_ERROR_INVALID_ARGS,
+        &UnrepresentedHoist(_, _) => LIBLO_ERROR_INVALID_ARGS,
     }
 }
 
