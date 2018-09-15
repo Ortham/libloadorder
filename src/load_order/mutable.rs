@@ -79,9 +79,7 @@ pub trait MutableLoadOrder: ReadableLoadOrderExt {
             Ok(x) => x,
         };
 
-        if !is_partitioned_by_master_flag(&plugins)? {
-            return Err(Error::NonMasterBeforeMaster);
-        }
+        validate_load_order(&plugins)?;
 
         mem::swap(&mut plugins, self.plugins_mut());
 
@@ -234,22 +232,16 @@ fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
     unique_plugin_names.len() == plugin_names.len()
 }
 
-fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> Result<bool, Error> {
+fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
     let first_non_master_pos = match find_first_non_master_position(plugins) {
-        None => return Ok(true),
+        None => return Ok(()),
         Some(x) => x,
     };
 
     let last_master_pos = match plugins.iter().rposition(|p| p.is_master_file()) {
-        None => return Ok(true),
+        None => return Ok(()),
         Some(x) => x,
     };
-
-    if first_non_master_pos > last_master_pos {
-        return Ok(true);
-    }
-
-    let plugins = &plugins[first_non_master_pos..=last_master_pos];
 
     let mut plugin_names: HashSet<String> = HashSet::new();
 
@@ -257,21 +249,45 @@ fn is_partitioned_by_master_flag(plugins: &[Plugin]) -> Result<bool, Error> {
     // When a master file is encountered, remove its masters from the hashset.
     // If there are any plugins left in the hashset, they weren't hoisted there,
     // so fail the check.
-    for plugin in plugins {
-        if !plugin.is_master_file() {
-            plugin_names.insert(plugin.name().to_lowercase());
-        } else {
-            for master in plugin.masters()? {
-                plugin_names.remove(&master.to_lowercase());
-            }
+    if first_non_master_pos < last_master_pos {
+        for plugin in plugins
+            .iter()
+            .skip(first_non_master_pos)
+            .take(last_master_pos - first_non_master_pos + 1)
+        {
+            if !plugin.is_master_file() {
+                plugin_names.insert(plugin.name().to_lowercase());
+            } else {
+                for master in plugin.masters()? {
+                    plugin_names.remove(&master.to_lowercase());
+                }
 
-            if !plugin_names.is_empty() {
-                return Ok(false);
+                if !plugin_names.is_empty() {
+                    return Err(Error::NonMasterBeforeMaster);
+                }
             }
         }
     }
 
-    Ok(true)
+    // Now check in reverse that no master file depends on a non-master that
+    // loads after it.
+    plugin_names.clear();
+    for plugin in plugins.iter().rev() {
+        if !plugin.is_master_file() {
+            plugin_names.insert(plugin.name().to_lowercase());
+        } else if let Some(m) = plugin
+            .masters()?
+            .iter()
+            .find(|m| plugin_names.contains(&m.to_lowercase()))
+        {
+            return Err(Error::UnrepresentedHoist(
+                m.clone(),
+                plugin.name().to_string(),
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -315,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn is_partitioned_by_master_flag_should_be_true_if_there_are_only_master_files() {
+    fn validate_load_order_should_be_ok_if_there_are_only_master_files() {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
@@ -324,11 +340,11 @@ mod tests {
             Plugin::new("Blank.esm", &settings).unwrap(),
         ];
 
-        assert!(is_partitioned_by_master_flag(&plugins).unwrap());
+        assert!(validate_load_order(&plugins).is_ok());
     }
 
     #[test]
-    fn is_partitioned_by_master_flag_should_be_true_if_there_are_no_master_files() {
+    fn validate_load_order_should_be_ok_if_there_are_no_master_files() {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
@@ -337,11 +353,11 @@ mod tests {
             Plugin::new("Blank - Different.esp", &settings).unwrap(),
         ];
 
-        assert!(is_partitioned_by_master_flag(&plugins).unwrap());
+        assert!(validate_load_order(&plugins).is_ok());
     }
 
     #[test]
-    fn is_partitioned_by_master_flag_should_be_true_if_master_files_are_before_all_others() {
+    fn validate_load_order_should_be_ok_if_master_files_are_before_all_others() {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
@@ -350,11 +366,11 @@ mod tests {
             Plugin::new("Blank.esp", &settings).unwrap(),
         ];
 
-        assert!(is_partitioned_by_master_flag(&plugins).unwrap());
+        assert!(validate_load_order(&plugins).is_ok());
     }
 
     #[test]
-    fn is_partitioned_by_master_flag_should_be_true_if_hoisted_non_masters_load_before_masters() {
+    fn validate_load_order_should_be_ok_if_hoisted_non_masters_load_before_masters() {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
@@ -364,21 +380,35 @@ mod tests {
             Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
         ];
 
-        assert!(is_partitioned_by_master_flag(&plugins).unwrap());
+        assert!(validate_load_order(&plugins).is_ok());
     }
 
     #[test]
-    fn is_partitioned_by_master_flag_should_be_false_if_non_masters_are_hoisted_earlier_than_needed(
+    fn validate_load_order_should_error_if_non_masters_are_hoisted_earlier_than_needed() {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(&tmp_dir.path());
+
+        let plugins = vec![
+            Plugin::new("Blank.esp", &settings).unwrap(),
+            Plugin::new("Blank.esm", &settings).unwrap(),
+            Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
+        ];
+
+        assert!(validate_load_order(&plugins).is_err());
+    }
+
+    #[test]
+    fn validate_load_order_should_error_if_master_files_load_before_non_masters_they_have_as_masters(
 ) {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
         let plugins = vec![
-            Plugin::new("Blank.esp", &settings).unwrap(),
             Plugin::new("Blank.esm", &settings).unwrap(),
             Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
         ];
 
-        assert!(!is_partitioned_by_master_flag(&plugins).unwrap());
+        assert!(validate_load_order(&plugins).is_err());
     }
 }
