@@ -88,12 +88,10 @@ pub fn set_active_plugins<T: InsertableLoadOrder>(
     load_order: &mut T,
     active_plugin_names: &[&str],
 ) -> Result<(), Error> {
-    let (existing_plugin_indices, new_plugins) = load_order.lookup_plugins(active_plugin_names)?;
+    let existing_plugin_indices = load_order.lookup_plugins(active_plugin_names)?;
 
-    if load_order.count_normal_plugins(&existing_plugin_indices, &new_plugins)
-        > MAX_ACTIVE_NORMAL_PLUGINS
-        || load_order.count_light_masters(&existing_plugin_indices, &new_plugins)
-            > MAX_ACTIVE_LIGHT_MASTERS
+    if load_order.count_normal_plugins(&existing_plugin_indices) > MAX_ACTIVE_NORMAL_PLUGINS
+        || load_order.count_light_masters(&existing_plugin_indices) > MAX_ACTIVE_LIGHT_MASTERS
     {
         return Err(Error::TooManyActivePlugins);
     }
@@ -112,11 +110,6 @@ pub fn set_active_plugins<T: InsertableLoadOrder>(
 
     for index in existing_plugin_indices {
         load_order.plugins_mut()[index].activate()?;
-    }
-
-    for mut plugin in new_plugins {
-        plugin.activate()?;
-        load_order.insert(plugin);
     }
 
     Ok(())
@@ -358,6 +351,23 @@ mod tests {
     }
 
     #[test]
+    fn set_active_plugins_should_error_if_given_plugins_not_in_the_load_order() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
+        assert!(!load_order.is_active("Blank - Master Dependent.esp"));
+        assert!(
+            load_order
+                .index_of("Blank - Master Dependent.esp")
+                .is_none()
+        );
+        assert!(!load_order.is_active("Blàñk.esp"));
+        assert!(load_order.index_of("Blàñk.esp").is_none());
+    }
+
+    #[test]
     fn set_active_plugins_should_deactivate_all_plugins_not_given() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
@@ -377,21 +387,5 @@ mod tests {
         assert!(!load_order.is_active("Blank - Different.esp"));
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
-    }
-
-    #[test]
-    fn set_active_plugins_should_add_given_plugins_not_in_the_load_order_in_the_given_order() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
-        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
-        assert!(load_order.is_active("Blank - Master Dependent.esp"));
-        assert_eq!(
-            3,
-            load_order.index_of("Blank - Master Dependent.esp").unwrap()
-        );
-        assert!(load_order.is_active("Blàñk.esp"));
-        assert_eq!(4, load_order.index_of("Blàñk.esp").unwrap());
     }
 }

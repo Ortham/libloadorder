@@ -244,10 +244,7 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
             .collect()
     }
 
-    fn lookup_plugins(
-        &mut self,
-        active_plugin_names: &[&str],
-    ) -> Result<(Vec<usize>, Vec<Plugin>), Error> {
+    fn lookup_plugins(&mut self, active_plugin_names: &[&str]) -> Result<Vec<usize>, Error> {
         let (existing_plugin_indices, new_plugin_names): (Vec<usize>, Vec<&str>) =
             active_plugin_names.into_par_iter().partition_map(|n| {
                 match self
@@ -260,31 +257,20 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
                 }
             });
 
-        let new_plugins = new_plugin_names
-            .into_par_iter()
-            .map(|n| {
-                Plugin::new(n, self.game_settings())
-                    .map_err(|_| Error::InvalidPlugin(n.to_string()))
-            }).collect::<Result<Vec<Plugin>, Error>>()?;
-
-        Ok((existing_plugin_indices, new_plugins))
+        if new_plugin_names.is_empty() {
+            Ok(existing_plugin_indices)
+        } else {
+            Err(Error::PluginNotFound(new_plugin_names[0].to_string()))
+        }
     }
 
-    fn count_normal_plugins(
-        &mut self,
-        existing_plugin_indices: &[usize],
-        new_plugins: &[Plugin],
-    ) -> usize {
-        count_plugins(self.plugins(), existing_plugin_indices, new_plugins, false)
+    fn count_normal_plugins(&mut self, existing_plugin_indices: &[usize]) -> usize {
+        count_plugins(self.plugins(), existing_plugin_indices, false)
     }
 
-    fn count_light_masters(
-        &mut self,
-        existing_plugin_indices: &[usize],
-        new_plugins: &[Plugin],
-    ) -> usize {
+    fn count_light_masters(&mut self, existing_plugin_indices: &[usize]) -> usize {
         if self.game_settings().id().supports_light_masters() {
-            count_plugins(self.plugins(), existing_plugin_indices, new_plugins, true)
+            count_plugins(self.plugins(), existing_plugin_indices, true)
         } else {
             0
         }
@@ -309,20 +295,12 @@ fn to_plugin(
 fn count_plugins(
     existing_plugins: &[Plugin],
     existing_plugin_indices: &[usize],
-    new_plugins: &[Plugin],
     count_light_masters: bool,
 ) -> usize {
-    let new_count = new_plugins
-        .iter()
-        .filter(|p| p.is_light_master_file() == count_light_masters)
-        .count();
-
-    let existing_count = existing_plugin_indices
+    existing_plugin_indices
         .into_iter()
         .filter(|i| existing_plugins[**i].is_light_master_file() == count_light_masters)
-        .count();
-
-    new_count + existing_count
+        .count()
 }
 
 #[cfg(test)]

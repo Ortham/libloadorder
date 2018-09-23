@@ -962,25 +962,22 @@ mod tests {
         let mut plugin_refs: Vec<&str> = plugins[..254].iter().map(AsRef::as_ref).collect();
         plugin_refs.extend(plugins[261..4356].iter().map(|s| s.as_str()));
 
+        load_order.load().unwrap();
         assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
 
         let i = 4356;
-        assert!(load_order.set_plugin_index(&plugins[i], 261).is_ok());
         assert!(load_order.activate(&plugins[i]).is_ok());
         assert!(load_order.is_active(&plugins[i]));
 
         let i = 254;
-        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_ok());
         assert!(load_order.is_active(&plugins[i]));
 
         let i = 256;
-        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
 
         let i = 4357;
-        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
     }
@@ -995,6 +992,7 @@ mod tests {
         let mut plugin_refs: Vec<&str> = plugins[..255].iter().map(AsRef::as_ref).collect();
         plugin_refs.extend(plugins[261..4357].iter().map(|s| s.as_str()));
 
+        load_order.load().unwrap();
         assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
         assert_eq!(4351, load_order.active_plugin_names().len());
     }
