@@ -965,18 +965,22 @@ mod tests {
         assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
 
         let i = 4356;
+        assert!(load_order.set_plugin_index(&plugins[i], 261).is_ok());
         assert!(load_order.activate(&plugins[i]).is_ok());
         assert!(load_order.is_active(&plugins[i]));
 
         let i = 254;
+        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_ok());
         assert!(load_order.is_active(&plugins[i]));
 
         let i = 256;
+        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
 
         let i = 4357;
+        assert!(load_order.set_plugin_index(&plugins[i], 262).is_ok());
         assert!(load_order.activate(&plugins[i]).is_err());
         assert!(!load_order.is_active(&plugins[i]));
     }

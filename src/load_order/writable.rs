@@ -47,14 +47,20 @@ pub fn activate<T: InsertableLoadOrder>(
     load_order: &mut T,
     plugin_name: &str,
 ) -> Result<(), Error> {
-    let index = load_order.find_or_add(plugin_name)?;
-
     let at_max_active_normal_plugins =
         load_order.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
     let at_max_active_light_masters =
         load_order.count_active_light_masters() == MAX_ACTIVE_LIGHT_MASTERS;
 
-    let plugin = &mut load_order.plugins_mut()[index];
+    let plugin = match load_order
+        .plugins_mut()
+        .iter_mut()
+        .find(|p| p.name_matches(plugin_name))
+    {
+        Some(p) => p,
+        None => return Err(Error::PluginNotFound(plugin_name.to_string())),
+    };
+
     if !plugin.is_active()
         && ((!plugin.is_light_master_file() && at_max_active_normal_plugins)
             || (plugin.is_light_master_file() && at_max_active_light_masters))
@@ -213,26 +219,12 @@ mod tests {
     }
 
     #[test]
-    fn activate_should_insert_a_master_before_non_masters_if_it_is_not_present() {
+    fn activate_should_error_if_the_plugin_is_not_already_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        assert!(activate(&mut load_order, "Blank.esm").is_ok());
-        assert!(load_order.is_active("Blank.esm"));
-        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
-    }
-
-    #[test]
-    fn activate_should_append_a_non_master_if_it_is_not_present() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        assert!(activate(&mut load_order, "Blank - Master Dependent.esp").is_ok());
-        assert!(load_order.is_active("Blank - Master Dependent.esp"));
-        assert_eq!(
-            3,
-            load_order.index_of("Blank - Master Dependent.esp").unwrap()
-        );
+        assert!(activate(&mut load_order, "Blank.esm").is_err());
+        assert!(!load_order.is_active("Blank.esm"));
     }
 
     #[test]
@@ -252,6 +244,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
+            load_order.add_to_load_order(&plugin).unwrap();
             activate(&mut load_order, &plugin).unwrap();
         }
 
@@ -267,6 +260,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
+            load_order.add_to_load_order(&plugin).unwrap();
             activate(&mut load_order, &plugin).unwrap();
         }
 

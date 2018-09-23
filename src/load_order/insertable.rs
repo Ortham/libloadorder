@@ -46,15 +46,6 @@ pub trait InsertableLoadOrder: MutableLoadOrder {
         Ok(self.insert(plugin))
     }
 
-    fn find_or_add(&mut self, plugin_name: &str) -> Result<usize, Error> {
-        match self.index_of(plugin_name) {
-            Some(i) => Ok(i),
-            None => self
-                .add_to_load_order(plugin_name)
-                .map_err(|_| Error::InvalidPlugin(plugin_name.to_string())),
-        }
-    }
-
     fn load_unique_plugins(
         &mut self,
         plugin_name_tuples: Vec<(String, bool)>,
