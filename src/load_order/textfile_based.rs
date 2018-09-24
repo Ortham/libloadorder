@@ -154,7 +154,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         self.replace_plugins(plugin_names)
     }
 
-    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
         if position != 0
             && !self.plugins().is_empty()
             && eq(plugin_name, self.game_settings().master_file())
@@ -933,7 +933,7 @@ mod tests {
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
-        load_order.set_plugin_index("Blank.esm", 1).unwrap();
+        assert_eq!(1, load_order.set_plugin_index("Blank.esm", 1).unwrap());
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
     }

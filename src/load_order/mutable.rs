@@ -45,10 +45,10 @@ pub trait MutableLoadOrder: ReadableLoadOrderExt {
         &mut self,
         plugin_name: &str,
         position: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<usize, Error> {
         if let Some(x) = self.index_of(plugin_name) {
             if x == position {
-                return Ok(());
+                return Ok(position);
             }
         }
 
@@ -56,11 +56,11 @@ pub trait MutableLoadOrder: ReadableLoadOrderExt {
 
         if position >= self.plugins().len() {
             self.plugins_mut().push(plugin);
+            Ok(self.plugins().len() - 1)
         } else {
             self.plugins_mut().insert(position, plugin);
+            Ok(position)
         }
-
-        Ok(())
     }
 
     fn deactivate_all(&mut self) {

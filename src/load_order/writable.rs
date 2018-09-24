@@ -32,7 +32,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error>;
 
-    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error>;
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error>;
 
     fn is_self_consistent(&self) -> Result<bool, Error>;
 

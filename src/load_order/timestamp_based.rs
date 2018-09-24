@@ -144,7 +144,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         self.replace_plugins(plugin_names)
     }
 
-    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<(), Error> {
+    fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 
@@ -898,7 +898,7 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
-        load_order.set_plugin_index("Blank.esm", 1).unwrap();
+        assert_eq!(1, load_order.set_plugin_index("Blank.esm", 1).unwrap());
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
     }
@@ -914,9 +914,10 @@ mod tests {
         assert_eq!(filenames, load_order.plugin_names());
 
         let num_plugins = load_order.plugins().len();
-        load_order
+        let index = load_order
             .set_plugin_index("Blank - Different.esm", 1)
             .unwrap();
+        assert_eq!(1, index);
         assert_eq!(1, load_order.index_of("Blank - Different.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
     }
@@ -935,7 +936,7 @@ mod tests {
         assert_eq!(filenames, load_order.plugin_names());
 
         let num_plugins = load_order.plugins().len();
-        load_order.set_plugin_index("Blank.esm", 2).unwrap();
+        assert_eq!(2, load_order.set_plugin_index("Blank.esm", 2).unwrap());
         assert_eq!(2, load_order.index_of("Blank.esm").unwrap());
         assert_eq!(num_plugins + 1, load_order.plugins().len());
     }
@@ -946,9 +947,10 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
-        load_order
+        let index = load_order
             .set_plugin_index("Blank - Different.esp", 1)
             .unwrap();
+        assert_eq!(1, index);
         assert_eq!(1, load_order.index_of("Blank - Different.esp").unwrap());
         assert_eq!(num_plugins, load_order.plugins().len());
     }
@@ -962,7 +964,7 @@ mod tests {
             .add_to_load_order("Blank - Master Dependent.esp")
             .unwrap();
         let num_plugins = load_order.plugins().len();
-        load_order.set_plugin_index("Blank.esp", 2).unwrap();
+        assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
         assert_eq!(2, load_order.index_of("Blank.esp").unwrap());
         assert_eq!(num_plugins, load_order.plugins().len());
     }
@@ -975,12 +977,13 @@ mod tests {
         load_order
             .add_to_load_order("Blank - Master Dependent.esp")
             .unwrap();
-        load_order.set_plugin_index("Blank.esp", 2).unwrap();
+        assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
         assert!(load_order.is_active("Blank.esp"));
 
-        load_order
+        let index = load_order
             .set_plugin_index("Blank - Different.esp", 2)
             .unwrap();
+        assert_eq!(2, index);
         assert!(!load_order.is_active("Blank - Different.esp"));
     }
 
