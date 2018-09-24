@@ -20,6 +20,7 @@ use std::collections::HashSet;
 
 use rayon::prelude::*;
 
+use super::find_first_non_master_position;
 use super::mutable::MutableLoadOrder;
 use enums::Error;
 use plugin::{trim_dot_ghost, Plugin};
@@ -80,6 +81,19 @@ pub trait InsertableLoadOrder: MutableLoadOrder {
         }
 
         Ok(())
+    }
+}
+
+pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
+    if plugin.is_master_file() {
+        find_first_non_master_position(plugins)
+    } else {
+        // Check that there isn't a master that would hoist this plugin.
+        plugins.iter().filter(|p| p.is_master_file()).position(|p| {
+            p.masters()
+                .map(|masters| masters.iter().any(|m| plugin.name_matches(&m)))
+                .unwrap_or(false)
+        })
     }
 }
 

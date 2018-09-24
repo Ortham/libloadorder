@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::collections::HashSet;
 
 use unicase::eq;
 
@@ -30,6 +31,10 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
 
     fn save(&mut self) -> Result<(), Error>;
 
+    fn add(&mut self, plugin_name: &str) -> Result<usize, Error>;
+
+    fn remove(&mut self, plugin_name: &str) -> Result<(), Error>;
+
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error>;
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error>;
@@ -41,6 +46,78 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
     fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error>;
 
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error>;
+}
+
+pub fn add<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<usize, Error> {
+    match load_order.index_of(plugin_name) {
+        Some(_) => Err(Error::DuplicatePlugin),
+        None => {
+            let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
+
+            match load_order.insert_position(&plugin) {
+                Some(position) => {
+                    load_order.validate_index(&plugin, position)?;
+                    load_order.plugins_mut().insert(position, plugin);
+                    Ok(position)
+                }
+                None => {
+                    load_order.validate_index(&plugin, load_order.plugins().len())?;
+                    load_order.plugins_mut().push(plugin);
+                    Ok(load_order.plugins().len() - 1)
+                }
+            }
+        }
+    }
+}
+
+pub fn remove<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
+    match load_order.index_of(plugin_name) {
+        Some(index) => {
+            let plugin_path = load_order
+                .game_settings()
+                .plugins_directory()
+                .join(plugin_name);
+            if plugin_path.exists() {
+                return Err(Error::InstalledPlugin(plugin_name.to_string()));
+            }
+
+            if load_order.plugins()[index].is_master_file() {
+                let next_master_pos = &load_order
+                    .plugins()
+                    .iter()
+                    .skip(index + 1)
+                    .position(|p| p.is_master_file());
+
+                if let Some(position) = next_master_pos {
+                    let previous_master_pos = &load_order.plugins()[..index]
+                        .iter()
+                        .rposition(|p| p.is_master_file())
+                        .unwrap_or(0);
+
+                    let master_names: HashSet<String> = load_order.plugins()[*position]
+                        .masters()?
+                        .iter()
+                        .map(|m| m.to_lowercase())
+                        .collect();
+
+                    if load_order
+                        .plugins()
+                        .iter()
+                        .take(*position)
+                        .skip(*previous_master_pos)
+                        .any(|p| !master_names.contains(&p.name().to_lowercase()))
+                    {
+                        return Err(Error::NonMasterBeforeMaster);
+                    }
+                }
+            }
+
+            load_order.plugins_mut().remove(index);
+
+            Ok(())
+        }
+        None => Err(Error::PluginNotFound(plugin_name.to_string())),
+    }
 }
 
 pub fn activate<T: InsertableLoadOrder>(
@@ -119,17 +196,19 @@ pub fn set_active_plugins<T: InsertableLoadOrder>(
 mod tests {
     use super::*;
 
+    use std::fs::remove_file;
     use std::path::Path;
 
     use tempfile::tempdir;
 
     use enums::GameId;
     use game_settings::GameSettings;
+    use load_order::insertable::{generic_insert_position, InsertableLoadOrder};
     use load_order::readable::{
         active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
         ReadableLoadOrderExt,
     };
-    use load_order::tests::mock_game_files;
+    use load_order::tests::{mock_game_files, set_master_flag};
     use tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -177,11 +256,7 @@ mod tests {
 
     impl InsertableLoadOrder for TestLoadOrder {
         fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-            if plugin.is_master_file() {
-                Some(1)
-            } else {
-                None
-            }
+            generic_insert_position(self.plugins(), plugin)
         }
     }
 
@@ -191,6 +266,154 @@ mod tests {
             game_settings,
             plugins,
         }
+    }
+
+    #[test]
+    fn add_should_error_if_the_plugin_is_already_in_the_load_order() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert!(add(&mut load_order, "Blank.esm").is_ok());
+        assert!(add(&mut load_order, "Blank.esm").is_err());
+    }
+
+    #[test]
+    fn add_should_error_if_given_a_master_that_would_hoist_a_non_master() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm",
+            load_order.game_settings(),
+        );
+        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        assert!(add(&mut load_order, "Blank - Different.esm").is_ok());
+
+        copy_to_test_dir(
+            "Blank - Different Master Dependent.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        );
+
+        assert!(add(&mut load_order, "Blank - Different Master Dependent.esm").is_err());
+    }
+
+    #[test]
+    fn add_should_error_if_the_plugin_is_not_valid() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert!(add(&mut load_order, "invalid.esm").is_err());
+    }
+
+    #[test]
+    fn add_should_insert_a_master_before_non_masters() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert_eq!(1, add(&mut load_order, "Blank.esm").unwrap());
+        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
+    }
+
+    #[test]
+    fn add_should_append_a_non_master() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        assert_eq!(
+            3,
+            add(&mut load_order, "Blank - Master Dependent.esp").unwrap()
+        );
+        assert_eq!(
+            3,
+            load_order.index_of("Blank - Master Dependent.esp").unwrap()
+        );
+    }
+
+    #[test]
+    fn add_should_hoist_a_non_master_that_a_master_depends_on() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+        copy_to_test_dir(
+            "Blank - Different Master Dependent.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        );
+        assert!(add(&mut load_order, "Blank - Different Master Dependent.esm").is_ok());
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm",
+            load_order.game_settings(),
+        );
+        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        assert_eq!(1, add(&mut load_order, "Blank - Different.esm").unwrap());
+    }
+
+    #[test]
+    fn remove_should_error_if_the_plugin_is_not_in_the_load_order() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        assert!(remove(&mut load_order, "Blank.esm").is_err());
+    }
+
+    #[test]
+    fn remove_should_error_if_the_plugin_is_installed() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        assert!(remove(&mut load_order, "Blank.esp").is_err());
+    }
+
+    #[test]
+    fn remove_should_error_if_removing_a_master_would_leave_a_non_master_it_hoisted_loading_too_early(
+) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+        copy_to_test_dir(
+            "Blank - Different Master Dependent.esm",
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        );
+        assert!(add(&mut load_order, "Blank - Different Master Dependent.esm").is_ok());
+
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            "Blank - Different.esm",
+            load_order.game_settings(),
+        );
+        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        assert_eq!(1, add(&mut load_order, "Blank - Different.esm").unwrap());
+
+        copy_to_test_dir(
+            "Blank - Master Dependent.esm",
+            "Blank - Master Dependent.esm",
+            load_order.game_settings(),
+        );
+        assert!(add(&mut load_order, "Blank - Master Dependent.esm").is_ok());
+
+        assert!(remove(&mut load_order, "Blank - Different Master Dependent.esm").is_err());
+    }
+
+    #[test]
+    fn remove_should_remove_the_given_plugin_from_the_load_order() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        remove_file(
+            load_order
+                .game_settings()
+                .plugins_directory()
+                .join("Blank.esp"),
+        ).unwrap();
+
+        assert!(remove(&mut load_order, "Blank.esp").is_ok());
+        assert!(load_order.index_of("Blank.esp").is_none());
     }
 
     #[test]

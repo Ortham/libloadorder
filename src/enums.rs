@@ -98,6 +98,7 @@ pub enum Error {
     NoLocalAppData,
     /// First string is the plugin, second is the master.
     UnrepresentedHoist(String, String),
+    InstalledPlugin(String),
 }
 
 #[cfg(windows)]
@@ -190,6 +191,11 @@ impl fmt::Display for Error {
                 f,
                 "The plugin \"{}\" is a master of \"{}\", which will hoist it",
                 plugin, master
+            ),
+            Error::InstalledPlugin(ref plugin) => write!(
+                f,
+                "The plugin \"{}\" is installed, so cannot be removed from the load order",
+                plugin
             ),
         }
     }

@@ -23,14 +23,14 @@ use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
-use super::insertable::InsertableLoadOrder;
+use super::create_parent_dirs;
+use super::insertable::{generic_insert_position, InsertableLoadOrder};
 use super::mutable::{hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
 };
-use super::writable::{activate, deactivate, set_active_plugins, WritableLoadOrder};
-use super::{create_parent_dirs, find_first_non_master_position};
+use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
@@ -107,11 +107,7 @@ impl InsertableLoadOrder for AsteriskBasedLoadOrder {
             }
         }
 
-        if plugin.is_master_file() {
-            find_first_non_master_position(self.plugins())
-        } else {
-            None
-        }
+        generic_insert_position(self.plugins(), plugin)
     }
 }
 
@@ -154,6 +150,14 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         }
 
         Ok(())
+    }
+
+    fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
+        add(self, plugin_name)
+    }
+
+    fn remove(&mut self, plugin_name: &str) -> Result<(), Error> {
+        remove(self, plugin_name)
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {

@@ -26,14 +26,14 @@ use encoding::{EncoderTrap, Encoding};
 use rayon::prelude::*;
 use regex::Regex;
 
-use super::insertable::InsertableLoadOrder;
+use super::create_parent_dirs;
+use super::insertable::{generic_insert_position, InsertableLoadOrder};
 use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
 };
-use super::writable::{activate, deactivate, set_active_plugins, WritableLoadOrder};
-use super::{create_parent_dirs, find_first_non_master_position};
+use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::{Error, GameId};
 use game_settings::GameSettings;
 use plugin::Plugin;
@@ -95,11 +95,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 
 impl InsertableLoadOrder for TimestampBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        if plugin.is_master_file() {
-            find_first_non_master_position(self.plugins())
-        } else {
-            None
-        }
+        generic_insert_position(self.plugins(), plugin)
     }
 }
 
@@ -138,6 +134,14 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
             Ok(_) => save_active_plugins(self),
             Err(e) => Err(e),
         }
+    }
+
+    fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
+        add(self, plugin_name)
+    }
+
+    fn remove(&mut self, plugin_name: &str) -> Result<(), Error> {
+        remove(self, plugin_name)
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
