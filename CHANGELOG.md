@@ -3,6 +3,32 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [12.0.0] - 2018-10-29
+
+### Added
+
+- `WritableLoadOrder::add()` inserts the given plugin into the load order at the
+  latest valid position, and returns the plugin's new index on success.
+- `WritableLoadOrder::remove()` removes the given plugin from the load order.
+
+### Changed
+
+- `WritableLoadOrder::activate()` and `WritableLoadOrder::set_active_plugins()`
+  will now error if attempting to activate a plugin that has no existing load
+  order position.
+- `WritableLoadOrder::set_plugin_index()` now returns the index set for the
+  given plugin on success, which can be useful if passing a index larger than
+  the length of the load order.
+
+### Fixed
+
+- `WritableLoadOrder`'s `load()`, `set_load_order()`, `set_plugin_index()`,
+  `set_active_plugins()` and `activate()` now all respect the game behaviour of
+  'hoisting' non-master plugins that are masters of master plugins to load
+  immediately before the earliest master plugin that depends on them. It is now
+  an error to attempt to set a load order that contains a plugin in an unhoisted
+  position that the game will hoist.
+
 ## [11.4.1] - 2018-09-10
 
 ### Fixed
