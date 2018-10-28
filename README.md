@@ -1,8 +1,8 @@
 # Libloadorder
 
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/WrinklyNinja/libloadorder?branch=master&svg=true)](https://ci.appveyor.com/project/WrinklyNinja/libloadorder)
-[![Travis Build Status](https://travis-ci.org/WrinklyNinja/libloadorder.svg?branch=master)](https://travis-ci.org/WrinklyNinja/libloadorder)
-[![dependency status](https://deps.rs/repo/github/WrinklyNinja/libloadorder/status.svg)](https://deps.rs/repo/github/WrinklyNinja/libloadorder)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/Ortham/libloadorder?branch=master&svg=true)](https://ci.appveyor.com/project/Ortham/libloadorder)
+[![Travis Build Status](https://travis-ci.org/Ortham/libloadorder.svg?branch=master)](https://travis-ci.org/Ortham/libloadorder)
+[![dependency status](https://deps.rs/repo/github/Ortham/libloadorder/status.svg)](https://deps.rs/repo/github/Ortham/libloadorder)
 [![docs](https://docs.rs/libloadorder-ffi/badge.svg)](https://docs.rs/crate/libloadorder-ffi)
 
 Libloadorder is a cross-platform library for manipulating the load order and
@@ -29,7 +29,7 @@ To build libloadorder and its C FFI and generate C/C++ headers for it, install
 ## Tests
 
 The tests require
-[testing-plugins](https://github.com/WrinklyNinja/testing-plugins), put them in
+[testing-plugins](https://github.com/Ortham/testing-plugins), put them in
 `testing-plugins` in the repo root.
 
 Run `cargo test` and `cargo bench` to run the Rust tests and benchmarks
