@@ -26,6 +26,7 @@
 //! - TES IV: Oblivion
 //! - TES V: Skyrim
 //! - TES V: Skyrim Special Edition
+//! - TES V: Skyrim VR
 //! - Fallout 3
 //! - Fallout: New Vegas
 //! - Fallout 4
@@ -87,16 +88,16 @@
 //! - Contains only installed plugins.
 //! - Contains no duplicate entries.
 //! - Loads all master files (including light masters and false-flagged plugins) before all plugin
-//!   files.
-//! - Contains no more than 255 active plugins, excluding light masters.
-//! - Contains no more than 4096 active light masters.
+//!   files, with the exception that a non-master file that is a master of a master file must load
+//!   between that master file and the previous master file.
+//! - Contains no more than 255 active plugins, excluding light plugins.
+//! - Contains no more than 4096 active light plugins.
 //! - Contains all the game's implicitly active plugins that are installed (e.g. `Skyrim.esm` and
 //!   `Update.esm` for Skyrim).
 //! - Starts with the game's main master file (Skyrim, Skyrim SE, Fallout 4 and Fallout 4 VR only).
 //!
 //! Libloadorder considers a load order that fulfills all the above conditions to be valid, though
-//! there are additional conditions that may be enforced by the game (e.g. a plugin must load after
-//! all the plugins it depends on).
+//! there may be additional conditions that may be enforced by the game.
 //!
 //! Libloadorder is less strict when loading load orders and will adjust them at load time to be
 //! valid, similar to game behaviour.

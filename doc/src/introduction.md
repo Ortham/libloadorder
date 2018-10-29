@@ -6,13 +6,15 @@ This documentation provides a general overview of load ordering in the following
 - TES IV: Oblivion
 - TES V: Skyrim
 - TES V: Skyrim Special Edition
+- TES V: Skyrim VR
 - Fallout 3
 - Fallout: New Vegas
 - Fallout 4
+- Fallout 4 VR
 
 For simplicity, "the game" will be used when the text refers to any of the games in the previous list.
 
-Mod plugins for the game are files that end in `.esp` or `.esm` (Skyrim Special Edition and Fallout 4 also support `.esl` plugins). These files are created by the game's official editing tools, or by third party modders' tools. They contain various data entries, which can either be brand new additions or changes to the entries added by another plugin, including the game's main master file (`Morrowind.esm`, `Oblivion.esm`, `Skyrim.esm`, `Fallout3.esm`, `FalloutNV.esm` or `Fallout4.esm` depending on the game). These entries cover almost all aspects of what is in the game, eg. NPCs, items, races, interiors, worlds, quests, etc.
+Mod plugins for the game are files that end in `.esp` or `.esm` (Skyrim Special Edition, Skyrim VR, Fallout 4 and Fallout 4 VR also support `.esl` plugins). These files are created by the game's official editing tools, or by third party modders' tools. They contain various data entries, which can either be brand new additions or changes to the entries added by another plugin, including the game's main master file (`Morrowind.esm`, `Oblivion.esm`, `Skyrim.esm`, `Fallout3.esm`, `FalloutNV.esm` or `Fallout4.esm` depending on the game). These entries cover almost all aspects of what is in the game, eg. NPCs, items, races, interiors, worlds, quests, etc.
 
 When the game is run, it loads each of the plugins you have installed one by one. The order in which it loads them is, unsurprisingly, what is referred to as the load order. The load order is important for two reasons:
 
@@ -23,4 +25,4 @@ A plugin which changes the entries added by other plugins is dependent on those 
 
 ## Displaying the Load Order
 
-A plugin's position in the load order is often displayed by mod managers as a hexadecimal number, from 00 to FE (0 to 255 in decimal). The plugin with position 00 loads first, and the plugin with position FE is loaded last. Hexadecimal numbers are used to display the load order positions of plugins because these numbers form the first two digits of the code that the game uses to reference the entries that the plugin adds, so knowing the numbers allows modders and mod users to determine which plugin an entry is from.
+A plugin's position in the load order is often displayed by mod managers as a hexadecimal number, from 00 to FE (0 to 255 in decimal). The plugin with position 00 loads first, and the plugin with position FE is loaded last. Hexadecimal numbers are used to display the load order positions of plugins because these numbers form the first two digits of the code that the game uses to reference the entries that the plugin adds, so knowing the numbers allows modders and mod users to determine which plugin an entry is from. This isn't quite true for light plugins, which load in load order, but which all have the new records they add moved to the FE slot.

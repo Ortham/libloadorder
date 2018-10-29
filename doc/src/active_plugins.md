@@ -9,4 +9,4 @@ Both active plugins files are encoded in Windows-1252. This is fairly important,
 
 Up to 255 plugins can be active at any one time. Listing more than 255 plugins in the active plugins file will result in weirdness and broken things, as will listing a plugin more than once.
 
-In Skyrim Special Edition and Fallout 4, light masters do not count towards the 255 active plugin limit, and instead have a separate limit of up to 4096 active light masters.
+In Skyrim Special Edition and Fallout 4, light plugins do not count towards the 255 active plugin limit, and instead have a separate limit of up to 4096 active light plugins.
