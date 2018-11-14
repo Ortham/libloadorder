@@ -28,6 +28,10 @@ changelog does not include libloadorder-ffi changes.
   immediately before the earliest master plugin that depends on them. It is now
   an error to attempt to set a load order that contains a plugin in an unhoisted
   position that the game will hoist.
+- `WritableLoadOrder::is_self_consistent()` now falls back to reading
+  `loadorder.txt` as encoded in Windows-1252 if it is not encoded in valid
+  UTF-8, for compatibility with utilities that incorrectly encode it in
+  Windows-1252 and consistency with `WritableLoadOrder::load()`.
 
 ## [11.4.1] - 2018-09-10
 
