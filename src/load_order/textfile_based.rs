@@ -177,13 +177,16 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     fn is_self_consistent(&self) -> Result<bool, Error> {
         match self.game_settings().load_order_file() {
             None => Ok(true),
-            Some(x) => {
-                if !x.exists() || !self.game_settings().active_plugins_file().exists() {
+            Some(load_order_file) => {
+                if !load_order_file.exists() || !self.game_settings().active_plugins_file().exists()
+                {
                     return Ok(true);
                 }
 
                 // First get load order according to loadorder.txt.
-                let load_order_plugin_names = read_utf8_plugin_names(x, plugin_line_mapper)?;
+                let load_order_plugin_names =
+                    read_utf8_plugin_names(load_order_file, plugin_line_mapper)
+                        .or_else(|_| read_plugin_names(load_order_file, plugin_line_mapper))?;
 
                 // Get load order from plugins.txt.
                 let active_plugin_names = read_plugin_names(
@@ -992,6 +995,34 @@ mod tests {
         // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
         let expected_filenames = vec!["Skyrim.esm", "Blàñk.esp", "Blank.esm\r", "missing.esp"];
         write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_self_consistent_should_read_load_order_file_as_windows_1252_if_not_utf8() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+        );
+
+        // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
+        let expected_filenames = vec!["Skyrim.esm", "Blàñk.esp", "Blank.esm\r", "missing.esp"];
+
+        let mut file =
+            File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
+
+        for filename in &expected_filenames {
+            file.write_all(
+                &WINDOWS_1252
+                    .encode(filename.as_ref(), EncoderTrap::Strict)
+                    .unwrap(),
+            ).unwrap();
+            writeln!(file).unwrap();
+        }
 
         assert!(load_order.is_self_consistent().unwrap());
     }
