@@ -688,18 +688,17 @@ mod tests {
                 .active_plugins_file()
                 .parent()
                 .unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         load_order.save().unwrap();
 
-        assert!(
-            load_order
-                .game_settings()
-                .active_plugins_file()
-                .parent()
-                .unwrap()
-                .exists()
-        );
+        assert!(load_order
+            .game_settings()
+            .active_plugins_file()
+            .parent()
+            .unwrap()
+            .exists());
     }
 
     #[test]
@@ -848,11 +847,9 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
-        assert!(
-            load_order
-                .set_plugin_index("Blank - Master Dependent.esp", 0)
-                .is_err()
-        );
+        assert!(load_order
+            .set_plugin_index("Blank - Master Dependent.esp", 0)
+            .is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
 

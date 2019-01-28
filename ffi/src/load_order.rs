@@ -54,7 +54,8 @@ pub unsafe extern "C" fn lo_get_load_order_method(
         };
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get the current load order.
@@ -96,7 +97,8 @@ pub unsafe extern "C" fn lo_get_load_order(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Set the load order.
@@ -141,7 +143,8 @@ pub unsafe extern "C" fn lo_set_load_order(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get the load order position of a plugin.
@@ -176,7 +179,8 @@ pub unsafe extern "C" fn lo_get_plugin_position(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Set the load order position of a plugin.
@@ -216,7 +220,8 @@ pub unsafe extern "C" fn lo_set_plugin_position(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get filename of the plugin at a specific load order position.
@@ -253,5 +258,6 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }

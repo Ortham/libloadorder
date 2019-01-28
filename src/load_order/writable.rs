@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn remove_should_error_if_removing_a_master_would_leave_a_non_master_it_hoisted_loading_too_early(
-) {
+    ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
@@ -410,7 +410,8 @@ mod tests {
                 .game_settings()
                 .plugins_directory()
                 .join("Blank.esp"),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(remove(&mut load_order, "Blank.esp").is_ok());
         assert!(load_order.index_of("Blank.esp").is_none());
@@ -581,11 +582,9 @@ mod tests {
         let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert!(!load_order.is_active("Blank - Master Dependent.esp"));
-        assert!(
-            load_order
-                .index_of("Blank - Master Dependent.esp")
-                .is_none()
-        );
+        assert!(load_order
+            .index_of("Blank - Master Dependent.esp")
+            .is_none());
         assert!(!load_order.is_active("Blàñk.esp"));
         assert!(load_order.index_of("Blàñk.esp").is_none());
     }

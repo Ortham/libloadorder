@@ -150,7 +150,7 @@ pub unsafe extern "C" fn lo_get_version(
                     return error(
                         LIBLO_ERROR_INVALID_ARGS,
                         "Failed to parse major version number",
-                    )
+                    );
                 }
             }
             match env!("CARGO_PKG_VERSION_MINOR").parse::<c_uint>() {
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn lo_get_version(
                     return error(
                         LIBLO_ERROR_INVALID_ARGS,
                         "Failed to parse minor version number",
-                    )
+                    );
                 }
             }
             match env!("CARGO_PKG_VERSION_PATCH").parse::<c_uint>() {
@@ -168,13 +168,14 @@ pub unsafe extern "C" fn lo_get_version(
                     return error(
                         LIBLO_ERROR_INVALID_ARGS,
                         "Failed to parse patch version number",
-                    )
+                    );
                 }
             }
 
             LIBLO_OK
         }
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get the message for the last error or warning encountered.
@@ -200,7 +201,8 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
 
             LIBLO_OK
         }
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Free memory allocated to string output.

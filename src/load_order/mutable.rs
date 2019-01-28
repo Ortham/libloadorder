@@ -399,7 +399,7 @@ mod tests {
 
     #[test]
     fn validate_load_order_should_error_if_master_files_load_before_non_masters_they_have_as_masters(
-) {
+    ) {
         let tmp_dir = tempdir().unwrap();
         let settings = prepare(&tmp_dir.path());
 
