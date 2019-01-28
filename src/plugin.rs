@@ -178,12 +178,13 @@ fn has_valid_extension(filename: &str, game: GameId) -> bool {
 
 fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     // as_bytes().into_iter() is faster than bytes().
-    string.len() >= suffix.len() && string
-        .as_bytes()
-        .into_iter()
-        .rev()
-        .zip(suffix.as_bytes().into_iter().rev())
-        .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(&suffix_byte))
+    string.len() >= suffix.len()
+        && string
+            .as_bytes()
+            .into_iter()
+            .rev()
+            .zip(suffix.as_bytes().into_iter().rev())
+            .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(&suffix_byte))
 }
 
 pub fn trim_dot_ghost(string: &str) -> &str {

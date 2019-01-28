@@ -62,7 +62,8 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
             &WINDOWS_1252
                 .encode(filename.as_ref(), EncoderTrap::Strict)
                 .unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         writeln!(file, "").unwrap();
     }
 }
@@ -73,7 +74,8 @@ pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) 
             &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
             FileTime::from_unix_time(index as i64, 0),
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 

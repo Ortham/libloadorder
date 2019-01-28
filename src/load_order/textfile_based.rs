@@ -516,7 +516,8 @@ mod tests {
                 &WINDOWS_1252
                     .encode(filename.as_ref(), EncoderTrap::Strict)
                     .unwrap(),
-            ).unwrap();
+            )
+            .unwrap();
             writeln!(file).unwrap();
         }
 
@@ -557,21 +558,17 @@ mod tests {
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esm").is_none());
-        assert!(
-            load_order
-                .index_of("Blank - Master Dependent.esp")
-                .is_none()
-        );
+        assert!(load_order
+            .index_of("Blank - Master Dependent.esp")
+            .is_none());
         assert!(load_order.index_of("Blàñk.esp").is_none());
 
         load_order.load().unwrap();
 
         assert!(load_order.index_of("Blank.esm").is_some());
-        assert!(
-            load_order
-                .index_of("Blank - Master Dependent.esp")
-                .is_some()
-        );
+        assert!(load_order
+            .index_of("Blank - Master Dependent.esp")
+            .is_some());
         assert!(load_order.index_of("Blàñk.esp").is_some());
     }
 
@@ -735,7 +732,8 @@ mod tests {
                 .game_settings()
                 .plugins_directory()
                 .join("Blank.esm.ghost"),
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_filenames = vec![
             "Skyrim.esm",
@@ -773,7 +771,8 @@ mod tests {
         let plugin_names = read_utf8_plugin_names(
             load_order.game_settings().load_order_file().unwrap(),
             plugin_line_mapper,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(expected_filenames, plugin_names);
     }
 
@@ -788,18 +787,17 @@ mod tests {
                 .active_plugins_file()
                 .parent()
                 .unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         load_order.save().unwrap();
 
-        assert!(
-            load_order
-                .game_settings()
-                .active_plugins_file()
-                .parent()
-                .unwrap()
-                .exists()
-        );
+        assert!(load_order
+            .game_settings()
+            .active_plugins_file()
+            .parent()
+            .unwrap()
+            .exists());
     }
 
     #[test]
@@ -1020,7 +1018,8 @@ mod tests {
                 &WINDOWS_1252
                     .encode(filename.as_ref(), EncoderTrap::Strict)
                     .unwrap(),
-            ).unwrap();
+            )
+            .unwrap();
             writeln!(file).unwrap();
         }
 

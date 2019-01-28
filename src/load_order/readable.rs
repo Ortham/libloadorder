@@ -122,9 +122,10 @@ pub trait ReadableLoadOrderExt: ReadableLoadOrder + Sync {
             {
                 break;
             }
-            let can_deactivate = plugin.is_active() && !implicitly_active_plugins
-                .iter()
-                .any(|i| plugin.name_matches(i));
+            let can_deactivate = plugin.is_active()
+                && !implicitly_active_plugins
+                    .iter()
+                    .any(|i| plugin.name_matches(i));
             if can_deactivate {
                 if plugin.is_light_master_file()
                     && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
@@ -530,7 +531,8 @@ mod tests {
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
             load_order.game_settings(),
-        ).unwrap();
+        )
+        .unwrap();
         assert!(load_order.validate_index(&plugin, 2).is_ok());
     }
 
@@ -557,7 +559,8 @@ mod tests {
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
             load_order.game_settings(),
-        ).unwrap();
+        )
+        .unwrap();
         assert!(load_order.validate_index(&plugin, 1).is_err());
     }
 
@@ -573,14 +576,15 @@ mod tests {
 
     #[test]
     fn validate_index_should_succeed_for_a_non_master_plugin_that_is_a_master_of_the_next_master_file(
-) {
+    ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare_hoisted(&tmp_dir.path());
 
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
             load_order.game_settings(),
-        ).unwrap();
+        )
+        .unwrap();
         load_order.plugins.insert(1, plugin);
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
@@ -589,7 +593,7 @@ mod tests {
 
     #[test]
     fn validate_index_should_error_for_a_non_master_plugin_that_is_not_a_master_of_the_next_master_file(
-) {
+    ) {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(&tmp_dir.path());
 
@@ -600,14 +604,15 @@ mod tests {
 
     #[test]
     fn validate_index_should_error_for_a_non_master_plugin_and_an_index_not_before_a_master_that_depends_on_it(
-) {
+    ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare_hoisted(&tmp_dir.path());
 
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
             load_order.game_settings(),
-        ).unwrap();
+        )
+        .unwrap();
         load_order.plugins.insert(1, plugin);
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();

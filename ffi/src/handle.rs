@@ -160,7 +160,8 @@ pub unsafe extern "C" fn lo_create_handle(
             Ok(false) => LIBLO_WARN_LO_MISMATCH,
             Err(x) => handle_error(x),
         }
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Destroy an existing game handle.
@@ -194,7 +195,8 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Fix up the text file(s) used by the load order and active plugins systems.
@@ -234,7 +236,8 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
 /// Get the list of implicitly active plugins for the given handle's game.
@@ -289,5 +292,6 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
         }
 
         LIBLO_OK
-    }).unwrap_or(LIBLO_ERROR_PANICKED)
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
 }

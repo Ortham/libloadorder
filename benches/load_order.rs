@@ -50,7 +50,8 @@ fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filena
             &WINDOWS_1252
                 .encode(filename.as_ref(), EncoderTrap::Strict)
                 .unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         writeln!(file, "").unwrap();
     }
 }
@@ -61,7 +62,8 @@ fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
             &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
             FileTime::from_unix_time(index as i64, 0),
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 
@@ -354,14 +356,14 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
     );
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default()
         .warm_up_time(Duration::from_secs(1))
         .measurement_time(Duration::from_secs(2));
     targets = readable_load_order_benchmark, writable_load_order_benchmark
 }
-criterion_group!{
+criterion_group! {
     name = slow_benches;
     config = Criterion::default()
         .warm_up_time(Duration::from_secs(2))

@@ -175,9 +175,11 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             .enumerate()
         {
             match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
-                Some(pos) => if pos != i - missing_plugins_count {
-                    return Err(Error::GameMasterMustLoadFirst);
-                },
+                Some(pos) => {
+                    if pos != i - missing_plugins_count {
+                        return Err(Error::GameMasterMustLoadFirst);
+                    }
+                }
                 None => missing_plugins_count += 1,
             }
         }
@@ -583,21 +585,17 @@ mod tests {
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esm").is_none());
-        assert!(
-            load_order
-                .index_of("Blank - Master Dependent.esp")
-                .is_none()
-        );
+        assert!(load_order
+            .index_of("Blank - Master Dependent.esp")
+            .is_none());
         assert!(load_order.index_of("Blàñk.esp").is_none());
 
         load_order.load().unwrap();
 
         assert!(load_order.index_of("Blank.esm").is_some());
-        assert!(
-            load_order
-                .index_of("Blank - Master Dependent.esp")
-                .is_some()
-        );
+        assert!(load_order
+            .index_of("Blank - Master Dependent.esp")
+            .is_some());
         assert!(load_order.index_of("Blàñk.esp").is_some());
     }
 
@@ -688,7 +686,8 @@ mod tests {
                 .game_settings()
                 .plugins_directory()
                 .join("Blank.esm.ghost"),
-        ).unwrap();
+        )
+        .unwrap();
 
         load_order.load().unwrap();
 
@@ -737,18 +736,17 @@ mod tests {
                 .active_plugins_file()
                 .parent()
                 .unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         load_order.save().unwrap();
 
-        assert!(
-            load_order
-                .game_settings()
-                .active_plugins_file()
-                .parent()
-                .unwrap()
-                .exists()
-        );
+        assert!(load_order
+            .game_settings()
+            .active_plugins_file()
+            .parent()
+            .unwrap()
+            .exists());
     }
 
     #[test]
