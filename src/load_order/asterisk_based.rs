@@ -294,8 +294,8 @@ mod tests {
         let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
         load_order.plugins_mut().insert(1, plugin);
 
-        copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());
-        let plugin = Plugin::new("Hearthfires.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
@@ -307,8 +307,8 @@ mod tests {
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        copy_to_test_dir("Blank.esm", "Hearthfires.esm", &load_order.game_settings());
-        let plugin = Plugin::new("Hearthfires.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());

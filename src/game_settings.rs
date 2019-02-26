@@ -49,7 +49,7 @@ const SKYRIM_SE_HARDCODED_PLUGINS: &[&str] = &[
     "Skyrim.esm",
     "Update.esm",
     "Dawnguard.esm",
-    "Hearthfires.esm",
+    "HearthFires.esm",
     "Dragonborn.esm",
 ];
 
@@ -57,7 +57,7 @@ const SKYRIM_VR_HARDCODED_PLUGINS: &[&str] = &[
     "Skyrim.esm",
     "Update.esm",
     "Dawnguard.esm",
-    "Hearthfires.esm",
+    "HearthFires.esm",
     "Dragonborn.esm",
     "SkyrimVR.esm",
 ];
@@ -706,7 +706,7 @@ mod tests {
             "Skyrim.esm",
             "Update.esm",
             "Dawnguard.esm",
-            "Hearthfires.esm",
+            "HearthFires.esm",
             "Dragonborn.esm",
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
@@ -721,7 +721,7 @@ mod tests {
             "Skyrim.esm",
             "Update.esm",
             "Dawnguard.esm",
-            "Hearthfires.esm",
+            "HearthFires.esm",
             "Dragonborn.esm",
             "SkyrimVR.esm",
         ];
@@ -796,7 +796,7 @@ mod tests {
             "Skyrim.esm",
             "Update.esm",
             "Dawnguard.esm",
-            "Hearthfires.esm",
+            "HearthFires.esm",
             "Dragonborn.esm",
             "ccBGSSSE002-ExoticArrows.esl",
             "ccBGSSSE003-Zombies.esl",
