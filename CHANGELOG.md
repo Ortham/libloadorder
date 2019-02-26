@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [12.0.1] = 2019-02-26
+
+### Fixed
+
+- Fixed the casing of `Hearthfires.esm` to `HearthFires.esm` in the hardcoded
+  plugin lists for Skyrim and Skyrim Special Edition, to fix recognising that
+  plugin on case-sensitive filesystems.
+
 ## [12.0.0] - 2018-10-29
 
 ### Added
