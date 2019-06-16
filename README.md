@@ -2,6 +2,7 @@
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/Ortham/libloadorder?branch=master&svg=true)](https://ci.appveyor.com/project/Ortham/libloadorder)
 [![Travis Build Status](https://travis-ci.org/Ortham/libloadorder.svg?branch=master)](https://travis-ci.org/Ortham/libloadorder)
+[![Coverage Status](https://coveralls.io/repos/github/Ortham/libloadorder/badge.svg?branch=master)](https://coveralls.io/github/Ortham/libloadorder?branch=master)
 [![dependency status](https://deps.rs/repo/github/Ortham/libloadorder/status.svg)](https://deps.rs/repo/github/Ortham/libloadorder)
 [![docs](https://docs.rs/libloadorder-ffi/badge.svg)](https://docs.rs/crate/libloadorder-ffi)
 
