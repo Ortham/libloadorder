@@ -299,7 +299,7 @@ fn count_plugins(
     count_light_masters: bool,
 ) -> usize {
     existing_plugin_indices
-        .into_iter()
+        .iter()
         .filter(|i| existing_plugins[**i].is_light_master_file() == count_light_masters)
         .count()
 }

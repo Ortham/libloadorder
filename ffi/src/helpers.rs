@@ -51,26 +51,26 @@ fn map_io_error(err: &io::Error) -> c_uint {
 
 fn map_error(err: &Error) -> c_uint {
     use Error::*;
-    match err {
-        &InvalidPath(_) => LIBLO_ERROR_FILE_NOT_FOUND,
-        &IoError(ref x) => map_io_error(x),
-        &NoFilename => LIBLO_ERROR_FILE_PARSE_FAIL,
-        &SystemTimeError(_) => LIBLO_ERROR_TIMESTAMP_WRITE_FAIL,
-        &NotUtf8(_) => LIBLO_ERROR_FILE_NOT_UTF8,
-        &DecodeError(_) => LIBLO_ERROR_TEXT_DECODE_FAIL,
-        &EncodeError(_) => LIBLO_ERROR_TEXT_ENCODE_FAIL,
-        &PluginParsingError => LIBLO_ERROR_FILE_PARSE_FAIL,
-        &PluginNotFound(_) => LIBLO_ERROR_INVALID_ARGS,
-        &TooManyActivePlugins => LIBLO_ERROR_INVALID_ARGS,
-        &InvalidRegex => LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
-        &DuplicatePlugin => LIBLO_ERROR_INVALID_ARGS,
-        &NonMasterBeforeMaster => LIBLO_ERROR_INVALID_ARGS,
-        &GameMasterMustLoadFirst => LIBLO_ERROR_INVALID_ARGS,
-        &InvalidPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
-        &ImplicitlyActivePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
-        &NoLocalAppData => LIBLO_ERROR_INVALID_ARGS,
-        &UnrepresentedHoist(_, _) => LIBLO_ERROR_INVALID_ARGS,
-        &InstalledPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
+    match *err {
+        InvalidPath(_) => LIBLO_ERROR_FILE_NOT_FOUND,
+        IoError(ref x) => map_io_error(x),
+        NoFilename => LIBLO_ERROR_FILE_PARSE_FAIL,
+        SystemTimeError(_) => LIBLO_ERROR_TIMESTAMP_WRITE_FAIL,
+        NotUtf8(_) => LIBLO_ERROR_FILE_NOT_UTF8,
+        DecodeError(_) => LIBLO_ERROR_TEXT_DECODE_FAIL,
+        EncodeError(_) => LIBLO_ERROR_TEXT_ENCODE_FAIL,
+        PluginParsingError => LIBLO_ERROR_FILE_PARSE_FAIL,
+        PluginNotFound(_) => LIBLO_ERROR_INVALID_ARGS,
+        TooManyActivePlugins => LIBLO_ERROR_INVALID_ARGS,
+        InvalidRegex => LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
+        DuplicatePlugin => LIBLO_ERROR_INVALID_ARGS,
+        NonMasterBeforeMaster => LIBLO_ERROR_INVALID_ARGS,
+        GameMasterMustLoadFirst => LIBLO_ERROR_INVALID_ARGS,
+        InvalidPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
+        ImplicitlyActivePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
+        NoLocalAppData => LIBLO_ERROR_INVALID_ARGS,
+        UnrepresentedHoist(_, _) => LIBLO_ERROR_INVALID_ARGS,
+        InstalledPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
     }
 }
 
@@ -93,7 +93,7 @@ pub fn to_c_string<S: AsRef<str>>(string: S) -> Result<*mut c_char, u32> {
 pub fn to_c_string_array<S: AsRef<str>>(strings: &[S]) -> Result<(*mut *mut c_char, size_t), u32> {
     let mut c_strings = strings
         .iter()
-        .map(|s| to_c_string(s))
+        .map(to_c_string)
         .collect::<Result<Vec<*mut c_char>, u32>>()?;
 
     c_strings.shrink_to_fit();
