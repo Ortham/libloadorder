@@ -5,8 +5,7 @@ mod ffi_headers {
     use std::env;
     use std::fs;
 
-    use self::cbindgen::Builder;
-    use self::cbindgen::Language;
+    use self::cbindgen::generate;
 
     pub fn generate_headers() {
         let crate_dir = env::var("CARGO_MANIFEST_DIR")
@@ -14,20 +13,9 @@ mod ffi_headers {
 
         fs::create_dir_all("include").expect("could not create include directory");
 
-        Builder::new()
-            .with_crate(&crate_dir)
-            .with_language(Language::C)
-            .generate()
-            .expect("could not generate C header file")
+        generate(&crate_dir)
+            .expect("could not generate C/C++ header file")
             .write_to_file("include/libloadorder.h");
-
-        Builder::new()
-            .with_crate(&crate_dir)
-            .with_language(Language::Cxx)
-            .with_std_types(false)
-            .generate()
-            .expect("could not generate C++ header file")
-            .write_to_file("include/libloadorder.hpp");
     }
 }
 

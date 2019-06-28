@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-#include "libloadorder.hpp"
+#include "libloadorder.h"
 
 void test_game_id_values() {
   printf("testing LIBLO_GAME_* values...\n");
