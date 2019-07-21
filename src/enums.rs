@@ -140,10 +140,10 @@ impl From<esplugin::Error> for Error {
         match error {
             esplugin::Error::IoError(x) => Error::IoError(x),
             esplugin::Error::NoFilename => Error::NoFilename,
-            esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError => {
+            esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError(_, _) => {
                 Error::PluginParsingError
             }
-            esplugin::Error::DecodeError(x) => Error::DecodeError(x),
+            esplugin::Error::DecodeError => Error::DecodeError("invalid sequence".into()),
         }
     }
 }
