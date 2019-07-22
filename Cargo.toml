@@ -20,7 +20,7 @@ coveralls = { repository = "Ortham/libloadorder" }
 [dependencies]
 encoding = "0.2"
 filetime = "0.2"
-esplugin = "2.0.0"
+esplugin = "3.0.0"
 regex = "1.0.0"
 unicase = "2.0.0"
 rayon = "1.0.0"
