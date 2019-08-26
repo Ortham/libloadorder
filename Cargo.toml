@@ -29,7 +29,7 @@ rayon = "1.0.0"
 app_dirs = "1.1.1"
 
 [dev-dependencies]
-criterion = "0.2.0"
+criterion = "0.3.0"
 tempfile = "3.0.0"
 
 [lib]
