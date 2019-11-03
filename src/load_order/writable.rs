@@ -20,7 +20,6 @@ use std::collections::HashSet;
 
 use unicase::eq;
 
-use super::insertable::InsertableLoadOrder;
 use super::mutable::MutableLoadOrder;
 use super::readable::{ReadableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
 use enums::Error;
@@ -48,7 +47,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error>;
 }
 
-pub fn add<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<usize, Error> {
+pub fn add<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<usize, Error> {
     match load_order.index_of(plugin_name) {
         Some(_) => Err(Error::DuplicatePlugin),
         None => {
@@ -70,7 +69,7 @@ pub fn add<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
     }
 }
 
-pub fn remove<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
+pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
     match load_order.index_of(plugin_name) {
         Some(index) => {
             let plugin_path = load_order
@@ -120,10 +119,7 @@ pub fn remove<T: InsertableLoadOrder>(load_order: &mut T, plugin_name: &str) -> 
     }
 }
 
-pub fn activate<T: InsertableLoadOrder>(
-    load_order: &mut T,
-    plugin_name: &str,
-) -> Result<(), Error> {
+pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
     let at_max_active_normal_plugins =
         load_order.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
     let at_max_active_light_masters =
@@ -161,7 +157,7 @@ pub fn deactivate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) ->
         .map(|p| p.deactivate())
 }
 
-pub fn set_active_plugins<T: InsertableLoadOrder>(
+pub fn set_active_plugins<T: MutableLoadOrder>(
     load_order: &mut T,
     active_plugin_names: &[&str],
 ) -> Result<(), Error> {
@@ -203,7 +199,7 @@ mod tests {
 
     use enums::GameId;
     use game_settings::GameSettings;
-    use load_order::insertable::{generic_insert_position, InsertableLoadOrder};
+    use load_order::mutable::{generic_insert_position, MutableLoadOrder};
     use load_order::readable::{
         active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
         ReadableLoadOrderExt,
@@ -252,9 +248,7 @@ mod tests {
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
         }
-    }
 
-    impl InsertableLoadOrder for TestLoadOrder {
         fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
             generic_insert_position(self.plugins(), plugin)
         }
@@ -461,7 +455,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.add_to_load_order(&plugin).unwrap();
+            load_order.load_and_insert(&plugin).unwrap();
             activate(&mut load_order, &plugin).unwrap();
         }
 
@@ -477,7 +471,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.add_to_load_order(&plugin).unwrap();
+            load_order.load_and_insert(&plugin).unwrap();
             activate(&mut load_order, &plugin).unwrap();
         }
 

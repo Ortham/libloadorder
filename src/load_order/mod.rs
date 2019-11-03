@@ -18,7 +18,6 @@
  */
 
 mod asterisk_based;
-mod insertable;
 mod mutable;
 mod readable;
 #[cfg(test)]

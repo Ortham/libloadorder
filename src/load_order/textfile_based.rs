@@ -25,9 +25,9 @@ use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use super::create_parent_dirs;
-use super::insertable::{generic_insert_position, InsertableLoadOrder};
 use super::mutable::{
-    hoist_masters, load_active_plugins, plugin_line_mapper, read_plugin_names, MutableLoadOrder,
+    generic_insert_position, hoist_masters, load_active_plugins, plugin_line_mapper,
+    read_plugin_names, MutableLoadOrder,
 };
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
@@ -89,9 +89,7 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
-}
 
-impl InsertableLoadOrder for TextfileBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         let is_game_master = eq(plugin.name(), self.game_settings().master_file());
 

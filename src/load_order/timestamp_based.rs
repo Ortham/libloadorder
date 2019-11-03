@@ -27,8 +27,9 @@ use rayon::prelude::*;
 use regex::Regex;
 
 use super::create_parent_dirs;
-use super::insertable::{generic_insert_position, InsertableLoadOrder};
-use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
+use super::mutable::{
+    generic_insert_position, hoist_masters, load_active_plugins, MutableLoadOrder,
+};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
@@ -91,9 +92,7 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
-}
 
-impl InsertableLoadOrder for TimestampBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         generic_insert_position(self.plugins(), plugin)
     }
@@ -962,7 +961,7 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         load_order
-            .add_to_load_order("Blank - Master Dependent.esp")
+            .load_and_insert("Blank - Master Dependent.esp")
             .unwrap();
         let num_plugins = load_order.plugins().len();
         assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
@@ -976,7 +975,7 @@ mod tests {
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         load_order
-            .add_to_load_order("Blank - Master Dependent.esp")
+            .load_and_insert("Blank - Master Dependent.esp")
             .unwrap();
         assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
         assert!(load_order.is_active("Blank.esp"));

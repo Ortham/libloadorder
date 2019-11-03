@@ -30,10 +30,12 @@ use rayon::prelude::*;
 use super::find_first_non_master_position;
 use super::readable::ReadableLoadOrderExt;
 use enums::Error;
-use plugin::Plugin;
+use plugin::{trim_dot_ghost, Plugin};
 
 pub trait MutableLoadOrder: ReadableLoadOrderExt {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
+
+    fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
     fn deactivate_excess_plugins(&mut self) {
         for index in self.get_excess_active_plugin_indices() {
@@ -82,6 +84,62 @@ pub trait MutableLoadOrder: ReadableLoadOrderExt {
         validate_load_order(&plugins)?;
 
         mem::swap(&mut plugins, self.plugins_mut());
+
+        Ok(())
+    }
+
+    fn insert(&mut self, plugin: Plugin) -> usize {
+        match self.insert_position(&plugin) {
+            Some(position) => {
+                self.plugins_mut().insert(position, plugin);
+                position
+            }
+            None => {
+                self.plugins_mut().push(plugin);
+                self.plugins().len() - 1
+            }
+        }
+    }
+
+    fn load_and_insert(&mut self, plugin_name: &str) -> Result<usize, Error> {
+        let plugin = Plugin::new(plugin_name, self.game_settings())?;
+
+        Ok(self.insert(plugin))
+    }
+
+    fn load_unique_plugins(
+        &mut self,
+        plugin_name_tuples: Vec<(String, bool)>,
+        installed_filenames: Vec<String>,
+    ) {
+        let plugins: Vec<Plugin> = {
+            let game_settings = self.game_settings();
+
+            remove_duplicates_icase(plugin_name_tuples, installed_filenames)
+                .into_par_iter()
+                .filter_map(|(filename, active)| {
+                    Plugin::with_active(&filename, game_settings, active).ok()
+                })
+                .collect()
+        };
+
+        for plugin in plugins {
+            self.insert(plugin);
+        }
+    }
+
+    fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
+        let plugin_names: Vec<String> = self
+            .game_settings()
+            .implicitly_active_plugins()
+            .iter()
+            .filter(|p| !self.is_active(p))
+            .cloned()
+            .collect();
+
+        for plugin_name in plugin_names {
+            activate_unvalidated(self, &plugin_name)?;
+        }
 
         Ok(())
     }
@@ -170,6 +228,19 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
     move_elements(plugins, from_to_map);
 
     Ok(())
+}
+
+pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
+    if plugin.is_master_file() {
+        find_first_non_master_position(plugins)
+    } else {
+        // Check that there isn't a master that would hoist this plugin.
+        plugins.iter().filter(|p| p.is_master_file()).position(|p| {
+            p.masters()
+                .map(|masters| masters.iter().any(|m| plugin.name_matches(&m)))
+                .unwrap_or(false)
+        })
+    }
 }
 
 fn move_elements<T>(vec: &mut Vec<T>, mut from_to_indices: BTreeMap<usize, usize>) {
@@ -285,6 +356,50 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
                 plugin.name().to_string(),
             ));
         }
+    }
+
+    Ok(())
+}
+
+fn remove_duplicates_icase(
+    plugin_tuples: Vec<(String, bool)>,
+    filenames: Vec<String>,
+) -> Vec<(String, bool)> {
+    let mut set: HashSet<String> = HashSet::with_capacity(filenames.len());
+
+    let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
+        .into_iter()
+        .rev()
+        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(&string).to_lowercase()))
+        .collect();
+
+    unique_tuples.reverse();
+
+    let unique_file_tuples_iter = filenames
+        .into_iter()
+        .filter(|ref string| set.insert(trim_dot_ghost(&string).to_lowercase()))
+        .map(|f| (f, false));
+
+    unique_tuples.extend(unique_file_tuples_iter);
+
+    unique_tuples
+}
+
+fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
+    load_order: &mut T,
+    filename: &str,
+) -> Result<(), Error> {
+    let index = {
+        let index = load_order.index_of(filename);
+        if index.is_none() && Plugin::is_valid(&filename, load_order.game_settings()) {
+            Some(load_order.load_and_insert(filename)?)
+        } else {
+            index
+        }
+    };
+
+    if let Some(x) = index {
+        load_order.plugins_mut()[x].activate()?;
     }
 
     Ok(())

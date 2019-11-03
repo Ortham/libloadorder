@@ -24,8 +24,7 @@ use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use super::create_parent_dirs;
-use super::insertable::{generic_insert_position, InsertableLoadOrder};
-use super::mutable::{hoist_masters, read_plugin_names, MutableLoadOrder};
+use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
     ReadableLoadOrderExt,
@@ -86,9 +85,7 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
-}
 
-impl InsertableLoadOrder for AsteriskBasedLoadOrder {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if self.game_settings().is_implicitly_active(plugin.name()) {
             if self.plugins().is_empty() {
