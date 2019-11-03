@@ -117,7 +117,7 @@ impl GameSettings {
         }
     }
 
-    pub fn into_load_order(self) -> Box<WritableLoadOrder> {
+    pub fn into_load_order(self) -> Box<dyn WritableLoadOrder> {
         match self.load_order_method() {
             LoadOrderMethod::Asterisk => Box::new(AsteriskBasedLoadOrder::new(self)),
             LoadOrderMethod::Textfile => Box::new(TextfileBasedLoadOrder::new(self)),
