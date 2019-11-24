@@ -19,6 +19,12 @@
 use game_settings::GameSettings;
 use plugin::Plugin;
 
+pub trait ReadableLoadOrderBase {
+    fn plugins(&self) -> &Vec<Plugin>;
+
+    fn game_settings_base(&self) -> &GameSettings;
+}
+
 pub trait ReadableLoadOrder {
     fn game_settings(&self) -> &GameSettings;
 
@@ -33,31 +39,39 @@ pub trait ReadableLoadOrder {
     fn is_active(&self, plugin_name: &str) -> bool;
 }
 
-pub fn plugin_names(plugins: &[Plugin]) -> Vec<&str> {
-    plugins.iter().map(Plugin::name).collect()
-}
+impl<T: ReadableLoadOrderBase> ReadableLoadOrder for T {
+    fn game_settings(&self) -> &GameSettings {
+        self.game_settings_base()
+    }
 
-pub fn index_of(plugins: &[Plugin], plugin_name: &str) -> Option<usize> {
-    plugins.iter().position(|p| p.name_matches(plugin_name))
-}
+    fn plugin_names(&self) -> Vec<&str> {
+        self.plugins().iter().map(Plugin::name).collect()
+    }
 
-pub fn plugin_at(plugins: &[Plugin], index: usize) -> Option<&str> {
-    plugins.get(index).map(Plugin::name)
-}
+    fn index_of(&self, plugin_name: &str) -> Option<usize> {
+        self.plugins()
+            .iter()
+            .position(|p| p.name_matches(plugin_name))
+    }
 
-pub fn active_plugin_names(plugins: &[Plugin]) -> Vec<&str> {
-    plugins
-        .iter()
-        .filter(|p| p.is_active())
-        .map(Plugin::name)
-        .collect()
-}
+    fn plugin_at(&self, index: usize) -> Option<&str> {
+        self.plugins().get(index).map(Plugin::name)
+    }
 
-pub fn is_active(plugins: &[Plugin], plugin_name: &str) -> bool {
-    plugins
-        .iter()
-        .find(|p| p.name_matches(plugin_name))
-        .map_or(false, |p| p.is_active())
+    fn active_plugin_names(&self) -> Vec<&str> {
+        self.plugins()
+            .iter()
+            .filter(|p| p.is_active())
+            .map(Plugin::name)
+            .collect()
+    }
+
+    fn is_active(&self, plugin_name: &str) -> bool {
+        self.plugins()
+            .iter()
+            .find(|p| p.name_matches(plugin_name))
+            .map_or(false, |p| p.is_active())
+    }
 }
 
 #[cfg(test)]
@@ -77,29 +91,13 @@ mod tests {
         plugins: Vec<Plugin>,
     }
 
-    impl ReadableLoadOrder for TestLoadOrder {
-        fn game_settings(&self) -> &GameSettings {
+    impl ReadableLoadOrderBase for TestLoadOrder {
+        fn game_settings_base(&self) -> &GameSettings {
             &self.game_settings
         }
 
-        fn plugin_names(&self) -> Vec<&str> {
-            plugin_names(&self.plugins)
-        }
-
-        fn index_of(&self, plugin_name: &str) -> Option<usize> {
-            index_of(&self.plugins, plugin_name)
-        }
-
-        fn plugin_at(&self, index: usize) -> Option<&str> {
-            plugin_at(&self.plugins, index)
-        }
-
-        fn active_plugin_names(&self) -> Vec<&str> {
-            active_plugin_names(&self.plugins)
-        }
-
-        fn is_active(&self, plugin_name: &str) -> bool {
-            is_active(&self.plugins, plugin_name)
+        fn plugins(&self) -> &Vec<Plugin> {
+            &self.plugins
         }
     }
 

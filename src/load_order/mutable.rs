@@ -29,7 +29,7 @@ use rayon::iter::Either;
 use rayon::prelude::*;
 
 use super::find_first_non_master_position;
-use super::readable::ReadableLoadOrder;
+use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::{trim_dot_ghost, Plugin};
@@ -37,9 +37,7 @@ use plugin::{trim_dot_ghost, Plugin};
 pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
 pub const MAX_ACTIVE_LIGHT_MASTERS: usize = 4096;
 
-pub trait MutableLoadOrder: ReadableLoadOrder + Sync {
-    fn plugins(&self) -> &Vec<Plugin>;
-
+pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
@@ -651,9 +649,6 @@ mod tests {
     use load_order::tests::*;
     use tests::copy_to_test_dir;
 
-    use super::super::readable::{
-        active_plugin_names, index_of, is_active, plugin_at, plugin_names,
-    };
     use tempfile::tempdir;
 
     struct TestLoadOrder {
@@ -661,37 +656,17 @@ mod tests {
         plugins: Vec<Plugin>,
     }
 
-    impl ReadableLoadOrder for TestLoadOrder {
-        fn game_settings(&self) -> &GameSettings {
+    impl ReadableLoadOrderBase for TestLoadOrder {
+        fn game_settings_base(&self) -> &GameSettings {
             &self.game_settings
         }
 
-        fn plugin_names(&self) -> Vec<&str> {
-            plugin_names(&self.plugins)
-        }
-
-        fn index_of(&self, plugin_name: &str) -> Option<usize> {
-            index_of(&self.plugins, plugin_name)
-        }
-
-        fn plugin_at(&self, index: usize) -> Option<&str> {
-            plugin_at(&self.plugins, index)
-        }
-
-        fn active_plugin_names(&self) -> Vec<&str> {
-            active_plugin_names(&self.plugins)
-        }
-
-        fn is_active(&self, plugin_name: &str) -> bool {
-            is_active(&self.plugins, plugin_name)
+        fn plugins(&self) -> &Vec<Plugin> {
+            &self.plugins
         }
     }
 
     impl MutableLoadOrder for TestLoadOrder {
-        fn plugins(&self) -> &Vec<Plugin> {
-            &self.plugins
-        }
-
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
         }

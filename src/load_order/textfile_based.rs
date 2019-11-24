@@ -29,9 +29,7 @@ use super::mutable::{
     generic_insert_position, hoist_masters, load_active_plugins, plugin_line_mapper,
     read_plugin_names, MutableLoadOrder,
 };
-use super::readable::{
-    active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
-};
+use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::Error;
 use game_settings::GameSettings;
@@ -52,37 +50,17 @@ impl TextfileBasedLoadOrder {
     }
 }
 
-impl ReadableLoadOrder for TextfileBasedLoadOrder {
-    fn game_settings(&self) -> &GameSettings {
+impl ReadableLoadOrderBase for TextfileBasedLoadOrder {
+    fn game_settings_base(&self) -> &GameSettings {
         &self.game_settings
     }
 
-    fn plugin_names(&self) -> Vec<&str> {
-        plugin_names(self.plugins())
-    }
-
-    fn index_of(&self, plugin_name: &str) -> Option<usize> {
-        index_of(self.plugins(), plugin_name)
-    }
-
-    fn plugin_at(&self, index: usize) -> Option<&str> {
-        plugin_at(self.plugins(), index)
-    }
-
-    fn active_plugin_names(&self) -> Vec<&str> {
-        active_plugin_names(self.plugins())
-    }
-
-    fn is_active(&self, plugin_name: &str) -> bool {
-        is_active(self.plugins(), plugin_name)
+    fn plugins(&self) -> &Vec<Plugin> {
+        &self.plugins
     }
 }
 
 impl MutableLoadOrder for TextfileBasedLoadOrder {
-    fn plugins(&self) -> &Vec<Plugin> {
-        &self.plugins
-    }
-
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
