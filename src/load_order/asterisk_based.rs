@@ -27,7 +27,6 @@ use super::create_parent_dirs;
 use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
-    ReadableLoadOrderExt,
 };
 use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::Error;
@@ -75,13 +74,11 @@ impl ReadableLoadOrder for AsteriskBasedLoadOrder {
     }
 }
 
-impl ReadableLoadOrderExt for AsteriskBasedLoadOrder {
+impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
-}
 
-impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }

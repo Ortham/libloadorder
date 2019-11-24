@@ -32,7 +32,6 @@ use super::mutable::{
 };
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
-    ReadableLoadOrderExt,
 };
 use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::{Error, GameId};
@@ -82,13 +81,11 @@ impl ReadableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-impl ReadableLoadOrderExt for TimestampBasedLoadOrder {
+impl MutableLoadOrder for TimestampBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
-}
 
-impl MutableLoadOrder for TimestampBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
@@ -168,7 +165,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-fn load_plugins_from_dir<T: ReadableLoadOrderExt>(load_order: &T) -> Vec<Plugin> {
+fn load_plugins_from_dir<T: MutableLoadOrder>(load_order: &T) -> Vec<Plugin> {
     let filenames = load_order.find_plugins_in_dir();
     let game_settings = load_order.game_settings();
 
@@ -220,7 +217,7 @@ fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
     timestamps
 }
 
-fn save_active_plugins<T: ReadableLoadOrderExt>(load_order: &mut T) -> Result<(), Error> {
+fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
     create_parent_dirs(load_order.game_settings().active_plugins_file())?;
 
     let prelude = get_file_prelude(load_order.game_settings())?;

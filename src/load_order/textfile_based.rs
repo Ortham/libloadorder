@@ -31,7 +31,6 @@ use super::mutable::{
 };
 use super::readable::{
     active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
-    ReadableLoadOrderExt,
 };
 use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
 use enums::Error;
@@ -79,13 +78,11 @@ impl ReadableLoadOrder for TextfileBasedLoadOrder {
     }
 }
 
-impl ReadableLoadOrderExt for TextfileBasedLoadOrder {
+impl MutableLoadOrder for TextfileBasedLoadOrder {
     fn plugins(&self) -> &Vec<Plugin> {
         &self.plugins
     }
-}
 
-impl MutableLoadOrder for TextfileBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }

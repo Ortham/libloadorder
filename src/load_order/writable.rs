@@ -20,8 +20,8 @@ use std::collections::HashSet;
 
 use unicase::eq;
 
-use super::mutable::MutableLoadOrder;
-use super::readable::{ReadableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
+use super::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
+use super::readable::ReadableLoadOrder;
 use enums::Error;
 use plugin::Plugin;
 
@@ -202,7 +202,6 @@ mod tests {
     use load_order::mutable::{generic_insert_position, MutableLoadOrder};
     use load_order::readable::{
         active_plugin_names, index_of, is_active, plugin_at, plugin_names, ReadableLoadOrder,
-        ReadableLoadOrderExt,
     };
     use load_order::tests::{mock_game_files, set_master_flag};
     use tests::copy_to_test_dir;
@@ -238,13 +237,11 @@ mod tests {
         }
     }
 
-    impl ReadableLoadOrderExt for TestLoadOrder {
+    impl MutableLoadOrder for TestLoadOrder {
         fn plugins(&self) -> &Vec<Plugin> {
             &self.plugins
         }
-    }
 
-    impl MutableLoadOrder for TestLoadOrder {
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
         }
