@@ -78,139 +78,12 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         filenames
     }
 
-    fn get_excess_active_plugin_indices(&self) -> Vec<usize> {
-        let implicitly_active_plugins = self.game_settings().implicitly_active_plugins();
-        let mut normal_active_count = self.count_active_normal_plugins();
-        let mut light_master_active_count = self.count_active_light_masters();
-
-        let mut plugin_indices: Vec<usize> = Vec::new();
-        for (index, plugin) in self.plugins().iter().enumerate().rev() {
-            if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
-                && light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
-            {
-                break;
-            }
-            let can_deactivate = plugin.is_active()
-                && !implicitly_active_plugins
-                    .iter()
-                    .any(|i| plugin.name_matches(i));
-            if can_deactivate {
-                if plugin.is_light_master_file()
-                    && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
-                {
-                    plugin_indices.push(index);
-                    light_master_active_count -= 1;
-                } else if !plugin.is_light_master_file()
-                    && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
-                {
-                    plugin_indices.push(index);
-                    normal_active_count -= 1;
-                }
-            }
-        }
-
-        plugin_indices
-    }
-
     fn validate_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
         if plugin.is_master_file() {
-            self.validate_master_file_index(plugin, index)
+            validate_master_file_index(self.plugins(), plugin, index)
         } else {
-            self.validate_non_master_file_index(plugin, index)
+            validate_non_master_file_index(self.plugins(), plugin, index)
         }
-    }
-
-    fn validate_master_file_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
-        let plugins = if index < self.plugins().len() {
-            &self.plugins()[..index]
-        } else {
-            &self.plugins()[..]
-        };
-
-        let previous_master_pos = plugins
-            .iter()
-            .rposition(|p| p.is_master_file())
-            .unwrap_or(0);
-
-        let master_names: HashSet<String> =
-            plugin.masters()?.iter().map(|m| m.to_lowercase()).collect();
-
-        // Check that all of the plugins that load between this index and
-        // the previous plugin are masters of this plugin.
-        if plugins
-            .iter()
-            .skip(previous_master_pos + 1)
-            .any(|p| !master_names.contains(&p.name().to_lowercase()))
-        {
-            return Err(Error::NonMasterBeforeMaster);
-        }
-
-        // Check that none of the non-masters that load after index are
-        // masters of this plugin.
-        if let Some(p) = self
-            .plugins()
-            .iter()
-            .skip(index)
-            .filter(|p| !p.is_master_file())
-            .find(|p| master_names.contains(&p.name().to_lowercase()))
-        {
-            Err(Error::UnrepresentedHoist(
-                p.name().to_string(),
-                plugin.name().to_string(),
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn validate_non_master_file_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
-        // Check that there aren't any earlier master files that have this
-        // plugin as a master.
-        for master_file in self
-            .plugins()
-            .iter()
-            .take(index)
-            .filter(|p| p.is_master_file())
-        {
-            if master_file
-                .masters()?
-                .iter()
-                .any(|m| plugin.name_matches(&m))
-            {
-                return Err(Error::UnrepresentedHoist(
-                    plugin.name().to_string(),
-                    master_file.name().to_string(),
-                ));
-            }
-        }
-
-        // Check that the next master file has this plugin as a master.
-        let next_master_pos = match self
-            .plugins()
-            .iter()
-            .skip(index)
-            .position(|p| p.is_master_file())
-        {
-            None => return Ok(()),
-            Some(i) => index + i,
-        };
-
-        if self.plugins()[next_master_pos]
-            .masters()?
-            .iter()
-            .any(|m| plugin.name_matches(&m))
-        {
-            Ok(())
-        } else {
-            Err(Error::NonMasterBeforeMaster)
-        }
-    }
-
-    fn map_to_plugins(&self, plugin_names: &[&str]) -> Result<Vec<Plugin>, Error> {
-        plugin_names
-            .par_iter()
-            .map(|n| to_plugin(n, self.plugins(), self.game_settings()))
-            .collect()
     }
 
     fn lookup_plugins(&mut self, active_plugin_names: &[&str]) -> Result<Vec<usize>, Error> {
@@ -246,7 +119,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn deactivate_excess_plugins(&mut self) {
-        for index in self.get_excess_active_plugin_indices() {
+        for index in get_excess_active_plugin_indices(self) {
             self.plugins_mut()[index].deactivate();
         }
     }
@@ -284,7 +157,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             return Err(Error::DuplicatePlugin);
         }
 
-        let mut plugins = match self.map_to_plugins(plugin_names) {
+        let mut plugins = match map_to_plugins(self, plugin_names) {
             Err(x) => return Err(Error::InvalidPlugin(x.to_string())),
             Ok(x) => x,
         };
@@ -296,23 +169,10 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         Ok(())
     }
 
-    fn insert(&mut self, plugin: Plugin) -> usize {
-        match self.insert_position(&plugin) {
-            Some(position) => {
-                self.plugins_mut().insert(position, plugin);
-                position
-            }
-            None => {
-                self.plugins_mut().push(plugin);
-                self.plugins().len() - 1
-            }
-        }
-    }
-
     fn load_and_insert(&mut self, plugin_name: &str) -> Result<usize, Error> {
         let plugin = Plugin::new(plugin_name, self.game_settings())?;
 
-        Ok(self.insert(plugin))
+        Ok(insert(self, plugin))
     }
 
     fn load_unique_plugins(
@@ -332,7 +192,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         };
 
         for plugin in plugins {
-            self.insert(plugin);
+            insert(self, plugin);
         }
     }
 
@@ -475,6 +335,145 @@ fn count_plugins(
         .iter()
         .filter(|i| existing_plugins[**i].is_light_master_file() == count_light_masters)
         .count()
+}
+
+fn get_excess_active_plugin_indices<T: MutableLoadOrder + ?Sized>(load_order: &T) -> Vec<usize> {
+    let implicitly_active_plugins = load_order.game_settings().implicitly_active_plugins();
+    let mut normal_active_count = load_order.count_active_normal_plugins();
+    let mut light_master_active_count = load_order.count_active_light_masters();
+
+    let mut plugin_indices: Vec<usize> = Vec::new();
+    for (index, plugin) in load_order.plugins().iter().enumerate().rev() {
+        if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
+            && light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
+        {
+            break;
+        }
+        let can_deactivate = plugin.is_active()
+            && !implicitly_active_plugins
+                .iter()
+                .any(|i| plugin.name_matches(i));
+        if can_deactivate {
+            if plugin.is_light_master_file() && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
+            {
+                plugin_indices.push(index);
+                light_master_active_count -= 1;
+            } else if !plugin.is_light_master_file()
+                && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
+            {
+                plugin_indices.push(index);
+                normal_active_count -= 1;
+            }
+        }
+    }
+
+    plugin_indices
+}
+
+fn validate_master_file_index(
+    plugins: &[Plugin],
+    plugin: &Plugin,
+    index: usize,
+) -> Result<(), Error> {
+    let preceding_plugins = if index < plugins.len() {
+        &plugins[..index]
+    } else {
+        plugins
+    };
+
+    let previous_master_pos = preceding_plugins
+        .iter()
+        .rposition(|p| p.is_master_file())
+        .unwrap_or(0);
+
+    let master_names: HashSet<String> =
+        plugin.masters()?.iter().map(|m| m.to_lowercase()).collect();
+
+    // Check that all of the plugins that load between this index and
+    // the previous plugin are masters of this plugin.
+    if preceding_plugins
+        .iter()
+        .skip(previous_master_pos + 1)
+        .any(|p| !master_names.contains(&p.name().to_lowercase()))
+    {
+        return Err(Error::NonMasterBeforeMaster);
+    }
+
+    // Check that none of the non-masters that load after index are
+    // masters of this plugin.
+    if let Some(p) = plugins
+        .iter()
+        .skip(index)
+        .filter(|p| !p.is_master_file())
+        .find(|p| master_names.contains(&p.name().to_lowercase()))
+    {
+        Err(Error::UnrepresentedHoist(
+            p.name().to_string(),
+            plugin.name().to_string(),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_non_master_file_index(
+    plugins: &[Plugin],
+    plugin: &Plugin,
+    index: usize,
+) -> Result<(), Error> {
+    // Check that there aren't any earlier master files that have this
+    // plugin as a master.
+    for master_file in plugins.iter().take(index).filter(|p| p.is_master_file()) {
+        if master_file
+            .masters()?
+            .iter()
+            .any(|m| plugin.name_matches(&m))
+        {
+            return Err(Error::UnrepresentedHoist(
+                plugin.name().to_string(),
+                master_file.name().to_string(),
+            ));
+        }
+    }
+
+    // Check that the next master file has this plugin as a master.
+    let next_master_pos = match plugins.iter().skip(index).position(|p| p.is_master_file()) {
+        None => return Ok(()),
+        Some(i) => index + i,
+    };
+
+    if plugins[next_master_pos]
+        .masters()?
+        .iter()
+        .any(|m| plugin.name_matches(&m))
+    {
+        Ok(())
+    } else {
+        Err(Error::NonMasterBeforeMaster)
+    }
+}
+
+fn map_to_plugins<T: ReadableLoadOrderBase + Sync + ?Sized>(
+    load_order: &T,
+    plugin_names: &[&str],
+) -> Result<Vec<Plugin>, Error> {
+    plugin_names
+        .par_iter()
+        .map(|n| to_plugin(n, load_order.plugins(), load_order.game_settings_base()))
+        .collect()
+}
+
+fn insert<T: MutableLoadOrder + ?Sized>(load_order: &mut T, plugin: Plugin) -> usize {
+    match load_order.insert_position(&plugin) {
+        Some(position) => {
+            load_order.plugins_mut().insert(position, plugin);
+            position
+        }
+        None => {
+            load_order.plugins_mut().push(plugin);
+            load_order.plugins().len() - 1
+        }
+    }
 }
 
 fn move_elements<T>(vec: &mut Vec<T>, mut from_to_indices: BTreeMap<usize, usize>) {
