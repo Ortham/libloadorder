@@ -23,7 +23,7 @@ use std::error::Error;
 use std::panic::catch_unwind;
 use std::path::Path;
 use std::ptr;
-use std::sync::{LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::RwLock;
 
 use libc::{c_char, c_uint, size_t};
 use loadorder::GameId;
@@ -37,21 +37,12 @@ use helpers::{error, handle_error, to_c_string_array, to_str};
 ///
 /// Used to keep each game's data independent. Abstracts the definition of libloadorder's internal
 /// state while still providing type safety across the library.
-// NOTE: The outer Box is to appease cbindgen, but it probably just needs support for RwLock added.
 #[allow(non_camel_case_types)]
 pub type lo_game_handle = *mut GameHandle;
 
-pub struct GameHandle(RwLock<Box<dyn WritableLoadOrder>>);
-
-impl GameHandle {
-    pub fn read(&self) -> LockResult<RwLockReadGuard<Box<dyn WritableLoadOrder>>> {
-        self.0.read()
-    }
-
-    pub fn write(&self) -> LockResult<RwLockWriteGuard<Box<dyn WritableLoadOrder>>> {
-        self.0.write()
-    }
-}
+// This type alias is necessary to make cbindgen treat lo_game_handle as a
+// pointer to an undefined type, rather than an undefined type itself.
+type GameHandle = RwLock<Box<dyn WritableLoadOrder>>;
 
 fn map_game_id(game_id: u32) -> Result<GameId, u32> {
     match game_id {
@@ -153,7 +144,7 @@ pub unsafe extern "C" fn lo_create_handle(
 
         let is_self_consistent = load_order.is_self_consistent();
 
-        *handle = Box::into_raw(Box::new(GameHandle(RwLock::new(load_order))));
+        *handle = Box::into_raw(Box::new(RwLock::new(load_order)));
 
         match is_self_consistent {
             Ok(true) => LIBLO_OK,
