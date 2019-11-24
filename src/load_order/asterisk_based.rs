@@ -23,10 +23,11 @@ use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
-use super::create_parent_dirs;
 use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
+use super::writable::{
+    activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
+};
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::Plugin;
@@ -43,6 +44,13 @@ impl AsteriskBasedLoadOrder {
             game_settings,
             plugins: Vec::new(),
         }
+    }
+
+    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        read_plugin_names(
+            self.game_settings().active_plugins_file(),
+            plugin_line_mapper,
+        )
     }
 }
 
@@ -187,15 +195,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         set_active_plugins(self, active_plugin_names)
-    }
-}
-
-impl AsteriskBasedLoadOrder {
-    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
-        read_plugin_names(
-            self.game_settings().active_plugins_file(),
-            plugin_line_mapper,
-        )
     }
 }
 

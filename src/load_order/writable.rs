@@ -17,6 +17,8 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::collections::HashSet;
+use std::fs::create_dir_all;
+use std::path::Path;
 
 use unicase::eq;
 
@@ -185,6 +187,15 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
         load_order.plugins_mut()[index].activate()?;
     }
 
+    Ok(())
+}
+
+pub fn create_parent_dirs(path: &Path) -> Result<(), Error> {
+    if let Some(x) = path.parent() {
+        if !x.exists() {
+            create_dir_all(x)?
+        }
+    }
     Ok(())
 }
 

@@ -28,7 +28,6 @@ use encoding::{DecoderTrap, Encoding};
 use rayon::iter::Either;
 use rayon::prelude::*;
 
-use super::find_first_non_master_position;
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use enums::Error;
 use game_settings::GameSettings;
@@ -640,6 +639,10 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
     Ok(())
 }
 
+fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
+    plugins.iter().position(|p| !p.is_master_file())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -717,6 +720,18 @@ mod tests {
         );
 
         load_order
+    }
+
+    fn prepare_plugins(game_path: &Path, blank_esp_source: &str) -> Vec<Plugin> {
+        let settings = game_settings_for_test(GameId::SkyrimSE, game_path);
+
+        copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
+        copy_to_test_dir(blank_esp_source, "Blank.esp", &settings);
+
+        vec![
+            Plugin::new(settings.master_file(), &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+        ]
     }
 
     #[test]
@@ -920,5 +935,23 @@ mod tests {
         ];
 
         assert!(validate_load_order(&plugins).is_err());
+    }
+
+    #[test]
+    fn find_first_non_master_should_find_a_normal_esp() {
+        let tmp_dir = tempdir().unwrap();
+        let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esp");
+
+        let first_non_master = super::find_first_non_master_position(&plugins);
+        assert_eq!(1, first_non_master.unwrap());
+    }
+
+    #[test]
+    fn find_first_non_master_should_find_a_light_master_flagged_esp() {
+        let tmp_dir = tempdir().unwrap();
+        let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esl");
+
+        let first_non_master = super::find_first_non_master_position(&plugins);
+        assert_eq!(1, first_non_master.unwrap());
     }
 }

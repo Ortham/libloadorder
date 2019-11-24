@@ -25,7 +25,6 @@ use std::path::Path;
 use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use filetime::{set_file_times, FileTime};
-use tempfile::tempdir;
 
 use enums::GameId;
 use enums::LoadOrderMethod;
@@ -123,34 +122,4 @@ pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
     file.write(&[value])?;
 
     Ok(())
-}
-
-fn prepare(game_path: &Path, blank_esp_source: &str) -> Vec<Plugin> {
-    let settings = game_settings_for_test(GameId::SkyrimSE, game_path);
-
-    copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
-    copy_to_test_dir(blank_esp_source, "Blank.esp", &settings);
-
-    vec![
-        Plugin::new(settings.master_file(), &settings).unwrap(),
-        Plugin::new("Blank.esp", &settings).unwrap(),
-    ]
-}
-
-#[test]
-fn find_first_non_master_should_find_a_normal_esp() {
-    let tmp_dir = tempdir().unwrap();
-    let plugins = prepare(&tmp_dir.path(), "Blank.esp");
-
-    let first_non_master = super::find_first_non_master_position(&plugins);
-    assert_eq!(1, first_non_master.unwrap());
-}
-
-#[test]
-fn find_first_non_master_should_find_a_light_master_flagged_esp() {
-    let tmp_dir = tempdir().unwrap();
-    let plugins = prepare(&tmp_dir.path(), "Blank.esl");
-
-    let first_non_master = super::find_first_non_master_position(&plugins);
-    assert_eq!(1, first_non_master.unwrap());
 }

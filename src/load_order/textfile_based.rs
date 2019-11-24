@@ -24,13 +24,14 @@ use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
-use super::create_parent_dirs;
 use super::mutable::{
     generic_insert_position, hoist_masters, load_active_plugins, plugin_line_mapper,
     read_plugin_names, MutableLoadOrder,
 };
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
+use super::writable::{
+    activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
+};
 use enums::Error;
 use game_settings::GameSettings;
 use plugin::{trim_dot_ghost, Plugin};
@@ -47,6 +48,51 @@ impl TextfileBasedLoadOrder {
             game_settings,
             plugins: Vec::new(),
         }
+    }
+
+    fn read_from_load_order_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        match self.game_settings().load_order_file() {
+            Some(file_path) => read_utf8_plugin_names(file_path, load_order_line_mapper)
+                .or_else(|_| read_plugin_names(file_path, load_order_line_mapper)),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
+        read_plugin_names(
+            self.game_settings().active_plugins_file(),
+            active_plugin_line_mapper,
+        )
+    }
+
+    fn save_load_order(&self) -> Result<(), Error> {
+        if let Some(file_path) = self.game_settings().load_order_file() {
+            create_parent_dirs(file_path)?;
+
+            let file = File::create(file_path)?;
+            let mut writer = BufWriter::new(file);
+            for plugin_name in self.plugin_names() {
+                writeln!(writer, "{}", plugin_name)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn save_active_plugins(&self) -> Result<(), Error> {
+        create_parent_dirs(self.game_settings().active_plugins_file())?;
+
+        let file = File::create(self.game_settings().active_plugins_file())?;
+        let mut writer = BufWriter::new(file);
+        for plugin_name in self.active_plugin_names() {
+            writer.write_all(
+                &WINDOWS_1252
+                    .encode(&plugin_name, EncoderTrap::Strict)
+                    .map_err(Error::EncodeError)?,
+            )?;
+            writeln!(writer)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -188,53 +234,6 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         set_active_plugins(self, active_plugin_names)
-    }
-}
-
-impl TextfileBasedLoadOrder {
-    fn read_from_load_order_file(&self) -> Result<Vec<(String, bool)>, Error> {
-        match self.game_settings().load_order_file() {
-            Some(file_path) => read_utf8_plugin_names(file_path, load_order_line_mapper)
-                .or_else(|_| read_plugin_names(file_path, load_order_line_mapper)),
-            None => Ok(Vec::new()),
-        }
-    }
-
-    fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
-        read_plugin_names(
-            self.game_settings().active_plugins_file(),
-            active_plugin_line_mapper,
-        )
-    }
-
-    fn save_load_order(&self) -> Result<(), Error> {
-        if let Some(file_path) = self.game_settings().load_order_file() {
-            create_parent_dirs(file_path)?;
-
-            let file = File::create(file_path)?;
-            let mut writer = BufWriter::new(file);
-            for plugin_name in self.plugin_names() {
-                writeln!(writer, "{}", plugin_name)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn save_active_plugins(&self) -> Result<(), Error> {
-        create_parent_dirs(self.game_settings().active_plugins_file())?;
-
-        let file = File::create(self.game_settings().active_plugins_file())?;
-        let mut writer = BufWriter::new(file);
-        for plugin_name in self.active_plugin_names() {
-            writer.write_all(
-                &WINDOWS_1252
-                    .encode(&plugin_name, EncoderTrap::Strict)
-                    .map_err(Error::EncodeError)?,
-            )?;
-            writeln!(writer)?;
-        }
-
-        Ok(())
     }
 }
 

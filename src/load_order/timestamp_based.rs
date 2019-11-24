@@ -26,12 +26,13 @@ use encoding::{EncoderTrap, Encoding};
 use rayon::prelude::*;
 use regex::Regex;
 
-use super::create_parent_dirs;
 use super::mutable::{
     generic_insert_position, hoist_masters, load_active_plugins, MutableLoadOrder,
 };
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-use super::writable::{activate, add, deactivate, remove, set_active_plugins, WritableLoadOrder};
+use super::writable::{
+    activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
+};
 use enums::{Error, GameId};
 use game_settings::GameSettings;
 use plugin::Plugin;
@@ -50,6 +51,39 @@ impl TimestampBasedLoadOrder {
             game_settings,
             plugins: Vec::new(),
         }
+    }
+
+    fn load_plugins_from_dir(&self) -> Vec<Plugin> {
+        let filenames = self.find_plugins_in_dir();
+        let game_settings = self.game_settings();
+
+        filenames
+            .par_iter()
+            .filter_map(|f| Plugin::new(&f, game_settings).ok())
+            .collect()
+    }
+
+    fn save_active_plugins(&mut self) -> Result<(), Error> {
+        create_parent_dirs(self.game_settings().active_plugins_file())?;
+
+        let prelude = get_file_prelude(self.game_settings())?;
+
+        let file = File::create(&self.game_settings().active_plugins_file())?;
+        let mut writer = BufWriter::new(file);
+        writer.write_all(&prelude)?;
+        for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
+            if self.game_settings().id() == GameId::Morrowind {
+                write!(writer, "GameFile{}=", index)?;
+            }
+            writer.write_all(
+                &WINDOWS_1252
+                    .encode(plugin_name, EncoderTrap::Strict)
+                    .map_err(Error::EncodeError)?,
+            )?;
+            writeln!(writer)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -77,7 +111,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 
-        self.plugins = load_plugins_from_dir(self);
+        self.plugins = self.load_plugins_from_dir();
         self.plugins.par_sort_by(plugin_sorter);
         hoist_masters(&mut self.plugins)?;
 
@@ -105,7 +139,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
             .collect();
 
         match result {
-            Ok(_) => save_active_plugins(self),
+            Ok(_) => self.save_active_plugins(),
             Err(e) => Err(e),
         }
     }
@@ -141,16 +175,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         set_active_plugins(self, active_plugin_names)
     }
-}
-
-fn load_plugins_from_dir<T: MutableLoadOrder>(load_order: &T) -> Vec<Plugin> {
-    let filenames = load_order.find_plugins_in_dir();
-    let game_settings = load_order.game_settings();
-
-    filenames
-        .par_iter()
-        .filter_map(|f| Plugin::new(&f, game_settings).ok())
-        .collect()
 }
 
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
@@ -193,29 +217,6 @@ fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
     }
 
     timestamps
-}
-
-fn save_active_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Result<(), Error> {
-    create_parent_dirs(load_order.game_settings().active_plugins_file())?;
-
-    let prelude = get_file_prelude(load_order.game_settings())?;
-
-    let file = File::create(&load_order.game_settings().active_plugins_file())?;
-    let mut writer = BufWriter::new(file);
-    writer.write_all(&prelude)?;
-    for (index, plugin_name) in load_order.active_plugin_names().iter().enumerate() {
-        if load_order.game_settings().id() == GameId::Morrowind {
-            write!(writer, "GameFile{}=", index)?;
-        }
-        writer.write_all(
-            &WINDOWS_1252
-                .encode(plugin_name, EncoderTrap::Strict)
-                .map_err(Error::EncodeError)?,
-        )?;
-        writeln!(writer)?;
-    }
-
-    Ok(())
 }
 
 fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {

@@ -26,26 +26,8 @@ mod textfile_based;
 mod timestamp_based;
 mod writable;
 
-use std::fs::create_dir_all;
-use std::path::Path;
-
-use enums::Error;
 pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
 pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::textfile_based::TextfileBasedLoadOrder;
 pub use load_order::timestamp_based::TimestampBasedLoadOrder;
 pub use load_order::writable::WritableLoadOrder;
-use plugin::Plugin;
-
-fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
-    plugins.iter().position(|p| !p.is_master_file())
-}
-
-fn create_parent_dirs(path: &Path) -> Result<(), Error> {
-    if let Some(x) = path.parent() {
-        if !x.exists() {
-            create_dir_all(x)?
-        }
-    }
-    Ok(())
-}
