@@ -149,11 +149,11 @@ impl Parameters {
         }
     }
 
-    fn load_order(&self) -> Box<WritableLoadOrder> {
+    fn load_order(&self) -> Box<dyn WritableLoadOrder> {
         self.settings.clone().into_load_order()
     }
 
-    fn loaded_load_order(&self) -> Box<WritableLoadOrder> {
+    fn loaded_load_order(&self) -> Box<dyn WritableLoadOrder> {
         let mut load_order = self.load_order();
         load_order.load().unwrap();
 
