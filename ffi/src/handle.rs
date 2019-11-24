@@ -41,14 +41,14 @@ use helpers::{error, handle_error, to_c_string_array, to_str};
 #[allow(non_camel_case_types)]
 pub type lo_game_handle = *mut GameHandle;
 
-pub struct GameHandle(RwLock<Box<WritableLoadOrder>>);
+pub struct GameHandle(RwLock<Box<dyn WritableLoadOrder>>);
 
 impl GameHandle {
-    pub fn read(&self) -> LockResult<RwLockReadGuard<Box<WritableLoadOrder>>> {
+    pub fn read(&self) -> LockResult<RwLockReadGuard<Box<dyn WritableLoadOrder>>> {
         self.0.read()
     }
 
-    pub fn write(&self) -> LockResult<RwLockWriteGuard<Box<WritableLoadOrder>>> {
+    pub fn write(&self) -> LockResult<RwLockWriteGuard<Box<dyn WritableLoadOrder>>> {
         self.0.write()
     }
 }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn lo_create_handle(
             );
         }
 
-        let load_order: Box<WritableLoadOrder>;
+        let load_order: Box<dyn WritableLoadOrder>;
         if local_path.is_null() {
             #[cfg(not(windows))]
             return error(
