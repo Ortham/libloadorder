@@ -12,11 +12,8 @@ cache: cargo
 install:
   - rustup component add rustfmt-preview
   - rustfmt --version
-  - |
-    if [[ $(cargo tarpaulin --version) != *0.8.4 ]]
-    then
-      cargo install --force cargo-tarpaulin
-    fi
+  - curl -fsSL https://github.com/xd009642/tarpaulin/releases/download/0.9.0/cargo-tarpaulin-0.9.0-travis.tar.gz | tar xz
+  - mv cargo-tarpaulin ~/.cargo/bin/
 
 before_script:
   - wget https://github.com/Ortham/testing-plugins/archive/1.4.1.tar.gz
