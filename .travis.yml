@@ -10,7 +10,6 @@ addons:
 cache: cargo
 
 install:
-  - rustup component add rustfmt-preview
   - rustfmt --version
   - cargo install cargo-tarpaulin --version 0.10.2
 

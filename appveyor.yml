@@ -12,8 +12,6 @@ install:
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
-
-  - rustup component add rustfmt-preview
   - rustfmt --version
 
   - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/Ortham/testing-plugins/archive/1.4.1.zip', "$env:APPVEYOR_BUILD_FOLDER\1.4.1.zip")
