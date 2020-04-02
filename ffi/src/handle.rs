@@ -19,7 +19,6 @@
 extern crate libc;
 extern crate loadorder;
 
-use std::error::Error;
 use std::panic::catch_unwind;
 use std::path::Path;
 use std::ptr;
@@ -177,7 +176,7 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let mut handle = match (*handle).write() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -214,7 +213,7 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let mut handle = match (*handle).write() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -261,7 +260,7 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
         }
 
         let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 

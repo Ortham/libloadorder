@@ -17,7 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::error::Error;
 use std::panic::catch_unwind;
 use std::ptr;
 
@@ -43,7 +42,7 @@ pub unsafe extern "C" fn lo_get_load_order_method(
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -75,7 +74,7 @@ pub unsafe extern "C" fn lo_get_load_order(
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -125,7 +124,7 @@ pub unsafe extern "C" fn lo_set_load_order(
             return error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
         }
         let mut handle = match (*handle).write() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -164,7 +163,7 @@ pub unsafe extern "C" fn lo_get_plugin_position(
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -202,7 +201,7 @@ pub unsafe extern "C" fn lo_set_plugin_position(
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let mut handle = match (*handle).write() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 
@@ -241,7 +240,7 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
         let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, e.description()),
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
         };
 

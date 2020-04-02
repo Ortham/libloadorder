@@ -250,7 +250,7 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
 fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<String>, Error> {
     let mut plugin_names: Vec<String> = hardcoded_plugins(game_id)
         .iter()
-        .map(|s| s.to_string())
+        .map(|s| (*s).to_string())
         .collect();
 
     if let Some(file_path) = ccc_file_path(game_id, game_path) {
