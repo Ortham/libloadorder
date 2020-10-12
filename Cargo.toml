@@ -13,8 +13,6 @@ exclude = [
 ]
 
 [badges]
-appveyor = { repository = "Ortham/libloadorder" }
-travis-ci = { repository = "Ortham/libloadorder" }
 coveralls = { repository = "Ortham/libloadorder" }
 
 [dependencies]
