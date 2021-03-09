@@ -22,7 +22,7 @@ use std::path::Path;
 
 use unicase::eq;
 
-use super::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_MASTERS, MAX_ACTIVE_NORMAL_PLUGINS};
+use super::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_PLUGINS, MAX_ACTIVE_NORMAL_PLUGINS};
 use super::readable::ReadableLoadOrder;
 use enums::Error;
 use plugin::Plugin;
@@ -124,8 +124,8 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
 pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
     let at_max_active_normal_plugins =
         load_order.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
-    let at_max_active_light_masters =
-        load_order.count_active_light_masters() == MAX_ACTIVE_LIGHT_MASTERS;
+    let at_max_active_light_plugins =
+        load_order.count_active_light_plugins() == MAX_ACTIVE_LIGHT_PLUGINS;
 
     let plugin = match load_order
         .plugins_mut()
@@ -137,8 +137,8 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
     };
 
     if !plugin.is_active()
-        && ((!plugin.is_light_master_file() && at_max_active_normal_plugins)
-            || (plugin.is_light_master_file() && at_max_active_light_masters))
+        && ((!plugin.is_light_plugin() && at_max_active_normal_plugins)
+            || (plugin.is_light_plugin() && at_max_active_light_plugins))
     {
         Err(Error::TooManyActivePlugins)
     } else {
@@ -166,7 +166,7 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
     let existing_plugin_indices = load_order.lookup_plugins(active_plugin_names)?;
 
     if load_order.count_normal_plugins(&existing_plugin_indices) > MAX_ACTIVE_NORMAL_PLUGINS
-        || load_order.count_light_masters(&existing_plugin_indices) > MAX_ACTIVE_LIGHT_MASTERS
+        || load_order.count_light_plugins(&existing_plugin_indices) > MAX_ACTIVE_LIGHT_PLUGINS
     {
         return Err(Error::TooManyActivePlugins);
     }

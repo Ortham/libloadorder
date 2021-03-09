@@ -34,7 +34,7 @@ use game_settings::GameSettings;
 use plugin::{trim_dot_ghost, Plugin};
 
 pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
-pub const MAX_ACTIVE_LIGHT_MASTERS: usize = 4096;
+pub const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 
 pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
@@ -44,14 +44,14 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn count_active_normal_plugins(&self) -> usize {
         self.plugins()
             .iter()
-            .filter(|p| !p.is_light_master_file() && p.is_active())
+            .filter(|p| !p.is_light_plugin() && p.is_active())
             .count()
     }
 
-    fn count_active_light_masters(&self) -> usize {
+    fn count_active_light_plugins(&self) -> usize {
         self.plugins()
             .iter()
-            .filter(|p| p.is_light_master_file() && p.is_active())
+            .filter(|p| p.is_light_plugin() && p.is_active())
             .count()
     }
 
@@ -110,8 +110,8 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         count_plugins(self.plugins(), existing_plugin_indices, false)
     }
 
-    fn count_light_masters(&mut self, existing_plugin_indices: &[usize]) -> usize {
-        if self.game_settings().id().supports_light_masters() {
+    fn count_light_plugins(&mut self, existing_plugin_indices: &[usize]) -> usize {
+        if self.game_settings().id().supports_light_plugins() {
             count_plugins(self.plugins(), existing_plugin_indices, true)
         } else {
             0
@@ -329,23 +329,23 @@ fn to_plugin(
 fn count_plugins(
     existing_plugins: &[Plugin],
     existing_plugin_indices: &[usize],
-    count_light_masters: bool,
+    count_light_plugins: bool,
 ) -> usize {
     existing_plugin_indices
         .iter()
-        .filter(|i| existing_plugins[**i].is_light_master_file() == count_light_masters)
+        .filter(|i| existing_plugins[**i].is_light_plugin() == count_light_plugins)
         .count()
 }
 
 fn get_excess_active_plugin_indices<T: MutableLoadOrder + ?Sized>(load_order: &T) -> Vec<usize> {
     let implicitly_active_plugins = load_order.game_settings().implicitly_active_plugins();
     let mut normal_active_count = load_order.count_active_normal_plugins();
-    let mut light_master_active_count = load_order.count_active_light_masters();
+    let mut light_plugin_active_count = load_order.count_active_light_plugins();
 
     let mut plugin_indices: Vec<usize> = Vec::new();
     for (index, plugin) in load_order.plugins().iter().enumerate().rev() {
         if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
-            && light_master_active_count <= MAX_ACTIVE_LIGHT_MASTERS
+            && light_plugin_active_count <= MAX_ACTIVE_LIGHT_PLUGINS
         {
             break;
         }
@@ -354,13 +354,10 @@ fn get_excess_active_plugin_indices<T: MutableLoadOrder + ?Sized>(load_order: &T
                 .iter()
                 .any(|i| plugin.name_matches(i));
         if can_deactivate {
-            if plugin.is_light_master_file() && light_master_active_count > MAX_ACTIVE_LIGHT_MASTERS
-            {
+            if plugin.is_light_plugin() && light_plugin_active_count > MAX_ACTIVE_LIGHT_PLUGINS {
                 plugin_indices.push(index);
-                light_master_active_count -= 1;
-            } else if !plugin.is_light_master_file()
-                && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS
-            {
+                light_plugin_active_count -= 1;
+            } else if !plugin.is_light_plugin() && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS {
                 plugin_indices.push(index);
                 normal_active_count -= 1;
             }
@@ -946,7 +943,7 @@ mod tests {
     }
 
     #[test]
-    fn find_first_non_master_should_find_a_light_master_flagged_esp() {
+    fn find_first_non_master_should_find_a_light_flagged_esp() {
         let tmp_dir = tempdir().unwrap();
         let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esl");
 

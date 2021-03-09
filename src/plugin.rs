@@ -104,7 +104,7 @@ impl Plugin {
         self.data.is_master_file()
     }
 
-    pub fn is_light_master_file(&self) -> bool {
+    pub fn is_light_plugin(&self) -> bool {
         self.data.is_light_master_file()
     }
 
@@ -165,7 +165,7 @@ impl Plugin {
 }
 
 fn has_valid_extension(filename: &str, game: GameId) -> bool {
-    let valid_extensions = if game.supports_light_masters() {
+    let valid_extensions = if game.supports_light_plugins() {
         VALID_EXTENSIONS_WITH_ESL
     } else {
         VALID_EXTENSIONS
@@ -313,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn is_light_master_file_should_be_true_for_esl_files_only() {
+    fn is_light_plugin_should_be_true_for_esl_files_only() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
@@ -329,17 +329,17 @@ mod tests {
         copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
         let plugin = Plugin::new("Blank.esm", &settings).unwrap();
 
-        assert!(!plugin.is_light_master_file());
+        assert!(!plugin.is_light_plugin());
 
         copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
         let plugin = Plugin::new("Blank.esl", &settings).unwrap();
 
-        assert!(plugin.is_light_master_file());
+        assert!(plugin.is_light_plugin());
 
         copy_to_test_dir("Blank - Different.esp", "Blank - Different.esl", &settings);
         let plugin = Plugin::new("Blank - Different.esl", &settings).unwrap();
 
-        assert!(plugin.is_light_master_file());
+        assert!(plugin.is_light_plugin());
     }
 
     #[test]

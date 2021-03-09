@@ -68,7 +68,7 @@ impl GameId {
         }
     }
 
-    pub fn supports_light_masters(self) -> bool {
+    pub fn supports_light_plugins(self) -> bool {
         use enums::GameId::*;
         match self {
             Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => true,
@@ -229,15 +229,15 @@ mod tests {
     }
 
     #[test]
-    fn game_id_supports_light_masters_should_be_false_until_fallout_4() {
-        assert!(!GameId::Morrowind.supports_light_masters());
-        assert!(!GameId::Oblivion.supports_light_masters());
-        assert!(!GameId::Skyrim.supports_light_masters());
-        assert!(GameId::SkyrimSE.supports_light_masters());
-        assert!(GameId::SkyrimVR.supports_light_masters());
-        assert!(!GameId::Fallout3.supports_light_masters());
-        assert!(!GameId::FalloutNV.supports_light_masters());
-        assert!(GameId::Fallout4.supports_light_masters());
-        assert!(GameId::Fallout4VR.supports_light_masters());
+    fn game_id_supports_light_plugins_should_be_false_until_fallout_4() {
+        assert!(!GameId::Morrowind.supports_light_plugins());
+        assert!(!GameId::Oblivion.supports_light_plugins());
+        assert!(!GameId::Skyrim.supports_light_plugins());
+        assert!(GameId::SkyrimSE.supports_light_plugins());
+        assert!(GameId::SkyrimVR.supports_light_plugins());
+        assert!(!GameId::Fallout3.supports_light_plugins());
+        assert!(!GameId::FalloutNV.supports_light_plugins());
+        assert!(GameId::Fallout4.supports_light_plugins());
+        assert!(GameId::Fallout4VR.supports_light_plugins());
     }
 }
