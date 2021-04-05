@@ -23,7 +23,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 #[cfg(windows)]
-use app_dirs;
+use app_dirs2;
 
 use encoding::all::WINDOWS_1252;
 use encoding::{DecoderTrap, Encoding};
@@ -78,7 +78,7 @@ const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm
 impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
-        let local_app_data_path = app_dirs::get_data_root(app_dirs::AppDataType::UserCache)?;
+        let local_app_data_path = app_dirs2::get_data_root(app_dirs2::AppDataType::UserCache)?;
         let local_path = match appdata_folder_name(game_id) {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,

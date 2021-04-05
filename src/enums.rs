@@ -31,7 +31,7 @@ use esplugin::GameId as EspmId;
 use regex;
 
 #[cfg(windows)]
-use app_dirs;
+use app_dirs2;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum LoadOrderMethod {
@@ -102,10 +102,10 @@ pub enum Error {
 }
 
 #[cfg(windows)]
-impl From<app_dirs::AppDirsError> for Error {
-    fn from(error: app_dirs::AppDirsError) -> Self {
+impl From<app_dirs2::AppDirsError> for Error {
+    fn from(error: app_dirs2::AppDirsError) -> Self {
         match error {
-            app_dirs::AppDirsError::Io(x) => Error::IoError(x),
+            app_dirs2::AppDirsError::Io(x) => Error::IoError(x),
             _ => Error::NoLocalAppData,
         }
     }
