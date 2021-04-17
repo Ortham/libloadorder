@@ -105,7 +105,7 @@ impl Plugin {
     }
 
     pub fn is_light_plugin(&self) -> bool {
-        self.data.is_light_master_file()
+        self.data.is_light_plugin()
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
