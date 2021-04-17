@@ -40,6 +40,7 @@ pub enum LoadOrderMethod {
     Asterisk,
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum GameId {
     Morrowind = 1,
@@ -70,10 +71,7 @@ impl GameId {
 
     pub fn supports_light_plugins(self) -> bool {
         use enums::GameId::*;
-        match self {
-            Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => true,
-            _ => false,
-        }
+        matches!(self, Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR)
     }
 }
 
