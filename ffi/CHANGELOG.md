@@ -3,6 +3,28 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [13.0.0] - 2021-04-17
+
+### Changed
+
+- cbindgen now generates a single `libloadorder.h` header file that can be used
+  by C and C++ callers.
+- `GameHandle`'s type has changed as a wrapper type is no longer required.
+  This should have no effect on C/C++ callers as the type remains opaque to
+  them.
+- Some error messages have changed.
+- Updated to libloadorder v13.0.0.
+- Updated to cbindgen v0.19.
+
+### Fixed
+
+- Bare trait object deprecation warnings.
+
+### Removed
+
+- cbindgen no longer generates a `libloadorder.hpp` header, C++ callers should
+  include `libloadorder.h` instead.
+
 ## [12.0.0] - 2018-10-29
 
 ### Changed

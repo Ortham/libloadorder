@@ -3,6 +3,21 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [13.0.0] - 2021-04-17
+
+### Changed
+
+- `GameId::supports_light_masters()` has been renamed to
+  `GameId::supports_light_plugins()` to reflect that not all light-flagged
+  plugins are masters.
+- Updated to esplugin v3.4.0.
+- Updated to criterion v0.3.0.
+- The app_dirs dependency has been replaced by a dependency on app_dirs2.
+
+### Fixed
+
+- Bare trait object deprecation warnings.
+
 ## [12.0.1] = 2019-02-26
 
 ### Fixed
