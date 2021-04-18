@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
-use criterion::Criterion;
+use criterion::{BenchmarkId, Criterion};
 use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
 use filetime::{set_file_times, FileTime};
@@ -161,7 +161,7 @@ impl Parameters {
     }
 }
 
-impl fmt::Debug for Parameters {
+impl fmt::Display for Parameters {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -173,6 +173,15 @@ impl fmt::Debug for Parameters {
     }
 }
 
+macro_rules! parameterised_benchmark {
+    ( $criterion:expr, $benchmark_name:expr, $parameters:expr, $func:expr ) => {{
+        let mut group = $criterion.benchmark_group($benchmark_name);
+        for parameter in &$parameters {
+            group.bench_with_input(BenchmarkId::from_parameter(parameter), parameter, $func);
+        }
+    }};
+}
+
 fn readable_load_order_benchmark(c: &mut Criterion) {
     // ReadableLoadOrder methods are the same for all games, so just benchmark one.
     let load_orders: Vec<Parameters> = vec![
@@ -180,20 +189,21 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
         Parameters::new(GameId::Fallout4, 500, 250),
     ];
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "ReadableLoadOrder.plugin_names()",
+        load_orders,
         |b, parameters| {
-            let mut load_order = parameters.load_order();
-
-            load_order.load().unwrap();
+            let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.plugin_names())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "ReadableLoadOrder.index_of()",
+        load_orders,
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
@@ -202,32 +212,35 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
                 .unwrap();
 
             b.iter(|| load_order.index_of(plugin))
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "ReadableLoadOrder.plugin_at()",
+        load_orders,
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.plugin_at(10))
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "ReadableLoadOrder.active_plugin_names()",
+        load_orders,
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.active_plugin_names())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "ReadableLoadOrder.is_active()",
+        load_orders,
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
@@ -237,8 +250,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
                 .to_owned();
 
             b.iter(|| load_order.is_active(&plugin))
-        },
-        load_orders.clone(),
+        }
     );
 }
 
@@ -252,18 +264,21 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
         Parameters::new(GameId::Fallout4, 500, 250),
     ];
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.load()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.load_order();
 
             b.iter(|| load_order.load())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.set_load_order()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
@@ -271,18 +286,18 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_load_order(&plugin_refs).unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.save()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.save().unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 }
 
@@ -296,54 +311,60 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         Parameters::new(GameId::Fallout4, 500, 250),
     ];
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.set_plugin_index()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.set_plugin_index(&plugin_name, 10).unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.is_self_consistent()",
+        load_orders,
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
             b.iter(|| load_order.is_self_consistent().unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.activate()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.activate(&plugin_name).unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.deactivate()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
             let plugin_name = load_order.plugin_at(5).unwrap().to_string();
 
             b.iter(|| load_order.deactivate(&plugin_name).unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 
-    c.bench_function_over_inputs(
+    parameterised_benchmark!(
+        c,
         "WritableLoadOrder.set_active_plugins()",
+        load_orders,
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
@@ -351,8 +372,7 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
             b.iter(|| load_order.set_active_plugins(&plugin_refs).unwrap())
-        },
-        load_orders.clone(),
+        }
     );
 }
 
