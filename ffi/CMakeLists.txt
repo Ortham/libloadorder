@@ -9,7 +9,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 
 if (MSVC)
-    set (SYSTEM_LIBS ws2_32 Userenv)
+    set (SYSTEM_LIBS ws2_32 Userenv bcrypt)
 endif ()
 
 set (LIBLOADORDER_FFI_LIBRARY "${CMAKE_SOURCE_DIR}/../target/debug/${CMAKE_STATIC_LIBRARY_PREFIX}loadorder_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}")
