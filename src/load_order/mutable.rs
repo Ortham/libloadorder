@@ -67,7 +67,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
             .filter_map(|e| e.file_name().to_str().map(|f| f.to_owned()))
-            .filter(|ref filename| set.insert(trim_dot_ghost(&filename).to_lowercase()))
+            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
             .collect()
     }
 
@@ -305,7 +305,7 @@ pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<us
         // Check that there isn't a master that would hoist this plugin.
         plugins.iter().filter(|p| p.is_master_file()).position(|p| {
             p.masters()
-                .map(|masters| masters.iter().any(|m| plugin.name_matches(&m)))
+                .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
                 .unwrap_or(false)
         })
     }
@@ -424,7 +424,7 @@ fn validate_non_master_file_index(
         if master_file
             .masters()?
             .iter()
-            .any(|m| plugin.name_matches(&m))
+            .any(|m| plugin.name_matches(m))
         {
             return Err(Error::UnrepresentedHoist(
                 plugin.name().to_string(),
@@ -442,7 +442,7 @@ fn validate_non_master_file_index(
     if plugins[next_master_pos]
         .masters()?
         .iter()
-        .any(|m| plugin.name_matches(&m))
+        .any(|m| plugin.name_matches(m))
     {
         Ok(())
     } else {
@@ -600,14 +600,14 @@ fn remove_duplicates_icase(
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .into_iter()
         .rev()
-        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(&string).to_lowercase()))
+        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(string).to_lowercase()))
         .collect();
 
     unique_tuples.reverse();
 
     let unique_file_tuples_iter = filenames
         .into_iter()
-        .filter(|ref string| set.insert(trim_dot_ghost(&string).to_lowercase()))
+        .filter(|string| set.insert(trim_dot_ghost(string).to_lowercase()))
         .map(|f| (f, false));
 
     unique_tuples.extend(unique_file_tuples_iter);
@@ -621,7 +621,7 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
 ) -> Result<(), Error> {
     let index = {
         let index = load_order.index_of(filename);
-        if index.is_none() && Plugin::is_valid(&filename, load_order.game_settings()) {
+        if index.is_none() && Plugin::is_valid(filename, load_order.game_settings()) {
             Some(load_order.load_and_insert(filename)?)
         } else {
             index

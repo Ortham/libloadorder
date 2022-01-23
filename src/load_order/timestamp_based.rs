@@ -59,7 +59,7 @@ impl TimestampBasedLoadOrder {
 
         filenames
             .par_iter()
-            .filter_map(|f| Plugin::new(&f, game_settings).ok())
+            .filter_map(|f| Plugin::new(f, game_settings).ok())
             .collect()
     }
 
@@ -180,7 +180,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     if a.is_master_file() == b.is_master_file() {
         match a.modification_time().cmp(&b.modification_time()) {
-            Ordering::Equal => a.name().cmp(&b.name()),
+            Ordering::Equal => a.name().cmp(b.name()),
             x => x,
         }
     } else if a.is_master_file() {
@@ -193,7 +193,7 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
 fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<String> {
     if game_id == GameId::Morrowind {
         line = regex
-            .captures(&line)
+            .captures(line)
             .and_then(|c| c.get(1))
             .map_or(&line[0..0], |m| m.as_str());
     }

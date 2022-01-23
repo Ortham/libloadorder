@@ -86,7 +86,7 @@ impl TextfileBasedLoadOrder {
         for plugin_name in self.active_plugin_names() {
             writer.write_all(
                 &WINDOWS_1252
-                    .encode(&plugin_name, EncoderTrap::Strict)
+                    .encode(plugin_name, EncoderTrap::Strict)
                     .map_err(Error::EncodeError)?,
             )?;
             writeln!(writer)?;
@@ -217,7 +217,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
                     .iter()
                     .filter(|l| active_plugin_names.iter().any(|a| plugin_names_match(a, l)))
                     .zip(active_plugin_names.iter())
-                    .all(|(l, a)| plugin_names_match(&l, &a));
+                    .all(|(l, a)| plugin_names_match(l, a));
 
                 Ok(are_equal)
             }

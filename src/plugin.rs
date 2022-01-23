@@ -40,7 +40,6 @@ const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
 
 #[derive(Clone, Debug)]
 pub struct Plugin {
-    game: GameId,
     active: bool,
     modification_time: SystemTime,
     data: esplugin::Plugin,
@@ -76,7 +75,6 @@ impl Plugin {
         data.parse_open_file(file, true)?;
 
         Ok(Plugin {
-            game: game_settings.id(),
             active,
             modification_time,
             data,
@@ -184,7 +182,7 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
             .iter()
             .rev()
             .zip(suffix.as_bytes().iter().rev())
-            .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(&suffix_byte))
+            .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(suffix_byte))
 }
 
 pub fn trim_dot_ghost(string: &str) -> &str {

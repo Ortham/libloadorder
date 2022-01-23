@@ -212,7 +212,7 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
 #[no_mangle]
 pub unsafe extern "C" fn lo_free_string(string: *mut c_char) {
     if !string.is_null() {
-        CString::from_raw(string);
+        drop(CString::from_raw(string));
     }
 }
 
