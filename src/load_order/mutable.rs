@@ -239,7 +239,7 @@ where
 
 pub fn read_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
 where
-    F: Fn(&str) -> Option<T> + Send + Sync,
+    F: FnMut(&str) -> Option<T> + Send + Sync,
     T: Send,
 {
     if !file_path.exists() {

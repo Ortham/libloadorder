@@ -16,9 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use encoding::all::WINDOWS_1252;
 use encoding::{EncoderTrap, Encoding};
@@ -194,34 +195,43 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn is_self_consistent(&self) -> Result<bool, Error> {
-        match self.game_settings().load_order_file() {
-            None => Ok(true),
-            Some(load_order_file) => {
-                if !load_order_file.exists() || !self.game_settings().active_plugins_file().exists()
-                {
-                    return Ok(true);
-                }
-
-                // First get load order according to loadorder.txt.
-                let load_order_plugin_names =
-                    read_utf8_plugin_names(load_order_file, plugin_line_mapper)
-                        .or_else(|_| read_plugin_names(load_order_file, plugin_line_mapper))?;
-
-                // Get load order from plugins.txt.
-                let active_plugin_names = read_plugin_names(
-                    self.game_settings().active_plugins_file(),
-                    plugin_line_mapper,
-                )?;
-
-                let are_equal = load_order_plugin_names
-                    .iter()
-                    .filter(|l| active_plugin_names.iter().any(|a| plugin_names_match(a, l)))
-                    .zip(active_plugin_names.iter())
-                    .all(|(l, a)| plugin_names_match(l, a));
-
-                Ok(are_equal)
-            }
+        match check_self_consistency(self.game_settings())? {
+            SelfConsistency::Inconsistent => Ok(false),
+            _ => Ok(true),
         }
+    }
+
+    /// A textfile-based load order is ambiguous when it's not self-consistent
+    /// (because an app that prefers loadorder.txt may give a different load
+    /// order to one that prefers plugins.txt) or when there are installed
+    /// plugins that are not present in one or both of the text files.
+    fn is_ambiguous(&self) -> Result<bool, Error> {
+        let plugin_names = match check_self_consistency(self.game_settings())? {
+            SelfConsistency::Inconsistent => {
+                return Ok(true);
+            }
+            SelfConsistency::ConsistentWithNames(plugin_names) => plugin_names,
+            SelfConsistency::ConsistentNoLoadOrderFile => read_plugin_names(
+                self.game_settings().active_plugins_file(),
+                plugin_line_mapper,
+            )?,
+            SelfConsistency::ConsistentOnlyLoadOrderFile(load_order_file) => {
+                read_utf8_plugin_names(&load_order_file, plugin_line_mapper)
+                    .or_else(|_| read_plugin_names(&load_order_file, plugin_line_mapper))?
+            }
+        };
+
+        let set: HashSet<String> = plugin_names
+            .into_iter()
+            .map(|name| trim_dot_ghost(&name).to_lowercase())
+            .collect();
+
+        let all_plugins_listed = self
+            .plugins
+            .iter()
+            .all(|plugin| set.contains(&plugin.name().to_lowercase()));
+
+        Ok(!all_plugins_listed)
     }
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
@@ -251,6 +261,53 @@ where
     file.read_to_string(&mut content)?;
 
     Ok(content.lines().filter_map(line_mapper).collect())
+}
+
+enum SelfConsistency {
+    ConsistentNoLoadOrderFile,
+    ConsistentOnlyLoadOrderFile(PathBuf),
+    ConsistentWithNames(Vec<String>),
+    Inconsistent,
+}
+
+fn check_self_consistency(game_settings: &GameSettings) -> Result<SelfConsistency, Error> {
+    match game_settings.load_order_file() {
+        None => Ok(SelfConsistency::ConsistentNoLoadOrderFile),
+        Some(load_order_file) => {
+            if !load_order_file.exists() {
+                return Ok(SelfConsistency::ConsistentNoLoadOrderFile);
+            }
+
+            if !game_settings.active_plugins_file().exists() {
+                return Ok(SelfConsistency::ConsistentOnlyLoadOrderFile(
+                    load_order_file.clone(),
+                ));
+            }
+
+            // First get load order according to loadorder.txt.
+            let load_order_plugin_names =
+                read_utf8_plugin_names(load_order_file, plugin_line_mapper)
+                    .or_else(|_| read_plugin_names(load_order_file, plugin_line_mapper))?;
+
+            // Get load order from plugins.txt.
+            let active_plugin_names =
+                read_plugin_names(game_settings.active_plugins_file(), plugin_line_mapper)?;
+
+            let are_equal = load_order_plugin_names
+                .iter()
+                .filter(|l| active_plugin_names.iter().any(|a| plugin_names_match(a, l)))
+                .zip(active_plugin_names.iter())
+                .all(|(l, a)| plugin_names_match(l, a));
+
+            if are_equal {
+                Ok(SelfConsistency::ConsistentWithNames(
+                    load_order_plugin_names,
+                ))
+            } else {
+                Ok(SelfConsistency::Inconsistent)
+            }
+        }
+    }
 }
 
 fn load_order_line_mapper(line: &str) -> Option<(String, bool)> {
@@ -996,5 +1053,170 @@ mod tests {
         }
 
         assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_load_order_is_not_self_consistent() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+        );
+
+        let expected_filenames = vec!["Blàñk.esp", "missing.esp", "Blank.esm\r"];
+        write_load_order_file(load_order.game_settings(), &expected_filenames);
+
+        assert!(!load_order.is_self_consistent().unwrap());
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_active_plugins_and_load_order_files_do_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_only_active_plugins_file_exists_and_does_not_list_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        loaded_plugin_names.pop();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_only_active_plugins_file_exists_and_lists_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_only_load_order_file_exists_and_does_not_list_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        loaded_plugin_names.pop();
+
+        write_load_order_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_only_load_order_file_exists_and_lists_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        write_load_order_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_read_load_order_file_as_windows_1252_if_not_utf8() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        let mut file =
+            File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
+
+        for filename in &loaded_plugin_names {
+            file.write_all(
+                &WINDOWS_1252
+                    .encode(filename.as_ref(), EncoderTrap::Strict)
+                    .unwrap(),
+            )
+            .unwrap();
+            writeln!(file).unwrap();
+        }
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_active_plugins_and_load_order_files_exist_and_load_order_file_does_not_list_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        loaded_plugin_names.pop();
+
+        write_load_order_file(load_order.game_settings(), &loaded_plugin_names);
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_active_plugins_and_load_order_files_exist_and_load_order_file_lists_all_loaded_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        write_load_order_file(load_order.game_settings(), &loaded_plugin_names);
+
+        loaded_plugin_names.pop();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
     }
 }

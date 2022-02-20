@@ -189,6 +189,35 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
     .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
+/// Check if the load order is ambiguous, by checking that all plugins in the current load order
+/// state have a well-defined position in the "on disk" state, and that all data sources are
+/// consistent. If the load order is ambiguous, different applications may read different load
+/// orders from the same source data.
+///
+/// Outputs `true` if the load order state is ambiguous, and false otherwise.
+///
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+#[no_mangle]
+pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bool) -> c_uint {
+    catch_unwind(|| {
+        if handle.is_null() || result.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
+            Ok(h) => h,
+        };
+
+        match handle.is_ambiguous() {
+            Ok(x) => *result = x,
+            Err(x) => return handle_error(x),
+        }
+
+        LIBLO_OK
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
 /// Fix up the text file(s) used by the load order and active plugins systems.
 ///
 /// This checks that the load order and active plugin lists conform to libloadorder's validity

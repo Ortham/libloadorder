@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -30,7 +31,7 @@ use super::writable::{
 };
 use enums::Error;
 use game_settings::GameSettings;
-use plugin::Plugin;
+use plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug)]
 pub struct AsteriskBasedLoadOrder {
@@ -49,7 +50,7 @@ impl AsteriskBasedLoadOrder {
     fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
         read_plugin_names(
             self.game_settings().active_plugins_file(),
-            plugin_line_mapper,
+            owning_plugin_line_mapper,
         )
     }
 }
@@ -185,6 +186,30 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         Ok(true)
     }
 
+    /// An asterisk-based load order can be ambiguous if there are installed
+    /// plugins that don't exist in the active plugins file.
+    fn is_ambiguous(&self) -> Result<bool, Error> {
+        let mut set: HashSet<String> = HashSet::new();
+
+        // Read plugins from the active plugins file. A set of plugin names is
+        // more useful than the returned vec, so insert into the set during the
+        // line mapping and then discard the line.
+        read_plugin_names(self.game_settings().active_plugins_file(), |line| {
+            plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
+                set.insert(trim_dot_ghost(name).to_lowercase());
+                None
+            })
+        })?;
+
+        // Check if all loaded plugins are named in the set.
+        let all_plugins_listed = self
+            .plugins
+            .iter()
+            .all(|plugin| set.contains(&plugin.name().to_lowercase()));
+
+        Ok(!all_plugins_listed)
+    }
+
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         activate(self, plugin_name)
     }
@@ -198,14 +223,18 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 }
 
-fn plugin_line_mapper(line: &str) -> Option<(String, bool)> {
+fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
     if line.is_empty() || line.starts_with('#') {
         None
     } else if line.as_bytes()[0] == b'*' {
-        Some((line[1..].to_owned(), true))
+        Some((&line[1..], true))
     } else {
-        Some((line.to_owned(), false))
+        Some((line, false))
     }
+}
+
+fn owning_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
+    plugin_line_mapper(line).map(|(name, active)| (name.to_owned(), active))
 }
 
 #[cfg(test)]
@@ -923,6 +952,58 @@ mod tests {
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_all_loaded_plugins_are_listed_in_active_plugins_file() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_ignore_plugins_that_are_listed_in_active_plugins_file_but_not_loaded() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        assert!(load_order.index_of("missing.esp").is_none());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+        loaded_plugin_names.push("missing.esp");
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_true_if_there_are_loaded_plugins_not_in_active_plugins_file() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let mut loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        loaded_plugin_names.pop();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(load_order.is_ambiguous().unwrap());
     }
 
     #[test]

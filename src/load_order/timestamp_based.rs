@@ -17,6 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -164,6 +165,22 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         Ok(true)
     }
 
+    /// A timestamp-based load order is ambiguous if two or more plugins share
+    /// the same timestamp.
+    fn is_ambiguous(&self) -> Result<bool, Error> {
+        // All timestamps are already stored as part of the loaded plugin data,
+        // so just add all plugin timestamps to a set and return true if a
+        // timestamp value is already in the set.
+        let mut set: HashSet<SystemTime> = HashSet::new();
+
+        let all_timestamps_unique = self
+            .plugins
+            .iter()
+            .all(|plugin| set.insert(plugin.modification_time()));
+
+        Ok(!all_timestamps_unique)
+    }
+
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         activate(self, plugin_name)
     }
@@ -246,6 +263,7 @@ mod tests {
     use enums::GameId;
     use filetime::{set_file_times, FileTime};
     use load_order::tests::*;
+    use std::convert::TryInto;
     use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};
     use std::path::Path;
@@ -969,5 +987,35 @@ mod tests {
         let load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_all_loaded_plugins_have_unique_timestamps() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        for (index, plugin) in load_order.plugins_mut().iter_mut().enumerate() {
+            plugin
+                .set_modification_time(UNIX_EPOCH + Duration::new(index.try_into().unwrap(), 0))
+                .unwrap();
+        }
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_return_false_if_two_loaded_plugins_have_the_same_timestamp() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        // Give two files the same timestamp.
+        load_order.plugins_mut()[0]
+            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
+            .unwrap();
+        load_order.plugins_mut()[1]
+            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
+            .unwrap();
+
+        assert!(load_order.is_ambiguous().unwrap());
     }
 }

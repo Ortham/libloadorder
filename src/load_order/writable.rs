@@ -42,6 +42,8 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
 
     fn is_self_consistent(&self) -> Result<bool, Error>;
 
+    fn is_ambiguous(&self) -> Result<bool, Error>;
+
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error>;
 
     fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error>;

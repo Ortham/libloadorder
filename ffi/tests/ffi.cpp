@@ -104,6 +104,17 @@ void test_lo_create_handle() {
   lo_destroy_handle(handle);
 }
 
+void test_lo_is_ambiguous() {
+  printf("testing lo_is_ambiguous()...\n");
+  lo_game_handle handle = create_handle();
+
+  bool is_ambiguous = true;
+  unsigned int return_code = lo_is_ambiguous(handle, &is_ambiguous);
+
+  assert(return_code == 0);
+  lo_destroy_handle(handle);
+}
+
 void test_lo_fix_plugin_lists() {
   printf("testing lo_fix_plugin_list()...\n");
   lo_game_handle handle = create_handle();
@@ -293,6 +304,7 @@ int main(void) {
   test_lo_free_string_array();
 
   test_lo_create_handle();
+  test_lo_is_ambiguous();
   test_lo_fix_plugin_lists();
   test_lo_get_implicitly_active_plugins();
 
