@@ -201,10 +201,13 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             })
         })?;
 
-        // Check if all loaded plugins are named in the set.
+        // Check if all loaded plugins aside from implicitly active plugins
+        // (which don't get written to the active plugins file) are named in the
+        // set.
         let all_plugins_listed = self
             .plugins
             .iter()
+            .filter(|plugin| !self.game_settings().is_implicitly_active(plugin.name()))
             .all(|plugin| set.contains(&plugin.name().to_lowercase()));
 
         Ok(!all_plugins_listed)
@@ -984,6 +987,27 @@ mod tests {
         loaded_plugin_names.push("missing.esp");
 
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_ignore_loaded_implicitly_active_plugins_not_listed_in_active_plugins_file(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(|plugin| plugin.name())
+            .collect();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        copy_to_test_dir("Blank.esm", "Dawnguard.esm", &load_order.game_settings());
+        let plugin = Plugin::new("Dawnguard.esm", &load_order.game_settings()).unwrap();
+        load_order.plugins_mut().push(plugin);
 
         assert!(!load_order.is_ambiguous().unwrap());
     }
