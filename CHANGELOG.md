@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [13.1.0] - 2022-02-23
+
+### Added
+
+- `WritableLoadOrder::is_ambiguous()` for checking if all currently-loaded
+  plugins have a well defined load order position and that all data sources are
+  consistent.
+
 ## [13.0.0] - 2021-04-17
 
 ### Changed
