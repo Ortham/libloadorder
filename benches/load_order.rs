@@ -126,7 +126,7 @@ struct Parameters {
     settings: GameSettings,
     plugins_count: u16,
     active_plugins_count: u16,
-    directory: Rc<TempDir>,
+    _directory: Rc<TempDir>,
 }
 
 impl Parameters {
@@ -145,7 +145,7 @@ impl Parameters {
             settings,
             plugins_count,
             active_plugins_count,
-            directory: Rc::new(directory),
+            _directory: Rc::new(directory),
         }
     }
 
