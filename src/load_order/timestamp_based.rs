@@ -22,8 +22,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use encoding::all::WINDOWS_1252;
-use encoding::{EncoderTrap, Encoding};
 use rayon::prelude::*;
 use regex::Regex;
 
@@ -31,6 +29,7 @@ use super::mutable::{
     generic_insert_position, hoist_masters, load_active_plugins, MutableLoadOrder,
 };
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
+use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
@@ -76,11 +75,7 @@ impl TimestampBasedLoadOrder {
             if self.game_settings().id() == GameId::Morrowind {
                 write!(writer, "GameFile{}=", index)?;
             }
-            writer.write_all(
-                &WINDOWS_1252
-                    .encode(plugin_name, EncoderTrap::Strict)
-                    .map_err(Error::EncodeError)?,
-            )?;
+            writer.write_all(&strict_encode(plugin_name)?)?;
             writeln!(writer)?;
         }
 

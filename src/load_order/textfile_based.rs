@@ -21,8 +21,6 @@ use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
-use encoding::all::WINDOWS_1252;
-use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use super::mutable::{
@@ -30,6 +28,7 @@ use super::mutable::{
     read_plugin_names, MutableLoadOrder,
 };
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
+use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
@@ -85,11 +84,7 @@ impl TextfileBasedLoadOrder {
         let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         for plugin_name in self.active_plugin_names() {
-            writer.write_all(
-                &WINDOWS_1252
-                    .encode(plugin_name, EncoderTrap::Strict)
-                    .map_err(Error::EncodeError)?,
-            )?;
+            writer.write_all(&strict_encode(plugin_name)?)?;
             writeln!(writer)?;
         }
 
@@ -541,12 +536,7 @@ mod tests {
             File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
 
         for filename in &expected_filenames {
-            file.write_all(
-                &WINDOWS_1252
-                    .encode(filename.as_ref(), EncoderTrap::Strict)
-                    .unwrap(),
-            )
-            .unwrap();
+            file.write_all(&strict_encode(filename).unwrap()).unwrap();
             writeln!(file).unwrap();
         }
 
@@ -1064,12 +1054,7 @@ mod tests {
             File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
 
         for filename in &expected_filenames {
-            file.write_all(
-                &WINDOWS_1252
-                    .encode(filename.as_ref(), EncoderTrap::Strict)
-                    .unwrap(),
-            )
-            .unwrap();
+            file.write_all(&strict_encode(filename).unwrap()).unwrap();
             writeln!(file).unwrap();
         }
 
@@ -1188,12 +1173,7 @@ mod tests {
             File::create(&load_order.game_settings().load_order_file().unwrap()).unwrap();
 
         for filename in &loaded_plugin_names {
-            file.write_all(
-                &WINDOWS_1252
-                    .encode(filename.as_ref(), EncoderTrap::Strict)
-                    .unwrap(),
-            )
-            .unwrap();
+            file.write_all(&strict_encode(filename).unwrap()).unwrap();
             writeln!(file).unwrap();
         }
 

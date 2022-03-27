@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate criterion;
-extern crate encoding;
+extern crate encoding_rs;
 extern crate filetime;
 extern crate loadorder;
 extern crate tempfile;
@@ -14,8 +14,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion};
-use encoding::all::WINDOWS_1252;
-use encoding::{EncoderTrap, Encoding};
+use encoding_rs::WINDOWS_1252;
 use filetime::{set_file_times, FileTime};
 use tempfile::TempDir;
 
@@ -46,12 +45,8 @@ fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filena
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
         }
-        file.write_all(
-            &WINDOWS_1252
-                .encode(filename.as_ref(), EncoderTrap::Strict)
-                .unwrap(),
-        )
-        .unwrap();
+        file.write_all(&WINDOWS_1252.encode(filename.as_ref()).0)
+            .unwrap();
         writeln!(file, "").unwrap();
     }
 }

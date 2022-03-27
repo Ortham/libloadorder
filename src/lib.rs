@@ -19,7 +19,7 @@
 
 #[cfg(windows)]
 extern crate app_dirs2;
-extern crate encoding;
+extern crate encoding_rs;
 extern crate esplugin;
 extern crate filetime;
 extern crate rayon;

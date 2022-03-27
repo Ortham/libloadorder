@@ -20,12 +20,11 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use encoding::all::WINDOWS_1252;
-use encoding::{EncoderTrap, Encoding};
 use unicase::eq;
 
 use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
+use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
@@ -122,11 +121,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             if plugin.is_active() {
                 write!(writer, "*")?;
             }
-            writer.write_all(
-                &WINDOWS_1252
-                    .encode(plugin.name(), EncoderTrap::Strict)
-                    .map_err(Error::EncodeError)?,
-            )?;
+            writer.write_all(&strict_encode(plugin.name())?)?;
             writeln!(writer)?;
         }
 

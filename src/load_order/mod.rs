@@ -26,8 +26,26 @@ mod textfile_based;
 mod timestamp_based;
 mod writable;
 
+use std::borrow::Cow;
+
+use encoding_rs::WINDOWS_1252;
+
+use super::enums::Error;
+
 pub use load_order::asterisk_based::AsteriskBasedLoadOrder;
 pub use load_order::readable::ReadableLoadOrder;
 pub use load_order::textfile_based::TextfileBasedLoadOrder;
 pub use load_order::timestamp_based::TimestampBasedLoadOrder;
 pub use load_order::writable::WritableLoadOrder;
+
+fn strict_encode(string: &str) -> Result<Cow<'_, [u8]>, Error> {
+    let (output, _, had_unmappable_chars) = WINDOWS_1252.encode(string);
+
+    if had_unmappable_chars {
+        Err(Error::EncodeError(Cow::Borrowed(
+            "unrepresentable character",
+        )))
+    } else {
+        Ok(output)
+    }
+}

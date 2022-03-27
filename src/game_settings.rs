@@ -25,8 +25,7 @@ use std::path::PathBuf;
 #[cfg(windows)]
 use app_dirs2;
 
-use encoding::all::WINDOWS_1252;
-use encoding::{DecoderTrap, Encoding};
+use encoding_rs::WINDOWS_1252;
 
 use enums::{Error, GameId, LoadOrderMethod};
 use load_order::AsteriskBasedLoadOrder;
@@ -216,16 +215,10 @@ fn use_my_games_directory(ini_path: &Path) -> bool {
         return false;
     }
 
-    // Decoding should never fail, since we're just replacing
-    // invalid characters and Windows-1252 is a single-byte
-    // encoding, but treat it as a 'false' result anyway.
-    match WINDOWS_1252
-        .decode(&contents, DecoderTrap::Replace)
-        .map(|s| s.find("bUseMyGamesDirectory=1"))
-    {
-        Err(_) | Ok(None) => false,
-        Ok(Some(_)) => true,
-    }
+    WINDOWS_1252
+        .decode_without_bom_handling(&contents)
+        .0
+        .contains("bUseMyGamesDirectory=1")
 }
 
 fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {

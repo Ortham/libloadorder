@@ -23,8 +23,7 @@ use std::io::Read;
 use std::mem;
 use std::path::Path;
 
-use encoding::all::WINDOWS_1252;
-use encoding::{DecoderTrap, Encoding};
+use encoding_rs::WINDOWS_1252;
 use rayon::iter::Either;
 use rayon::prelude::*;
 
@@ -253,8 +252,8 @@ where
     // This should never fail, as although Windows-1252 has a few unused bytes
     // they get mapped to C1 control characters.
     let content = WINDOWS_1252
-        .decode(&content, DecoderTrap::Strict)
-        .map_err(Error::DecodeError)?;
+        .decode_without_bom_handling_and_without_replacement(&content)
+        .ok_or_else(|| Error::DecodeError("invalid sequence".into()))?;
 
     Ok(content.lines().filter_map(line_mapper).collect())
 }

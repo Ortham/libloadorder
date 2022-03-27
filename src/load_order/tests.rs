@@ -22,13 +22,12 @@ use std::fs::{create_dir, File, OpenOptions};
 use std::io::{self, Seek, Write};
 use std::path::Path;
 
-use encoding::all::WINDOWS_1252;
-use encoding::{EncoderTrap, Encoding};
 use filetime::{set_file_times, FileTime};
 
 use enums::GameId;
 use enums::LoadOrderMethod;
 use game_settings::GameSettings;
+use load_order::strict_encode;
 use plugin::Plugin;
 use tests::copy_to_test_dir;
 
@@ -57,12 +56,9 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
         }
-        file.write_all(
-            &WINDOWS_1252
-                .encode(filename.as_ref(), EncoderTrap::Strict)
-                .unwrap(),
-        )
-        .unwrap();
+
+        file.write_all(&strict_encode(filename.as_ref()).unwrap())
+            .unwrap();
         writeln!(file, "").unwrap();
     }
 }
