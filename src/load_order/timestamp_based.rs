@@ -726,6 +726,27 @@ mod tests {
     }
 
     #[test]
+    fn save_should_error_if_an_active_plugin_filename_cannot_be_encoded_in_windows_1252() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let filename = "Bl\u{0227}nk.esm";
+        copy_to_test_dir(
+            "Blank - Different.esm",
+            filename,
+            &load_order.game_settings(),
+        );
+        let mut plugin = Plugin::new(filename, &load_order.game_settings()).unwrap();
+        plugin.activate().unwrap();
+        load_order.plugins_mut().push(plugin);
+
+        match load_order.save().unwrap_err() {
+            Error::EncodeError(s) => assert_eq!("unrepresentable character", s),
+            e => panic!("Expected encode error, got {:?}", e),
+        };
+    }
+
+    #[test]
     fn set_load_order_should_error_if_given_duplicate_plugins() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());

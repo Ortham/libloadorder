@@ -250,6 +250,8 @@ where
     let mut file = File::open(file_path)?;
     file.read_to_end(&mut content)?;
 
+    // This should never fail, as although Windows-1252 has a few unused bytes
+    // they get mapped to C1 control characters.
     let content = WINDOWS_1252
         .decode(&content, DecoderTrap::Strict)
         .map_err(Error::DecodeError)?;
