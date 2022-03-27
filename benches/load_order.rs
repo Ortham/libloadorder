@@ -1,10 +1,3 @@
-#[macro_use]
-extern crate criterion;
-extern crate encoding_rs;
-extern crate filetime;
-extern crate loadorder;
-extern crate tempfile;
-
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Display;
@@ -372,18 +365,18 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
     );
 }
 
-criterion_group! {
+criterion::criterion_group! {
     name = benches;
     config = Criterion::default()
         .warm_up_time(Duration::from_secs(1))
         .measurement_time(Duration::from_secs(2));
     targets = readable_load_order_benchmark, writable_load_order_benchmark
 }
-criterion_group! {
+criterion::criterion_group! {
     name = slow_benches;
     config = Criterion::default()
         .warm_up_time(Duration::from_secs(2))
         .sample_size(25);
     targets = benchmarks_writable_load_order_slow
 }
-criterion_main!(benches, slow_benches);
+criterion::criterion_main!(benches, slow_benches);

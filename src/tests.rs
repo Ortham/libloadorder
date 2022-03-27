@@ -20,8 +20,8 @@
 use std::fs::{copy, create_dir};
 use std::path::{Path, PathBuf};
 
-use enums::GameId;
-use game_settings::GameSettings;
+use crate::enums::GameId;
+use crate::game_settings::GameSettings;
 
 pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());

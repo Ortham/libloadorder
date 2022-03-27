@@ -33,9 +33,9 @@ use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
-use enums::{Error, GameId};
-use game_settings::GameSettings;
-use plugin::Plugin;
+use crate::enums::{Error, GameId};
+use crate::game_settings::GameSettings;
+use crate::plugin::Plugin;
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 
@@ -255,15 +255,15 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 mod tests {
     use super::*;
 
-    use enums::GameId;
+    use crate::enums::GameId;
+    use crate::load_order::tests::*;
+    use crate::tests::copy_to_test_dir;
     use filetime::{set_file_times, FileTime};
-    use load_order::tests::*;
     use std::convert::TryInto;
     use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};
     use std::path::Path;
     use tempfile::tempdir;
-    use tests::copy_to_test_dir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TimestampBasedLoadOrder {
         let (game_settings, plugins) = mock_game_files(game_id, game_dir);

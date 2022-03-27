@@ -24,8 +24,8 @@ use unicase::eq;
 
 use super::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_PLUGINS, MAX_ACTIVE_NORMAL_PLUGINS};
 use super::readable::ReadableLoadOrder;
-use enums::Error;
-use plugin::Plugin;
+use crate::enums::Error;
+use crate::plugin::Plugin;
 
 pub trait WritableLoadOrder: ReadableLoadOrder {
     fn load(&mut self) -> Result<(), Error>;
@@ -210,12 +210,12 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use enums::GameId;
-    use game_settings::GameSettings;
-    use load_order::mutable::{generic_insert_position, MutableLoadOrder};
-    use load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-    use load_order::tests::{mock_game_files, set_master_flag};
-    use tests::copy_to_test_dir;
+    use crate::enums::GameId;
+    use crate::game_settings::GameSettings;
+    use crate::load_order::mutable::{generic_insert_position, MutableLoadOrder};
+    use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
+    use crate::load_order::tests::{mock_game_files, set_master_flag};
+    use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
         game_settings: GameSettings,

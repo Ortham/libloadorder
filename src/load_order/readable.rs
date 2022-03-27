@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-use game_settings::GameSettings;
-use plugin::Plugin;
+use crate::game_settings::GameSettings;
+use crate::plugin::Plugin;
 
 pub trait ReadableLoadOrderBase {
     fn plugins(&self) -> &Vec<Plugin>;
@@ -82,9 +82,9 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use enums::GameId;
-    use load_order::tests::mock_game_files;
-    use tests::copy_to_test_dir;
+    use crate::enums::GameId;
+    use crate::load_order::tests::mock_game_files;
+    use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
         game_settings: GameSettings,

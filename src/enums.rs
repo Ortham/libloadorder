@@ -26,12 +26,6 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 use std::time;
 
-use esplugin;
-use regex;
-
-#[cfg(windows)]
-use app_dirs2;
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum LoadOrderMethod {
     Timestamp,
@@ -69,7 +63,7 @@ impl GameId {
     }
 
     pub fn supports_light_plugins(self) -> bool {
-        use enums::GameId::*;
+        use self::GameId::*;
         matches!(self, Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR)
     }
 }

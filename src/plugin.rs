@@ -19,13 +19,12 @@
 use std::fs::File;
 use std::time::SystemTime;
 
-use esplugin;
 use filetime::{set_file_times, FileTime};
 use unicase::eq;
 
-use enums::{Error, GameId};
-use game_settings::GameSettings;
-use ghostable_path::GhostablePath;
+use crate::enums::{Error, GameId};
+use crate::game_settings::GameSettings;
+use crate::ghostable_path::GhostablePath;
 
 const VALID_EXTENSIONS: &[&str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
 
@@ -197,10 +196,10 @@ pub fn trim_dot_ghost(string: &str) -> &str {
 mod tests {
     use super::*;
 
+    use crate::tests::copy_to_test_dir;
     use std::path::PathBuf;
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::tempdir;
-    use tests::copy_to_test_dir;
 
     #[test]
     fn name_should_return_the_plugin_filename_without_any_ghost_extension() {

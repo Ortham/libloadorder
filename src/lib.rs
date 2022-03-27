@@ -17,17 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#[cfg(windows)]
-extern crate app_dirs2;
-extern crate encoding_rs;
-extern crate esplugin;
-extern crate filetime;
-extern crate rayon;
-extern crate regex;
-#[cfg(test)]
-extern crate tempfile;
-extern crate unicase;
-
 mod enums;
 mod game_settings;
 mod ghostable_path;
@@ -36,7 +25,6 @@ mod plugin;
 #[cfg(test)]
 mod tests;
 
-pub use enums::{Error, GameId, LoadOrderMethod};
-pub use game_settings::GameSettings;
-pub use load_order::ReadableLoadOrder;
-pub use load_order::WritableLoadOrder;
+pub use crate::enums::{Error, GameId, LoadOrderMethod};
+pub use crate::game_settings::GameSettings;
+pub use crate::load_order::{ReadableLoadOrder, WritableLoadOrder};

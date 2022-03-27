@@ -25,7 +25,7 @@ use libc::{c_char, c_uint, size_t};
 use loadorder::Error;
 
 use super::ERROR_MESSAGE;
-use constants::*;
+use crate::constants::*;
 
 pub fn error(code: c_uint, message: &str) -> c_uint {
     ERROR_MESSAGE.with(|f| {

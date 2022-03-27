@@ -22,16 +22,12 @@ use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::path::PathBuf;
 
-#[cfg(windows)]
-use app_dirs2;
-
 use encoding_rs::WINDOWS_1252;
 
-use enums::{Error, GameId, LoadOrderMethod};
-use load_order::AsteriskBasedLoadOrder;
-use load_order::TextfileBasedLoadOrder;
-use load_order::TimestampBasedLoadOrder;
-use load_order::WritableLoadOrder;
+use crate::enums::{Error, GameId, LoadOrderMethod};
+use crate::load_order::{
+    AsteriskBasedLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder, WritableLoadOrder,
+};
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
@@ -108,7 +104,7 @@ impl GameSettings {
     }
 
     pub fn load_order_method(&self) -> LoadOrderMethod {
-        use enums::GameId::*;
+        use crate::enums::GameId::*;
         match self.id {
             Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
@@ -125,7 +121,7 @@ impl GameSettings {
     }
 
     pub fn master_file(&self) -> &'static str {
-        use enums::GameId::*;
+        use crate::enums::GameId::*;
         match self.id {
             Morrowind => "Morrowind.esm",
             Oblivion => "Oblivion.esm",
@@ -168,7 +164,7 @@ impl GameSettings {
 }
 
 fn appdata_folder_name(game_id: GameId) -> Option<&'static str> {
-    use enums::GameId::*;
+    use crate::enums::GameId::*;
     match game_id {
         Morrowind => None,
         Oblivion => Some("Oblivion"),

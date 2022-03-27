@@ -25,12 +25,12 @@ use std::path::Path;
 
 use filetime::{set_file_times, FileTime};
 
-use enums::GameId;
-use enums::LoadOrderMethod;
-use game_settings::GameSettings;
-use load_order::strict_encode;
-use plugin::Plugin;
-use tests::copy_to_test_dir;
+use crate::enums::GameId;
+use crate::enums::LoadOrderMethod;
+use crate::game_settings::GameSettings;
+use crate::load_order::strict_encode;
+use crate::plugin::Plugin;
+use crate::tests::copy_to_test_dir;
 
 pub fn write_load_order_file<T: AsRef<str> + Display>(
     game_settings: &GameSettings,

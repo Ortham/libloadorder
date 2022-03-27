@@ -16,8 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-extern crate libc;
-extern crate loadorder;
 
 use std::panic::catch_unwind;
 use std::path::Path;
@@ -29,8 +27,8 @@ use loadorder::GameId;
 use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
 
-use constants::*;
-use helpers::{error, handle_error, to_c_string_array, to_str};
+use crate::constants::*;
+use crate::helpers::{error, handle_error, to_c_string_array, to_str};
 
 /// A structure that holds all game-specific data used by libloadorder.
 ///

@@ -102,17 +102,12 @@
 //! Libloadorder is less strict when loading load orders and will adjust them at load time to be
 //! valid, similar to game behaviour.
 
-extern crate libc;
-extern crate loadorder;
-
 use std::cell::RefCell;
 use std::ffi::CString;
-use std::io;
 use std::panic::catch_unwind;
 use std::ptr;
 
 use libc::{c_char, c_uint, size_t};
-use loadorder::Error;
 
 mod active_plugins;
 mod constants;
@@ -120,11 +115,11 @@ mod handle;
 mod helpers;
 mod load_order;
 
-pub use active_plugins::*;
-pub use constants::*;
-pub use handle::*;
-use helpers::error;
-pub use load_order::*;
+pub use crate::active_plugins::*;
+pub use crate::constants::*;
+pub use crate::handle::*;
+use crate::helpers::error;
+pub use crate::load_order::*;
 
 thread_local!(static ERROR_MESSAGE: RefCell<CString> = RefCell::new(CString::default()));
 

@@ -28,9 +28,9 @@ use rayon::iter::Either;
 use rayon::prelude::*;
 
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-use enums::Error;
-use game_settings::GameSettings;
-use plugin::{trim_dot_ghost, Plugin};
+use crate::enums::Error;
+use crate::game_settings::GameSettings;
+use crate::plugin::{trim_dot_ghost, Plugin};
 
 pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
 pub const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
@@ -644,10 +644,10 @@ fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
 mod tests {
     use super::*;
 
-    use enums::GameId;
-    use game_settings::GameSettings;
-    use load_order::tests::*;
-    use tests::copy_to_test_dir;
+    use crate::enums::GameId;
+    use crate::game_settings::GameSettings;
+    use crate::load_order::tests::*;
+    use crate::tests::copy_to_test_dir;
 
     use tempfile::tempdir;
 

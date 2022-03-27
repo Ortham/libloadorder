@@ -28,9 +28,9 @@ use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
-use enums::Error;
-use game_settings::GameSettings;
-use plugin::{trim_dot_ghost, Plugin};
+use crate::enums::Error;
+use crate::game_settings::GameSettings;
+use crate::plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug)]
 pub struct AsteriskBasedLoadOrder {
@@ -239,15 +239,15 @@ fn owning_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
 mod tests {
     use super::*;
 
-    use enums::GameId;
+    use crate::enums::GameId;
+    use crate::load_order::tests::*;
+    use crate::tests::copy_to_test_dir;
     use filetime::{set_file_times, FileTime};
-    use load_order::tests::*;
     use std::fs::{remove_dir_all, File};
     use std::io;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
     use tempfile::tempdir;
-    use tests::copy_to_test_dir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> AsteriskBasedLoadOrder {
         let (game_settings, plugins) = mock_game_files(game_id, game_dir);

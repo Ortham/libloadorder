@@ -20,7 +20,7 @@
 use std::fs::rename;
 use std::path::{Path, PathBuf};
 
-use enums::Error;
+use crate::enums::Error;
 
 pub trait GhostablePath {
     fn ghost(&self) -> Result<PathBuf, Error>;
