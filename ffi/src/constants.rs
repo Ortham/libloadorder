@@ -19,9 +19,6 @@
 
 use libc::c_uint;
 
-use loadorder::GameId;
-use loadorder::LoadOrderMethod;
-
 /// Success return code.
 #[no_mangle]
 pub static LIBLO_OK: c_uint = 0;
@@ -100,66 +97,48 @@ pub static LIBLO_RETURN_MAX: c_uint = 20;
 /// The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3
 /// and Fallout: New Vegas all use this system.
 #[no_mangle]
-pub static LIBLO_METHOD_TIMESTAMP: c_uint = LoadOrderMethod::Timestamp as c_uint;
+pub static LIBLO_METHOD_TIMESTAMP: c_uint = 0;
 
 /// he game handle is using the textfile-based load order system. Skyrim uses this system.
 #[no_mangle]
-pub static LIBLO_METHOD_TEXTFILE: c_uint = LoadOrderMethod::Textfile as c_uint;
+pub static LIBLO_METHOD_TEXTFILE: c_uint = 1;
 
 /// The asterisk load order system, used by Fallout 4 and Skyrim Special Edition.
 #[no_mangle]
-pub static LIBLO_METHOD_ASTERISK: c_uint = LoadOrderMethod::Asterisk as c_uint;
+pub static LIBLO_METHOD_ASTERISK: c_uint = 2;
 
 /// Game code for The Elder Scrolls III: Morrowind.
 #[no_mangle]
-pub static LIBLO_GAME_TES3: c_uint = GameId::Morrowind as c_uint;
+pub static LIBLO_GAME_TES3: c_uint = 1;
 
 /// Game code for The Elder Scrolls IV: Oblivion.
 #[no_mangle]
-pub static LIBLO_GAME_TES4: c_uint = GameId::Oblivion as c_uint;
+pub static LIBLO_GAME_TES4: c_uint = 2;
 
 /// Game code for The Elder Scrolls V: Skyrim.
 #[no_mangle]
-pub static LIBLO_GAME_TES5: c_uint = GameId::Skyrim as c_uint;
+pub static LIBLO_GAME_TES5: c_uint = 3;
 
 /// Game code for Fallout 3.
 #[no_mangle]
-pub static LIBLO_GAME_FO3: c_uint = GameId::Fallout3 as c_uint;
+pub static LIBLO_GAME_FO3: c_uint = 4;
 
 /// Game code for Fallout: New Vegas.
 #[no_mangle]
-pub static LIBLO_GAME_FNV: c_uint = GameId::FalloutNV as c_uint;
+pub static LIBLO_GAME_FNV: c_uint = 5;
 
 /// Game code for Fallout 4.
 #[no_mangle]
-pub static LIBLO_GAME_FO4: c_uint = GameId::Fallout4 as c_uint;
+pub static LIBLO_GAME_FO4: c_uint = 6;
 
 /// Game code for The Elder Scrolls V: Skyrim Special Edition.
 #[no_mangle]
-pub static LIBLO_GAME_TES5SE: c_uint = GameId::SkyrimSE as c_uint;
+pub static LIBLO_GAME_TES5SE: c_uint = 7;
 
 /// Game code for The Elder Scrolls V: Skyrim VR.
 #[no_mangle]
-pub static LIBLO_GAME_TES5VR: c_uint = GameId::SkyrimVR as c_uint;
+pub static LIBLO_GAME_TES5VR: c_uint = 9;
 
 /// Game code for Fallout 4 VR.
 #[no_mangle]
-pub static LIBLO_GAME_FO4VR: c_uint = GameId::Fallout4VR as c_uint;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn game_constants_should_have_expected_integer_values() {
-        assert_eq!(1, LIBLO_GAME_TES3);
-        assert_eq!(2, LIBLO_GAME_TES4);
-        assert_eq!(3, LIBLO_GAME_TES5);
-        assert_eq!(4, LIBLO_GAME_FO3);
-        assert_eq!(5, LIBLO_GAME_FNV);
-        assert_eq!(6, LIBLO_GAME_FO4);
-        assert_eq!(7, LIBLO_GAME_TES5SE);
-        assert_eq!(8, LIBLO_GAME_FO4VR);
-        assert_eq!(9, LIBLO_GAME_TES5VR);
-    }
-}
+pub static LIBLO_GAME_FO4VR: c_uint = 8;

@@ -195,7 +195,7 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
                 if f.borrow().as_bytes().is_empty() {
                     *message = ptr::null();
                 } else {
-                    *message = f.borrow().as_ptr() as *const i8;
+                    *message = f.borrow().as_ptr();
                 }
             });
 

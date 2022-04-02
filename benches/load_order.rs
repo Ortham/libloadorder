@@ -5,6 +5,7 @@ extern crate filetime;
 extern crate loadorder;
 extern crate tempfile;
 
+use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::{copy, create_dir, File};
@@ -56,7 +57,7 @@ fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
         set_file_times(
             &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
-            FileTime::from_unix_time(index as i64, 0),
+            FileTime::from_unix_time(i64::try_from(index).unwrap(), 0),
         )
         .unwrap();
     }
@@ -108,7 +109,7 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
         write_load_order_file(game_settings, &plugins_as_ref);
     }
     set_timestamps(&game_settings.plugins_directory(), &plugins_as_ref);
-    plugins_as_ref.truncate(active_plugins_count as usize);
+    plugins_as_ref.truncate(active_plugins_count.into());
     write_active_plugins_file(game_settings, &plugins_as_ref);
 }
 
@@ -203,7 +204,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
             let load_order = parameters.loaded_load_order();
 
             let plugin = load_order
-                .plugin_at(parameters.plugins_count as usize)
+                .plugin_at(parameters.plugins_count.into())
                 .unwrap();
 
             b.iter(|| load_order.index_of(plugin))
@@ -240,7 +241,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
             let load_order = parameters.loaded_load_order();
 
             let plugin = load_order
-                .plugin_at(parameters.plugins_count as usize)
+                .plugin_at(parameters.plugins_count.into())
                 .unwrap()
                 .to_owned();
 

@@ -17,6 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::convert::TryFrom;
 use std::fmt::Display;
 use std::fs::{create_dir, File, OpenOptions};
 use std::io::{self, Seek, Write};
@@ -68,7 +69,7 @@ pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) 
         set_file_times(
             &plugins_directory.join(filename.as_ref()),
             FileTime::zero(),
-            FileTime::from_unix_time(index as i64, 0),
+            FileTime::from_unix_time(i64::try_from(index).unwrap(), 0),
         )
         .unwrap();
     }
