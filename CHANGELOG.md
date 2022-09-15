@@ -3,6 +3,13 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [13.1.1] - 2022-09-15
+
+### Changed
+
+- Updated esplugin to v4.0.0.
+- The encoding dependency has been replaced by a dependency on encoding_rs.
+
 ## [13.1.0] - 2022-02-23
 
 ### Added
