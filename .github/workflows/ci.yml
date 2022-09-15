@@ -26,9 +26,11 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Prepare test resources
@@ -36,6 +38,7 @@ jobs:
           (New-Object Net.WebClient).DownloadFile('https://github.com/WrinklyNinja/testing-plugins/archive/1.4.1.zip', "$PWD/1.4.1.zip")
           7z x 1.4.1.zip
           mv testing-plugins-1.4.1 testing-plugins
+
       - name: Build and run tests
         run: cargo test --all --all-features
 
@@ -61,9 +64,11 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Tarpaulin
