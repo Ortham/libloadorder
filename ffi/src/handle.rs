@@ -285,7 +285,7 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
     num_plugins: *mut size_t,
 ) -> c_uint {
     catch_unwind(|| {
-        if handle.is_null() {
+        if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
 
