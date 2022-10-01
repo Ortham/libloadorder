@@ -28,7 +28,7 @@ use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
 
 use crate::constants::*;
-use crate::helpers::{error, handle_error, to_c_string_array, to_str};
+use crate::helpers::{error, handle_error, to_c_string, to_c_string_array, to_str};
 
 /// A structure that holds all game-specific data used by libloadorder.
 ///
@@ -309,6 +309,49 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
                 *num_plugins = size;
             }
             Err(x) => return error(x, "A filename contained a null byte"),
+        }
+
+        LIBLO_OK
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
+/// Get the active plugins file path for the given game handle.
+///
+/// The active plugins file path is often within the game's local path, but its
+/// name and location varies by game and game configuration, so this function
+/// exposes the path that libloadorder chooses to use.
+///
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
+/// returned.
+#[no_mangle]
+pub unsafe extern "C" fn lo_get_active_plugins_file_path(
+    handle: lo_game_handle,
+    path: *mut *mut c_char,
+) -> c_uint {
+    catch_unwind(|| {
+        if handle.is_null() || path.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
+            Ok(h) => h,
+        };
+
+        let file_path = match handle.game_settings().active_plugins_file().to_str() {
+            Some(p) => p,
+            None => {
+                return error(
+                    LIBLO_ERROR_PATH_ENCODE_FAIL,
+                    "The active plugins file path could not be encoded in UTF-8",
+                )
+            }
+        };
+
+        match to_c_string(file_path) {
+            Ok(x) => *path = x,
+            Err(x) => return error(x, "The filename contained a null byte"),
         }
 
         LIBLO_OK

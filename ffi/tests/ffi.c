@@ -137,6 +137,23 @@ void test_lo_get_implicitly_active_plugins() {
   lo_destroy_handle(handle);
 }
 
+void test_lo_get_active_plugins_file_path() {
+  printf("testing lo_get_active_plugins_file_path()...\n");
+  lo_game_handle handle = create_handle();
+
+  char * path = NULL;
+  unsigned int return_code = lo_get_active_plugins_file_path(handle, &path);
+
+  assert(return_code == 0);
+#ifdef _WIN32
+  assert(strcmp(path, "../../testing-plugins/Oblivion\\plugins.txt") == 0);
+#else
+  assert(strcmp(path, "../../testing-plugins/Oblivion/plugins.txt") == 0);
+#endif
+  lo_free_string(path);
+  lo_destroy_handle(handle);
+}
+
 void test_lo_set_active_plugins() {
   printf("testing lo_set_active_plugins()...\n");
   lo_game_handle handle = create_handle();
@@ -282,6 +299,7 @@ int main(void) {
   test_lo_is_ambiguous();
   test_lo_fix_plugin_lists();
   test_lo_get_implicitly_active_plugins();
+  test_lo_get_active_plugins_file_path();
 
   test_lo_set_active_plugins();
   test_lo_get_active_plugins();
