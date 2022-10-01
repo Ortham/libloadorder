@@ -74,7 +74,7 @@ impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
         let local_app_data_path = app_dirs2::get_data_root(app_dirs2::AppDataType::UserCache)?;
-        let local_path = match appdata_folder_name(game_id) {
+        let local_path = match appdata_folder_name(game_id, game_path) {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,
         };
@@ -163,18 +163,35 @@ impl GameSettings {
     }
 }
 
-fn appdata_folder_name(game_id: GameId) -> Option<&'static str> {
+// The local path can vary depending on where the game was bought from.
+// Skyrim SE and Fallout 4 both have a " MS" suffix added to their local folder
+// name when bought from the Microsoft Store, and Skyrim SE has a " GOG" suffix
+// added when bought from GOG.
+// The logic for checking if a given game install path is for a MS Store game is
+// complicated, costly and not fully understood, so don't attempt it here.
+// However, the logic for checking if a Skyrim SE install is from GOG is simple
+// and relatively quick, so can be done here.
+fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
     match game_id {
         Morrowind => None,
         Oblivion => Some("Oblivion"),
         Skyrim => Some("Skyrim"),
-        SkyrimSE => Some("Skyrim Special Edition"),
+        SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
         SkyrimVR => Some("Skyrim VR"),
         Fallout3 => Some("Fallout3"),
         FalloutNV => Some("FalloutNV"),
         Fallout4 => Some("Fallout4"),
         Fallout4VR => Some("Fallout4VR"),
+    }
+}
+
+fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
+    // Galaxy64.dll is installed by GOG's installer but not by Steam.
+    if game_path.join("Galaxy64.dll").exists() {
+        "Skyrim Special Edition GOG"
+    } else {
+        "Skyrim Special Edition"
     }
 }
 
@@ -463,31 +480,49 @@ mod tests {
 
     #[test]
     fn appdata_folder_name_should_be_mapped_from_game_id() {
-        assert!(appdata_folder_name(GameId::Morrowind).is_none());
+        // The game path is unused for most game IDs.
+        let game_path = Path::new("");
 
-        let mut folder = appdata_folder_name(GameId::Oblivion).unwrap();
+        assert!(appdata_folder_name(GameId::Morrowind, game_path).is_none());
+
+        let mut folder = appdata_folder_name(GameId::Oblivion, game_path).unwrap();
         assert_eq!("Oblivion", folder);
 
-        folder = appdata_folder_name(GameId::Skyrim).unwrap();
+        folder = appdata_folder_name(GameId::Skyrim, game_path).unwrap();
         assert_eq!("Skyrim", folder);
 
-        folder = appdata_folder_name(GameId::SkyrimSE).unwrap();
+        folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
         assert_eq!("Skyrim Special Edition", folder);
 
-        folder = appdata_folder_name(GameId::SkyrimVR).unwrap();
+        folder = appdata_folder_name(GameId::SkyrimVR, game_path).unwrap();
         assert_eq!("Skyrim VR", folder);
 
-        folder = appdata_folder_name(GameId::Fallout3).unwrap();
+        folder = appdata_folder_name(GameId::Fallout3, game_path).unwrap();
         assert_eq!("Fallout3", folder);
 
-        folder = appdata_folder_name(GameId::FalloutNV).unwrap();
+        folder = appdata_folder_name(GameId::FalloutNV, game_path).unwrap();
         assert_eq!("FalloutNV", folder);
 
-        folder = appdata_folder_name(GameId::Fallout4).unwrap();
+        folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
         assert_eq!("Fallout4", folder);
 
-        folder = appdata_folder_name(GameId::Fallout4VR).unwrap();
+        folder = appdata_folder_name(GameId::Fallout4VR, game_path).unwrap();
         assert_eq!("Fallout4VR", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_skyrim_se_should_have_gog_suffix_if_galaxy_dll_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition", folder);
+
+        let dll_path = game_path.join("Galaxy64.dll");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition GOG", folder);
     }
 
     #[test]
