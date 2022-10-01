@@ -3,6 +3,27 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [13.2.0] - 2022-10-01
+
+### Added
+
+- `GameSettings::new()` now sets the local app data folder name for Skyrim SE to
+  `Skyrim Special Edition GOG` if the game install path contains `Galaxy64.dll`,
+  and otherwise uses `Skyrim Special Edition` as before. The `Galaxy64.dll` file
+  is present when GOG's distribution of Skyrim SE is installed.
+
+### Changed
+
+- Updated to Rust's 2018 edition.
+
+### Fixed
+
+- If Oblivion's `Oblivion.ini` could not be found or read, or if it did not
+  contain the `bUseMyGamesDirectory` setting, the game's install path would be
+  used as the parent directory for `plugins.txt`. It now correctly defaults to
+  using the game's local app data directory, and only uses the install path if
+  `bUseMyGamesDirectory=0` is found.
+
 ## [13.1.1] - 2022-09-15
 
 ### Changed

@@ -3,6 +3,23 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [13.2.0] - 2022-10-01
+
+### Added
+
+- `lo_get_active_plugins_file_path()` for getting the active plugins file path
+  that libloadorder uses for a given game handle.
+
+### Changed
+
+- Updated to Rust's 2018 edition.
+- Updated to libloadorder v13.2.0.
+
+### Fixed
+
+- `lo_get_implicitly_active_plugins()` did not check if its `plugins` or
+  `num_plugins` argument values were null.
+
 ## [13.1.1] - 2022-09-15
 
 ### Changed
