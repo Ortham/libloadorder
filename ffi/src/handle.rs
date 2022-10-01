@@ -159,7 +159,7 @@ pub unsafe extern "C" fn lo_create_handle(
 #[no_mangle]
 pub unsafe extern "C" fn lo_destroy_handle(handle: lo_game_handle) {
     if !handle.is_null() {
-        Box::from_raw(handle);
+        drop(Box::from_raw(handle));
     }
 }
 
