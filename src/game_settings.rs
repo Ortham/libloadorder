@@ -201,20 +201,23 @@ fn plugins_file_path(game_id: GameId, game_path: &Path, local_path: &Path) -> Pa
 
 fn use_my_games_directory(ini_path: &Path) -> bool {
     let file = match File::open(ini_path) {
-        Err(_) => return false,
+        // If the ini file isn't present, My Games is used by default.
+        Err(_) => return true,
         Ok(x) => x,
     };
     let mut buf_reader = BufReader::new(file);
     let mut contents = Vec::new();
 
     if buf_reader.read_to_end(&mut contents).is_err() {
-        return false;
+        // If the ini file isn't readable, My Games is used by default.
+        return true;
     }
 
-    WINDOWS_1252
+    // My Games is used if bUseMyGamesDirectory is not present or set to 1.
+    !WINDOWS_1252
         .decode_without_bom_handling(&contents)
         .0
-        .contains("bUseMyGamesDirectory=1")
+        .contains("bUseMyGamesDirectory=0")
 }
 
 fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
@@ -907,12 +910,23 @@ mod tests {
     }
 
     #[test]
-    fn use_my_games_directory_should_be_false_if_the_ini_path_does_not_exist() {
-        assert!(!use_my_games_directory(Path::new("does_not_exist")));
+    fn use_my_games_directory_should_be_true_if_the_ini_path_does_not_exist() {
+        assert!(use_my_games_directory(Path::new("does_not_exist")));
     }
 
     #[test]
-    fn use_my_games_directory_should_be_false_if_the_ini_setting_value_is_not_1() {
+    fn use_my_games_directory_should_be_true_if_the_ini_setting_is_not_present() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("ini.ini");
+        let mut file = File::create(&ini_path).unwrap();
+        file.write_all("...\n\n...".as_bytes())
+            .unwrap();
+
+        assert!(use_my_games_directory(&ini_path));
+    }
+
+    #[test]
+    fn use_my_games_directory_should_be_false_if_the_ini_setting_value_is_0() {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
         let mut file = File::create(&ini_path).unwrap();
@@ -923,7 +937,7 @@ mod tests {
     }
 
     #[test]
-    fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_1() {
+    fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_not_0() {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
         let mut file = File::create(&ini_path).unwrap();
