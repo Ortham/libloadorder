@@ -173,6 +173,7 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
         if handle.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -201,6 +202,7 @@ pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bo
         if handle.is_null() || result.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -239,6 +241,7 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
         if handle.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,

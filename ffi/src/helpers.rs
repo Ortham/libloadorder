@@ -112,5 +112,5 @@ pub unsafe fn to_str_vec<'a>(
     slice::from_raw_parts(array, array_size)
         .iter()
         .map(|c| to_str(*c))
-        .collect::<Result<Vec<&str>, u32>>()
+        .collect()
 }

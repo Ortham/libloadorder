@@ -42,6 +42,7 @@ pub unsafe extern "C" fn lo_get_active_plugins(
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -87,6 +88,7 @@ pub unsafe extern "C" fn lo_set_active_plugins(
         if handle.is_null() || plugins.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -130,6 +132,7 @@ pub unsafe extern "C" fn lo_set_plugin_active(
         if handle.is_null() || plugin.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -174,6 +177,7 @@ pub unsafe extern "C" fn lo_get_plugin_active(
         if handle.is_null() || plugin.is_null() || result.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,

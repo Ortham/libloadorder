@@ -18,7 +18,7 @@
  */
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -186,32 +186,32 @@ fn load_order_path(game_id: GameId, local_path: &Path) -> Option<PathBuf> {
 }
 
 fn plugins_file_path(game_id: GameId, game_path: &Path, local_path: &Path) -> PathBuf {
-    let ini_path = game_path.join("Oblivion.ini");
     match game_id {
-        GameId::Oblivion if ini_path.exists() => if use_my_games_directory(&ini_path) {
-            local_path
-        } else {
-            game_path
-        }
-        .join("plugins.txt"),
         GameId::Morrowind => game_path.join("Morrowind.ini"),
+        GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
         _ => local_path.join("plugins.txt"),
     }
 }
 
+fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> PathBuf {
+    let ini_path = game_path.join("Oblivion.ini");
+
+    let parent_path = if use_my_games_directory(&ini_path) {
+        local_path
+    } else {
+        game_path
+    };
+
+    parent_path.join("plugins.txt")
+}
+
 fn use_my_games_directory(ini_path: &Path) -> bool {
-    let file = match File::open(ini_path) {
-        // If the ini file isn't present, My Games is used by default.
+    let contents = match std::fs::read(ini_path) {
+        // If the ini file isn't present or can't be read, My Games is used by
+        // default.
         Err(_) => return true,
         Ok(x) => x,
     };
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = Vec::new();
-
-    if buf_reader.read_to_end(&mut contents).is_err() {
-        // If the ini file isn't readable, My Games is used by default.
-        return true;
-    }
 
     // My Games is used if bUseMyGamesDirectory is not present or set to 1.
     !WINDOWS_1252
@@ -249,10 +249,9 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
         if file_path.exists() {
             let reader = BufReader::new(File::open(file_path)?);
 
-            let lines = reader.lines().filter_map(|line| {
-                line.ok()
-                    .and_then(|l| if l.is_empty() { None } else { Some(l) })
-            });
+            let lines = reader
+                .lines()
+                .filter_map(|line| line.ok().filter(|l| !l.is_empty()));
 
             plugin_names.extend(lines);
         }
@@ -667,9 +666,8 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
         let ini_path = game_path.join("Oblivion.ini");
-        let mut file = File::create(&ini_path).unwrap();
-        file.write_all("...\nbUseMyGamesDirectory=0\n...".as_bytes())
-            .unwrap();
+
+        std::fs::write(ini_path, "...\nbUseMyGamesDirectory=0\n...").unwrap();
 
         let settings =
             GameSettings::with_local_path(GameId::Oblivion, &game_path, &Path::new("local"))
@@ -918,9 +916,8 @@ mod tests {
     fn use_my_games_directory_should_be_true_if_the_ini_setting_is_not_present() {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
-        let mut file = File::create(&ini_path).unwrap();
-        file.write_all("...\n\n...".as_bytes())
-            .unwrap();
+
+        std::fs::write(&ini_path, "...\n\n...").unwrap();
 
         assert!(use_my_games_directory(&ini_path));
     }
@@ -929,9 +926,8 @@ mod tests {
     fn use_my_games_directory_should_be_false_if_the_ini_setting_value_is_0() {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
-        let mut file = File::create(&ini_path).unwrap();
-        file.write_all("...\nbUseMyGamesDirectory=0\n...".as_bytes())
-            .unwrap();
+
+        std::fs::write(&ini_path, "...\nbUseMyGamesDirectory=0\n...").unwrap();
 
         assert!(!use_my_games_directory(&ini_path));
     }
@@ -940,9 +936,8 @@ mod tests {
     fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_not_0() {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
-        let mut file = File::create(&ini_path).unwrap();
-        file.write_all("...\nbUseMyGamesDirectory=1\n...".as_bytes())
-            .unwrap();
+
+        std::fs::write(&ini_path, "...\nbUseMyGamesDirectory=1\n...").unwrap();
 
         assert!(use_my_games_directory(&ini_path));
     }

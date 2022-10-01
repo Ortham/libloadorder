@@ -22,6 +22,8 @@ use std::path::{Path, PathBuf};
 
 use crate::enums::Error;
 
+pub const GHOST_FILE_EXTENSION: &str = ".ghost";
+
 pub trait GhostablePath {
     fn ghost(&self) -> Result<PathBuf, Error>;
     fn unghost(&self) -> Result<PathBuf, Error>;
@@ -87,7 +89,7 @@ impl GhostablePath for Path {
                 .ok_or_else(|| Error::InvalidPath(self.to_path_buf()))
                 .map(|x| {
                     let mut filename = x.to_os_string();
-                    filename.push(".ghost");
+                    filename.push(GHOST_FILE_EXTENSION);
 
                     self.with_file_name(filename)
                 })

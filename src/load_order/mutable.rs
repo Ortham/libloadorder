@@ -18,8 +18,7 @@
  */
 
 use std::collections::{BTreeMap, HashSet};
-use std::fs::{read_dir, File};
-use std::io::Read;
+use std::fs::read_dir;
 use std::mem;
 use std::path::Path;
 
@@ -179,16 +178,12 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         plugin_name_tuples: Vec<(String, bool)>,
         installed_filenames: Vec<String>,
     ) {
-        let plugins: Vec<Plugin> = {
-            let game_settings = self.game_settings();
-
-            remove_duplicates_icase(plugin_name_tuples, installed_filenames)
-                .into_par_iter()
-                .filter_map(|(filename, active)| {
-                    Plugin::with_active(&filename, game_settings, active).ok()
-                })
-                .collect()
-        };
+        let plugins: Vec<_> = remove_duplicates_icase(plugin_name_tuples, installed_filenames)
+            .into_par_iter()
+            .filter_map(|(filename, active)| {
+                Plugin::with_active(&filename, self.game_settings(), active).ok()
+            })
+            .collect();
 
         for plugin in plugins {
             insert(self, plugin);
@@ -196,7 +191,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        let plugin_names: Vec<String> = self
+        let plugin_names: Vec<_> = self
             .game_settings()
             .implicitly_active_plugins()
             .iter()
@@ -224,7 +219,7 @@ where
         line_mapper,
     )?;
 
-    let plugin_indices: Vec<usize> = plugin_names
+    let plugin_indices: Vec<_> = plugin_names
         .par_iter()
         .filter_map(|p| load_order.index_of(p))
         .collect();
@@ -245,17 +240,15 @@ where
         return Ok(Vec::new());
     }
 
-    let mut content: Vec<u8> = Vec::new();
-    let mut file = File::open(file_path)?;
-    file.read_to_end(&mut content)?;
+    let content = std::fs::read(file_path)?;
 
     // This should never fail, as although Windows-1252 has a few unused bytes
     // they get mapped to C1 control characters.
-    let content = WINDOWS_1252
+    let decoded_content = WINDOWS_1252
         .decode_without_bom_handling_and_without_replacement(&content)
         .ok_or_else(|| Error::DecodeError("invalid sequence".into()))?;
 
-    Ok(content.lines().filter_map(line_mapper).collect())
+    Ok(decoded_content.lines().filter_map(line_mapper).collect())
 }
 
 pub fn plugin_line_mapper(line: &str) -> Option<String> {
@@ -350,10 +343,12 @@ fn get_excess_active_plugin_indices<T: MutableLoadOrder + ?Sized>(load_order: &T
         {
             break;
         }
+
         let can_deactivate = plugin.is_active()
             && !implicitly_active_plugins
                 .iter()
                 .any(|i| plugin.name_matches(i));
+
         if can_deactivate {
             if plugin.is_light_plugin() && light_plugin_active_count > MAX_ACTIVE_LIGHT_PLUGINS {
                 plugin_indices.push(index);
@@ -511,10 +506,8 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     insert_position: usize,
 ) -> Result<Plugin, Error> {
     if let Some(p) = load_order.index_of(plugin_name) {
-        {
-            let plugin = &load_order.plugins()[p];
-            load_order.validate_index(plugin, insert_position)?;
-        }
+        let plugin = &load_order.plugins()[p];
+        load_order.validate_index(plugin, insert_position)?;
 
         Ok(load_order.plugins_mut().remove(p))
     } else {
@@ -620,14 +613,14 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     filename: &str,
 ) -> Result<(), Error> {
-    let index = {
-        let index = load_order.index_of(filename);
-        if index.is_none() && Plugin::is_valid(filename, load_order.game_settings()) {
-            Some(load_order.load_and_insert(filename)?)
-        } else {
-            index
-        }
-    };
+    let index = load_order
+        .index_of(filename)
+        .map(Ok)
+        .or_else(|| {
+            Plugin::is_valid(filename, load_order.game_settings())
+                .then(|| load_order.load_and_insert(filename))
+        })
+        .transpose()?;
 
     if let Some(x) = index {
         load_order.plugins_mut()[x].activate()?;

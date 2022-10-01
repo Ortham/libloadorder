@@ -24,7 +24,7 @@ use unicase::eq;
 
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
-use crate::ghostable_path::GhostablePath;
+use crate::ghostable_path::{GhostablePath, GHOST_FILE_EXTENSION};
 
 const VALID_EXTENSIONS: &[&str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
 
@@ -185,8 +185,8 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
 }
 
 pub fn trim_dot_ghost(string: &str) -> &str {
-    if iends_with_ascii(string, ".ghost") {
-        &string[..(string.len() - 6)]
+    if iends_with_ascii(string, GHOST_FILE_EXTENSION) {
+        &string[..(string.len() - GHOST_FILE_EXTENSION.len())]
     } else {
         string
     }

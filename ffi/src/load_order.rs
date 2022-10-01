@@ -41,6 +41,7 @@ pub unsafe extern "C" fn lo_get_load_order_method(
         if handle.is_null() || method.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -73,6 +74,7 @@ pub unsafe extern "C" fn lo_get_load_order(
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -120,9 +122,11 @@ pub unsafe extern "C" fn lo_set_load_order(
         if handle.is_null() || plugins.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         if num_plugins == 0 {
             return error(LIBLO_ERROR_INVALID_ARGS, "Zero-length plugin array passed.");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -162,6 +166,7 @@ pub unsafe extern "C" fn lo_get_plugin_position(
         if handle.is_null() || plugin.is_null() || index.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -200,6 +205,7 @@ pub unsafe extern "C" fn lo_set_plugin_position(
         if handle.is_null() || plugin.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let mut handle = match (*handle).write() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
@@ -239,6 +245,7 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
         if handle.is_null() || plugin.is_null() {
             return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
         }
+
         let handle = match (*handle).read() {
             Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
             Ok(h) => h,
