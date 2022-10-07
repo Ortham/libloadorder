@@ -165,11 +165,11 @@ impl GameSettings {
 
 // The local path can vary depending on where the game was bought from.
 // Skyrim SE and Fallout 4 both have a " MS" suffix added to their local folder
-// name when bought from the Microsoft Store, and Skyrim SE has a " GOG" suffix
-// added when bought from GOG.
+// name when bought from the Microsoft Store, and Skyrim SE has different folder
+// names depending on whether it was bought on Steam, GOG or Epic.
 // The logic for checking if a given game install path is for a MS Store game is
 // complicated, costly and not fully understood, so don't attempt it here.
-// However, the logic for checking if a Skyrim SE install is from GOG is simple
+// However, the logic for checking where a Skyrim SE install is from is simple
 // and relatively quick, so can be done here.
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
@@ -187,10 +187,14 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
 }
 
 fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
-    // Galaxy64.dll is installed by GOG's installer but not by Steam.
     if game_path.join("Galaxy64.dll").exists() {
+        // Galaxy64.dll is only installed by GOG's installer.
         "Skyrim Special Edition GOG"
+    } else if game_path.join("EOSSDK-Win64-Shipping.dll").exists() {
+        // EOSSDK-Win64-Shipping.dll is only installed by Epic.
+        "Skyrim Special Edition EPIC"
     } else {
+        // If neither file is present it's probably the Steam distribution.
         "Skyrim Special Edition"
     }
 }
@@ -522,6 +526,36 @@ mod tests {
         File::create(&dll_path).unwrap();
 
         folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition GOG", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_skyrim_se_should_have_epic_suffix_if_eossdk_dll_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition", folder);
+
+        let dll_path = game_path.join("EOSSDK-Win64-Shipping.dll");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition EPIC", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_skyrim_se_prefers_gog_suffix_over_epic_suffix() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let dll_path = game_path.join("Galaxy64.dll");
+        File::create(&dll_path).unwrap();
+
+        let dll_path = game_path.join("EOSSDK-Win64-Shipping.dll");
+        File::create(&dll_path).unwrap();
+
+        let folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
         assert_eq!("Skyrim Special Edition GOG", folder);
     }
 
