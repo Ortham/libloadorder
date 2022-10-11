@@ -1,6 +1,6 @@
 [package]
 name = "libloadorder"
-version = "13.2.0"
+version = "13.3.0"
 authors = ["Oliver Hamlet <oliver@ortham.io>"]
 description = "A cross-platform library for manipulating the load order and active status of plugins for the Elder Scrolls and Fallout games."
 documentation = "https://docs.rs/libloadorder"

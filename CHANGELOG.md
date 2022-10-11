@@ -3,6 +3,16 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [13.3.0] - 2022-10-11
+
+### Added
+
+- `GameSettings::new()` now sets the local app data folder name for Skyrim SE to
+  `Skyrim Special Edition EPIC` if the game install path does not contain
+  `Galaxy64.dll` and does contain `EOSSDK-Win64-Shipping.dll`. The
+  `EOSSDK-Win64-Shipping.dll` file is present when the Epic Games Store's
+  distribution of Skyrim SE is installed.
+
 ## [13.2.0] - 2022-10-01
 
 ### Added
