@@ -23,7 +23,6 @@ use std::mem;
 use std::path::Path;
 
 use encoding_rs::WINDOWS_1252;
-use rayon::iter::Either;
 use rayon::prelude::*;
 
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
@@ -85,23 +84,15 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn lookup_plugins(&mut self, active_plugin_names: &[&str]) -> Result<Vec<usize>, Error> {
-        let (existing_plugin_indices, new_plugin_names): (Vec<usize>, Vec<&str>) =
-            active_plugin_names.into_par_iter().partition_map(|n| {
-                match self
-                    .plugins()
+        active_plugin_names
+            .par_iter()
+            .map(|n| {
+                self.plugins()
                     .par_iter()
                     .position_any(|p| p.name_matches(n))
-                {
-                    Some(x) => Either::Left(x),
-                    None => Either::Right(n),
-                }
-            });
-
-        if new_plugin_names.is_empty() {
-            Ok(existing_plugin_indices)
-        } else {
-            Err(Error::PluginNotFound(new_plugin_names[0].to_string()))
-        }
+                    .ok_or_else(|| Error::PluginNotFound(n.to_string()))
+            })
+            .collect()
     }
 
     fn count_normal_plugins(&mut self, existing_plugin_indices: &[usize]) -> usize {
