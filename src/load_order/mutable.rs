@@ -158,12 +158,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         Ok(())
     }
 
-    fn load_and_insert(&mut self, plugin_name: &str) -> Result<usize, Error> {
-        let plugin = Plugin::new(plugin_name, self.game_settings())?;
-
-        Ok(insert(self, plugin))
-    }
-
     fn load_unique_plugins(
         &mut self,
         plugin_name_tuples: Vec<(String, bool)>,
@@ -182,13 +176,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        let plugin_names: Vec<_> = self
-            .game_settings()
-            .implicitly_active_plugins()
-            .iter()
-            .filter(|p| !self.is_active(p))
-            .cloned()
-            .collect();
+        let plugin_names = self.game_settings().implicitly_active_plugins().to_vec();
 
         for plugin_name in plugin_names {
             activate_unvalidated(self, &plugin_name)?;
@@ -604,20 +592,17 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     filename: &str,
 ) -> Result<(), Error> {
-    let index = load_order
-        .index_of(filename)
-        .map(Ok)
-        .or_else(|| {
-            Plugin::is_valid(filename, load_order.game_settings())
-                .then(|| load_order.load_and_insert(filename))
-        })
-        .transpose()?;
-
-    if let Some(x) = index {
-        load_order.plugins_mut()[x].activate()?;
+    if let Some(x) = load_order.index_of(filename) {
+        load_order.plugins_mut()[x].activate()
+    } else {
+        // Ignore any errors trying to load the plugin to save checking if it's
+        // valid and then loading it if it is.
+        Plugin::with_active(filename, load_order.game_settings(), true)
+            .map(|plugin| {
+                insert(load_order, plugin);
+            })
+            .or(Ok(()))
     }
-
-    Ok(())
 }
 
 fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {

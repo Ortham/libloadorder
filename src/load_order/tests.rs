@@ -32,6 +32,8 @@ use crate::load_order::strict_encode;
 use crate::plugin::Plugin;
 use crate::tests::copy_to_test_dir;
 
+use super::mutable::MutableLoadOrder;
+
 pub fn write_load_order_file<T: AsRef<str> + Display>(
     game_settings: &GameSettings,
     filenames: &[T],
@@ -119,4 +121,17 @@ pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
     file.write(&[value])?;
 
     Ok(())
+}
+
+pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
+    let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+
+    match load_order.insert_position(&plugin) {
+        Some(position) => {
+            load_order.plugins_mut().insert(position, plugin);
+        }
+        None => {
+            load_order.plugins_mut().push(plugin);
+        }
+    }
 }

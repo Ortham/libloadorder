@@ -970,9 +970,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        load_order
-            .load_and_insert("Blank - Master Dependent.esp")
-            .unwrap();
+        load_and_insert(&mut load_order, "Blank - Master Dependent.esp");
         let num_plugins = load_order.plugins().len();
         assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
         assert_eq!(2, load_order.index_of("Blank.esp").unwrap());
@@ -984,9 +982,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
 
-        load_order
-            .load_and_insert("Blank - Master Dependent.esp")
-            .unwrap();
+        load_and_insert(&mut load_order, "Blank - Master Dependent.esp");
         assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
         assert!(load_order.is_active("Blank.esp"));
 

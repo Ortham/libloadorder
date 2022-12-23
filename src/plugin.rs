@@ -144,21 +144,6 @@ impl Plugin {
     pub fn deactivate(&mut self) {
         self.active = false;
     }
-
-    pub fn is_valid(filename: &str, game_settings: &GameSettings) -> bool {
-        if !has_valid_extension(filename, game_settings.id()) {
-            return false;
-        }
-
-        match game_settings
-            .plugins_directory()
-            .join(filename)
-            .resolve_path()
-        {
-            Err(_) => false,
-            Ok(ref x) => esplugin::Plugin::is_valid(game_settings.id().to_esplugin_id(), x, true),
-        }
-    }
 }
 
 fn has_valid_extension(filename: &str, game: GameId) -> bool {
@@ -427,71 +412,5 @@ mod tests {
 
         assert!(!plugin.is_active());
         assert!(game_dir.join("Data").join("Blank.esp").exists());
-    }
-
-    #[test]
-    fn is_valid_should_return_true_for_a_valid_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-        assert!(Plugin::is_valid("Blank.esp", &settings));
-
-        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
-        assert!(Plugin::is_valid("Blank.esm", &settings));
-
-        copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
-        assert!(!Plugin::is_valid("Blank.esl", &settings));
-
-        copy_to_test_dir(
-            "Blank - Different.esp",
-            "Blank - Different.esp.ghost",
-            &settings,
-        );
-        assert!(Plugin::is_valid("Blank - Different.esp", &settings));
-
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm.ghost",
-            &settings,
-        );
-        assert!(Plugin::is_valid("Blank - Different.esm", &settings));
-
-        let settings =
-            GameSettings::with_local_path(GameId::SkyrimSE, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.esm", "Blank.esl", &settings);
-        assert!(Plugin::is_valid("Blank.esl", &settings));
-    }
-
-    #[test]
-    fn is_valid_should_return_false_if_the_plugin_does_not_have_a_esp_or_esm_extension() {
-        let tmp_dir = tempdir().unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.esp", "Blank.pse", &settings);
-        assert!(!Plugin::is_valid("Blank.pse", &settings));
-    }
-
-    #[test]
-    fn is_valid_should_return_false_if_the_path_given_is_not_a_valid_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let game_dir = tmp_dir.path();
-
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_dir, &PathBuf::default())
-                .unwrap();
-
-        copy_to_test_dir("Blank.bsa", "Blank.esp", &settings);
-        assert!(!Plugin::is_valid("Blank.esp", &settings));
     }
 }

@@ -174,11 +174,11 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
     }
 
     for plugin_name in load_order.game_settings().implicitly_active_plugins() {
-        if !Plugin::is_valid(plugin_name, load_order.game_settings()) {
-            continue;
-        }
-
-        if !active_plugin_names.iter().any(|p| eq(*p, plugin_name)) {
+        // If the plugin isn't installed, don't check that it's in the active
+        // plugins list. Installed plugins will have already been loaded.
+        if load_order.index_of(plugin_name).is_some()
+            && !active_plugin_names.iter().any(|p| eq(*p, plugin_name))
+        {
             return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
         }
     }
@@ -214,7 +214,7 @@ mod tests {
     use crate::game_settings::GameSettings;
     use crate::load_order::mutable::{generic_insert_position, MutableLoadOrder};
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-    use crate::load_order::tests::{mock_game_files, set_master_flag};
+    use crate::load_order::tests::{load_and_insert, mock_game_files, set_master_flag};
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -443,7 +443,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.load_and_insert(&plugin).unwrap();
+            load_and_insert(&mut load_order, &plugin);
             activate(&mut load_order, &plugin).unwrap();
         }
 
@@ -459,7 +459,7 @@ mod tests {
         for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
-            load_order.load_and_insert(&plugin).unwrap();
+            load_and_insert(&mut load_order, &plugin);
             activate(&mut load_order, &plugin).unwrap();
         }
 
