@@ -68,7 +68,7 @@ impl TimestampBasedLoadOrder {
 
         let prelude = get_file_prelude(self.game_settings())?;
 
-        let file = File::create(&self.game_settings().active_plugins_file())?;
+        let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         writer.write_all(&prelude)?;
         for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {

@@ -53,7 +53,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn find_plugins_in_dir(&self) -> Vec<String> {
-        let entries = match read_dir(&self.game_settings().plugins_directory()) {
+        let entries = match read_dir(self.game_settings().plugins_directory()) {
             Ok(x) => x,
             _ => return Vec::new(),
         };

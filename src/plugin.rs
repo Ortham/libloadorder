@@ -116,7 +116,7 @@ impl Plugin {
         // WritableLoadOrder::save() could lead to libloadorder not setting all
         // the timestamps it needs to and producing an incorrect load order.
         set_file_times(
-            &self.data.path(),
+            self.data.path(),
             FileTime::from_system_time(SystemTime::now()),
             FileTime::from_system_time(time),
         )?;
