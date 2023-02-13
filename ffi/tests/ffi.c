@@ -121,6 +121,17 @@ void test_lo_is_ambiguous() {
   lo_destroy_handle(handle);
 }
 
+void test_lo_had_excess_active_plugins() {
+  printf("testing lo_had_excess_active_plugins()...\n");
+  lo_game_handle handle = create_handle();
+
+  bool had_excess = true;
+  unsigned int return_code = lo_is_ambiguous(handle, &had_excess);
+
+  assert(return_code == 0);
+  lo_destroy_handle(handle);
+}
+
 void test_lo_get_implicitly_active_plugins() {
   printf("testing lo_get_load_order()...\n");
   lo_game_handle handle = create_fo4_handle();
@@ -297,6 +308,7 @@ int main(void) {
 
   test_lo_create_handle();
   test_lo_is_ambiguous();
+  test_lo_had_excess_active_plugins();
   test_lo_fix_plugin_lists();
   test_lo_get_implicitly_active_plugins();
   test_lo_get_active_plugins_file_path();

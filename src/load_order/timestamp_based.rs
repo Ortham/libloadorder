@@ -43,6 +43,7 @@ const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 pub struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
+    had_excess_active_plugins: bool,
 }
 
 impl TimestampBasedLoadOrder {
@@ -50,6 +51,7 @@ impl TimestampBasedLoadOrder {
         Self {
             game_settings,
             plugins: Vec::new(),
+            had_excess_active_plugins: false,
         }
     }
 
@@ -119,7 +121,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.deactivate_excess_plugins();
+        self.had_excess_active_plugins = self.deactivate_excess_plugins();
 
         Ok(())
     }
@@ -127,17 +129,19 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn save(&mut self) -> Result<(), Error> {
         let timestamps = padded_unique_timestamps(self.plugins());
 
-        let result: Result<Vec<()>, Error> = self
-            .plugins_mut()
+        self.plugins_mut()
             .par_iter_mut()
             .zip(timestamps.into_par_iter())
-            .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
-            .collect();
+            .try_for_each(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))?;
 
-        match result {
-            Ok(_) => self.save_active_plugins(),
-            Err(e) => Err(e),
-        }
+        self.save_active_plugins()?;
+
+        // libloadorder doesn't write excess active plugins so saving the load
+        // order means there's no longer any difference between what state is
+        // held in memory and what has been written.
+        self.had_excess_active_plugins = false;
+
+        Ok(())
     }
 
     fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
@@ -174,6 +178,13 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
             .all(|plugin| set.insert(plugin.modification_time()));
 
         Ok(!all_timestamps_unique)
+    }
+
+    /// True if the load order had too many active plugins when it was loaded.
+    /// Saving the load order sets this to false, as libloadorder does not
+    /// write invalid load orders.
+    fn had_excess_active_plugins(&self) -> bool {
+        self.had_excess_active_plugins
     }
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
@@ -270,6 +281,7 @@ mod tests {
         TimestampBasedLoadOrder {
             game_settings,
             plugins,
+            had_excess_active_plugins: false,
         }
     }
 
@@ -465,6 +477,8 @@ mod tests {
         let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -523,6 +537,8 @@ mod tests {
         let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -545,6 +561,8 @@ mod tests {
         let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -582,6 +600,8 @@ mod tests {
             assert_eq!(plugins[i], active_plugin_names[i]);
         }
         assert_eq!(plugins, active_plugin_names);
+
+        assert!(load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -718,6 +738,19 @@ mod tests {
             .read_to_string(&mut content)
             .unwrap();
         assert!(content.contains("isrealmorrowindini=false\n[Game Files]\n"));
+    }
+
+    #[test]
+    fn save_should_reset_deactivated_excess_plugins_to_false() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        load_order.had_excess_active_plugins = true;
+
+        assert!(load_order.had_excess_active_plugins());
+
+        load_order.save().unwrap();
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]

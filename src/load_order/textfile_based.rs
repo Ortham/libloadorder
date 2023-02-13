@@ -40,6 +40,7 @@ use crate::plugin::{trim_dot_ghost, Plugin};
 pub struct TextfileBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
+    had_excess_active_plugins: bool,
 }
 
 impl TextfileBasedLoadOrder {
@@ -47,6 +48,7 @@ impl TextfileBasedLoadOrder {
         Self {
             game_settings,
             plugins: Vec::new(),
+            had_excess_active_plugins: false,
         }
     }
 
@@ -149,14 +151,21 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.deactivate_excess_plugins();
+        self.had_excess_active_plugins = self.deactivate_excess_plugins();
 
         Ok(())
     }
 
     fn save(&mut self) -> Result<(), Error> {
         self.save_load_order()?;
-        self.save_active_plugins()
+        self.save_active_plugins()?;
+
+        // libloadorder doesn't write excess active plugins so saving the load
+        // order means there's no longer any difference between what state is
+        // held in memory and what has been written.
+        self.had_excess_active_plugins = false;
+
+        Ok(())
     }
 
     fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
@@ -227,6 +236,13 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             .all(|plugin| set.contains(&plugin.name().to_lowercase()));
 
         Ok(!all_plugins_listed)
+    }
+
+    /// True if the load order had too many active plugins when it was loaded.
+    /// Saving the load order sets this to false, as libloadorder does not
+    /// write invalid load orders.
+    fn had_excess_active_plugins(&self) -> bool {
+        self.had_excess_active_plugins
     }
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
@@ -335,6 +351,7 @@ mod tests {
         TextfileBasedLoadOrder {
             game_settings,
             plugins,
+            had_excess_active_plugins: false,
         }
     }
 
@@ -627,6 +644,8 @@ mod tests {
         let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blank - Master Dependent.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -733,6 +752,8 @@ mod tests {
             assert_eq!(plugins[i], active_plugin_names[i]);
         }
         assert_eq!(plugins, active_plugin_names);
+
+        assert!(load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -831,6 +852,19 @@ mod tests {
             vec!["Skyrim.esm", "Blank.esp"],
             load_order.active_plugin_names()
         );
+    }
+
+    #[test]
+    fn save_should_reset_deactivated_excess_plugins_to_false() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        load_order.had_excess_active_plugins = true;
+
+        assert!(load_order.had_excess_active_plugins());
+
+        load_order.save().unwrap();
+
+        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
