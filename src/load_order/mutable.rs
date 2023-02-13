@@ -576,7 +576,7 @@ fn remove_duplicates_icase(
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .into_iter()
         .rev()
-        .filter(|&(ref string, _)| set.insert(trim_dot_ghost(string).to_lowercase()))
+        .filter(|(string, _)| set.insert(trim_dot_ghost(string).to_lowercase()))
         .collect();
 
     unique_tuples.reverse();
