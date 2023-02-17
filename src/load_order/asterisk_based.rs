@@ -36,7 +36,6 @@ use crate::plugin::{trim_dot_ghost, Plugin};
 pub struct AsteriskBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
-    had_excess_active_plugins: bool,
 }
 
 impl AsteriskBasedLoadOrder {
@@ -44,7 +43,6 @@ impl AsteriskBasedLoadOrder {
         Self {
             game_settings,
             plugins: Vec::new(),
-            had_excess_active_plugins: false,
         }
     }
 
@@ -105,7 +103,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.had_excess_active_plugins = self.deactivate_excess_plugins();
+        self.deactivate_excess_plugins();
 
         Ok(())
     }
@@ -126,11 +124,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             writer.write_all(&strict_encode(plugin.name())?)?;
             writeln!(writer)?;
         }
-
-        // libloadorder doesn't write excess active plugins so saving the load
-        // order means there's no longer any difference between what state is
-        // held in memory and what has been written.
-        self.had_excess_active_plugins = false;
 
         Ok(())
     }
@@ -215,13 +208,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         Ok(!all_plugins_listed)
     }
 
-    /// True if the load order had too many active plugins when it was loaded.
-    /// Saving the load order sets this to false, as libloadorder does not
-    /// write invalid load orders.
-    fn had_excess_active_plugins(&self) -> bool {
-        self.had_excess_active_plugins
-    }
-
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
         activate(self, plugin_name)
     }
@@ -268,7 +254,6 @@ mod tests {
         AsteriskBasedLoadOrder {
             game_settings,
             plugins,
-            had_excess_active_plugins: false,
         }
     }
 
@@ -657,7 +642,6 @@ mod tests {
         let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
-        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -682,8 +666,6 @@ mod tests {
         assert_eq!(4351, active_plugin_names.len());
         assert_eq!(plugins[..255], active_plugin_names[..255]);
         assert_eq!(plugins[261..4357], active_plugin_names[255..]);
-
-        assert!(load_order.had_excess_active_plugins());
     }
 
     #[test]
@@ -806,19 +788,6 @@ mod tests {
             vec!["*Blank.esp", "Blank - Different.esp", "ghosted.esm"],
             lines
         );
-    }
-
-    #[test]
-    fn save_should_reset_deactivated_excess_plugins_to_false() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-        load_order.had_excess_active_plugins = true;
-
-        assert!(load_order.had_excess_active_plugins());
-
-        load_order.save().unwrap();
-
-        assert!(!load_order.had_excess_active_plugins());
     }
 
     #[test]

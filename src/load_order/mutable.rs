@@ -107,13 +107,10 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         }
     }
 
-    fn deactivate_excess_plugins(&mut self) -> bool {
-        let indices = get_excess_active_plugin_indices(self);
-        for index in &indices {
-            self.plugins_mut()[*index].deactivate();
+    fn deactivate_excess_plugins(&mut self) {
+        for index in get_excess_active_plugin_indices(self) {
+            self.plugins_mut()[index].deactivate();
         }
-
-        !indices.is_empty()
     }
 
     fn move_or_insert_plugin_with_index(

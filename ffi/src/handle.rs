@@ -218,39 +218,6 @@ pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bo
     .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
-/// Checks if the load order had too many active plugins when it was last read or written.
-///
-/// If libloadorder reads a load order with more active plugins than the game supports, any active
-/// plugins past the game's limit will be treated as though they are inactive, and will be
-/// deactivated when libloadorder saves the load order. Since libloadorder does not allow invalid
-/// load orders to be written, this will always return false after the load order has been
-/// modified by libloadorder.
-///
-/// Outputs `true` if there were too many active plugins, and false otherwise.
-///
-/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
-#[no_mangle]
-pub unsafe extern "C" fn lo_had_excess_active_plugins(
-    handle: lo_game_handle,
-    result: *mut bool,
-) -> c_uint {
-    catch_unwind(|| {
-        if handle.is_null() || result.is_null() {
-            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
-        }
-
-        let handle = match (*handle).read() {
-            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
-            Ok(h) => h,
-        };
-
-        *result = handle.had_excess_active_plugins();
-
-        LIBLO_OK
-    })
-    .unwrap_or(LIBLO_ERROR_PANICKED)
-}
-
 /// Fix up the text file(s) used by the load order and active plugins systems.
 ///
 /// This checks that the load order and active plugin lists conform to libloadorder's validity

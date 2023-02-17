@@ -44,8 +44,6 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
 
     fn is_ambiguous(&self) -> Result<bool, Error>;
 
-    fn had_excess_active_plugins(&self) -> bool;
-
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error>;
 
     fn deactivate(&mut self, plugin_name: &str) -> Result<(), Error>;
