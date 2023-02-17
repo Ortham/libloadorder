@@ -103,8 +103,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.deactivate_excess_plugins();
-
         Ok(())
     }
 
@@ -651,21 +649,6 @@ mod tests {
 
         assert!(load_order.load().is_ok());
         assert_eq!(1, load_order.active_plugin_names().len());
-    }
-
-    #[test]
-    fn load_should_deactivate_excess_normal_plugins_and_light_masters_using_separate_limits() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        let plugins = prepare_bulk_plugins(load_order.game_settings());
-
-        load_order.load().unwrap();
-        let active_plugin_names = load_order.active_plugin_names();
-
-        assert_eq!(4351, active_plugin_names.len());
-        assert_eq!(plugins[..255], active_plugin_names[..255]);
-        assert_eq!(plugins[261..4357], active_plugin_names[255..]);
     }
 
     #[test]

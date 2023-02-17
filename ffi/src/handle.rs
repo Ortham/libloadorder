@@ -227,10 +227,6 @@ pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bo
 /// For the case of a plugin appearing multiple times in a load order / active plugin list,
 /// libloadorder discards all but the last instance of that plugin.
 ///
-/// For the case of more than 255 plugins being active, libloadorder deactivates as many plugins as
-/// required to bring the number of plugins active below 256, starting from the end of the load
-/// order and working towards the beginning.
-///
 /// This can be useful for when plugins are uninstalled manually or by a utility that does not also
 /// update the load order / active plugins systems correctly.
 ///

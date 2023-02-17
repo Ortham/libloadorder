@@ -119,8 +119,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.deactivate_excess_plugins();
-
         Ok(())
     }
 
@@ -545,43 +543,6 @@ mod tests {
         let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
-    }
-
-    #[test]
-    fn load_should_deactivate_excess_plugins() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
-
-        let mut plugins: Vec<String> = Vec::new();
-        plugins.push(load_order.game_settings().master_file().to_string());
-        for i in 0..260 {
-            plugins.push(format!("Blank{}.esm", i));
-            copy_to_test_dir(
-                "Blank.esm",
-                &plugins.last().unwrap(),
-                load_order.game_settings(),
-            );
-        }
-
-        {
-            let plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
-            write_active_plugins_file(load_order.game_settings(), &plugins_as_ref);
-            set_timestamps(
-                &load_order.game_settings().plugins_directory(),
-                &plugins_as_ref,
-            );
-        }
-
-        plugins = plugins[0..255].to_vec();
-
-        load_order.load().unwrap();
-        let active_plugin_names = load_order.active_plugin_names();
-
-        assert_eq!(255, active_plugin_names.len());
-        for i in 0..255 {
-            assert_eq!(plugins[i], active_plugin_names[i]);
-        }
-        assert_eq!(plugins, active_plugin_names);
     }
 
     #[test]

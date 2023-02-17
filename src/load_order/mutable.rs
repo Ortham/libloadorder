@@ -107,12 +107,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         }
     }
 
-    fn deactivate_excess_plugins(&mut self) {
-        for index in get_excess_active_plugin_indices(self) {
-            self.plugins_mut()[index].deactivate();
-        }
-    }
-
     fn move_or_insert_plugin_with_index(
         &mut self,
         plugin_name: &str,
@@ -308,38 +302,6 @@ fn count_plugins(
         .iter()
         .filter(|i| existing_plugins[**i].is_light_plugin() == count_light_plugins)
         .count()
-}
-
-fn get_excess_active_plugin_indices<T: MutableLoadOrder + ?Sized>(load_order: &T) -> Vec<usize> {
-    let implicitly_active_plugins = load_order.game_settings().implicitly_active_plugins();
-    let mut normal_active_count = load_order.count_active_normal_plugins();
-    let mut light_plugin_active_count = load_order.count_active_light_plugins();
-
-    let mut plugin_indices: Vec<usize> = Vec::new();
-    for (index, plugin) in load_order.plugins().iter().enumerate().rev() {
-        if normal_active_count <= MAX_ACTIVE_NORMAL_PLUGINS
-            && light_plugin_active_count <= MAX_ACTIVE_LIGHT_PLUGINS
-        {
-            break;
-        }
-
-        let can_deactivate = plugin.is_active()
-            && !implicitly_active_plugins
-                .iter()
-                .any(|i| plugin.name_matches(i));
-
-        if can_deactivate {
-            if plugin.is_light_plugin() && light_plugin_active_count > MAX_ACTIVE_LIGHT_PLUGINS {
-                plugin_indices.push(index);
-                light_plugin_active_count -= 1;
-            } else if !plugin.is_light_plugin() && normal_active_count > MAX_ACTIVE_NORMAL_PLUGINS {
-                plugin_indices.push(index);
-                normal_active_count -= 1;
-            }
-        }
-    }
-
-    plugin_indices
 }
 
 fn validate_master_file_index(

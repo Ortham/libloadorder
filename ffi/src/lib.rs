@@ -100,7 +100,11 @@
 //! there may be additional conditions that may be enforced by the game.
 //!
 //! Libloadorder is less strict when loading load orders and will adjust them at load time to be
-//! valid, similar to game behaviour.
+//! valid, similar to game behaviour. The exception to this adjustment is that the set of active
+//! plugins is not reduced in size if too many plugins are active, so that it is preserved when
+//! changing the order in which plugins are loaded. As such, while libloadorder will refuse to
+//! activate too many plugins, it will preserve a load order that already has too many plugins
+//! activated.
 
 use std::cell::RefCell;
 use std::ffi::CString;

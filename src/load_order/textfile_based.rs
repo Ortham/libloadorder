@@ -149,8 +149,6 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.deactivate_excess_plugins();
-
         Ok(())
     }
 
@@ -694,45 +692,6 @@ mod tests {
 
         assert!(load_order.load().is_ok());
         assert_eq!(1, load_order.active_plugin_names().len());
-    }
-
-    #[test]
-    fn load_should_deactivate_excess_plugins_not_including_implicitly_active_plugins() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let mut plugins: Vec<String> = Vec::new();
-        plugins.push(load_order.game_settings().master_file().to_string());
-        for i in 0..260 {
-            plugins.push(format!("Blank{}.esm", i));
-            copy_to_test_dir(
-                "Blank - Different.esm",
-                &plugins.last().unwrap(),
-                load_order.game_settings(),
-            );
-        }
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-
-        {
-            let plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
-            write_active_plugins_file(load_order.game_settings(), &plugins_as_ref);
-            set_timestamps(
-                &load_order.game_settings().plugins_directory(),
-                &plugins_as_ref,
-            );
-        }
-
-        plugins = plugins[0..254].to_vec();
-        plugins.push("Update.esm".to_string());
-
-        load_order.load().unwrap();
-        let active_plugin_names = load_order.active_plugin_names();
-
-        assert_eq!(255, active_plugin_names.len());
-        for i in 0..255 {
-            assert_eq!(plugins[i], active_plugin_names[i]);
-        }
-        assert_eq!(plugins, active_plugin_names);
     }
 
     #[test]
