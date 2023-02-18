@@ -30,27 +30,10 @@ use crate::enums::Error;
 use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
-pub const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
-pub const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
-
 pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
-
-    fn count_active_normal_plugins(&self) -> usize {
-        self.plugins()
-            .iter()
-            .filter(|p| !p.is_light_plugin() && p.is_active())
-            .count()
-    }
-
-    fn count_active_light_plugins(&self) -> usize {
-        self.plugins()
-            .iter()
-            .filter(|p| p.is_light_plugin() && p.is_active())
-            .count()
-    }
 
     fn find_plugins_in_dir(&self) -> Vec<String> {
         let entries = match read_dir(self.game_settings().plugins_directory()) {
@@ -93,18 +76,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
                     .ok_or_else(|| Error::PluginNotFound(n.to_string()))
             })
             .collect()
-    }
-
-    fn count_normal_plugins(&mut self, existing_plugin_indices: &[usize]) -> usize {
-        count_plugins(self.plugins(), existing_plugin_indices, false)
-    }
-
-    fn count_light_plugins(&mut self, existing_plugin_indices: &[usize]) -> usize {
-        if self.game_settings().id().supports_light_plugins() {
-            count_plugins(self.plugins(), existing_plugin_indices, true)
-        } else {
-            0
-        }
     }
 
     fn move_or_insert_plugin_with_index(
@@ -291,17 +262,6 @@ fn to_plugin(
         None => Plugin::new(plugin_name, game_settings),
         Some(x) => Ok(x.clone()),
     }
-}
-
-fn count_plugins(
-    existing_plugins: &[Plugin],
-    existing_plugin_indices: &[usize],
-    count_light_plugins: bool,
-) -> usize {
-    existing_plugin_indices
-        .iter()
-        .filter(|i| existing_plugins[**i].is_light_plugin() == count_light_plugins)
-        .count()
 }
 
 fn validate_master_file_index(

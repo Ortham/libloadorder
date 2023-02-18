@@ -22,10 +22,13 @@ use std::path::Path;
 
 use unicase::eq;
 
-use super::mutable::{MutableLoadOrder, MAX_ACTIVE_LIGHT_PLUGINS, MAX_ACTIVE_NORMAL_PLUGINS};
-use super::readable::ReadableLoadOrder;
+use super::mutable::MutableLoadOrder;
+use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
 use crate::plugin::Plugin;
+
+const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
+const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 
 pub trait WritableLoadOrder: ReadableLoadOrder {
     fn load(&mut self) -> Result<(), Error>;
@@ -123,11 +126,42 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+struct PluginCounts {
+    light: usize,
+    normal: usize,
+}
+
+fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCounts {
+    let mut counts = PluginCounts::default();
+
+    for plugin in load_order.plugins().iter().filter(|p| p.is_active()) {
+        if plugin.is_light_plugin() {
+            counts.light += 1;
+        } else {
+            counts.normal += 1;
+        }
+    }
+
+    counts
+}
+
+fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize]) -> PluginCounts {
+    let mut counts = PluginCounts::default();
+
+    for index in existing_plugin_indexes {
+        if existing_plugins[*index].is_light_plugin() {
+            counts.light += 1;
+        } else {
+            counts.normal += 1;
+        }
+    }
+
+    counts
+}
+
 pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
-    let at_max_active_normal_plugins =
-        load_order.count_active_normal_plugins() == MAX_ACTIVE_NORMAL_PLUGINS;
-    let at_max_active_light_plugins =
-        load_order.count_active_light_plugins() == MAX_ACTIVE_LIGHT_PLUGINS;
+    let counts = count_active_plugins(load_order);
 
     let plugin = match load_order
         .plugins_mut()
@@ -138,14 +172,19 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
         None => return Err(Error::PluginNotFound(plugin_name.to_string())),
     };
 
-    if !plugin.is_active()
-        && ((!plugin.is_light_plugin() && at_max_active_normal_plugins)
-            || (plugin.is_light_plugin() && at_max_active_light_plugins))
-    {
-        Err(Error::TooManyActivePlugins)
-    } else {
-        plugin.activate()
+    if !plugin.is_active() {
+        let is_light = plugin.is_light_plugin();
+
+        if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
+            || (!is_light && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
+        {
+            return Err(Error::TooManyActivePlugins);
+        } else {
+            plugin.activate()?;
+        }
     }
+
+    Ok(())
 }
 
 pub fn deactivate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
@@ -167,9 +206,9 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 ) -> Result<(), Error> {
     let existing_plugin_indices = load_order.lookup_plugins(active_plugin_names)?;
 
-    if load_order.count_normal_plugins(&existing_plugin_indices) > MAX_ACTIVE_NORMAL_PLUGINS
-        || load_order.count_light_plugins(&existing_plugin_indices) > MAX_ACTIVE_LIGHT_PLUGINS
-    {
+    let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
+
+    if counts.normal > MAX_ACTIVE_NORMAL_PLUGINS || counts.light > MAX_ACTIVE_LIGHT_PLUGINS {
         return Err(Error::TooManyActivePlugins);
     }
 
