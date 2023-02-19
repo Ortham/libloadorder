@@ -20,7 +20,7 @@ use crate::game_settings::GameSettings;
 use crate::plugin::Plugin;
 
 pub trait ReadableLoadOrderBase {
-    fn plugins(&self) -> &Vec<Plugin>;
+    fn plugins(&self) -> &[Plugin];
 
     fn game_settings_base(&self) -> &GameSettings;
 }
@@ -96,7 +96,7 @@ mod tests {
             &self.game_settings
         }
 
-        fn plugins(&self) -> &Vec<Plugin> {
+        fn plugins(&self) -> &[Plugin] {
             &self.plugins
         }
     }

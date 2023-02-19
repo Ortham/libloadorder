@@ -545,7 +545,7 @@ mod tests {
             &self.game_settings
         }
 
-        fn plugins(&self) -> &Vec<Plugin> {
+        fn plugins(&self) -> &[Plugin] {
             &self.plugins
         }
     }
