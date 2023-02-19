@@ -135,7 +135,11 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        if plugin_names.is_empty() || !eq(plugin_names[0], self.game_settings().master_file()) {
+        let is_game_master_first = plugin_names
+            .first()
+            .map(|name| eq(*name, self.game_settings().master_file()))
+            .unwrap_or(false);
+        if !is_game_master_first {
             return Err(Error::GameMasterMustLoadFirst);
         }
 

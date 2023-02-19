@@ -53,7 +53,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
     fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
         let mut filenames = self.find_plugins_in_dir();
-        filenames.sort();
+        filenames.sort_unstable();
 
         filenames
     }
@@ -254,14 +254,13 @@ fn to_plugin(
     existing_plugins: &[Plugin],
     game_settings: &GameSettings,
 ) -> Result<Plugin, Error> {
-    let existing_plugin = existing_plugins
+    existing_plugins
         .par_iter()
-        .find_any(|p| p.name_matches(plugin_name));
-
-    match existing_plugin {
-        None => Plugin::new(plugin_name, game_settings),
-        Some(x) => Ok(x.clone()),
-    }
+        .find_any(|p| p.name_matches(plugin_name))
+        .map_or_else(
+            || Plugin::new(plugin_name, game_settings),
+            |p| Ok(p.clone()),
+        )
 }
 
 fn validate_master_file_index(
@@ -331,12 +330,12 @@ fn validate_non_master_file_index(
     }
 
     // Check that the next master file has this plugin as a master.
-    let next_master_pos = match plugins.iter().skip(index).position(|p| p.is_master_file()) {
+    let next_master = match plugins.iter().skip(index).find(|p| p.is_master_file()) {
         None => return Ok(()),
-        Some(i) => index + i,
+        Some(p) => p,
     };
 
-    if plugins[next_master_pos]
+    if next_master
         .masters()?
         .iter()
         .any(|m| plugin.name_matches(m))
@@ -379,17 +378,7 @@ fn move_elements<T>(vec: &mut Vec<T>, mut from_to_indices: BTreeMap<usize, usize
     // this function is likely to be called with empty or very small maps, so
     // just loop through it after each move and increment any affected to_index
     // values.
-    while !from_to_indices.is_empty() {
-        // This is a bit gnarly, but it's just popping of the front element.
-        let from_index = *from_to_indices
-            .iter()
-            .next()
-            .expect("map should not be empty")
-            .0;
-        let to_index = from_to_indices
-            .remove(&from_index)
-            .expect("map key should exist");
-
+    while let Some((from_index, to_index)) = from_to_indices.pop_first() {
         let element = vec.remove(from_index);
         vec.insert(to_index, element);
 
@@ -514,8 +503,12 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     filename: &str,
 ) -> Result<(), Error> {
-    if let Some(x) = load_order.index_of(filename) {
-        load_order.plugins_mut()[x].activate()
+    if let Some(plugin) = load_order
+        .plugins_mut()
+        .into_iter()
+        .find(|p| p.name_matches(filename))
+    {
+        plugin.activate()
     } else {
         // Ignore any errors trying to load the plugin to save checking if it's
         // valid and then loading it if it is.

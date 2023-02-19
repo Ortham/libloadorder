@@ -205,7 +205,7 @@ fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<
         line = regex
             .captures(line)
             .and_then(|c| c.get(1))
-            .map_or(&line[0..0], |m| m.as_str());
+            .map_or("", |m| m.as_str());
     }
 
     if line.is_empty() || line.starts_with('#') {
