@@ -176,7 +176,7 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
     match game_id {
         Morrowind => None,
         Oblivion => Some("Oblivion"),
-        Skyrim => Some("Skyrim"),
+        Skyrim => Some(skyrim_appdata_folder_name(game_path)),
         SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
         SkyrimVR => Some("Skyrim VR"),
         Fallout3 => Some("Fallout3"),
@@ -186,8 +186,26 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
     }
 }
 
+fn skyrim_appdata_folder_name(game_path: &Path) -> &'static str {
+    if game_path.join("Enderal Launcher.exe").exists() {
+        // It's not actually Skyrim, it's Enderal.
+        "enderal"
+    } else {
+        "Skyrim"
+    }
+}
+
 fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
-    if game_path.join("Galaxy64.dll").exists() {
+    let is_gog_install = game_path.join("Galaxy64.dll").exists();
+
+    if game_path.join("Enderal Launcher.exe").exists() {
+        // It's not actually Skyrim SE, it's Enderal SE.
+        if is_gog_install {
+            "Enderal Special Edition GOG"
+        } else {
+            "Enderal Special Edition"
+        }
+    } else if is_gog_install {
         // Galaxy64.dll is only installed by GOG's installer.
         "Skyrim Special Edition GOG"
     } else if game_path.join("EOSSDK-Win64-Shipping.dll").exists() {
