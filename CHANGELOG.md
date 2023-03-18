@@ -3,6 +3,26 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [14.0.0] - 2023-03-18
+
+### Added
+
+- Support for Enderal: Forgotten Stories and Enderal: Forgotten Stories (Special
+  Edition), which are total conversion mods for Skyrim and Skyrim Special
+  Edition respectively. They operate in the same way as their base games, but
+  store their load orders in different directories. If given the `Skyrim` or
+  `SkyrimSE` game IDs and a game path but no local path, libloadorder will now
+  check for `Enderal Launcher.exe` in the game path and use the appropriate
+  local path.
+
+### Changed
+
+- Excess active plugins are no longer deactivated on load. This means that
+  changing the load order when there are more than the game's supported number
+  of plugins active will no longer risk deactivating any plugins.
+- Performance improvements to loading plugins, setting active plugins and
+  counting the number of active plugins.
+
 ## [13.3.0] - 2022-10-11
 
 ### Added
