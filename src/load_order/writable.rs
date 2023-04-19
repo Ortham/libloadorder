@@ -79,10 +79,7 @@ pub fn add<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result
 pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
     match load_order.index_of(plugin_name) {
         Some(index) => {
-            let plugin_path = load_order
-                .game_settings()
-                .plugins_directory()
-                .join(plugin_name);
+            let plugin_path = load_order.game_settings().plugin_path(plugin_name);
             if plugin_path.exists() {
                 return Err(Error::InstalledPlugin(plugin_name.to_string()));
             }

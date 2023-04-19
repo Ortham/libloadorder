@@ -59,7 +59,7 @@ impl Plugin {
             return Err(Error::InvalidPlugin(filename.to_owned()));
         }
 
-        let filepath = game_settings.plugins_directory().join(filename);
+        let filepath = game_settings.plugin_path(filename);
 
         let filepath = if active {
             filepath.unghost()?

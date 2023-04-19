@@ -243,9 +243,9 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_dir, copy_to_test_dir};
     use filetime::{set_file_times, FileTime};
-    use std::fs::{remove_dir_all, File};
+    use std::fs::{create_dir_all, remove_dir_all, File};
     use std::io;
     use std::io::{BufRead, BufReader};
     use std::path::Path;
@@ -703,6 +703,50 @@ mod tests {
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
             "Blank.esl.esp",
+            "Blank.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn load_should_add_external_dlc_plugins_before_plugins_directory_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("Fallout 4/Content");
+        create_dir_all(&game_path).unwrap();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let mut load_order = prepare(GameId::Fallout4, &game_path);
+
+        copy_to_test_dir("Blank.esm", "Blank.esm", &load_order.game_settings());
+
+        let dlc_path = tmp_dir
+            .path()
+            .join("Fallout 4- Far Harbor (PC)/Content/Data");
+        create_dir_all(&dlc_path).unwrap();
+        copy_to_dir(
+            "Blank.esm",
+            &dlc_path,
+            "DLCCoast.esm",
+            &load_order.game_settings(),
+        );
+        copy_to_dir(
+            "Blank.esp",
+            &dlc_path,
+            "Blank DLC.esp",
+            &load_order.game_settings(),
+        );
+
+        load_order.load().unwrap();
+
+        let expected_filenames = vec![
+            "Fallout4.esm",
+            "DLCCoast.esm",
+            "Blank.esm",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
             "Blank.esp",
             "Blàñk.esp",
         ];

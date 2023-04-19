@@ -32,6 +32,7 @@ use crate::load_order::{
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
     id: GameId,
+    is_ms_install: bool,
     game_path: PathBuf,
     plugins_file_path: PathBuf,
     load_order_path: Option<PathBuf>,
@@ -57,18 +58,40 @@ const SKYRIM_VR_HARDCODED_PLUGINS: &[&str] = &[
     "SkyrimVR.esm",
 ];
 
+const FALLOUT4_FAR_HARBOR_PLUGIN: &str = "DLCCoast.esm";
+const FALLOUT4_NUKA_WORLD_PLUGIN: &str = "DLCNukaWorld.esm";
+const FALLOUT4_AUTOMATRON_PLUGIN: &str = "DLCRobot.esm";
+const FALLOUT4_TEXTURE_PACK_PLUGIN: &str = "DLCUltraHighResolution.esm";
+const FALLOUT4_WASTELAND_PLUGIN: &str = "DLCworkshop01.esm";
+const FALLOUT4_CONTRAPTIONS_PLUGIN: &str = "DLCworkshop02.esm";
+const FALLOUT4_VAULT_TEC_PLUGIN: &str = "DLCworkshop03.esm";
+
 const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
     "Fallout4.esm",
-    "DLCRobot.esm",
-    "DLCworkshop01.esm",
-    "DLCCoast.esm",
-    "DLCworkshop02.esm",
-    "DLCworkshop03.esm",
-    "DLCNukaWorld.esm",
-    "DLCUltraHighResolution.esm",
+    FALLOUT4_AUTOMATRON_PLUGIN,
+    FALLOUT4_WASTELAND_PLUGIN,
+    FALLOUT4_FAR_HARBOR_PLUGIN,
+    FALLOUT4_CONTRAPTIONS_PLUGIN,
+    FALLOUT4_VAULT_TEC_PLUGIN,
+    FALLOUT4_NUKA_WORLD_PLUGIN,
+    FALLOUT4_TEXTURE_PACK_PLUGIN,
 ];
 
 const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm"];
+
+// It's safe to use relative paths like this because the Microsoft Store
+// version of Fallout 4 won't launch if a DLC is installed and its install
+// path changed (e.g. by renaming a directory), so the DLC plugins must be
+// in their default locations.
+const MS_FO4_FAR_HARBOR_PATH: &str = "../../../Fallout 4- Far Harbor (PC)/Content/Data";
+const MS_FO4_NUKA_WORLD_PATH: &str = "../../../Fallout 4- Nuka-World (PC)/Content/Data";
+const MS_FO4_AUTOMATRON_PATH: &str = "../../../Fallout 4- Automatron (PC)/Content/Data";
+const MS_FO4_TEXTURE_PACK_PATH: &str =
+    "../../../Fallout 4- High Resolution Texture Pack/Content/Data";
+const MS_FO4_WASTELAND_PATH: &str = "../../../Fallout 4- Wasteland Workshop (PC)/Content/Data";
+const MS_FO4_CONTRAPTIONS_PATH: &str =
+    "../../../Fallout 4- Contraptions Workshop (PC)/Content/Data";
+const MS_FO4_VAULT_TEC_PATH: &str = "../../../Fallout 4- Vault-Tec Workshop (PC)/Content/Data";
 
 impl GameSettings {
     #[cfg(windows)]
@@ -92,6 +115,7 @@ impl GameSettings {
 
         Ok(GameSettings {
             id: game_id,
+            is_ms_install: is_ms_store_install(game_path),
             game_path: game_path.to_path_buf(),
             plugins_file_path,
             load_order_path,
@@ -155,10 +179,80 @@ impl GameSettings {
         self.load_order_path.as_ref()
     }
 
+    pub fn is_microsoft_store_install(&self) -> bool {
+        self.is_ms_install
+    }
+
     fn plugins_folder_name(&self) -> &'static str {
         match self.id {
             GameId::Morrowind => "Data Files",
             _ => "Data",
+        }
+    }
+
+    pub fn external_plugin_paths(&self) -> Vec<PathBuf> {
+        if self.id == GameId::Fallout4 && self.is_ms_install {
+            vec![
+                self.plugins_directory()
+                    .join(MS_FO4_FAR_HARBOR_PATH)
+                    .join(FALLOUT4_FAR_HARBOR_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_NUKA_WORLD_PATH)
+                    .join(FALLOUT4_NUKA_WORLD_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_AUTOMATRON_PATH)
+                    .join(FALLOUT4_AUTOMATRON_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_TEXTURE_PACK_PATH)
+                    .join(FALLOUT4_TEXTURE_PACK_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_WASTELAND_PATH)
+                    .join(FALLOUT4_WASTELAND_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_CONTRAPTIONS_PATH)
+                    .join(FALLOUT4_CONTRAPTIONS_PLUGIN),
+                self.plugins_directory()
+                    .join(MS_FO4_VAULT_TEC_PATH)
+                    .join(FALLOUT4_VAULT_TEC_PLUGIN),
+            ]
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
+        let relative_path = self.relative_plugin_parent_path(plugin_name);
+
+        self.plugins_directory()
+            .join(relative_path)
+            .join(plugin_name)
+    }
+
+    fn relative_plugin_parent_path<'a>(&self, plugin_name: &'a str) -> &'a str {
+        if self.id == GameId::Fallout4 && self.is_ms_install {
+            // The Microsoft Store installs Fallout 4's DLCs into separate directories,
+            // so their plugins need to be resolved outside of the configured plugins
+            // directory.
+            // The DLC plugins have ASCII filenames.
+            if plugin_name.eq_ignore_ascii_case(FALLOUT4_FAR_HARBOR_PLUGIN) {
+                MS_FO4_FAR_HARBOR_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_NUKA_WORLD_PLUGIN) {
+                MS_FO4_NUKA_WORLD_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_AUTOMATRON_PLUGIN) {
+                MS_FO4_AUTOMATRON_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_TEXTURE_PACK_PLUGIN) {
+                MS_FO4_TEXTURE_PACK_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_WASTELAND_PLUGIN) {
+                MS_FO4_WASTELAND_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_CONTRAPTIONS_PLUGIN) {
+                MS_FO4_CONTRAPTIONS_PATH
+            } else if plugin_name.eq_ignore_ascii_case(FALLOUT4_VAULT_TEC_PLUGIN) {
+                MS_FO4_VAULT_TEC_PATH
+            } else {
+                "."
+            }
+        } else {
+            "."
         }
     }
 }
@@ -215,6 +309,10 @@ fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
         // If neither file is present it's probably the Steam distribution.
         "Skyrim Special Edition"
     }
+}
+
+fn is_ms_store_install(game_path: &Path) -> bool {
+    game_path.join("appxmanifest.xml").exists()
 }
 
 fn load_order_path(game_id: GameId, local_path: &Path) -> Option<PathBuf> {
@@ -992,6 +1090,207 @@ mod tests {
             GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), Path::new("local"))
                 .unwrap();
         assert!(settings.load_order_file().is_none());
+    }
+
+    #[test]
+    fn is_microsoft_store_install_should_be_false_if_game_path_does_not_contain_appxmanifest_xml_file(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Skyrim, game_path, Path::new("local")).unwrap();
+
+        assert!(!settings.is_microsoft_store_install());
+    }
+
+    #[test]
+    fn is_microsoft_store_install_should_be_true_if_game_path_contains_appxmanifest_xml_file() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Skyrim, game_path, Path::new("local")).unwrap();
+
+        assert!(settings.is_microsoft_store_install());
+    }
+
+    #[test]
+    fn external_plugin_paths_should_be_empty_if_game_is_not_fallout4() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::SkyrimSE, game_path, Path::new("local")).unwrap();
+
+        assert!(settings.external_plugin_paths().is_empty());
+    }
+
+    #[test]
+    fn external_plugin_paths_should_be_empty_if_game_is_not_from_the_microsoft_store() {
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), Path::new("local"))
+                .unwrap();
+
+        assert!(settings.external_plugin_paths().is_empty());
+    }
+
+    #[test]
+    fn external_plugin_paths_should_not_be_empty_if_game_is_fallout4_from_the_microsoft_store() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+
+        assert_eq!(
+            vec![
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_FAR_HARBOR_PATH)
+                    .join(FALLOUT4_FAR_HARBOR_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_NUKA_WORLD_PATH)
+                    .join(FALLOUT4_NUKA_WORLD_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_AUTOMATRON_PATH)
+                    .join(FALLOUT4_AUTOMATRON_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_TEXTURE_PACK_PATH)
+                    .join(FALLOUT4_TEXTURE_PACK_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_WASTELAND_PATH)
+                    .join(FALLOUT4_WASTELAND_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_CONTRAPTIONS_PATH)
+                    .join(FALLOUT4_CONTRAPTIONS_PLUGIN),
+                game_path
+                    .join("Data")
+                    .join(MS_FO4_VAULT_TEC_PATH)
+                    .join(FALLOUT4_VAULT_TEC_PLUGIN),
+            ],
+            settings.external_plugin_paths()
+        );
+    }
+
+    #[test]
+    fn plugin_path_should_append_relative_plugin_path_to_plugins_directory_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+
+        let plugin_name = "DLCCoast.esm";
+        let plugin_path = settings.plugin_path(plugin_name);
+
+        assert_eq!(
+            PathBuf::from(game_path)
+                .join("Data")
+                .join(MS_FO4_FAR_HARBOR_PATH)
+                .join(plugin_name),
+            plugin_path
+        );
+    }
+
+    #[test]
+    fn plugin_path_should_preserve_case_of_fallout4_dlc_plugin_name() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+
+        let plugin_name = "dLcCOasT.esm";
+        let plugin_path = settings.plugin_path(plugin_name);
+
+        assert_eq!(
+            PathBuf::from(game_path)
+                .join("Data")
+                .join(MS_FO4_FAR_HARBOR_PATH)
+                .join(plugin_name),
+            plugin_path
+        );
+    }
+
+    #[test]
+    fn relative_plugin_parent_path_should_return_dot_if_game_is_not_fallout4() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::SkyrimSE, game_path, Path::new("local")).unwrap();
+
+        assert_eq!(".", settings.relative_plugin_parent_path("DLCCoast.esm"));
+    }
+
+    #[test]
+    fn relative_plugin_parent_path_should_return_dot_if_game_is_not_a_microsoft_store_install() {
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), Path::new("local"))
+                .unwrap();
+
+        assert_eq!(".", settings.relative_plugin_parent_path("DLCCoast.esm"));
+    }
+
+    #[test]
+    fn relative_plugin_parent_path_should_return_dot_if_game_is_fallout4_and_a_microsoft_store_install_and_plugin_is_not_dlc_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+
+        assert_eq!(".", settings.relative_plugin_parent_path("test.esm"));
+    }
+
+    #[test]
+    fn relative_plugin_parent_path_should_return_path_if_game_is_fallout4_and_a_microsoft_store_install_and_plugin_is_a_dlc_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+
+        let parameters = [
+            ("DLCCoast.esm", MS_FO4_FAR_HARBOR_PATH),
+            ("DLCNukaWorld.esm", MS_FO4_NUKA_WORLD_PATH),
+            ("DLCRobot.esm", MS_FO4_AUTOMATRON_PATH),
+            ("DLCUltraHighResolution.esm", MS_FO4_TEXTURE_PACK_PATH),
+            ("DLCworkshop01.esm", MS_FO4_WASTELAND_PATH),
+            ("DLCworkshop02.esm", MS_FO4_CONTRAPTIONS_PATH),
+            ("DLCworkshop03.esm", MS_FO4_VAULT_TEC_PATH),
+        ];
+
+        for (plugin_name, expected_path) in parameters {
+            assert_eq!(
+                expected_path,
+                settings.relative_plugin_parent_path(plugin_name)
+            );
+        }
     }
 
     #[test]

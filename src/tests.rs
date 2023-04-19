@@ -32,6 +32,14 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
 
+pub fn copy_to_dir(from_path: &str, to_dir: &Path, to_file: &str, game_settings: &GameSettings) {
+    let testing_plugins_dir = testing_plugins_dir(game_settings.id());
+    if !to_dir.exists() {
+        create_dir(to_dir).unwrap();
+    }
+    copy(testing_plugins_dir.join(from_path), to_dir.join(to_file)).unwrap();
+}
+
 fn testing_plugins_dir(game_id: GameId) -> PathBuf {
     use GameId::*;
     let game_folder = match game_id {

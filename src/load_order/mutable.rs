@@ -36,19 +36,37 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
     fn find_plugins_in_dir(&self) -> Vec<String> {
-        let entries = match read_dir(self.game_settings().plugins_directory()) {
-            Ok(x) => x,
-            _ => return Vec::new(),
-        };
-
         let mut set: HashSet<String> = HashSet::new();
 
-        entries
+        // A game might store some plugins outside of its main plugins directory
+        // so look for those plugins. They override any of the same names that
+        // appear in the main plugins directory, so check for the external paths
+        // first.
+        let mut files: Vec<String> = self
+            .game_settings()
+            .external_plugin_paths()
+            .into_iter()
+            .filter(|p| p.exists())
+            .filter_map(|p| {
+                p.file_name()
+                    .and_then(std::ffi::OsStr::to_str)
+                    .filter(|f| set.insert(f.to_lowercase()))
+                    .map(ToOwned::to_owned)
+            })
+            .collect();
+
+        // Now scan the main plugins directory for files.
+        let plugins_dir_files = read_dir(self.game_settings().plugins_directory())
+            .into_iter()
+            .flatten()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
             .filter_map(|e| e.file_name().to_str().map(|f| f.to_owned()))
-            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
-            .collect()
+            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()));
+
+        files.extend(plugins_dir_files);
+
+        files
     }
 
     fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
