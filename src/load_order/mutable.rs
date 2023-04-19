@@ -523,7 +523,7 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
 ) -> Result<(), Error> {
     if let Some(plugin) = load_order
         .plugins_mut()
-        .into_iter()
+        .iter_mut()
         .find(|p| p.name_matches(filename))
     {
         plugin.activate()
