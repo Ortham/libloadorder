@@ -19,6 +19,7 @@
 use std::ffi::{CStr, CString};
 use std::io;
 use std::mem;
+use std::path::PathBuf;
 use std::slice;
 
 use libc::{c_char, c_uint, size_t};
@@ -113,4 +114,18 @@ pub unsafe fn to_str_vec<'a>(
         .iter()
         .map(|c| to_str(*c))
         .collect()
+}
+
+pub unsafe fn to_path_buf_vec(
+    array: *const *const c_char,
+    array_size: usize,
+) -> Result<Vec<PathBuf>, u32> {
+    if array_size == 0 {
+        Ok(Vec::new())
+    } else {
+        slice::from_raw_parts(array, array_size)
+            .iter()
+            .map(|c| to_str(*c).map(PathBuf::from))
+            .collect()
+    }
 }

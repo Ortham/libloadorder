@@ -28,7 +28,9 @@ use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
 
 use crate::constants::*;
-use crate::helpers::{error, handle_error, to_c_string, to_c_string_array, to_str};
+use crate::helpers::{
+    error, handle_error, to_c_string, to_c_string_array, to_path_buf_vec, to_str,
+};
 
 /// A structure that holds all game-specific data used by libloadorder.
 ///
@@ -349,6 +351,46 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
             Ok(x) => *path = x,
             Err(x) => return error(x, "The filename contained a null byte"),
         }
+
+        LIBLO_OK
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
+/// Sets the external plugin paths to be recognised by the given handle.
+///
+/// If the load order contains plugins that are installed outside of the game's plugins directory,
+/// this function can be used to provide the paths to those plugins so that libloadorder is able to
+/// find them.
+///
+/// If external plugins exist, this function must be called before performing any operations on
+/// the load order to avoid any unexpected behaviour.
+///
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+#[no_mangle]
+pub unsafe extern "C" fn lo_set_external_plugin_paths(
+    handle: lo_game_handle,
+    paths: *const *const c_char,
+    num_paths: size_t,
+) -> c_uint {
+    catch_unwind(|| {
+        if handle.is_null() || (paths.is_null() && num_paths != 0) {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+
+        let mut handle = match (*handle).write() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
+            Ok(h) => h,
+        };
+
+        let plugin_paths = match to_path_buf_vec(paths, num_paths) {
+            Ok(x) => x,
+            Err(x) => return error(x, "A plugin path contained a null byte"),
+        };
+
+        handle
+            .game_settings_mut()
+            .set_external_plugin_paths(plugin_paths);
 
         LIBLO_OK
     })
