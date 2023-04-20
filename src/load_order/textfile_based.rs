@@ -123,6 +123,10 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
 }
 
 impl WritableLoadOrder for TextfileBasedLoadOrder {
+    fn game_settings_mut(&mut self) -> &mut GameSettings {
+        &mut self.game_settings
+    }
+
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 

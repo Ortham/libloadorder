@@ -26,11 +26,14 @@ use super::mutable::MutableLoadOrder;
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
 use crate::plugin::Plugin;
+use crate::GameSettings;
 
 const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
 const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 
 pub trait WritableLoadOrder: ReadableLoadOrder {
+    fn game_settings_mut(&mut self) -> &mut GameSettings;
+
     fn load(&mut self) -> Result<(), Error>;
 
     fn save(&mut self) -> Result<(), Error>;

@@ -104,6 +104,10 @@ impl MutableLoadOrder for TimestampBasedLoadOrder {
 }
 
 impl WritableLoadOrder for TimestampBasedLoadOrder {
+    fn game_settings_mut(&mut self) -> &mut GameSettings {
+        &mut self.game_settings
+    }
+
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 

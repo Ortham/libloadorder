@@ -92,6 +92,10 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
 }
 
 impl WritableLoadOrder for AsteriskBasedLoadOrder {
+    fn game_settings_mut(&mut self) -> &mut GameSettings {
+        &mut self.game_settings
+    }
+
     fn load(&mut self) -> Result<(), Error> {
         self.plugins_mut().clear();
 

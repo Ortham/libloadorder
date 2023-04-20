@@ -188,6 +188,10 @@ impl GameSettings {
         &self.external_plugin_paths
     }
 
+    pub fn set_external_plugin_paths(&mut self, paths: Vec<PathBuf>) {
+        self.external_plugin_paths = paths;
+    }
+
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
         self.external_plugin_paths()
             .iter()
