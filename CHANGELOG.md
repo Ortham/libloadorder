@@ -3,6 +3,24 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [14.1.0] - 2023-04-26
+
+### Added
+
+- Support for providing the paths to any plugins directories other than the
+  game's plugins directory that contain plugins which should be considered part
+  of the load order. This is intended to support the Microsoft Store's Fallout 4 DLCs, which are installed outside of the base game's install path.
+
+  - libloadorder will detect if a given Fallout 4 path is for a Microsoft Store
+    install by looking for `appxmanifest.xml` in the game directory when
+    creating a `GameSettings` struct. If found, libloadorder will initialise the
+    settings with the paths to the external DLC data directories in case the
+    DLCs are installed.
+  - `GameSettings::set_additional_plugins_directories()` can be used to
+    customise the paths that libloadorder will take into account.
+  - `WritableLoadOrder::game_settings_mut()` can be used to get a mutable
+    `GameSettings` reference from a `WritableLoadOrder` impl.
+
 ## [14.0.0] - 2023-03-18
 
 ### Added

@@ -3,6 +3,20 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [14.1.0] - 2023-04-26
+
+### Added
+
+- `lo_set_additional_plugins_directories()` for providing the paths to any
+  directories other than the game's plugins directory that contain plugins that
+  should be considered part of the load order. This is intended to support the
+  Microsoft Store's Fallout 4 DLCs, which are installed outside of the base game's
+  install path.
+
+### Changed
+
+- Updated to libloadorder v14.1.0.
+
 ## [14.0.0] - 2023-03-18
 
 ### Changed
