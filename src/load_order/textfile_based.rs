@@ -142,7 +142,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             self.read_from_active_plugins_file()?
         };
 
-        let filenames = self.find_plugins_in_dir_sorted();
+        let filenames = self.find_plugins_sorted();
         self.load_unique_plugins(plugin_tuples, filenames);
 
         if load_order_file_exists {

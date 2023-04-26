@@ -100,7 +100,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         self.plugins_mut().clear();
 
         let plugin_tuples = self.read_from_active_plugins_file()?;
-        let filenames = self.find_plugins_in_dir_sorted();
+        let filenames = self.find_plugins_sorted();
 
         self.load_unique_plugins(plugin_tuples, filenames);
         hoist_masters(&mut self.plugins)?;
@@ -715,7 +715,8 @@ mod tests {
     }
 
     #[test]
-    fn load_should_add_external_dlc_plugins_before_plugins_directory_plugins() {
+    fn load_should_add_plugins_in_additional_plugins_directory_before_those_in_main_plugins_directory(
+    ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path().join("Fallout 4/Content");
         create_dir_all(&game_path).unwrap();
@@ -751,6 +752,7 @@ mod tests {
             "Blank.esm",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
+            "Blank DLC.esp",
             "Blank.esp",
             "Blàñk.esp",
         ];

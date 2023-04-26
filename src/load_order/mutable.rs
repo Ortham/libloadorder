@@ -35,42 +35,32 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
-    fn find_plugins_in_dir(&self) -> Vec<String> {
+    fn find_plugins(&self) -> Vec<String> {
         let mut set: HashSet<String> = HashSet::new();
 
         // A game might store some plugins outside of its main plugins directory
         // so look for those plugins. They override any of the same names that
-        // appear in the main plugins directory, so check for the external paths
-        // first.
-        let mut files: Vec<String> = self
+        // appear in the main plugins directory, so check for the additional
+        // paths first.
+        let mut directories = self
             .game_settings()
-            .external_plugin_paths()
-            .into_iter()
-            .filter(|p| p.exists())
-            .filter_map(|p| {
-                p.file_name()
-                    .and_then(std::ffi::OsStr::to_str)
-                    .filter(|f| set.insert(f.to_lowercase()))
-                    .map(ToOwned::to_owned)
-            })
-            .collect();
+            .additional_plugins_directories()
+            .to_vec();
+        directories.push(self.game_settings().plugins_directory());
 
-        // Now scan the main plugins directory for files.
-        let plugins_dir_files = read_dir(self.game_settings().plugins_directory())
-            .into_iter()
+        directories
+            .iter()
+            .flat_map(read_dir)
             .flatten()
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
-            .filter_map(|e| e.file_name().to_str().map(|f| f.to_owned()))
-            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()));
-
-        files.extend(plugins_dir_files);
-
-        files
+            .filter_map(|e| e.file_name().to_str().map(str::to_owned))
+            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
+            .collect()
     }
 
-    fn find_plugins_in_dir_sorted(&self) -> Vec<String> {
-        let mut filenames = self.find_plugins_in_dir();
+    fn find_plugins_sorted(&self) -> Vec<String> {
+        let mut filenames = self.find_plugins();
         filenames.sort_unstable();
 
         filenames

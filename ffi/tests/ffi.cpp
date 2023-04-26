@@ -157,16 +157,16 @@ void test_lo_get_active_plugins_file_path() {
   lo_destroy_handle(handle);
 }
 
-void test_lo_set_external_plugin_paths() {
-printf("testing lo_set_external_plugin_paths()...\n");
+void test_lo_set_additional_plugins_directories() {
+printf("testing lo_set_additional_plugins_directories()...\n");
   lo_game_handle handle = create_handle();
 
   const char * paths[] = { "Blank.esm" };
-  unsigned int return_code = lo_set_external_plugin_paths(handle, paths, 1);
+  unsigned int return_code = lo_set_additional_plugins_directories(handle, paths, 1);
 
   assert(return_code == 0);
 
-  return_code = lo_set_external_plugin_paths(handle, nullptr, 0);
+  return_code = lo_set_additional_plugins_directories(handle, nullptr, 0);
 
   assert(return_code == 0);
 
@@ -341,7 +341,7 @@ int main(void) {
   test_lo_fix_plugin_lists();
   test_lo_get_implicitly_active_plugins();
   test_lo_get_active_plugins_file_path();
-  test_lo_set_external_plugin_paths();
+  test_lo_set_additional_plugins_directories();
 
   test_lo_set_active_plugins();
   test_lo_get_active_plugins();

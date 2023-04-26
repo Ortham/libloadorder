@@ -357,10 +357,10 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
     .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
-/// Sets the external plugin paths to be recognised by the given handle.
+/// Sets the additional plugins directories to be recognised by the given handle.
 ///
 /// If the load order contains plugins that are installed outside of the game's plugins directory,
-/// this function can be used to provide the paths to those plugins so that libloadorder is able to
+/// this function can be used to provide the paths to the directories that those plugins are in so that libloadorder is able to
 /// find them.
 ///
 /// If external plugins exist, this function must be called before performing any operations on
@@ -368,7 +368,7 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
-pub unsafe extern "C" fn lo_set_external_plugin_paths(
+pub unsafe extern "C" fn lo_set_additional_plugins_directories(
     handle: lo_game_handle,
     paths: *const *const c_char,
     num_paths: size_t,
@@ -390,7 +390,7 @@ pub unsafe extern "C" fn lo_set_external_plugin_paths(
 
         handle
             .game_settings_mut()
-            .set_external_plugin_paths(plugin_paths);
+            .set_additional_plugins_directories(plugin_paths);
 
         LIBLO_OK
     })

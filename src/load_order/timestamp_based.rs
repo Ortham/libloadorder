@@ -54,7 +54,7 @@ impl TimestampBasedLoadOrder {
     }
 
     fn load_plugins_from_dir(&self) -> Vec<Plugin> {
-        let filenames = self.find_plugins_in_dir();
+        let filenames = self.find_plugins();
         let game_settings = self.game_settings();
 
         filenames
