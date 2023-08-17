@@ -249,12 +249,19 @@ fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
     }
 }
 
-fn is_microsoft_store_install(game_path: &Path) -> bool {
-    game_path.join("appxmanifest.xml").exists()
+fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
+    match game_id {
+        GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => game_path
+            .parent()
+            .map(|parent| parent.join("appxmanifest.xml").exists())
+            .unwrap_or(false),
+        GameId::SkyrimSE | GameId::Fallout4 => game_path.join("appxmanifest.xml").exists(),
+        _ => false,
+    }
 }
 
 fn additional_plugins_directories(game_id: GameId, game_path: &Path) -> Vec<PathBuf> {
-    if game_id == GameId::Fallout4 && is_microsoft_store_install(game_path) {
+    if game_id == GameId::Fallout4 && is_microsoft_store_install(game_id, game_path) {
         vec![
             game_path.join(MS_FO4_AUTOMATRON_PATH),
             game_path.join(MS_FO4_NUKA_WORLD_PATH),
