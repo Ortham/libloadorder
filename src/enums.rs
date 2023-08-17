@@ -167,7 +167,7 @@ impl fmt::Display for Error {
             ),
             Error::GameMasterMustLoadFirst => write!(
                 f,
-                "The game's implicitly active plugins must load in their harcoded positions"
+                "The game's implicitly active plugins must load in their hardcoded positions"
             ),
             Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
             Error::ImplicitlyActivePlugin(ref x) => write!(
