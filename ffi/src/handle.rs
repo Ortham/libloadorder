@@ -125,11 +125,11 @@ pub unsafe extern "C" fn lo_create_handle(
                 Err(x) => return x,
             };
 
-            if !local_path.is_dir() {
+            if local_path.exists() && !local_path.is_dir() {
                 return error(
                     LIBLO_ERROR_INVALID_ARGS,
                     &format!(
-                        "Given local data path \"{:?}\" is not a valid directory",
+                        "Given local data path \"{:?}\" exists but is not a valid directory",
                         local_path
                     ),
                 );
@@ -395,4 +395,82 @@ pub unsafe extern "C" fn lo_set_additional_plugins_directories(
         LIBLO_OK
     })
     .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CString;
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[test]
+    fn lo_create_handle_should_allow_a_non_existent_local_path() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+        let local_path = CString::new("does-not-exist").unwrap();
+
+        assert!(!PathBuf::from(local_path.to_string_lossy().to_string()).exists());
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES5,
+                game_path.as_ptr(),
+                local_path.as_ptr(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_OK, result);
+        }
+    }
+
+    #[test]
+    fn lo_create_handle_should_allow_a_directory_local_path_that_exists() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+        let local_path = CString::new(".").unwrap();
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES5,
+                game_path.as_ptr(),
+                local_path.as_ptr(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_OK, result);
+        }
+    }
+
+    #[test]
+    fn lo_create_handle_should_error_if_given_a_non_directory_local_path_that_exists() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+        let local_path = CString::new(
+            std::env::current_exe()
+                .unwrap()
+                .to_string_lossy()
+                .as_bytes(),
+        )
+        .unwrap();
+
+        let local_path_buf = PathBuf::from(local_path.to_string_lossy().to_string());
+
+        assert!(local_path_buf.exists());
+        assert!(!local_path_buf.is_dir());
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES5,
+                game_path.as_ptr(),
+                local_path.as_ptr(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_ERROR_INVALID_ARGS, result);
+        }
+    }
 }
