@@ -3,6 +3,18 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [14.2.0] - 2023-08-20
+
+### Changed
+
+- `GameSettings::new()` is now available on Linux. Calling it for any game other
+  than Morrowind will always fail, as all other games use a local data path,
+  which must be provided on Linux.
+
+### Fixed
+
+- A typo in the `Error::GameMasterMustLoadFirst` error message.
+
 ## [14.1.0] - 2023-04-26
 
 ### Added
