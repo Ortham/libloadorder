@@ -108,13 +108,6 @@ pub unsafe extern "C" fn lo_create_handle(
 
         let load_order: Box<dyn WritableLoadOrder>;
         if local_path.is_null() {
-            #[cfg(not(windows))]
-            return error(
-                LIBLO_ERROR_INVALID_ARGS,
-                "A local data path must be supplied on non-Windows platforms",
-            );
-
-            #[cfg(windows)]
             match GameSettings::new(game_id, game_path) {
                 Ok(x) => load_order = x.into_load_order(),
                 Err(x) => return handle_error(x),
@@ -467,6 +460,62 @@ mod tests {
                 LIBLO_GAME_TES5,
                 game_path.as_ptr(),
                 local_path.as_ptr(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_ERROR_INVALID_ARGS, result);
+        }
+    }
+
+    #[test]
+    fn lo_create_handle_should_always_accept_a_null_local_path_if_game_is_morrowind() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES3,
+                game_path.as_ptr(),
+                std::ptr::null(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_OK, result);
+        }
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn lo_create_handle_should_accept_a_null_local_path_if_game_is_not_morrowind() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES4,
+                game_path.as_ptr(),
+                std::ptr::null(),
+            );
+            lo_destroy_handle(handle);
+
+            assert_eq!(LIBLO_OK, result);
+        }
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn lo_create_handle_should_not_accept_a_null_local_path_if_game_is_not_morrowind() {
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+        let game_path = CString::new(".").unwrap();
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES4,
+                game_path.as_ptr(),
+                std::ptr::null(),
             );
             lo_destroy_handle(handle);
 

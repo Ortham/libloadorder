@@ -94,6 +94,16 @@ impl GameSettings {
         GameSettings::with_local_path(game_id, game_path, &local_path)
     }
 
+    #[cfg(not(windows))]
+    pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
+        if appdata_folder_name(game_id, game_path).is_some() {
+            Err(Error::NoLocalAppData)
+        } else {
+            // It doesn't matter what local_path is passed in, as it isn't used.
+            GameSettings::with_local_path(game_id, game_path, &PathBuf::new())
+        }
+    }
+
     pub fn with_local_path(
         game_id: GameId,
         game_path: &Path,
