@@ -149,9 +149,9 @@ void test_lo_get_active_plugins_file_path() {
 
   assert(return_code == 0);
 #ifdef _WIN32
-  assert(strcmp(path, "../../testing-plugins/Oblivion\\plugins.txt") == 0);
+  assert(strcmp(path, "../../testing-plugins/Oblivion\\Plugins.txt") == 0);
 #else
-  assert(strcmp(path, "../../testing-plugins/Oblivion/plugins.txt") == 0);
+  assert(strcmp(path, "../../testing-plugins/Oblivion/Plugins.txt") == 0);
 #endif
   lo_free_string(path);
   lo_destroy_handle(handle);
@@ -357,7 +357,7 @@ int main(void) {
 
   test_thread_safety();
 
-  remove("testing-plugins/Oblivion/plugins.txt");
+  remove("testing-plugins/Oblivion/Plugins.txt");
   printf("SUCCESS\n");
   return 0;
 }

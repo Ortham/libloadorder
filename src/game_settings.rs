@@ -310,7 +310,7 @@ fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> PathBuf {
         game_path
     };
 
-    parent_path.join("plugins.txt")
+    parent_path.join("Plugins.txt")
 }
 
 fn use_my_games_directory(ini_path: &Path) -> bool {
@@ -740,7 +740,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -831,7 +831,7 @@ mod tests {
             GameSettings::with_local_path(GameId::Oblivion, &game_path, &Path::new("local"))
                 .unwrap();
         assert_eq!(
-            game_path.join("plugins.txt"),
+            game_path.join("Plugins.txt"),
             *settings.active_plugins_file()
         );
     }
