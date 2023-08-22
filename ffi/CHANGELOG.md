@@ -3,6 +3,12 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [14.2.1] - 2023-08-22
+
+### Changed
+
+- Updated to libloadorder v14.2.1.
+
 ## [14.2.0] - 2023-08-20
 
 ### Changed
@@ -12,6 +18,7 @@ changelog only contains libloadorder-ffi changes.
 - `lot_create_handle()` will no longer fail on Linux if passed a null local data
   path and `LIBLO_GAME_TES3` as the game ID. Passing any other game ID with a
   null local data path will still fail.
+- Updated to libloadorder v14.2.0.
 
 ## [14.1.0] - 2023-04-26
 
