@@ -45,6 +45,7 @@ pub enum GameId {
     SkyrimSE,
     Fallout4VR,
     SkyrimVR,
+    Starfield,
 }
 
 impl GameId {
@@ -59,12 +60,16 @@ impl GameId {
             GameId::FalloutNV => esplugin::GameId::FalloutNV,
             GameId::Fallout4 => esplugin::GameId::Fallout4,
             GameId::Fallout4VR => esplugin::GameId::Fallout4,
+            GameId::Starfield => esplugin::GameId::Starfield,
         }
     }
 
     pub fn supports_light_plugins(self) -> bool {
         use self::GameId::*;
-        matches!(self, Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR)
+        matches!(
+            self,
+            Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR | Starfield
+        )
     }
 }
 
@@ -279,6 +284,10 @@ mod tests {
             esplugin::GameId::Fallout4,
             GameId::Fallout4VR.to_esplugin_id()
         );
+        assert_eq!(
+            esplugin::GameId::Starfield,
+            GameId::Starfield.to_esplugin_id()
+        );
     }
 
     #[test]
@@ -292,5 +301,6 @@ mod tests {
         assert!(!GameId::FalloutNV.supports_light_plugins());
         assert!(GameId::Fallout4.supports_light_plugins());
         assert!(GameId::Fallout4VR.supports_light_plugins());
+        assert!(GameId::Starfield.supports_light_plugins());
     }
 }

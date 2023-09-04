@@ -58,11 +58,10 @@ impl AsteriskBasedLoadOrder {
     }
 
     fn ignore_active_plugins_file(&self) -> bool {
-        // Fallout 4 ignores plugins.txt if there are any sTestFile plugins listed in the ini files. The implicitly active plugins are the early loading plugins plus test file plugins.
-        (self.game_settings.id() == GameId::Fallout4
-            || self.game_settings.id() == GameId::Fallout4VR)
-            && self.game_settings.implicitly_active_plugins().len()
-                > self.game_settings.early_loading_plugins().len()
+        // Fallout 4 and Starfield ignore plugins.txt if there are any sTestFile plugins listed in
+        // the ini files.
+        ignore_active_plugins_file_fallout4(&self.game_settings)
+            || ignore_active_plugins_file_starfield(&self.game_settings)
     }
 }
 
@@ -262,6 +261,21 @@ fn owning_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
     plugin_line_mapper(line).map(|(name, active)| (name.to_owned(), active))
 }
 
+fn ignore_active_plugins_file_fallout4(game_settings: &GameSettings) -> bool {
+    // The implicitly active plugins are the early loading plugins plus test file plugins.
+    matches!(game_settings.id(), GameId::Fallout4 | GameId::Fallout4VR)
+        && game_settings.implicitly_active_plugins().len()
+            > game_settings.early_loading_plugins().len()
+}
+
+fn ignore_active_plugins_file_starfield(game_settings: &GameSettings) -> bool {
+    // The implicitly active plugins are the early loading plugins plus test file plugins plus
+    // BlueprintShips-Starfield.esm.
+    game_settings.id() == GameId::Starfield
+        && game_settings.implicitly_active_plugins().len()
+            > game_settings.early_loading_plugins().len() + 1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,6 +352,28 @@ mod tests {
     ) {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::Fallout4VR, &tmp_dir.path());
+
+        assert!(!load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_true_for_starfield_when_test_files_are_configured() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/StarfieldCustom.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        assert!(load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_false_for_starfield_when_test_files_are_not_configured()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }

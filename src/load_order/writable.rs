@@ -138,7 +138,7 @@ fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCount
     for plugin in load_order.plugins().iter().filter(|p| p.is_active()) {
         if plugin.is_light_plugin() {
             counts.light += 1;
-        } else {
+        } else if !plugin.is_override_plugin() {
             counts.normal += 1;
         }
     }
@@ -150,9 +150,11 @@ fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize])
     let mut counts = PluginCounts::default();
 
     for index in existing_plugin_indexes {
-        if existing_plugins[*index].is_light_plugin() {
+        let plugin = &existing_plugins[*index];
+
+        if plugin.is_light_plugin() {
             counts.light += 1;
-        } else {
+        } else if !plugin.is_override_plugin() {
             counts.normal += 1;
         }
     }
@@ -176,7 +178,9 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
         let is_light = plugin.is_light_plugin();
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
-            || (!is_light && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
+            || (!is_light
+                && !plugin.is_override_plugin()
+                && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
         {
             return Err(Error::TooManyActivePlugins);
         } else {
@@ -253,7 +257,9 @@ mod tests {
     use crate::game_settings::GameSettings;
     use crate::load_order::mutable::{generic_insert_position, MutableLoadOrder};
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-    use crate::load_order::tests::{load_and_insert, mock_game_files, set_master_flag};
+    use crate::load_order::tests::{
+        load_and_insert, mock_game_files, set_master_flag, set_override_flag,
+    };
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -507,6 +513,69 @@ mod tests {
     }
 
     #[test]
+    fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_an_override_plugin()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+            let plugin = format!("{}.esp", i);
+            copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
+            load_and_insert(&mut load_order, &plugin);
+            activate(&mut load_order, &plugin).unwrap();
+        }
+
+        let plugin = "override.esp";
+        copy_to_test_dir(
+            "Blank - Different Plugin Dependent.esp",
+            &plugin,
+            &load_order.game_settings(),
+        );
+        set_override_flag(
+            &load_order.game_settings().plugins_directory().join(plugin),
+            true,
+        )
+        .unwrap();
+        load_and_insert(&mut load_order, &plugin);
+
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_ok());
+        assert!(load_order.is_active(plugin));
+    }
+
+    #[test]
+    fn activate_should_not_count_active_override_plugins_towards_limit() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 2) {
+            let plugin = format!("{}.esp", i);
+            copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
+            load_and_insert(&mut load_order, &plugin);
+            activate(&mut load_order, &plugin).unwrap();
+        }
+
+        // Activate an override plugin as the 255th active plugin.
+        let plugin = "override.esp";
+        copy_to_test_dir(
+            "Blank - Different Plugin Dependent.esp",
+            &plugin,
+            &load_order.game_settings(),
+        );
+        set_override_flag(
+            &load_order.game_settings().plugins_directory().join(plugin),
+            true,
+        )
+        .unwrap();
+        load_and_insert(&mut load_order, &plugin);
+        activate(&mut load_order, &plugin).unwrap();
+
+        assert!(activate(&mut load_order, "Blank - Different.esp").is_ok());
+        assert!(load_order.is_active("Blank - Different.esp"));
+    }
+
+    #[test]
     fn deactivate_should_deactivate_the_plugin_with_the_given_filename() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
@@ -630,5 +699,46 @@ mod tests {
         assert!(!load_order.is_active("Blank - Different.esp"));
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
+    }
+
+    #[test]
+    fn set_active_plugins_should_not_count_existing_active_override_plugins_towards_limit() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let mut active_plugins = vec!["Starfield.esm".to_string()];
+
+        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+            let plugin = format!("{}.esp", i);
+            copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
+            load_and_insert(&mut load_order, &plugin);
+            activate(&mut load_order, &plugin).unwrap();
+
+            active_plugins.push(plugin);
+        }
+
+        // Also activate a couple of override plugins.
+        for i in 0..2 {
+            let plugin = format!("{}.override.esp", i);
+            copy_to_test_dir(
+                "Blank - Different Plugin Dependent.esp",
+                &plugin,
+                &load_order.game_settings(),
+            );
+            set_override_flag(
+                &load_order.game_settings().plugins_directory().join(&plugin),
+                true,
+            )
+            .unwrap();
+            load_and_insert(&mut load_order, &plugin);
+            activate(&mut load_order, &plugin).unwrap();
+
+            active_plugins.push(plugin);
+        }
+
+        let active_plugins: Vec<&str> = active_plugins.iter().map(|s| s.as_str()).collect();
+
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
+        assert_eq!(257, load_order.active_plugin_names().len());
     }
 }

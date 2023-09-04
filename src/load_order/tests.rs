@@ -129,6 +129,16 @@ pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
     Ok(())
 }
 
+pub fn set_override_flag(plugin: &Path, present: bool) -> io::Result<()> {
+    let mut file = OpenOptions::new().write(true).open(plugin)?;
+    file.seek(io::SeekFrom::Start(9))?;
+
+    let value = if present { 2 } else { 0 };
+    file.write(&[value])?;
+
+    Ok(())
+}
+
 pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
     let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
 

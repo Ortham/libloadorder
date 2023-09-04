@@ -74,6 +74,8 @@ const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
 
 const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm"];
 
+const STARFIELD_HARDCODED_PLUGINS: &[&str] = &["Starfield.esm", "Constellation.esm", "OldMars.esm"];
+
 // It's safe to use relative paths like this because the Microsoft Store
 // version of Fallout 4 won't launch if a DLC is installed and its install
 // path changed (e.g. by renaming a directory), so the DLC plugins must be
@@ -168,7 +170,7 @@ impl GameSettings {
         match self.id {
             Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
-            SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR => LoadOrderMethod::Asterisk,
+            SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR | Starfield => LoadOrderMethod::Asterisk,
         }
     }
 
@@ -189,6 +191,7 @@ impl GameSettings {
             Fallout3 => "Fallout3.esm",
             FalloutNV => "FalloutNV.esm",
             Fallout4 | Fallout4VR => "Fallout4.esm",
+            Starfield => "Starfield.esm",
         }
     }
 
@@ -269,9 +272,12 @@ impl GameSettings {
     ) -> Result<(Vec<String>, Vec<String>), Error> {
         let mut test_files = test_files(game_id, game_path, my_games_path)?;
 
-        if game_id == GameId::Fallout4 || game_id == GameId::Fallout4VR {
-            // Fallout 4 ignores plugins.txt and Fallout4.ccc if there are valid plugins listed as
-            // test files, so filter out invalid values.
+        if matches!(
+            game_id,
+            GameId::Fallout4 | GameId::Fallout4VR | GameId::Starfield
+        ) {
+            // Fallout 4 and Starfield ignore plugins.txt and Fallout4.ccc if there are valid
+            // plugins listed as test files, so filter out invalid values.
             test_files.retain(|f| {
                 let path = plugin_path(f, plugins_directory, additional_plugins_directories);
                 Plugin::with_path(&path, game_id, false).is_ok()
@@ -301,6 +307,7 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
         FalloutNV => Some(falloutnv_appdata_folder_name(game_path)),
         Fallout4 => Some(fallout4_appdata_folder_name(game_path)),
         Fallout4VR => Some("Fallout4VR"),
+        Starfield => Some("Starfield"),
     }
 }
 
@@ -378,7 +385,9 @@ fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
             .parent()
             .map(|parent| parent.join(APPX_MANIFEST).exists())
             .unwrap_or(false),
-        GameId::SkyrimSE | GameId::Fallout4 => game_path.join(APPX_MANIFEST).exists(),
+        GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield => {
+            game_path.join(APPX_MANIFEST).exists()
+        }
         _ => false,
     }
 }
@@ -466,6 +475,7 @@ fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
     match game_id {
         GameId::Fallout4 => Some(game_path.join("Fallout4.ccc")),
         GameId::SkyrimSE => Some(game_path.join("Skyrim.ccc")),
+        GameId::Starfield => Some(game_path.join("Starfield.ccc")),
         _ => None,
     }
 }
@@ -477,6 +487,7 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
         GameId::SkyrimVR => SKYRIM_VR_HARDCODED_PLUGINS,
         GameId::Fallout4 => FALLOUT4_HARDCODED_PLUGINS,
         GameId::Fallout4VR => FALLOUT4VR_HARDCODED_PLUGINS,
+        GameId::Starfield => STARFIELD_HARDCODED_PLUGINS,
         _ => &[],
     }
 }
@@ -528,7 +539,7 @@ fn early_loading_plugins(
         .map(|s| (*s).to_string())
         .collect();
 
-    if game_id == GameId::Fallout4 && has_test_files {
+    if matches!(game_id, GameId::Fallout4 | GameId::Starfield) && has_test_files {
         // If test files are configured for Fallout 4, CCC plugins are not loaded.
         // No need to check for Fallout 4 VR, as it has no CCC plugins file.
         return Ok(plugin_names);
@@ -571,6 +582,10 @@ fn implicitly_active_plugins(
         // Update.esm is always active, but loads after all other masters if it is not made to load
         // earlier (e.g. by listing in plugins.txt or by being a master of another master).
         plugin_names.push("Update.esm".to_string());
+    } else if game_id == GameId::Starfield {
+        // BlueprintShips-Starfield.esm, but loads after all other masters if it is not made to load
+        // earlier (e.g. by listing in plugins.txt or by being a master of another master).
+        plugin_names.push("BlueprintShips-Starfield.esm".to_string());
     }
 
     // Remove duplicates, keeping only the first instance of each plugin.
@@ -685,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn load_order_method_should_be_asterisk_for_tes5se_tes5vr_fo4_and_fo4vr() {
+    fn load_order_method_should_be_asterisk_for_tes5se_tes5vr_fo4_fo4vr_and_starfield() {
         let mut settings = game_with_generic_paths(GameId::SkyrimSE);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
 
@@ -696,6 +711,9 @@ mod tests {
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
 
         settings = game_with_generic_paths(GameId::Fallout4VR);
+        assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
+
+        settings = game_with_generic_paths(GameId::Starfield);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
     }
 
@@ -727,6 +745,9 @@ mod tests {
 
         settings = game_with_generic_paths(GameId::Fallout4VR);
         assert_eq!("Fallout4.esm", settings.master_file());
+
+        settings = game_with_generic_paths(GameId::Starfield);
+        assert_eq!("Starfield.esm", settings.master_file());
     }
 
     #[test]
@@ -759,6 +780,9 @@ mod tests {
 
         folder = appdata_folder_name(GameId::Fallout4VR, game_path).unwrap();
         assert_eq!("Fallout4VR", folder);
+
+        folder = appdata_folder_name(GameId::Starfield, game_path).unwrap();
+        assert_eq!("Starfield", folder);
     }
 
     #[test]
@@ -993,6 +1017,10 @@ mod tests {
         settings = game_with_generic_paths(GameId::Fallout4VR);
         plugins = vec!["Fallout4.esm", "Fallout4_VR.esm"];
         assert_eq!(plugins, settings.early_loading_plugins());
+
+        settings = game_with_generic_paths(GameId::Starfield);
+        plugins = vec!["Starfield.esm", "Constellation.esm", "OldMars.esm"];
+        assert_eq!(plugins, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1065,17 +1093,6 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
-        let hardcoded_plugins = vec![
-            "Fallout4.esm",
-            "DLCRobot.esm",
-            "DLCworkshop01.esm",
-            "DLCCoast.esm",
-            "DLCworkshop02.esm",
-            "DLCworkshop03.esm",
-            "DLCNukaWorld.esm",
-            "DLCUltraHighResolution.esm",
-        ];
-
         let ccc_path = ccc_file_path(GameId::Fallout4, &game_path).unwrap();
         std::fs::write(&ccc_path, "ccBGSFO4001-PipBoy(Black).esl").unwrap();
 
@@ -1097,7 +1114,40 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(hardcoded_plugins, settings.early_loading_plugins());
+        assert_eq!(FALLOUT4_HARDCODED_PLUGINS, settings.early_loading_plugins());
+    }
+
+    #[test]
+    fn early_loading_plugins_should_not_include_cc_plugins_for_starfield_if_test_files_are_configured(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let ccc_path = ccc_file_path(GameId::Starfield, &game_path).unwrap();
+        std::fs::write(&ccc_path, "test.esp").unwrap();
+
+        let ini_path = game_path.join("Starfield.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp\n").unwrap();
+
+        copy_to_dir(
+            "Blank.esp",
+            &game_path.join("Data"),
+            "Blank.esp",
+            GameId::Starfield,
+        );
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Starfield,
+            game_path,
+            &PathBuf::default(),
+            game_path.to_path_buf(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            STARFIELD_HARDCODED_PLUGINS,
+            settings.early_loading_plugins()
+        );
     }
 
     #[test]
@@ -1225,6 +1275,14 @@ mod tests {
         let plugins = settings.implicitly_active_plugins();
 
         assert!(plugins.contains(&"Update.esm".to_string()));
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_blueprintships_starfield_esm_for_starfield() {
+        let settings = game_with_generic_paths(GameId::Starfield);
+        let plugins = settings.implicitly_active_plugins();
+
+        assert!(plugins.contains(&"BlueprintShips-Starfield.esm".to_string()));
     }
 
     #[test]

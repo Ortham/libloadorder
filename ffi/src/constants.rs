@@ -146,3 +146,7 @@ pub static LIBLO_GAME_TES5VR: c_uint = 9;
 /// Game code for Fallout 4 VR.
 #[no_mangle]
 pub static LIBLO_GAME_FO4VR: c_uint = 8;
+
+/// Game code for Starfield.
+#[no_mangle]
+pub static LIBLO_GAME_STARFIELD: c_uint = 10;

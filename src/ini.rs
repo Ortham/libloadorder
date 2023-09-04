@@ -159,6 +159,15 @@ pub fn test_files(
             let test_files = merge_test_files(base_test_files, custom_test_files);
             Ok(filter_test_files(test_files))
         }
+        GameId::Starfield => {
+            let base_test_files = read_test_files(&game_path.join("Starfield.ini"))?;
+            let custom_test_files = read_test_files(&my_games_path.join("StarfieldCustom.ini"))?;
+
+            // TODO: Also load from game_path/Starfield_<language>.INI
+
+            let test_files = merge_test_files(base_test_files, custom_test_files);
+            Ok(filter_test_files(test_files))
+        }
     }
 }
 
@@ -541,6 +550,23 @@ mod tests {
         std::fs::write(&ini_path, "[General]\nsTestFile2=b").unwrap();
 
         let files = test_files(GameId::Fallout4VR, &game_path, &my_games_path).unwrap();
+
+        assert_eq!(vec!["a", "b"], files);
+    }
+
+    #[test]
+    fn test_files_for_starfield_should_merge_values_from_starfield_and_my_games_starfieldcustom_ini(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let (game_path, my_games_path) = prep_dirs(&tmp_dir);
+
+        let ini_path = game_path.join("Starfield.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile1=a").unwrap();
+
+        let ini_path = my_games_path.join("StarfieldCustom.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile2=b").unwrap();
+
+        let files = test_files(GameId::Starfield, &game_path, &my_games_path).unwrap();
 
         assert_eq!(vec!["a", "b"], files);
     }
