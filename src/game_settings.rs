@@ -138,7 +138,8 @@ impl GameSettings {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
         let plugins_directory = game_path.join(plugins_folder_name(game_id));
-        let additional_plugins_directories = additional_plugins_directories(game_id, game_path);
+        let additional_plugins_directories =
+            additional_plugins_directories(game_id, game_path, &my_games_path);
 
         let (early_loading_plugins, implicitly_active_plugins) =
             GameSettings::load_implicitly_active_plugins(
@@ -421,7 +422,11 @@ fn plugins_folder_name(game_id: GameId) -> &'static str {
     }
 }
 
-fn additional_plugins_directories(game_id: GameId, game_path: &Path) -> Vec<PathBuf> {
+fn additional_plugins_directories(
+    game_id: GameId,
+    game_path: &Path,
+    my_games_path: &Path,
+) -> Vec<PathBuf> {
     if game_id == GameId::Fallout4 && is_microsoft_store_install(game_id, game_path) {
         vec![
             game_path.join(MS_FO4_AUTOMATRON_PATH),
@@ -432,6 +437,8 @@ fn additional_plugins_directories(game_id: GameId, game_path: &Path) -> Vec<Path
             game_path.join(MS_FO4_FAR_HARBOR_PATH),
             game_path.join(MS_FO4_CONTRAPTIONS_PATH),
         ]
+    } else if game_id == GameId::Starfield {
+        vec![my_games_path.join("Data")]
     } else {
         Vec::new()
     }
@@ -1381,7 +1388,7 @@ mod tests {
     }
 
     #[test]
-    fn additional_plugins_directories_should_be_empty_if_game_is_not_fallout4() {
+    fn additional_plugins_directories_should_be_empty_if_game_is_not_fallout4_or_starfield() {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
@@ -1432,6 +1439,16 @@ mod tests {
                 game_path.join(MS_FO4_FAR_HARBOR_PATH),
                 game_path.join(MS_FO4_CONTRAPTIONS_PATH),
             ],
+            settings.additional_plugins_directories()
+        );
+    }
+
+    #[test]
+    fn additional_plugins_directories_should_not_be_empty_if_game_is_starfield() {
+        let settings = game_with_generic_paths(GameId::Starfield);
+
+        assert_eq!(
+            vec![Path::new("my games").join("Data")],
             settings.additional_plugins_directories()
         );
     }
