@@ -297,7 +297,8 @@ fn plugins_file_path(game_id: GameId, game_path: &Path, local_path: &Path) -> Pa
     match game_id {
         GameId::Morrowind => game_path.join("Morrowind.ini"),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
-        _ => local_path.join("plugins.txt"),
+        // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the games themselves read Plugins.txt.
+        _ => local_path.join("Plugins.txt"),
     }
 }
 
@@ -310,6 +311,7 @@ fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> PathBuf {
         game_path
     };
 
+    // Although Oblivion's launcher creates plugins.txt, the game itself reads Plugins.txt.
     parent_path.join("Plugins.txt")
 }
 
@@ -401,7 +403,7 @@ mod tests {
         let local_app_data_path = Path::new(&local_app_data);
 
         assert_eq!(
-            local_app_data_path.join("Skyrim").join("plugins.txt"),
+            local_app_data_path.join("Skyrim").join("Plugins.txt"),
             *settings.active_plugins_file()
         );
         assert_eq!(
@@ -748,7 +750,7 @@ mod tests {
             GameSettings::with_local_path(GameId::Skyrim, &Path::new("game"), &Path::new("local"))
                 .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -759,7 +761,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -770,7 +772,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -781,7 +783,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -792,7 +794,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -803,7 +805,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
@@ -814,7 +816,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            Path::new("local/plugins.txt"),
+            Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
     }
