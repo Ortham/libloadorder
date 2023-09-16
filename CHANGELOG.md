@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [14.2.2] - 2023-09-16
+
+## Changed
+
+- `GameSettings::active_plugins_file()` now returns a path ending in
+  `Plugins.txt` instead of `plugins.txt` for all games other than Morrowind, to
+  case-sensitively match the filenames used by the games.
+
 ## [14.2.1] - 2023-08-22
 
 ## Changed
