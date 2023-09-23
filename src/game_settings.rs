@@ -349,6 +349,44 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
     }
 }
 
+fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
+    // Scan the path for .nam files. Each .nam file can activate a .esm or .esp
+    // plugin with the same basename, so return those filenames.
+    let mut plugin_names = Vec::new();
+
+    if !plugins_path.exists() {
+        return Ok(plugin_names);
+    }
+
+    let dir_iter = plugins_path
+        .read_dir()?
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .unwrap_or_default()
+                .eq_ignore_ascii_case("nam")
+        });
+
+    for entry in dir_iter {
+        let file_name = entry.file_name();
+
+        let esp = Path::new(&file_name).with_extension("esp");
+        if let Some(esp) = esp.to_str() {
+            plugin_names.push(esp.to_string());
+        }
+
+        let esm = Path::new(&file_name).with_extension("esm");
+        if let Some(esm) = esm.to_str() {
+            plugin_names.push(esm.to_string());
+        }
+    }
+
+    Ok(plugin_names)
+}
+
 fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<String>, Error> {
     let mut plugin_names: Vec<String> = hardcoded_plugins(game_id)
         .iter()
@@ -367,6 +405,15 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
         }
     }
 
+    if game_id == GameId::FalloutNV {
+        // If there is a .nam file with the same basename as a plugin then the plugin is activated
+        // and listed as a DLC in the game's title screen menu. This only works in the game's
+        // Data path, so ignore additional plugin directories.
+        let nam_plugins = find_nam_plugins(&game_path.join("Data"))?;
+
+        plugin_names.extend(nam_plugins);
+    }
+
     Ok(plugin_names)
 }
 
@@ -374,7 +421,7 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
 mod tests {
     #[cfg(windows)]
     use std::env;
-    use std::io::Write;
+    use std::{fs::create_dir, io::Write};
     use tempfile::tempdir;
 
     use crate::tests::copy_to_dir;
@@ -999,6 +1046,43 @@ mod tests {
         ];
         settings = game_with_ccc_plugins(GameId::Fallout4, game_path, &plugins[8..]);
         assert_eq!(plugins, settings.implicitly_active_plugins());
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_plugins_with_nam_files_for_fallout_nv() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let data_path = game_path.join("Data");
+
+        create_dir(&data_path).unwrap();
+        File::create(data_path.join("plugin1.nam")).unwrap();
+        File::create(data_path.join("plugin2.NAM")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::FalloutNV, &game_path, &PathBuf::default())
+                .unwrap();
+
+        let expected_plugins = vec!["plugin1.esm", "plugin1.esp", "plugin2.esm", "plugin2.esp"];
+        let mut plugins = settings.implicitly_active_plugins().to_vec();
+        plugins.sort();
+
+        assert_eq!(expected_plugins, plugins);
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_plugins_with_nam_files_for_games_other_than_fallout_nv(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let data_path = game_path.join("Data");
+
+        create_dir(&data_path).unwrap();
+        File::create(data_path.join("plugin.nam")).unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::Fallout3, &game_path, &PathBuf::default())
+                .unwrap();
+        assert!(settings.implicitly_active_plugins().is_empty());
     }
 
     #[test]
