@@ -206,13 +206,6 @@ impl GameSettings {
 }
 
 // The local path can vary depending on where the game was bought from.
-// Skyrim SE and Fallout 4 both have a " MS" suffix added to their local folder
-// name when bought from the Microsoft Store, and Skyrim SE has different folder
-// names depending on whether it was bought on Steam, GOG or Epic.
-// The logic for checking if a given game install path is for a MS Store game is
-// complicated, costly and not fully understood, so don't attempt it here.
-// However, the logic for checking where a Skyrim SE install is from is simple
-// and relatively quick, so can be done here.
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
     match game_id {
@@ -222,8 +215,8 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
         SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
         SkyrimVR => Some("Skyrim VR"),
         Fallout3 => Some("Fallout3"),
-        FalloutNV => Some("FalloutNV"),
-        Fallout4 => Some("Fallout4"),
+        FalloutNV => Some(falloutnv_appdata_folder_name(game_path)),
+        Fallout4 => Some(fallout4_appdata_folder_name(game_path)),
         Fallout4VR => Some("Fallout4VR"),
     }
 }
@@ -253,9 +246,28 @@ fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
     } else if game_path.join("EOSSDK-Win64-Shipping.dll").exists() {
         // EOSSDK-Win64-Shipping.dll is only installed by Epic.
         "Skyrim Special Edition EPIC"
+    } else if is_microsoft_store_install(GameId::SkyrimSE, game_path) {
+        "Skyrim Special Edition MS"
     } else {
         // If neither file is present it's probably the Steam distribution.
         "Skyrim Special Edition"
+    }
+}
+
+fn falloutnv_appdata_folder_name(game_path: &Path) -> &'static str {
+    if game_path.join("EOSSDK-Win32-Shipping.dll").exists() {
+        // EOSSDK-Win32-Shipping.dll is only installed by Epic.
+        "FalloutNV_Epic"
+    } else {
+        "FalloutNV"
+    }
+}
+
+fn fallout4_appdata_folder_name(game_path: &Path) -> &'static str {
+    if is_microsoft_store_install(GameId::Fallout4, game_path) {
+        "Fallout4 MS"
+    } else {
+        "Fallout4"
     }
 }
 
@@ -683,6 +695,21 @@ mod tests {
     }
 
     #[test]
+    fn appdata_folder_name_for_skyrim_se_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition", folder);
+
+        let dll_path = game_path.join("appxmanifest.xml");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
+        assert_eq!("Skyrim Special Edition MS", folder);
+    }
+
+    #[test]
     fn appdata_folder_name_for_skyrim_se_prefers_gog_suffix_over_epic_suffix() {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
@@ -695,6 +722,36 @@ mod tests {
 
         let folder = appdata_folder_name(GameId::SkyrimSE, game_path).unwrap();
         assert_eq!("Skyrim Special Edition GOG", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_fallout_nv_should_have_epic_suffix_if_eossdk_dll_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::FalloutNV, game_path).unwrap();
+        assert_eq!("FalloutNV", folder);
+
+        let dll_path = game_path.join("EOSSDK-Win32-Shipping.dll");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::FalloutNV, game_path).unwrap();
+        assert_eq!("FalloutNV_Epic", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_fallout4_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4", folder);
+
+        let dll_path = game_path.join("appxmanifest.xml");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4 MS", folder);
     }
 
     #[test]
