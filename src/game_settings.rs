@@ -440,6 +440,15 @@ mod tests {
 
     use super::*;
 
+    fn game_with_generic_paths(game_id: GameId) -> GameSettings {
+        GameSettings::with_local_path(game_id, &PathBuf::from("game"), &PathBuf::from("local"))
+            .unwrap()
+    }
+
+    fn game_with_game_path(game_id: GameId, game_path: &Path) -> GameSettings {
+        GameSettings::with_local_path(game_id, game_path, &PathBuf::default()).unwrap()
+    }
+
     fn game_with_ccc_plugins(
         game_id: GameId,
         game_path: &Path,
@@ -451,7 +460,7 @@ mod tests {
             writeln!(file, "{}", plugin_name).unwrap();
         }
 
-        GameSettings::with_local_path(game_id, &game_path, &Path::new("local")).unwrap()
+        game_with_game_path(game_id, game_path)
     }
 
     #[test]
@@ -473,162 +482,73 @@ mod tests {
 
     #[test]
     fn id_should_be_the_id_the_struct_was_created_with() {
-        let settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        let settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(GameId::Morrowind, settings.id());
     }
 
     #[test]
     fn load_order_method_should_be_timestamp_for_tes3_tes4_fo3_and_fonv() {
-        let mut settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::Oblivion,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout3,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::FalloutNV,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
     }
 
     #[test]
     fn load_order_method_should_be_textfile_for_tes5() {
-        let settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        let settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!(LoadOrderMethod::Textfile, settings.load_order_method());
     }
 
     #[test]
     fn load_order_method_should_be_asterisk_for_tes5se_tes5vr_fo4_and_fo4vr() {
-        let mut settings = GameSettings::with_local_path(
-            GameId::SkyrimSE,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        let mut settings = game_with_generic_paths(GameId::SkyrimSE);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimVR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimVR);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4VR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4VR);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
     }
 
     #[test]
     fn master_file_should_be_mapped_from_game_id() {
-        let mut settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!("Morrowind.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::Oblivion,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert_eq!("Oblivion.esm", settings.master_file());
 
-        settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!("Skyrim.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimSE,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimSE);
         assert_eq!("Skyrim.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimVR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimVR);
         assert_eq!("Skyrim.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout3,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert_eq!("Fallout3.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::FalloutNV,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert_eq!("FalloutNV.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         assert_eq!("Fallout4.esm", settings.master_file());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4VR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4VR);
         assert_eq!("Fallout4.esm", settings.master_file());
     }
 
@@ -695,7 +615,8 @@ mod tests {
     }
 
     #[test]
-    fn appdata_folder_name_for_skyrim_se_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path() {
+    fn appdata_folder_name_for_skyrim_se_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path()
+    {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
@@ -740,7 +661,8 @@ mod tests {
     }
 
     #[test]
-    fn appdata_folder_name_for_fallout4_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path() {
+    fn appdata_folder_name_for_fallout4_should_have_ms_suffix_if_appxmanifest_xml_is_in_game_path()
+    {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
@@ -756,169 +678,85 @@ mod tests {
 
     #[test]
     fn plugins_folder_name_should_be_mapped_from_game_id() {
-        let mut settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!("Data Files", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::Oblivion,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimSE,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimSE);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimVR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimVR);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout3,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::FalloutNV,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         assert_eq!("Data", settings.plugins_folder_name());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4VR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4VR);
         assert_eq!("Data", settings.plugins_folder_name());
     }
 
     #[test]
     fn active_plugins_file_should_be_mapped_from_game_id() {
-        let mut settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(
             Path::new("game/Morrowind.ini"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::Oblivion,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings =
-            GameSettings::with_local_path(GameId::Skyrim, &Path::new("game"), &Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimSE,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimSE);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimVR,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimVR);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout3,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::FalloutNV,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
         );
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4VR,
-            &Path::new("game"),
-            &Path::new("local"),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4VR);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
@@ -933,9 +771,7 @@ mod tests {
 
         std::fs::write(ini_path, "...\nbUseMyGamesDirectory=0\n...").unwrap();
 
-        let settings =
-            GameSettings::with_local_path(GameId::Oblivion, &game_path, &Path::new("local"))
-                .unwrap();
+        let settings = game_with_game_path(GameId::Oblivion, &game_path);
         assert_eq!(
             game_path.join("Plugins.txt"),
             *settings.active_plugins_file()
@@ -944,18 +780,11 @@ mod tests {
 
     #[test]
     fn implicitly_active_plugins_should_be_mapped_from_game_id() {
-        let mut settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Skyrim);
         let mut plugins = vec!["Skyrim.esm", "Update.esm"];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimSE,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimSE);
         plugins = vec![
             "Skyrim.esm",
             "Update.esm",
@@ -965,12 +794,7 @@ mod tests {
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 
-        settings = GameSettings::with_local_path(
-            GameId::SkyrimVR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimVR);
         plugins = vec![
             "Skyrim.esm",
             "Update.esm",
@@ -981,12 +805,7 @@ mod tests {
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         plugins = vec![
             "Fallout4.esm",
             "DLCRobot.esm",
@@ -999,44 +818,19 @@ mod tests {
         ];
         assert_eq!(plugins, settings.implicitly_active_plugins());
 
-        settings = GameSettings::with_local_path(
-            GameId::Morrowind,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Morrowind);
         assert!(settings.implicitly_active_plugins().is_empty());
 
-        settings = GameSettings::with_local_path(
-            GameId::Oblivion,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert!(settings.implicitly_active_plugins().is_empty());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout3,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert!(settings.implicitly_active_plugins().is_empty());
 
-        settings = GameSettings::with_local_path(
-            GameId::FalloutNV,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert!(settings.implicitly_active_plugins().is_empty());
 
-        settings = GameSettings::with_local_path(
-            GameId::Fallout4VR,
-            &PathBuf::default(),
-            &PathBuf::default(),
-        )
-        .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4VR);
         plugins = vec!["Fallout4.esm", "Fallout4_VR.esm"];
         assert_eq!(plugins, settings.implicitly_active_plugins());
     }
@@ -1115,10 +909,7 @@ mod tests {
         File::create(data_path.join("plugin1.nam")).unwrap();
         File::create(data_path.join("plugin2.NAM")).unwrap();
 
-        let settings =
-            GameSettings::with_local_path(GameId::FalloutNV, &game_path, &PathBuf::default())
-                .unwrap();
-
+        let settings = game_with_game_path(GameId::FalloutNV, &game_path);
         let expected_plugins = vec!["plugin1.esm", "plugin1.esp", "plugin2.esm", "plugin2.esp"];
         let mut plugins = settings.implicitly_active_plugins().to_vec();
         plugins.sort();
@@ -1136,75 +927,53 @@ mod tests {
         create_dir(&data_path).unwrap();
         File::create(data_path.join("plugin.nam")).unwrap();
 
-        let settings =
-            GameSettings::with_local_path(GameId::Fallout3, &game_path, &PathBuf::default())
-                .unwrap();
+        let settings = game_with_game_path(GameId::Fallout3, &game_path);
         assert!(settings.implicitly_active_plugins().is_empty());
     }
 
     #[test]
     fn is_implicitly_active_should_return_true_iff_the_plugin_is_implicitly_active() {
-        let settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        let settings = game_with_generic_paths(GameId::Skyrim);
         assert!(settings.is_implicitly_active("Update.esm"));
         assert!(!settings.is_implicitly_active("Test.esm"));
     }
 
     #[test]
     fn is_implicitly_active_should_match_case_insensitively() {
-        let settings =
-            GameSettings::with_local_path(GameId::Skyrim, &PathBuf::default(), &PathBuf::default())
-                .unwrap();
+        let settings = game_with_generic_paths(GameId::Skyrim);
         assert!(settings.is_implicitly_active("update.esm"));
     }
 
     #[test]
     fn plugins_folder_should_be_a_child_of_the_game_path() {
-        let settings =
-            GameSettings::with_local_path(GameId::Skyrim, Path::new("game"), &PathBuf::default())
-                .unwrap();
+        let settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!(Path::new("game/Data"), settings.plugins_directory());
     }
 
     #[test]
     fn load_order_file_should_be_in_local_path_for_skyrim_and_none_for_other_games() {
-        let mut settings =
-            GameSettings::with_local_path(GameId::Skyrim, Path::new("game"), Path::new("local"))
-                .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Skyrim);
         assert_eq!(
             Path::new("local/loadorder.txt"),
             settings.load_order_file().unwrap()
         );
 
-        settings =
-            GameSettings::with_local_path(GameId::SkyrimSE, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::SkyrimSE);
         assert!(settings.load_order_file().is_none());
 
-        settings =
-            GameSettings::with_local_path(GameId::Morrowind, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Morrowind);
         assert!(settings.load_order_file().is_none());
 
-        settings =
-            GameSettings::with_local_path(GameId::Oblivion, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Oblivion);
         assert!(settings.load_order_file().is_none());
 
-        settings =
-            GameSettings::with_local_path(GameId::Fallout3, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout3);
         assert!(settings.load_order_file().is_none());
 
-        settings =
-            GameSettings::with_local_path(GameId::FalloutNV, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::FalloutNV);
         assert!(settings.load_order_file().is_none());
 
-        settings =
-            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), Path::new("local"))
-                .unwrap();
+        settings = game_with_generic_paths(GameId::Fallout4);
         assert!(settings.load_order_file().is_none());
     }
 
@@ -1215,17 +984,27 @@ mod tests {
 
         File::create(game_path.join("appxmanifest.xml")).unwrap();
 
-        let settings =
-            GameSettings::with_local_path(GameId::SkyrimSE, game_path, Path::new("local")).unwrap();
+        let game_ids = [
+            GameId::Morrowind,
+            GameId::Oblivion,
+            GameId::Skyrim,
+            GameId::SkyrimSE,
+            GameId::SkyrimVR,
+            GameId::Fallout3,
+            GameId::FalloutNV,
+        ];
 
-        assert!(settings.additional_plugins_directories().is_empty());
+        for game_id in game_ids {
+            let settings = game_with_game_path(game_id, game_path);
+
+            assert!(settings.additional_plugins_directories().is_empty());
+        }
     }
 
     #[test]
-    fn additional_plugins_directories_should_be_empty_if_game_is_not_from_the_microsoft_store() {
-        let settings =
-            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), Path::new("local"))
-                .unwrap();
+    fn additional_plugins_directories_should_be_empty_if_fallout4_is_not_from_the_microsoft_store()
+    {
+        let settings = game_with_generic_paths(GameId::Fallout4);
 
         assert!(settings.additional_plugins_directories().is_empty());
     }
@@ -1238,8 +1017,7 @@ mod tests {
 
         File::create(game_path.join("appxmanifest.xml")).unwrap();
 
-        let settings =
-            GameSettings::with_local_path(GameId::Fallout4, game_path, Path::new("local")).unwrap();
+        let settings = game_with_game_path(GameId::Fallout4, game_path);
 
         assert_eq!(
             vec![
@@ -1263,9 +1041,7 @@ mod tests {
         let plugin_name = "external.esp";
         let expected_plugin_path = other_dir.join(plugin_name);
 
-        let mut settings =
-            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), &PathBuf::default())
-                .unwrap();
+        let mut settings = game_with_generic_paths(GameId::Fallout4);
         settings.additional_plugins_directories = vec![other_dir.clone()];
 
         copy_to_dir("Blank.esp", &other_dir, plugin_name, &settings);
@@ -1277,9 +1053,7 @@ mod tests {
 
     #[test]
     fn plugin_path_should_return_plugins_dir_subpath_if_name_does_not_match_any_external_plugin() {
-        let settings =
-            GameSettings::with_local_path(GameId::Fallout4, Path::new("game"), &PathBuf::default())
-                .unwrap();
+        let settings = game_with_generic_paths(GameId::Fallout4);
 
         let plugin_name = "DLCCoast.esm";
         assert_eq!(
