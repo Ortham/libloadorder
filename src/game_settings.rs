@@ -83,6 +83,9 @@ const MS_FO4_WASTELAND_PATH: &str = "../../Fallout 4- Wasteland Workshop (PC)/Co
 const MS_FO4_CONTRAPTIONS_PATH: &str = "../../Fallout 4- Contraptions Workshop (PC)/Content/Data";
 const MS_FO4_VAULT_TEC_PATH: &str = "../../Fallout 4- Vault-Tec Workshop (PC)/Content/Data";
 
+const ENDERAL_LAUNCHER: &str = "Enderal Launcher.exe";
+const PLUGINS_TXT: &str = "Plugins.txt";
+
 impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
@@ -222,7 +225,7 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
 }
 
 fn skyrim_appdata_folder_name(game_path: &Path) -> &'static str {
-    if game_path.join("Enderal Launcher.exe").exists() {
+    if game_path.join(ENDERAL_LAUNCHER).exists() {
         // It's not actually Skyrim, it's Enderal.
         "enderal"
     } else {
@@ -233,7 +236,7 @@ fn skyrim_appdata_folder_name(game_path: &Path) -> &'static str {
 fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
     let is_gog_install = game_path.join("Galaxy64.dll").exists();
 
-    if game_path.join("Enderal Launcher.exe").exists() {
+    if game_path.join(ENDERAL_LAUNCHER).exists() {
         // It's not actually Skyrim SE, it's Enderal SE.
         if is_gog_install {
             "Enderal Special Edition GOG"
@@ -272,12 +275,14 @@ fn fallout4_appdata_folder_name(game_path: &Path) -> &'static str {
 }
 
 fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
+    const APPX_MANIFEST: &str = "appxmanifest.xml";
+
     match game_id {
         GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => game_path
             .parent()
-            .map(|parent| parent.join("appxmanifest.xml").exists())
+            .map(|parent| parent.join(APPX_MANIFEST).exists())
             .unwrap_or(false),
-        GameId::SkyrimSE | GameId::Fallout4 => game_path.join("appxmanifest.xml").exists(),
+        GameId::SkyrimSE | GameId::Fallout4 => game_path.join(APPX_MANIFEST).exists(),
         _ => false,
     }
 }
@@ -314,7 +319,7 @@ fn plugins_file_path(
         GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
         // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the games themselves read Plugins.txt.
-        _ => Ok(local_path.join("Plugins.txt")),
+        _ => Ok(local_path.join(PLUGINS_TXT)),
     }
 }
 
@@ -328,7 +333,7 @@ fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> Result<Pat
     };
 
     // Although Oblivion's launcher creates plugins.txt, the game itself reads Plugins.txt.
-    Ok(parent_path.join("Plugins.txt"))
+    Ok(parent_path.join(PLUGINS_TXT))
 }
 
 fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
