@@ -140,6 +140,22 @@ void test_lo_get_implicitly_active_plugins() {
   lo_destroy_handle(handle);
 }
 
+void test_lo_get_early_loading_plugins() {
+  printf("testing lo_get_load_order()...\n");
+  lo_game_handle handle = create_fo4_handle();
+
+  char ** plugins = nullptr;
+  size_t num_plugins = 0;
+  unsigned int return_code = lo_get_early_loading_plugins(handle, &plugins, &num_plugins);
+
+  assert(return_code == 0);
+  assert(num_plugins == 8);
+  assert(strcmp(plugins[0], "Fallout4.esm") == 0);
+  assert(strcmp(plugins[4], "DLCworkshop02.esm") == 0);
+  lo_free_string_array(plugins, num_plugins);
+  lo_destroy_handle(handle);
+}
+
 void test_lo_get_active_plugins_file_path() {
   printf("testing lo_get_active_plugins_file_path()...\n");
   lo_game_handle handle = create_handle();
@@ -340,6 +356,7 @@ int main(void) {
   test_lo_is_ambiguous();
   test_lo_fix_plugin_lists();
   test_lo_get_implicitly_active_plugins();
+  test_lo_get_early_loading_plugins();
   test_lo_get_active_plugins_file_path();
   test_lo_set_additional_plugins_directories();
 

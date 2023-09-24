@@ -254,15 +254,8 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
 /// Get the list of implicitly active plugins for the given handle's game.
 ///
 /// The list may be empty if the game has no implicitly active plugins. The list
-/// may include plugins that are not installed. Plugins are listed in their
-/// hardcoded load order.
-///
-/// Note that for the original Skyrim, `Update.esm` is hardcoded to always load,
-/// but not in a specific location, unlike all other implicitly active plugins
-/// for all games, which must load in the given order, before any other plugins.
-///
-/// The order of Creation Club plugins as listed in `Fallout4.ccc` or
-/// `Skyrim.ccc` is as their hardcoded load order for libloadorder's purposes.
+/// may include plugins that are not installed. Plugins are not necessarily
+/// listed in their load order.
 ///
 /// If the list is empty, the `plugins` pointer will be null and `num_plugins`
 /// will be `0`.
@@ -289,6 +282,62 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
         *num_plugins = 0;
 
         let plugin_names = handle.game_settings().implicitly_active_plugins();
+
+        if plugin_names.is_empty() {
+            return LIBLO_OK;
+        }
+
+        match to_c_string_array(plugin_names) {
+            Ok((pointer, size)) => {
+                *plugins = pointer;
+                *num_plugins = size;
+            }
+            Err(x) => return error(x, "A filename contained a null byte"),
+        }
+
+        LIBLO_OK
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
+/// Get the list of implicitly active plugins for the given handle's game.
+///
+/// The list may be empty if the game has no early loading plugins. The list
+/// may include plugins that are not installed. Plugins are listed in their
+/// hardcoded load order.
+///
+/// Note that for the original Skyrim, `Update.esm` is hardcoded to always load,
+/// but not in a specific location, unlike all other early loading plugins
+/// for all games, which must load in the given order, before any other plugins.
+///
+/// The order of Creation Club plugins as listed in `Fallout4.ccc` or
+/// `Skyrim.ccc` is as their hardcoded load order for libloadorder's purposes.
+///
+/// If the list is empty, the `plugins` pointer will be null and `num_plugins`
+/// will be `0`.
+///
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
+/// returned.
+#[no_mangle]
+pub unsafe extern "C" fn lo_get_early_loading_plugins(
+    handle: lo_game_handle,
+    plugins: *mut *mut *mut c_char,
+    num_plugins: *mut size_t,
+) -> c_uint {
+    catch_unwind(|| {
+        if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
+            Ok(h) => h,
+        };
+
+        *plugins = ptr::null_mut();
+        *num_plugins = 0;
+
+        let plugin_names = handle.game_settings().early_loading_plugins();
 
         if plugin_names.is_empty() {
             return LIBLO_OK;
