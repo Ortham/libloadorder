@@ -382,7 +382,6 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
 
     let dir_iter = plugins_path
         .read_dir()?
-        .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
         .filter(|e| {
