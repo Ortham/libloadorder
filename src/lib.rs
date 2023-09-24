@@ -20,6 +20,7 @@
 mod enums;
 mod game_settings;
 mod ghostable_path;
+mod ini;
 mod load_order;
 mod plugin;
 #[cfg(test)]
@@ -28,3 +29,7 @@ mod tests;
 pub use crate::enums::{Error, GameId, LoadOrderMethod};
 pub use crate::game_settings::GameSettings;
 pub use crate::load_order::{ReadableLoadOrder, WritableLoadOrder};
+
+fn is_enderal(game_path: &std::path::Path) -> bool {
+    game_path.join("Enderal Launcher.exe").exists()
+}

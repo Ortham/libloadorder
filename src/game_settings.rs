@@ -22,20 +22,22 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::path::PathBuf;
 
-use encoding_rs::WINDOWS_1252;
-
 use crate::enums::{Error, GameId, LoadOrderMethod};
+use crate::ini::{test_files, use_my_games_directory};
+use crate::is_enderal;
 use crate::load_order::{
     AsteriskBasedLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder, WritableLoadOrder,
 };
+use crate::plugin::Plugin;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
     id: GameId,
-    game_path: PathBuf,
+    plugins_directory: PathBuf,
     plugins_file_path: PathBuf,
     load_order_path: Option<PathBuf>,
     implicitly_active_plugins: Vec<String>,
+    early_loading_plugins: Vec<String>,
     additional_plugins_directories: Vec<PathBuf>,
 }
 
@@ -83,13 +85,15 @@ const MS_FO4_WASTELAND_PATH: &str = "../../Fallout 4- Wasteland Workshop (PC)/Co
 const MS_FO4_CONTRAPTIONS_PATH: &str = "../../Fallout 4- Contraptions Workshop (PC)/Content/Data";
 const MS_FO4_VAULT_TEC_PATH: &str = "../../Fallout 4- Vault-Tec Workshop (PC)/Content/Data";
 
-const ENDERAL_LAUNCHER: &str = "Enderal Launcher.exe";
 const PLUGINS_TXT: &str = "Plugins.txt";
 
 impl GameSettings {
     #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
-        let local_app_data_path = app_dirs2::get_data_root(app_dirs2::AppDataType::UserCache)?;
+        let local_app_data_path = match dirs::data_local_dir() {
+            Some(x) => x,
+            None => return Err(Error::NoLocalAppData),
+        };
         let local_path = match appdata_folder_name(game_id, game_path) {
             Some(x) => local_app_data_path.join(x),
             None => local_app_data_path,
@@ -112,17 +116,51 @@ impl GameSettings {
         game_path: &Path,
         local_path: &Path,
     ) -> Result<GameSettings, Error> {
+        let my_games_path = match my_games_folder_name(game_id, game_path) {
+            Some(folder) => documents_path(local_path)
+                .map(|d| d.join("My Games").join(folder))
+                .ok_or_else(|| Error::InvalidPath(local_path.to_owned()))?,
+            None => PathBuf::default(),
+        };
+
+        GameSettings::with_local_and_my_games_paths(game_id, game_path, local_path, &my_games_path)
+    }
+
+    pub(crate) fn with_local_and_my_games_paths(
+        game_id: GameId,
+        game_path: &Path,
+        local_path: &Path,
+        my_games_path: &Path,
+    ) -> Result<GameSettings, Error> {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
-        let implicitly_active_plugins = implicitly_active_plugins(game_id, game_path)?;
+        let plugins_directory = game_path.join(plugins_folder_name(game_id));
+        let additional_plugins_directories = additional_plugins_directories(game_id, game_path);
+
+        let mut test_files = test_files(game_id, game_path, my_games_path)?;
+
+        if game_id == GameId::Fallout4 || game_id == GameId::Fallout4VR {
+            // Fallout 4 ignores plugins.txt and Fallout4.ccc if there are valid plugins listed as test files, so filter out invalid values.
+            test_files.retain(|f| {
+                let path = plugin_path(f, &plugins_directory, &additional_plugins_directories);
+                Plugin::with_path(&path, game_id, false).is_ok()
+            });
+        }
+
+        let early_loading_plugins =
+            early_loading_plugins(game_id, game_path, !test_files.is_empty())?;
+
+        let implicitly_active_plugins =
+            implicitly_active_plugins(game_id, game_path, &early_loading_plugins, &test_files)?;
 
         Ok(GameSettings {
             id: game_id,
-            game_path: game_path.to_path_buf(),
+            plugins_directory,
             plugins_file_path,
             load_order_path,
             implicitly_active_plugins,
-            additional_plugins_directories: additional_plugins_directories(game_id, game_path),
+            early_loading_plugins,
+            additional_plugins_directories,
         })
     }
 
@@ -170,8 +208,19 @@ impl GameSettings {
             .any(|p| eq(p.as_str(), plugin))
     }
 
+    pub fn early_loading_plugins(&self) -> &[String] {
+        &self.early_loading_plugins
+    }
+
+    pub fn loads_early(&self, plugin: &str) -> bool {
+        use unicase::eq;
+        self.early_loading_plugins()
+            .iter()
+            .any(|p| eq(p.as_str(), plugin))
+    }
+
     pub fn plugins_directory(&self) -> PathBuf {
-        self.game_path.join(self.plugins_folder_name())
+        self.plugins_directory.clone()
     }
 
     pub fn active_plugins_file(&self) -> &PathBuf {
@@ -180,13 +229,6 @@ impl GameSettings {
 
     pub fn load_order_file(&self) -> Option<&PathBuf> {
         self.load_order_path.as_ref()
-    }
-
-    fn plugins_folder_name(&self) -> &'static str {
-        match self.id {
-            GameId::Morrowind => "Data Files",
-            _ => "Data",
-        }
     }
 
     pub fn additional_plugins_directories(&self) -> &[PathBuf] {
@@ -198,13 +240,11 @@ impl GameSettings {
     }
 
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
-        // There may be multiple directories that the plugin could be installed in, so check each in turn. Plugins may be ghosted, so take that into account when checking.
-        use crate::ghostable_path::GhostablePath;
-
-        self.additional_plugins_directories()
-            .iter()
-            .find_map(|d| d.join(plugin_name).resolve_path().ok())
-            .unwrap_or_else(|| self.plugins_directory().join(plugin_name))
+        plugin_path(
+            plugin_name,
+            &self.plugins_directory(),
+            &self.additional_plugins_directories,
+        )
     }
 }
 
@@ -225,7 +265,7 @@ fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str
 }
 
 fn skyrim_appdata_folder_name(game_path: &Path) -> &'static str {
-    if game_path.join(ENDERAL_LAUNCHER).exists() {
+    if is_enderal(game_path) {
         // It's not actually Skyrim, it's Enderal.
         "enderal"
     } else {
@@ -236,8 +276,7 @@ fn skyrim_appdata_folder_name(game_path: &Path) -> &'static str {
 fn skyrim_se_appdata_folder_name(game_path: &Path) -> &'static str {
     let is_gog_install = game_path.join("Galaxy64.dll").exists();
 
-    if game_path.join(ENDERAL_LAUNCHER).exists() {
-        // It's not actually Skyrim SE, it's Enderal SE.
+    if is_enderal(game_path) {
         if is_gog_install {
             "Enderal Special Edition GOG"
         } else {
@@ -274,6 +313,23 @@ fn fallout4_appdata_folder_name(game_path: &Path) -> &'static str {
     }
 }
 
+fn my_games_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
+    use crate::enums::GameId::*;
+    match game_id {
+        Skyrim => Some(skyrim_my_games_folder_name(game_path)),
+        // For all other games the name is the same as the AppData\Local folder name.
+        _ => appdata_folder_name(game_id, game_path),
+    }
+}
+
+fn skyrim_my_games_folder_name(game_path: &Path) -> &'static str {
+    if is_enderal(game_path) {
+        "Enderal"
+    } else {
+        "Skyrim"
+    }
+}
+
 fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
     const APPX_MANIFEST: &str = "appxmanifest.xml";
 
@@ -284,6 +340,35 @@ fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
             .unwrap_or(false),
         GameId::SkyrimSE | GameId::Fallout4 => game_path.join(APPX_MANIFEST).exists(),
         _ => false,
+    }
+}
+
+#[cfg(windows)]
+fn documents_path(_local_path: &Path) -> Option<PathBuf> {
+    dirs::document_dir()
+}
+
+#[cfg(not(windows))]
+fn documents_path(local_path: &Path) -> Option<PathBuf> {
+    const DOCUMENTS: &str = "Documents";
+    // Get the documents path relative to the game's local path, which should end in
+    // AppData/Local/<Game>.
+    local_path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+        .map(|p| p.join(DOCUMENTS))
+        .or_else(|| {
+            // Fall back to creating a path that navigates up parent directories. This may give a
+            // different result if local_path involves symlinks.
+            Some(local_path.join("..").join("..").join("..").join(DOCUMENTS))
+        })
+}
+
+fn plugins_folder_name(game_id: GameId) -> &'static str {
+    match game_id {
+        GameId::Morrowind => "Data Files",
+        _ => "Data",
     }
 }
 
@@ -318,7 +403,8 @@ fn plugins_file_path(
     match game_id {
         GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
-        // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the games themselves read Plugins.txt.
+        // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the
+        // games themselves read Plugins.txt.
         _ => Ok(local_path.join(PLUGINS_TXT)),
     }
 }
@@ -334,27 +420,6 @@ fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> Result<Pat
 
     // Although Oblivion's launcher creates plugins.txt, the game itself reads Plugins.txt.
     Ok(parent_path.join(PLUGINS_TXT))
-}
-
-fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
-    // Read ini as Windows-1252 bytes and then convert to UTF-8 before parsing,
-    // as the ini crate expects the content to be valid UTF-8.
-    let contents = std::fs::read(ini_path)?;
-
-    // My Games is used if bUseMyGamesDirectory is not present or set to 1.
-    let contents = WINDOWS_1252.decode_without_bom_handling(&contents).0;
-
-    ini::Ini::load_from_str(&contents).map_err(Error::from)
-}
-
-fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
-    if ini_path.exists() {
-        // My Games is used if bUseMyGamesDirectory is not present or set to 1.
-        read_ini(ini_path)
-            .map(|ini| ini.get_from(Some("General"), "bUseMyGamesDirectory") != Some("0"))
-    } else {
-        Ok(true)
-    }
 }
 
 fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
@@ -413,11 +478,21 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
     Ok(plugin_names)
 }
 
-fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<String>, Error> {
+fn early_loading_plugins(
+    game_id: GameId,
+    game_path: &Path,
+    has_test_files: bool,
+) -> Result<Vec<String>, Error> {
     let mut plugin_names: Vec<String> = hardcoded_plugins(game_id)
         .iter()
         .map(|s| (*s).to_string())
         .collect();
+
+    if game_id == GameId::Fallout4 && has_test_files {
+        // If test files are configured for Fallout 4, CCC plugins are not loaded.
+        // No need to check for Fallout 4 VR, as it has no CCC plugins file.
+        return Ok(plugin_names);
+    }
 
     if let Some(file_path) = ccc_file_path(game_id, game_path) {
         if file_path.exists() {
@@ -431,6 +506,20 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
         }
     }
 
+    Ok(plugin_names)
+}
+
+fn implicitly_active_plugins(
+    game_id: GameId,
+    game_path: &Path,
+    early_loading_plugins: &[String],
+    test_files: &[String],
+) -> Result<Vec<String>, Error> {
+    let mut plugin_names = Vec::new();
+
+    plugin_names.extend_from_slice(early_loading_plugins);
+    plugin_names.extend_from_slice(test_files);
+
     if game_id == GameId::FalloutNV {
         // If there is a .nam file with the same basename as a plugin then the plugin is activated
         // and listed as a DLC in the game's title screen menu. This only works in the game's
@@ -440,7 +529,26 @@ fn implicitly_active_plugins(game_id: GameId, game_path: &Path) -> Result<Vec<St
         plugin_names.extend(nam_plugins);
     }
 
+    // Remove duplicates, keeping only the first instance of each plugin.
+    let mut set = std::collections::HashSet::<unicase::UniCase<String>>::new();
+    plugin_names.retain(|e| set.insert(unicase::UniCase::new(e.clone())));
+
     Ok(plugin_names)
+}
+
+fn plugin_path(
+    plugin_name: &str,
+    plugins_directory: &Path,
+    additional_plugins_directories: &[PathBuf],
+) -> PathBuf {
+    // There may be multiple directories that the plugin could be installed in, so check each in
+    // turn. Plugins may be ghosted, so take that into account when checking.
+    use crate::ghostable_path::GhostablePath;
+
+    additional_plugins_directories
+        .iter()
+        .find_map(|d| d.join(plugin_name).resolve_path().ok())
+        .unwrap_or_else(|| plugins_directory.join(plugin_name))
 }
 
 #[cfg(test)]
@@ -455,12 +563,23 @@ mod tests {
     use super::*;
 
     fn game_with_generic_paths(game_id: GameId) -> GameSettings {
-        GameSettings::with_local_path(game_id, &PathBuf::from("game"), &PathBuf::from("local"))
-            .unwrap()
+        GameSettings::with_local_and_my_games_paths(
+            game_id,
+            &PathBuf::from("game"),
+            &PathBuf::from("local"),
+            &PathBuf::from("my games"),
+        )
+        .unwrap()
     }
 
     fn game_with_game_path(game_id: GameId, game_path: &Path) -> GameSettings {
-        GameSettings::with_local_path(game_id, game_path, &PathBuf::default()).unwrap()
+        GameSettings::with_local_and_my_games_paths(
+            game_id,
+            game_path,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        )
+        .unwrap()
     }
 
     fn game_with_ccc_plugins(
@@ -692,32 +811,15 @@ mod tests {
 
     #[test]
     fn plugins_folder_name_should_be_mapped_from_game_id() {
-        let mut settings = game_with_generic_paths(GameId::Morrowind);
-        assert_eq!("Data Files", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::Oblivion);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::Skyrim);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::SkyrimSE);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::SkyrimVR);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::Fallout3);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::FalloutNV);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::Fallout4);
-        assert_eq!("Data", settings.plugins_folder_name());
-
-        settings = game_with_generic_paths(GameId::Fallout4VR);
-        assert_eq!("Data", settings.plugins_folder_name());
+        assert_eq!("Data Files", plugins_folder_name(GameId::Morrowind));
+        assert_eq!("Data", plugins_folder_name(GameId::Oblivion));
+        assert_eq!("Data", plugins_folder_name(GameId::Skyrim));
+        assert_eq!("Data", plugins_folder_name(GameId::SkyrimSE));
+        assert_eq!("Data", plugins_folder_name(GameId::SkyrimVR));
+        assert_eq!("Data", plugins_folder_name(GameId::Fallout3));
+        assert_eq!("Data", plugins_folder_name(GameId::FalloutNV));
+        assert_eq!("Data", plugins_folder_name(GameId::Fallout4));
+        assert_eq!("Data", plugins_folder_name(GameId::Fallout4VR));
     }
 
     #[test]
@@ -793,10 +895,10 @@ mod tests {
     }
 
     #[test]
-    fn implicitly_active_plugins_should_be_mapped_from_game_id() {
+    fn early_loading_plugins_should_be_mapped_from_game_id() {
         let mut settings = game_with_generic_paths(GameId::Skyrim);
         let mut plugins = vec!["Skyrim.esm", "Update.esm"];
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::SkyrimSE);
         plugins = vec![
@@ -806,7 +908,7 @@ mod tests {
             "HearthFires.esm",
             "Dragonborn.esm",
         ];
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::SkyrimVR);
         plugins = vec![
@@ -817,7 +919,7 @@ mod tests {
             "Dragonborn.esm",
             "SkyrimVR.esm",
         ];
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Fallout4);
         plugins = vec![
@@ -830,27 +932,27 @@ mod tests {
             "DLCNukaWorld.esm",
             "DLCUltraHighResolution.esm",
         ];
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Morrowind);
-        assert!(settings.implicitly_active_plugins().is_empty());
+        assert!(settings.early_loading_plugins().is_empty());
 
         settings = game_with_generic_paths(GameId::Oblivion);
-        assert!(settings.implicitly_active_plugins().is_empty());
+        assert!(settings.early_loading_plugins().is_empty());
 
         settings = game_with_generic_paths(GameId::Fallout3);
-        assert!(settings.implicitly_active_plugins().is_empty());
+        assert!(settings.early_loading_plugins().is_empty());
 
         settings = game_with_generic_paths(GameId::FalloutNV);
-        assert!(settings.implicitly_active_plugins().is_empty());
+        assert!(settings.early_loading_plugins().is_empty());
 
         settings = game_with_generic_paths(GameId::Fallout4VR);
         plugins = vec!["Fallout4.esm", "Fallout4_VR.esm"];
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
     }
 
     #[test]
-    fn implicitly_active_plugins_should_include_plugins_loaded_from_ccc_file() {
+    fn early_loading_plugins_should_include_plugins_loaded_from_ccc_file() {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
@@ -872,7 +974,7 @@ mod tests {
             "ccQDRSSE001-SurvivalMode.esl",
         ];
         let mut settings = game_with_ccc_plugins(GameId::SkyrimSE, game_path, &plugins[5..]);
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         plugins = vec![
             "Fallout4.esm",
@@ -910,7 +1012,149 @@ mod tests {
             "ccEEJFO4001-DecorationPack.esl",
         ];
         settings = game_with_ccc_plugins(GameId::Fallout4, game_path, &plugins[8..]);
-        assert_eq!(plugins, settings.implicitly_active_plugins());
+        assert_eq!(plugins, settings.early_loading_plugins());
+    }
+
+    #[test]
+    fn early_loading_plugins_should_not_include_cc_plugins_for_fallout4_if_test_files_are_configured(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let hardcoded_plugins = vec![
+            "Fallout4.esm",
+            "DLCRobot.esm",
+            "DLCworkshop01.esm",
+            "DLCCoast.esm",
+            "DLCworkshop02.esm",
+            "DLCworkshop03.esm",
+            "DLCNukaWorld.esm",
+            "DLCUltraHighResolution.esm",
+        ];
+
+        let ccc_path = ccc_file_path(GameId::Fallout4, &game_path).unwrap();
+        std::fs::write(&ccc_path, "ccBGSFO4001-PipBoy(Black).esl").unwrap();
+
+        let ini_path = game_path.join("Fallout4.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp\n").unwrap();
+
+        copy_to_dir(
+            "Blank.esp",
+            &game_path.join("Data"),
+            "Blank.esp",
+            GameId::Fallout4,
+        );
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Fallout4,
+            game_path,
+            &PathBuf::default(),
+            game_path,
+        )
+        .unwrap();
+
+        assert_eq!(hardcoded_plugins, settings.early_loading_plugins());
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_early_loading_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let settings = game_with_game_path(GameId::SkyrimSE, game_path);
+
+        assert_eq!(
+            settings.early_loading_plugins(),
+            settings.implicitly_active_plugins()
+        );
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_test_files() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let ini_path = game_path.join("Skyrim.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile1=plugin.esp\n").unwrap();
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::SkyrimSE,
+            game_path,
+            &PathBuf::default(),
+            game_path,
+        )
+        .unwrap();
+
+        let mut expected_plugins = settings.early_loading_plugins().to_vec();
+        expected_plugins.push("plugin.esp".to_string());
+
+        assert_eq!(expected_plugins, settings.implicitly_active_plugins());
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_only_include_valid_test_files_for_fallout4() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let ini_path = game_path.join("Fallout4.ini");
+        std::fs::write(
+            &ini_path,
+            "[General]\nsTestFile1=plugin.esp\nsTestFile2=Blank.esp",
+        )
+        .unwrap();
+
+        copy_to_dir(
+            "Blank.esp",
+            &game_path.join("Data"),
+            "Blank.esp",
+            GameId::Fallout4,
+        );
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Fallout4,
+            game_path,
+            &PathBuf::default(),
+            game_path,
+        )
+        .unwrap();
+
+        let mut expected_plugins = settings.early_loading_plugins().to_vec();
+        expected_plugins.push("Blank.esp".to_string());
+
+        assert_eq!(expected_plugins, settings.implicitly_active_plugins());
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_only_include_valid_test_files_for_fallout4vr() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let ini_path = game_path.join("Fallout4VR.ini");
+        std::fs::write(
+            &ini_path,
+            "[General]\nsTestFile1=plugin.esp\nsTestFile2=Blank.esp",
+        )
+        .unwrap();
+
+        copy_to_dir(
+            "Blank.esp",
+            &game_path.join("Data"),
+            "Blank.esp",
+            GameId::Fallout4VR,
+        );
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Fallout4VR,
+            game_path,
+            &PathBuf::default(),
+            game_path,
+        )
+        .unwrap();
+
+        let mut expected_plugins = settings.early_loading_plugins().to_vec();
+        expected_plugins.push("Blank.esp".to_string());
+
+        assert_eq!(expected_plugins, settings.implicitly_active_plugins());
     }
 
     #[test]
@@ -946,6 +1190,28 @@ mod tests {
     }
 
     #[test]
+    fn implicitly_active_plugins_should_not_include_case_insensitive_duplicates() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let ini_path = game_path.join("Fallout4.ini");
+        std::fs::write(&ini_path, "[General]\nsTestFile1=fallout4.esm\n").unwrap();
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Fallout4,
+            game_path,
+            &PathBuf::default(),
+            game_path,
+        )
+        .unwrap();
+
+        assert_eq!(
+            settings.early_loading_plugins(),
+            settings.implicitly_active_plugins()
+        );
+    }
+
+    #[test]
     fn is_implicitly_active_should_return_true_iff_the_plugin_is_implicitly_active() {
         let settings = game_with_generic_paths(GameId::Skyrim);
         assert!(settings.is_implicitly_active("Update.esm"));
@@ -956,6 +1222,19 @@ mod tests {
     fn is_implicitly_active_should_match_case_insensitively() {
         let settings = game_with_generic_paths(GameId::Skyrim);
         assert!(settings.is_implicitly_active("update.esm"));
+    }
+
+    #[test]
+    fn loads_early_should_return_true_iff_the_plugin_loads_early() {
+        let settings = game_with_generic_paths(GameId::SkyrimSE);
+        assert!(settings.loads_early("Dawnguard.esm"));
+        assert!(!settings.loads_early("Test.esm"));
+    }
+
+    #[test]
+    fn loads_early_should_match_case_insensitively() {
+        let settings = game_with_generic_paths(GameId::SkyrimSE);
+        assert!(settings.loads_early("dawnguard.esm"));
     }
 
     #[test]
@@ -1058,7 +1337,7 @@ mod tests {
         let mut settings = game_with_generic_paths(GameId::Fallout4);
         settings.additional_plugins_directories = vec![other_dir.clone()];
 
-        copy_to_dir("Blank.esp", &other_dir, plugin_name, &settings);
+        copy_to_dir("Blank.esp", &other_dir, plugin_name, GameId::Fallout4);
 
         let plugin_path = settings.plugin_path(plugin_name);
 
@@ -1074,93 +1353,5 @@ mod tests {
             settings.plugins_directory().join(plugin_name),
             settings.plugin_path(plugin_name)
         );
-    }
-
-    #[test]
-    fn read_ini_should_read_empty_values_and_case_insensitive_keys() {
-        let tmp_dir = tempdir().unwrap();
-        let game_path = tmp_dir.path();
-        let ini_path = game_path.join("Oblivion.ini");
-
-        std::fs::write(
-            &ini_path,
-            "[General]\nsTestFile1=\nSTestFile2=a\nsTestFile3=b",
-        )
-        .unwrap();
-
-        let ini = read_ini(&ini_path).unwrap();
-
-        assert_eq!(Some(""), ini.get_from(Some("General"), "sTestFile1"));
-        assert_eq!(Some("a"), ini.get_from(Some("General"), "sTestFile2"));
-        assert_eq!(Some("b"), ini.get_from(Some("General"), "sTestFile3"));
-        assert_eq!(None, ini.get_from(Some("General"), "sTestFile4"));
-    }
-
-    #[test]
-    fn read_ini_should_read_as_windows_1252() {
-        let tmp_dir = tempdir().unwrap();
-        let game_path = tmp_dir.path();
-        let ini_path = game_path.join("Oblivion.ini");
-
-        std::fs::write(&ini_path, b"[General]\nsTestFile1=\xC0.esp").unwrap();
-
-        let ini = read_ini(&ini_path).unwrap();
-
-        assert_eq!(Some("À.esp"), ini.get_from(Some("General"), "sTestFile1"));
-    }
-
-    #[test]
-    fn use_my_games_directory_should_be_true_if_the_ini_path_does_not_exist() {
-        assert!(use_my_games_directory(Path::new("does_not_exist")).unwrap());
-    }
-
-    #[test]
-    fn use_my_games_directory_should_error_if_the_ini_is_invalid() {
-        let tmp_dir = tempdir().unwrap();
-        let ini_path = tmp_dir.path().join("ini.ini");
-
-        std::fs::write(&ini_path, "[General\nbUseMyGamesDirectory=0").unwrap();
-
-        assert!(use_my_games_directory(&ini_path).is_err());
-    }
-
-    #[test]
-    fn use_my_games_directory_should_be_true_if_the_ini_setting_is_not_present() {
-        let tmp_dir = tempdir().unwrap();
-        let ini_path = tmp_dir.path().join("ini.ini");
-
-        std::fs::write(&ini_path, "[General]\nSStartingCell=").unwrap();
-
-        assert!(use_my_games_directory(&ini_path).unwrap());
-    }
-
-    #[test]
-    fn use_my_games_directory_should_be_false_if_the_ini_setting_value_is_0() {
-        let tmp_dir = tempdir().unwrap();
-        let ini_path = tmp_dir.path().join("ini.ini");
-
-        std::fs::write(&ini_path, "[General]\nbUseMyGamesDirectory=0\n").unwrap();
-
-        assert!(!use_my_games_directory(&ini_path).unwrap());
-    }
-
-    #[test]
-    fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_0_but_in_wrong_section() {
-        let tmp_dir = tempdir().unwrap();
-        let ini_path = tmp_dir.path().join("ini.ini");
-
-        std::fs::write(&ini_path, "[Display]\nbUseMyGamesDirectory=0\n").unwrap();
-
-        assert!(use_my_games_directory(&ini_path).unwrap());
-    }
-
-    #[test]
-    fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_not_0() {
-        let tmp_dir = tempdir().unwrap();
-        let ini_path = tmp_dir.path().join("ini.ini");
-
-        std::fs::write(&ini_path, "[General]\nbUseMyGamesDirectory=1\n").unwrap();
-
-        assert!(use_my_games_directory(&ini_path).unwrap());
     }
 }

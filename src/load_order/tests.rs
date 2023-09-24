@@ -19,7 +19,7 @@
 
 use std::convert::TryFrom;
 use std::fmt::Display;
-use std::fs::{create_dir, File, OpenOptions};
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{self, Seek, Write};
 use std::path::Path;
 
@@ -79,9 +79,12 @@ pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) 
 
 pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
     let local_path = game_path.join("local");
-    create_dir(&local_path).unwrap();
+    create_dir_all(&local_path).unwrap();
+    let my_games_path = game_path.join("my games");
+    create_dir_all(&my_games_path).unwrap();
 
-    GameSettings::with_local_path(game_id, game_path, &local_path).unwrap()
+    GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, &my_games_path)
+        .unwrap()
 }
 
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
@@ -97,6 +100,9 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
         &settings,
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
+
+    // Recreate settings to account for newly-created plugin files.
+    let settings = game_settings_for_test(game_id, game_dir);
 
     let plugins = vec![
         Plugin::new(settings.master_file(), &settings).unwrap(),

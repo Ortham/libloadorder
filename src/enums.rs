@@ -97,16 +97,6 @@ pub enum Error {
     },
 }
 
-#[cfg(windows)]
-impl From<app_dirs2::AppDirsError> for Error {
-    fn from(error: app_dirs2::AppDirsError) -> Self {
-        match error {
-            app_dirs2::AppDirsError::Io(x) => Error::IoError(x),
-            _ => Error::NoLocalAppData,
-        }
-    }
-}
-
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Error::IoError(error)

@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 /*
  * This file is part of libloadorder
  *
@@ -17,6 +18,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::fs::File;
+use std::path::Path;
 use std::time::SystemTime;
 
 use filetime::{set_file_times, FileTime};
@@ -55,10 +57,6 @@ impl Plugin {
         game_settings: &GameSettings,
         active: bool,
     ) -> Result<Plugin, Error> {
-        if !has_valid_extension(filename, game_settings.id()) {
-            return Err(Error::InvalidPlugin(filename.to_owned()));
-        }
-
         let filepath = game_settings.plugin_path(filename);
 
         let filepath = if active {
@@ -67,10 +65,23 @@ impl Plugin {
             filepath.resolve_path()?
         };
 
-        let file = File::open(&filepath)?;
+        Plugin::with_path(&filepath, game_settings.id(), active)
+    }
+
+    pub(crate) fn with_path(path: &Path, game_id: GameId, active: bool) -> Result<Plugin, Error> {
+        let filename = match path.file_name().and_then(OsStr::to_str) {
+            Some(n) => n,
+            None => return Err(Error::NoFilename),
+        };
+
+        if !has_valid_extension(filename, game_id) {
+            return Err(Error::InvalidPlugin(filename.to_owned()));
+        }
+
+        let file = File::open(path)?;
         let modification_time = file.metadata()?.modified()?;
 
-        let mut data = esplugin::Plugin::new(game_settings.id().to_esplugin_id(), &filepath);
+        let mut data = esplugin::Plugin::new(game_id.to_esplugin_id(), path);
         data.parse_open_file(file, true)?;
 
         Ok(Plugin {
@@ -187,7 +198,13 @@ mod tests {
     use tempfile::tempdir;
 
     fn game_settings(game_id: GameId, game_path: &Path) -> GameSettings {
-        GameSettings::with_local_path(game_id, game_path, &PathBuf::default()).unwrap()
+        GameSettings::with_local_and_my_games_paths(
+            game_id,
+            game_path,
+            &PathBuf::default(),
+            &PathBuf::default(),
+        )
+        .unwrap()
     }
 
     #[test]

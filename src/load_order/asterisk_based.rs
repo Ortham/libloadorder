@@ -28,7 +28,7 @@ use super::strict_encode;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
-use crate::enums::Error;
+use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
@@ -47,10 +47,22 @@ impl AsteriskBasedLoadOrder {
     }
 
     fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
-        read_plugin_names(
-            self.game_settings().active_plugins_file(),
-            owning_plugin_line_mapper,
-        )
+        if self.ignore_active_plugins_file() {
+            Ok(Vec::new())
+        } else {
+            read_plugin_names(
+                self.game_settings().active_plugins_file(),
+                owning_plugin_line_mapper,
+            )
+        }
+    }
+
+    fn ignore_active_plugins_file(&self) -> bool {
+        // Fallout 4 ignores plugins.txt if there are any sTestFile plugins listed in the ini files. The implicitly active plugins are the early loading plugins plus test file plugins.
+        (self.game_settings.id() == GameId::Fallout4
+            || self.game_settings.id() == GameId::Fallout4VR)
+            && self.game_settings.implicitly_active_plugins().len()
+                > self.game_settings.early_loading_plugins().len()
     }
 }
 
@@ -70,13 +82,13 @@ impl MutableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        if self.game_settings().is_implicitly_active(plugin.name()) {
+        if self.game_settings().loads_early(plugin.name()) {
             if self.plugins().is_empty() {
                 return None;
             }
 
             let mut loaded_plugin_count = 0;
-            for plugin_name in self.game_settings().implicitly_active_plugins() {
+            for plugin_name in self.game_settings().early_loading_plugins() {
                 if eq(plugin.name(), plugin_name) {
                     return Some(loaded_plugin_count);
                 }
@@ -116,7 +128,9 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         let file = File::create(self.game_settings().active_plugins_file())?;
         let mut writer = BufWriter::new(file);
         for plugin in self.plugins() {
-            if self.game_settings().is_implicitly_active(plugin.name()) {
+            if self.game_settings().loads_early(plugin.name()) {
+                // Skip early loading plugins, but not implicitly active plugins
+                // as they may need load order positions defined.
                 continue;
             }
 
@@ -147,12 +161,12 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             return Err(Error::GameMasterMustLoadFirst);
         }
 
-        // Check that all implicitly active plugins that are present load in
+        // Check that all early loading plugins that are present load in
         // their hardcoded order.
         let mut missing_plugins_count = 0;
         for (i, plugin_name) in self
             .game_settings()
-            .implicitly_active_plugins()
+            .early_loading_plugins()
             .iter()
             .enumerate()
         {
@@ -195,20 +209,22 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         // Read plugins from the active plugins file. A set of plugin names is
         // more useful than the returned vec, so insert into the set during the
         // line mapping and then discard the line.
-        read_plugin_names(self.game_settings().active_plugins_file(), |line| {
-            plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
-                set.insert(trim_dot_ghost(name).to_lowercase());
-                None
-            })
-        })?;
+        if !self.ignore_active_plugins_file() {
+            read_plugin_names(self.game_settings().active_plugins_file(), |line| {
+                plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
+                    set.insert(trim_dot_ghost(name).to_lowercase());
+                    None
+                })
+            })?;
+        }
 
-        // Check if all loaded plugins aside from implicitly active plugins
+        // Check if all loaded plugins aside from early loading plugins
         // (which don't get written to the active plugins file) are named in the
         // set.
         let all_plugins_listed = self
             .plugins
             .iter()
-            .filter(|plugin| !self.game_settings().is_implicitly_active(plugin.name()))
+            .filter(|plugin| !self.game_settings().loads_early(plugin.name()))
             .all(|plugin| set.contains(&plugin.name().to_lowercase()));
 
         Ok(!all_plugins_listed)
@@ -278,6 +294,76 @@ mod tests {
     }
 
     #[test]
+    fn ignore_active_plugins_file_should_be_true_for_fallout4_when_test_files_are_configured() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Fallout4.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        assert!(load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_false_for_fallout4_when_test_files_are_not_configured()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        assert!(!load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_true_for_fallout4vr_when_test_files_are_configured() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Fallout4VR.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let load_order = prepare(GameId::Fallout4VR, &tmp_dir.path());
+
+        assert!(load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_false_for_fallout4vr_when_test_files_are_not_configured(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Fallout4VR, &tmp_dir.path());
+
+        assert!(!load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_false_for_skyrimse() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Skyrim.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=a").unwrap();
+
+        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        assert!(!load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
+    fn ignore_active_plugins_file_should_be_false_for_skyrimvr() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/SkyrimVR.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=a").unwrap();
+
+        let load_order = prepare(GameId::SkyrimVR, &tmp_dir.path());
+
+        assert!(!load_order.ignore_active_plugins_file());
+    }
+
+    #[test]
     fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -291,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_return_the_hardcoded_index_of_an_implicitly_active_plugin() {
+    fn insert_position_should_return_the_hardcoded_index_of_an_early_loading_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -306,7 +392,31 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_not_count_installed_unloaded_implicitly_active_plugins() {
+    fn insert_position_should_not_treat_all_implicitly_active_plugins_as_early_loading_plugins() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Skyrim.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esm").unwrap();
+
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank.esm",
+            "Blank - Different.esm",
+            &load_order.game_settings(),
+        );
+        let plugin = Plugin::new("Blank - Different.esm", &load_order.game_settings()).unwrap();
+        load_order.plugins_mut().insert(1, plugin);
+
+        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(2, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_not_count_installed_unloaded_early_loading_plugins() {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -616,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    fn load_should_add_missing_implicitly_active_plugins_in_their_hardcoded_positions() {
+    fn load_should_add_missing_early_loading_plugins_in_their_hardcoded_positions() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -731,18 +841,8 @@ mod tests {
             .path()
             .join("Fallout 4- Far Harbor (PC)/Content/Data");
         create_dir_all(&dlc_path).unwrap();
-        copy_to_dir(
-            "Blank.esm",
-            &dlc_path,
-            "DLCCoast.esm",
-            &load_order.game_settings(),
-        );
-        copy_to_dir(
-            "Blank.esp",
-            &dlc_path,
-            "Blank DLC.esp",
-            &load_order.game_settings(),
-        );
+        copy_to_dir("Blank.esm", &dlc_path, "DLCCoast.esm", GameId::Fallout4);
+        copy_to_dir("Blank.esp", &dlc_path, "Blank DLC.esp", GameId::Fallout4);
 
         load_order.load().unwrap();
 
@@ -758,6 +858,29 @@ mod tests {
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn load_should_ignore_active_plugins_file_for_fallout4_when_test_files_are_configured() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Fallout4.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        write_active_plugins_file(
+            load_order.game_settings(),
+            &["Blank.esp", "Blank - Master Dependent.esp"],
+        );
+
+        load_order.load().unwrap();
+
+        assert_eq!(
+            vec!["Fallout4.esm", "Blank.esp"],
+            load_order.active_plugin_names()
+        );
     }
 
     #[test]
@@ -848,6 +971,59 @@ mod tests {
     }
 
     #[test]
+    fn save_should_omit_early_loading_plugins_from_active_plugins_file() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
+        load_order.plugins_mut().push(plugin);
+
+        load_order.save().unwrap();
+
+        let reader =
+            BufReader::new(File::open(load_order.game_settings().active_plugins_file()).unwrap());
+
+        let lines = reader
+            .lines()
+            .collect::<Result<Vec<String>, io::Error>>()
+            .unwrap();
+
+        assert_eq!(vec!["*Blank.esp", "Blank - Different.esp"], lines);
+    }
+
+    #[test]
+    fn save_should_not_omit_implicitly_active_plugins_that_do_not_load_early() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Skyrim.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank - Different.esp").unwrap();
+
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        load_order.load().unwrap();
+
+        load_order.save().unwrap();
+
+        let content = std::fs::read(load_order.game_settings().active_plugins_file()).unwrap();
+        let content = encoding_rs::WINDOWS_1252.decode(&content).0;
+
+        let lines = content.lines().collect::<Vec<&str>>();
+
+        assert_eq!(
+            vec![
+                "Blank.esm",
+                "*Blank - Different.esp",
+                "Blank - Master Dependent.esp",
+                "Blank.esp",
+                "Blàñk.esp"
+            ],
+            lines
+        );
+    }
+
+    #[test]
     fn set_load_order_should_error_if_given_an_empty_list() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -870,7 +1046,7 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_error_if_an_implicitly_active_plugin_loads_after_another_plugin() {
+    fn set_load_order_should_error_if_an_early_loading_plugin_loads_after_another_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -893,7 +1069,30 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_not_error_if_an_implicitly_active_plugin_is_missing() {
+    fn set_load_order_should_not_error_if_a_non_early_loading_implicitly_active_plugin_loads_after_another_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Skyrim.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank - Different.esp").unwrap();
+
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        let filenames = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert!(load_order.set_load_order(&filenames).is_ok());
+    }
+
+    #[test]
+    fn set_load_order_should_not_error_if_an_early_loading_plugin_is_missing() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -1044,8 +1243,7 @@ mod tests {
     }
 
     #[test]
-    fn is_ambiguous_should_ignore_loaded_implicitly_active_plugins_not_listed_in_active_plugins_file(
-    ) {
+    fn is_ambiguous_should_ignore_loaded_early_loading_plugins_not_listed_in_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -1078,6 +1276,22 @@ mod tests {
         loaded_plugin_names.pop();
 
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        assert!(load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_ignore_the_active_plugins_file_for_fallout4_when_test_files_are_configured(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Fallout4.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        write_active_plugins_file(load_order.game_settings(), &load_order.plugin_names());
 
         assert!(load_order.is_ambiguous().unwrap());
     }
