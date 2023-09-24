@@ -90,6 +90,11 @@ pub enum Error {
     /// First string is the plugin, second is the master.
     UnrepresentedHoist(String, String),
     InstalledPlugin(String),
+    IniParsingError {
+        line: usize,
+        column: usize,
+        message: String,
+    },
 }
 
 #[cfg(windows)]
@@ -135,6 +140,25 @@ impl From<esplugin::Error> for Error {
                 Error::PluginParsingError
             }
             esplugin::Error::DecodeError => Error::DecodeError("invalid sequence".into()),
+        }
+    }
+}
+
+impl From<ini::Error> for Error {
+    fn from(error: ini::Error) -> Self {
+        match error {
+            ini::Error::Io(x) => Error::IoError(x),
+            ini::Error::Parse(x) => Error::from(x),
+        }
+    }
+}
+
+impl From<ini::ParseError> for Error {
+    fn from(error: ini::ParseError) -> Self {
+        Error::IniParsingError {
+            line: error.line,
+            column: error.col,
+            message: error.msg,
         }
     }
 }
@@ -187,6 +211,15 @@ impl fmt::Display for Error {
                 f,
                 "The plugin \"{}\" is installed, so cannot be removed from the load order",
                 plugin
+            ),
+            Error::IniParsingError {
+                line,
+                column,
+                ref message,
+            } => write!(
+                f,
+                "Failed to parse ini file, error at line {}, column {}: {}",
+                line, column, message
             ),
         }
     }

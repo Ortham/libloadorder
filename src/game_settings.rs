@@ -109,7 +109,7 @@ impl GameSettings {
         game_path: &Path,
         local_path: &Path,
     ) -> Result<GameSettings, Error> {
-        let plugins_file_path = plugins_file_path(game_id, game_path, local_path);
+        let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
         let implicitly_active_plugins = implicitly_active_plugins(game_id, game_path)?;
 
@@ -305,41 +305,51 @@ fn load_order_path(game_id: GameId, local_path: &Path) -> Option<PathBuf> {
     }
 }
 
-fn plugins_file_path(game_id: GameId, game_path: &Path, local_path: &Path) -> PathBuf {
+fn plugins_file_path(
+    game_id: GameId,
+    game_path: &Path,
+    local_path: &Path,
+) -> Result<PathBuf, Error> {
     match game_id {
-        GameId::Morrowind => game_path.join("Morrowind.ini"),
+        GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
         // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the games themselves read Plugins.txt.
-        _ => local_path.join("Plugins.txt"),
+        _ => Ok(local_path.join("Plugins.txt")),
     }
 }
 
-fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> PathBuf {
+fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> Result<PathBuf, Error> {
     let ini_path = game_path.join("Oblivion.ini");
 
-    let parent_path = if use_my_games_directory(&ini_path) {
+    let parent_path = if use_my_games_directory(&ini_path)? {
         local_path
     } else {
         game_path
     };
 
     // Although Oblivion's launcher creates plugins.txt, the game itself reads Plugins.txt.
-    parent_path.join("Plugins.txt")
+    Ok(parent_path.join("Plugins.txt"))
 }
 
-fn use_my_games_directory(ini_path: &Path) -> bool {
-    let contents = match std::fs::read(ini_path) {
-        // If the ini file isn't present or can't be read, My Games is used by
-        // default.
-        Err(_) => return true,
-        Ok(x) => x,
-    };
+fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
+    // Read ini as Windows-1252 bytes and then convert to UTF-8 before parsing,
+    // as the ini crate expects the content to be valid UTF-8.
+    let contents = std::fs::read(ini_path)?;
 
     // My Games is used if bUseMyGamesDirectory is not present or set to 1.
-    !WINDOWS_1252
-        .decode_without_bom_handling(&contents)
-        .0
-        .contains("bUseMyGamesDirectory=0")
+    let contents = WINDOWS_1252.decode_without_bom_handling(&contents).0;
+
+    ini::Ini::load_from_str(&contents).map_err(Error::from)
+}
+
+fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
+    if ini_path.exists() {
+        // My Games is used if bUseMyGamesDirectory is not present or set to 1.
+        read_ini(ini_path)
+            .map(|ini| ini.get_from(Some("General"), "bUseMyGamesDirectory") != Some("0"))
+    } else {
+        Ok(true)
+    }
 }
 
 fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
@@ -769,7 +779,7 @@ mod tests {
         let game_path = tmp_dir.path();
         let ini_path = game_path.join("Oblivion.ini");
 
-        std::fs::write(ini_path, "...\nbUseMyGamesDirectory=0\n...").unwrap();
+        std::fs::write(ini_path, "[General]\nbUseMyGamesDirectory=0\n").unwrap();
 
         let settings = game_with_game_path(GameId::Oblivion, &game_path);
         assert_eq!(
@@ -1063,8 +1073,51 @@ mod tests {
     }
 
     #[test]
+    fn read_ini_should_read_empty_values_and_case_insensitive_keys() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let ini_path = game_path.join("Oblivion.ini");
+
+        std::fs::write(
+            &ini_path,
+            "[General]\nsTestFile1=\nSTestFile2=a\nsTestFile3=b",
+        )
+        .unwrap();
+
+        let ini = read_ini(&ini_path).unwrap();
+
+        assert_eq!(Some(""), ini.get_from(Some("General"), "sTestFile1"));
+        assert_eq!(Some("a"), ini.get_from(Some("General"), "sTestFile2"));
+        assert_eq!(Some("b"), ini.get_from(Some("General"), "sTestFile3"));
+        assert_eq!(None, ini.get_from(Some("General"), "sTestFile4"));
+    }
+
+    #[test]
+    fn read_ini_should_read_as_windows_1252() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let ini_path = game_path.join("Oblivion.ini");
+
+        std::fs::write(&ini_path, b"[General]\nsTestFile1=\xC0.esp").unwrap();
+
+        let ini = read_ini(&ini_path).unwrap();
+
+        assert_eq!(Some("À.esp"), ini.get_from(Some("General"), "sTestFile1"));
+    }
+
+    #[test]
     fn use_my_games_directory_should_be_true_if_the_ini_path_does_not_exist() {
-        assert!(use_my_games_directory(Path::new("does_not_exist")));
+        assert!(use_my_games_directory(Path::new("does_not_exist")).unwrap());
+    }
+
+    #[test]
+    fn use_my_games_directory_should_error_if_the_ini_is_invalid() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("ini.ini");
+
+        std::fs::write(&ini_path, "[General\nbUseMyGamesDirectory=0").unwrap();
+
+        assert!(use_my_games_directory(&ini_path).is_err());
     }
 
     #[test]
@@ -1072,9 +1125,9 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
 
-        std::fs::write(&ini_path, "...\n\n...").unwrap();
+        std::fs::write(&ini_path, "[General]\nSStartingCell=").unwrap();
 
-        assert!(use_my_games_directory(&ini_path));
+        assert!(use_my_games_directory(&ini_path).unwrap());
     }
 
     #[test]
@@ -1082,9 +1135,19 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
 
-        std::fs::write(&ini_path, "...\nbUseMyGamesDirectory=0\n...").unwrap();
+        std::fs::write(&ini_path, "[General]\nbUseMyGamesDirectory=0\n").unwrap();
 
-        assert!(!use_my_games_directory(&ini_path));
+        assert!(!use_my_games_directory(&ini_path).unwrap());
+    }
+
+    #[test]
+    fn use_my_games_directory_should_be_true_if_the_ini_setting_value_is_0_but_in_wrong_section() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("ini.ini");
+
+        std::fs::write(&ini_path, "[Display]\nbUseMyGamesDirectory=0\n").unwrap();
+
+        assert!(use_my_games_directory(&ini_path).unwrap());
     }
 
     #[test]
@@ -1092,8 +1155,8 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let ini_path = tmp_dir.path().join("ini.ini");
 
-        std::fs::write(&ini_path, "...\nbUseMyGamesDirectory=1\n...").unwrap();
+        std::fs::write(&ini_path, "[General]\nbUseMyGamesDirectory=1\n").unwrap();
 
-        assert!(use_my_games_directory(&ini_path));
+        assert!(use_my_games_directory(&ini_path).unwrap());
     }
 }
