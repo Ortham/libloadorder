@@ -41,7 +41,7 @@ pub struct GameSettings {
     additional_plugins_directories: Vec<PathBuf>,
 }
 
-const SKYRIM_HARDCODED_PLUGINS: &[&str] = &["Skyrim.esm", "Update.esm"];
+const SKYRIM_HARDCODED_PLUGINS: &[&str] = &["Skyrim.esm"];
 
 const SKYRIM_SE_HARDCODED_PLUGINS: &[&str] = &[
     "Skyrim.esm",
@@ -527,6 +527,10 @@ fn implicitly_active_plugins(
         let nam_plugins = find_nam_plugins(&game_path.join("Data"))?;
 
         plugin_names.extend(nam_plugins);
+    } else if game_id == GameId::Skyrim {
+        // Update.esm is always active, but loads after all other masters if it is not made to load
+        // earlier (e.g. by listing in plugins.txt or by being a master of another master).
+        plugin_names.push("Update.esm".to_string());
     }
 
     // Remove duplicates, keeping only the first instance of each plugin.
@@ -897,7 +901,7 @@ mod tests {
     #[test]
     fn early_loading_plugins_should_be_mapped_from_game_id() {
         let mut settings = game_with_generic_paths(GameId::Skyrim);
-        let mut plugins = vec!["Skyrim.esm", "Update.esm"];
+        let mut plugins = vec!["Skyrim.esm"];
         assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::SkyrimSE);
@@ -1173,6 +1177,14 @@ mod tests {
         plugins.sort();
 
         assert_eq!(expected_plugins, plugins);
+    }
+
+    #[test]
+    fn implicitly_active_plugins_should_include_update_esm_for_skyrim() {
+        let settings = game_with_generic_paths(GameId::Skyrim);
+        let plugins = settings.implicitly_active_plugins();
+
+        assert!(plugins.contains(&"Update.esm".to_string()));
     }
 
     #[test]
