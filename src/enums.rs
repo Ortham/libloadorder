@@ -84,11 +84,19 @@ pub enum Error {
     DuplicatePlugin,
     NonMasterBeforeMaster,
     GameMasterMustLoadFirst,
+    InvalidEarlyLoadingPluginPosition {
+        name: String,
+        pos: usize,
+        expected_pos: usize,
+    },
     InvalidPlugin(String),
     ImplicitlyActivePlugin(String),
     NoLocalAppData,
-    /// First string is the plugin, second is the master.
-    UnrepresentedHoist(String, String),
+    NoDocumentsPath,
+    UnrepresentedHoist {
+        plugin: String,
+        master: String,
+    },
     InstalledPlugin(String),
     IniParsingError {
         line: usize,
@@ -172,7 +180,7 @@ impl fmt::Display for Error {
             Error::TooManyActivePlugins => write!(f, "Maximum number of active plugins exceeded"),
             Error::InvalidRegex => write!(
                 f,
-                "Internal error: regex used to parse Morrowind.ini is invalid"
+                "Internal error: regex is invalid"
             ),
             Error::DuplicatePlugin => write!(f, "The given plugin list contains duplicates"),
             Error::NonMasterBeforeMaster => write!(
@@ -181,7 +189,11 @@ impl fmt::Display for Error {
             ),
             Error::GameMasterMustLoadFirst => write!(
                 f,
-                "The game's implicitly active plugins must load in their hardcoded positions"
+                "The game's master file must load first"
+            ),
+            Error::InvalidEarlyLoadingPluginPosition{ ref name, pos, expected_pos } => write!(
+                f,
+                "Attempted to load the early-loading plugin {} at position {}, its expected position is {}", name, pos, expected_pos
             ),
             Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
             Error::ImplicitlyActivePlugin(ref x) => write!(
@@ -192,7 +204,10 @@ impl fmt::Display for Error {
             Error::NoLocalAppData => {
                 write!(f, "The game's local app data folder could not be detected")
             }
-            Error::UnrepresentedHoist(ref plugin, ref master) => write!(
+            Error::NoDocumentsPath => {
+                write!(f, "The user's Documents path could not be detected")
+            }
+            Error::UnrepresentedHoist { ref plugin, ref master } => write!(
                 f,
                 "The plugin \"{}\" is a master of \"{}\", which will hoist it",
                 plugin, master

@@ -119,7 +119,7 @@ impl GameSettings {
         let my_games_path = match my_games_folder_name(game_id, game_path) {
             Some(folder) => documents_path(local_path)
                 .map(|d| d.join("My Games").join(folder))
-                .ok_or_else(|| Error::InvalidPath(local_path.to_owned()))?,
+                .ok_or_else(|| Error::NoDocumentsPath)?,
             None => PathBuf::default(),
         };
 

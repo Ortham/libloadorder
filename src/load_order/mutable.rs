@@ -308,10 +308,10 @@ fn validate_master_file_index(
         .filter(|p| !p.is_master_file())
         .find(|p| master_names.contains(&p.name().to_lowercase()))
     {
-        Err(Error::UnrepresentedHoist(
-            p.name().to_string(),
-            plugin.name().to_string(),
-        ))
+        Err(Error::UnrepresentedHoist {
+            plugin: p.name().to_string(),
+            master: plugin.name().to_string(),
+        })
     } else {
         Ok(())
     }
@@ -330,10 +330,10 @@ fn validate_non_master_file_index(
             .iter()
             .any(|m| plugin.name_matches(m))
         {
-            return Err(Error::UnrepresentedHoist(
-                plugin.name().to_string(),
-                master_file.name().to_string(),
-            ));
+            return Err(Error::UnrepresentedHoist {
+                plugin: plugin.name().to_string(),
+                master: master_file.name().to_string(),
+            });
         }
     }
 
@@ -473,10 +473,10 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
             .iter()
             .find(|m| plugin_names.contains(&m.to_lowercase()))
         {
-            return Err(Error::UnrepresentedHoist(
-                m.clone(),
-                plugin.name().to_string(),
-            ));
+            return Err(Error::UnrepresentedHoist {
+                plugin: m.clone(),
+                master: plugin.name().to_string(),
+            });
         }
     }
 

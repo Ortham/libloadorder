@@ -172,8 +172,13 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         {
             match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
                 Some(pos) => {
-                    if pos != i - missing_plugins_count {
-                        return Err(Error::GameMasterMustLoadFirst);
+                    let expected_pos = i - missing_plugins_count;
+                    if pos != expected_pos {
+                        return Err(Error::InvalidEarlyLoadingPluginPosition {
+                            name: plugin_name.clone(),
+                            pos,
+                            expected_pos,
+                        });
                     }
                 }
                 None => missing_plugins_count += 1,
@@ -1063,7 +1068,15 @@ mod tests {
         ];
 
         match load_order.set_load_order(&filenames).unwrap_err() {
-            Error::GameMasterMustLoadFirst => {}
+            Error::InvalidEarlyLoadingPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!("Update.esm", name);
+                assert_eq!(2, pos);
+                assert_eq!(1, expected_pos);
+            }
             e => panic!("Wrong error type: {:?}", e),
         }
     }
