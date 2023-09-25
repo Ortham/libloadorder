@@ -202,7 +202,7 @@ mod tests {
             game_id,
             game_path,
             &PathBuf::default(),
-            &PathBuf::default(),
+            PathBuf::default(),
         )
         .unwrap()
     }

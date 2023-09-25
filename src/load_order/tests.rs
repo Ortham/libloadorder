@@ -83,12 +83,12 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
     let my_games_path = game_path.join("my games");
     create_dir_all(&my_games_path).unwrap();
 
-    GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, &my_games_path)
+    GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, my_games_path)
         .unwrap()
 }
 
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
-    let settings = game_settings_for_test(game_id, game_dir);
+    let mut settings = game_settings_for_test(game_id, game_dir);
 
     copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
     copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
@@ -101,8 +101,8 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
 
-    // Recreate settings to account for newly-created plugin files.
-    let settings = game_settings_for_test(game_id, game_dir);
+    // Refresh settings to account for newly-created plugin files.
+    settings.refresh_implicitly_active_plugins().unwrap();
 
     let plugins = vec![
         Plugin::new(settings.master_file(), &settings).unwrap(),

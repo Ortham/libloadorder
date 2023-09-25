@@ -35,6 +35,7 @@ pub struct GameSettings {
     id: GameId,
     plugins_directory: PathBuf,
     plugins_file_path: PathBuf,
+    my_games_path: PathBuf,
     load_order_path: Option<PathBuf>,
     implicitly_active_plugins: Vec<String>,
     early_loading_plugins: Vec<String>,
@@ -123,41 +124,35 @@ impl GameSettings {
             None => PathBuf::default(),
         };
 
-        GameSettings::with_local_and_my_games_paths(game_id, game_path, local_path, &my_games_path)
+        GameSettings::with_local_and_my_games_paths(game_id, game_path, local_path, my_games_path)
     }
 
     pub(crate) fn with_local_and_my_games_paths(
         game_id: GameId,
         game_path: &Path,
         local_path: &Path,
-        my_games_path: &Path,
+        my_games_path: PathBuf,
     ) -> Result<GameSettings, Error> {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
         let plugins_directory = game_path.join(plugins_folder_name(game_id));
         let additional_plugins_directories = additional_plugins_directories(game_id, game_path);
 
-        let mut test_files = test_files(game_id, game_path, my_games_path)?;
-
-        if game_id == GameId::Fallout4 || game_id == GameId::Fallout4VR {
-            // Fallout 4 ignores plugins.txt and Fallout4.ccc if there are valid plugins listed as test files, so filter out invalid values.
-            test_files.retain(|f| {
-                let path = plugin_path(f, &plugins_directory, &additional_plugins_directories);
-                Plugin::with_path(&path, game_id, false).is_ok()
-            });
-        }
-
-        let early_loading_plugins =
-            early_loading_plugins(game_id, game_path, !test_files.is_empty())?;
-
-        let implicitly_active_plugins =
-            implicitly_active_plugins(game_id, game_path, &early_loading_plugins, &test_files)?;
+        let (early_loading_plugins, implicitly_active_plugins) =
+            GameSettings::load_implicitly_active_plugins(
+                game_id,
+                game_path,
+                &my_games_path,
+                &plugins_directory,
+                &additional_plugins_directories,
+            )?;
 
         Ok(GameSettings {
             id: game_id,
             plugins_directory,
             plugins_file_path,
             load_order_path,
+            my_games_path,
             implicitly_active_plugins,
             early_loading_plugins,
             additional_plugins_directories,
@@ -245,6 +240,51 @@ impl GameSettings {
             &self.plugins_directory(),
             &self.additional_plugins_directories,
         )
+    }
+
+    pub fn refresh_implicitly_active_plugins(&mut self) -> Result<(), Error> {
+        let (early_loading_plugins, implicitly_active_plugins) =
+            GameSettings::load_implicitly_active_plugins(
+                self.id,
+                self.plugins_directory
+                    .parent()
+                    .expect("plugins directory path to have parent path component"),
+                &self.my_games_path,
+                &self.plugins_directory,
+                &self.additional_plugins_directories,
+            )?;
+
+        self.early_loading_plugins = early_loading_plugins;
+        self.implicitly_active_plugins = implicitly_active_plugins;
+
+        Ok(())
+    }
+
+    fn load_implicitly_active_plugins(
+        game_id: GameId,
+        game_path: &Path,
+        my_games_path: &Path,
+        plugins_directory: &Path,
+        additional_plugins_directories: &[PathBuf],
+    ) -> Result<(Vec<String>, Vec<String>), Error> {
+        let mut test_files = test_files(game_id, game_path, my_games_path)?;
+
+        if game_id == GameId::Fallout4 || game_id == GameId::Fallout4VR {
+            // Fallout 4 ignores plugins.txt and Fallout4.ccc if there are valid plugins listed as
+            // test files, so filter out invalid values.
+            test_files.retain(|f| {
+                let path = plugin_path(f, plugins_directory, additional_plugins_directories);
+                Plugin::with_path(&path, game_id, false).is_ok()
+            });
+        }
+
+        let early_loading_plugins =
+            early_loading_plugins(game_id, game_path, !test_files.is_empty())?;
+
+        let implicitly_active_plugins =
+            implicitly_active_plugins(game_id, game_path, &early_loading_plugins, &test_files)?;
+
+        Ok((early_loading_plugins, implicitly_active_plugins))
     }
 }
 
@@ -571,7 +611,7 @@ mod tests {
             game_id,
             &PathBuf::from("game"),
             &PathBuf::from("local"),
-            &PathBuf::from("my games"),
+            PathBuf::from("my games"),
         )
         .unwrap()
     }
@@ -581,7 +621,7 @@ mod tests {
             game_id,
             game_path,
             &PathBuf::default(),
-            &PathBuf::default(),
+            PathBuf::default(),
         )
         .unwrap()
     }
@@ -1053,7 +1093,7 @@ mod tests {
             GameId::Fallout4,
             game_path,
             &PathBuf::default(),
-            game_path,
+            game_path.to_path_buf(),
         )
         .unwrap();
 
@@ -1085,7 +1125,7 @@ mod tests {
             GameId::SkyrimSE,
             game_path,
             &PathBuf::default(),
-            game_path,
+            game_path.to_path_buf(),
         )
         .unwrap();
 
@@ -1118,7 +1158,7 @@ mod tests {
             GameId::Fallout4,
             game_path,
             &PathBuf::default(),
-            game_path,
+            game_path.to_path_buf(),
         )
         .unwrap();
 
@@ -1151,7 +1191,7 @@ mod tests {
             GameId::Fallout4VR,
             game_path,
             &PathBuf::default(),
-            game_path,
+            game_path.to_path_buf(),
         )
         .unwrap();
 
@@ -1213,7 +1253,7 @@ mod tests {
             GameId::Fallout4,
             game_path,
             &PathBuf::default(),
-            game_path,
+            game_path.to_path_buf(),
         )
         .unwrap();
 
@@ -1365,5 +1405,46 @@ mod tests {
             settings.plugins_directory().join(plugin_name),
             settings.plugin_path(plugin_name)
         );
+    }
+
+    #[test]
+    fn refresh_implicitly_active_plugins_should_update_early_loading_and_implicitly_active_plugins()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut settings = GameSettings::with_local_and_my_games_paths(
+            GameId::SkyrimSE,
+            game_path,
+            &PathBuf::default(),
+            game_path.to_path_buf(),
+        )
+        .unwrap();
+
+        let hardcoded_plugins = vec![
+            "Skyrim.esm",
+            "Update.esm",
+            "Dawnguard.esm",
+            "HearthFires.esm",
+            "Dragonborn.esm",
+        ];
+        assert_eq!(hardcoded_plugins, settings.early_loading_plugins());
+        assert_eq!(hardcoded_plugins, settings.implicitly_active_plugins());
+
+        std::fs::write(game_path.join("Skyrim.ccc"), "ccBGSSSE002-ExoticArrows.esl").unwrap();
+        std::fs::write(
+            game_path.join("Skyrim.ini"),
+            "[General]\nsTestFile1=plugin.esp\n",
+        )
+        .unwrap();
+
+        settings.refresh_implicitly_active_plugins().unwrap();
+
+        let mut expected_plugins = hardcoded_plugins;
+        expected_plugins.push("ccBGSSSE002-ExoticArrows.esl");
+        assert_eq!(expected_plugins, settings.early_loading_plugins());
+
+        expected_plugins.push("plugin.esp");
+        assert_eq!(expected_plugins, settings.implicitly_active_plugins());
     }
 }

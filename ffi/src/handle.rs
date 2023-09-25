@@ -174,6 +174,13 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
             Ok(h) => h,
         };
 
+        if let Err(x) = handle
+            .game_settings_mut()
+            .refresh_implicitly_active_plugins()
+        {
+            return handle_error(x);
+        }
+
         if let Err(x) = handle.load() {
             return handle_error(x);
         }
@@ -569,6 +576,64 @@ mod tests {
             lo_destroy_handle(handle);
 
             assert_eq!(LIBLO_ERROR_INVALID_ARGS, result);
+        }
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn lo_load_current_state_should_refresh_implicitly_active_plugins() {
+        let tmp_dir = tempfile::tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let local_path = game_path.join("AppData/Local/Oblivion");
+        let ini_path = game_path.join("Documents/My Games/Oblivion/Oblivion.ini");
+
+        let mut handle: lo_game_handle = std::ptr::null_mut();
+
+        let game_path = CString::new(game_path.to_str().unwrap()).unwrap();
+        let local_path = CString::new(local_path.to_str().unwrap()).unwrap();
+
+        unsafe {
+            let result = lo_create_handle(
+                &mut handle,
+                LIBLO_GAME_TES4,
+                game_path.as_ptr(),
+                local_path.as_ptr(),
+            );
+            assert_eq!(LIBLO_OK, result);
+        }
+
+        unsafe {
+            let mut plugins: *mut *mut c_char = std::ptr::null_mut();
+            let mut num_plugins: size_t = 0;
+
+            let result = lo_get_implicitly_active_plugins(handle, &mut plugins, &mut num_plugins);
+            assert_eq!(LIBLO_OK, result);
+            assert_eq!(0, num_plugins);
+
+            crate::lo_free_string_array(plugins, num_plugins);
+        }
+
+        std::fs::create_dir_all(&ini_path.parent().unwrap()).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        unsafe {
+            let result = lo_load_current_state(handle);
+            assert_eq!(LIBLO_OK, result);
+        }
+
+        unsafe {
+            let mut plugins: *mut *mut c_char = std::ptr::null_mut();
+            let mut num_plugins: size_t = 0;
+
+            let result = lo_get_implicitly_active_plugins(handle, &mut plugins, &mut num_plugins);
+            assert_eq!(LIBLO_OK, result);
+            assert_eq!(1, num_plugins);
+
+            crate::lo_free_string_array(plugins, num_plugins);
+        }
+
+        unsafe {
+            lo_destroy_handle(handle);
         }
     }
 }
