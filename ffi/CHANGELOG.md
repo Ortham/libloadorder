@@ -3,6 +3,23 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [15.0.0] - 2023-09-28
+
+### Added
+
+- `lo_get_early_loading_plugins()`, which can be used to get the plugins
+  previously gotten using `lo_get_implicitly_active_plugins()`, without any of
+  the newly-supported implicitly active plugins from `.nam` files or ini file
+  properties.
+- `LIBLO_ERROR_SYSTEM_ERROR` to represent unknown OS errors.
+- `LIBLO_GAME_STARFIELD` as the game code for Starfield.
+
+
+### Changed
+
+- Updated to libloadorder v15.0.0.
+- Updated to cbindgen v0.26.
+
 ## [14.2.2] - 2023-09-16
 
 ### Changed
@@ -19,9 +36,9 @@ changelog only contains libloadorder-ffi changes.
 
 ### Changed
 
-- `lot_create_handle()` will no longer fail if passed a local data path that
+- `lo_create_handle()` will no longer fail if passed a local data path that
   does not exist.
-- `lot_create_handle()` will no longer fail on Linux if passed a null local data
+- `lo_create_handle()` will no longer fail on Linux if passed a null local data
   path and `LIBLO_GAME_TES3` as the game ID. Passing any other game ID with a
   null local data path will still fail.
 - Updated to libloadorder v14.2.0.

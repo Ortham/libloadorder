@@ -3,6 +3,52 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [15.0.0] - 2023-09-28
+
+### Added
+
+- Support for Starfield, using `GameId::Starfield`.
+- Support for detecting Fallout: New Vegas `.nam` files. Any plugin with the
+  same basename as a `.nam` file in the Data folder is now treated as implicitly
+  active.
+- Support for detecting the correct local app data folders for Microsoft Store
+  installs of Skyrim Special Edition and Fallout 4, and Epic Games Store
+  installs of Fallout: New Vegas.
+- Support for plugins activated using the `sTestFile1` through `sTestFile10` ini
+  file properties for all games other than Morrowind, which does not use those
+  properties. Plugins activated using those ini file properties are treated as
+  implicitly active.
+- `GameSettings::early_loading_plugins()` and `GameSettings::loads_early()`.
+- `Error::InvalidEarlyLoadingPluginPosition`, which is now used instead of
+  `Error::GameMasterMustLoadFirst` when an early-loading plugin has the wrong
+  position in a load order that is being set.
+- `Error::NoDocumentsPath` is used when the user's Documents path cannot be
+  detected.
+- `Error::VdfParsingError` is used to represent errors encountered while parsing
+  VDF files. This is currently only done for Starfield's Steam app manifest
+  file.
+- `Error::SystemError` is used to represent unknown operating system errors.
+  This is currently only relevant for Microsoft Store installs of Starfield.
+
+### Changed
+
+- libloadorder now distinguishes between implicitly active plugins and those
+  that load in specific positions earlier than plugins listed in `plugins.txt`,
+  which are now referred to as early-loading plugins. The set of implicitly
+  active plugins is a superset of early loading plugins plus any plugins
+  activated by `.nam` files or ini file properties.
+- `Fallout4.ccc` and `plugins.txt` are now ignored when Fallout 4 or Fallout 4
+  VR have any plugins activated using ini file properties, to match the
+  behaviour of Fallout 4. Fallout 4 VR is assumed to have the same behaviour.
+- Replaced the `app_dirs2` dependency with `dirs`.
+- `Error::UnrepresentedHoist`'s two `String` members are now named to
+  disambiguate them.
+
+### Fixed
+
+- libloadorder now looks for `Oblivion.ini`'s `bUseMyGamesDirectory` property in
+  the ini file's `General` section, instead of anywhere in the file.
+
 ## [14.2.2] - 2023-09-16
 
 ## Changed
