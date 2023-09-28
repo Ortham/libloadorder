@@ -163,11 +163,107 @@ pub fn test_files(
             let base_test_files = read_test_files(&game_path.join("Starfield.ini"))?;
             let custom_test_files = read_test_files(&my_games_path.join("StarfieldCustom.ini"))?;
 
-            // TODO: Also load from game_path/Starfield_<language>.INI
+            let language = starfield_language(game_path)?;
+            let language_ini_path = my_games_path.join(format!("Starfield_{}.INI", language));
+            let language_test_files = read_test_files(&language_ini_path)?;
 
-            let test_files = merge_test_files(base_test_files, custom_test_files);
+            let test_files = merge_test_files(base_test_files, language_test_files);
+            let test_files = merge_test_files(test_files, custom_test_files);
             Ok(filter_test_files(test_files))
         }
+    }
+}
+
+fn starfield_language(game_path: &Path) -> Result<&'static str, Error> {
+    let steam_acf_path = game_path.join("../../appmanifest_1716740.acf");
+
+    let language = if steam_acf_path.exists() {
+        // Steam install: Get language from app manifest's AppState.UserConfig.language.
+        read_steam_language_config(&steam_acf_path)?.map(map_steam_language)
+    } else {
+        // Microsoft Store install: Get system language from Windows.
+        get_windows_system_language()?.map(map_windows_system_language)
+    };
+
+    Ok(language.unwrap_or("en"))
+}
+
+fn read_steam_language_config(appmanifest_acf_path: &Path) -> Result<Option<String>, Error> {
+    let content = std::fs::read_to_string(appmanifest_acf_path)?;
+
+    let language = keyvalues_parser::Vdf::parse(&content)?
+        .value
+        .get_obj()
+        .and_then(|o| o.get("UserConfig"))
+        .and_then(|v| v.first())
+        .and_then(keyvalues_parser::Value::get_obj)
+        .and_then(|o| o.get("language"))
+        .and_then(|v| v.first())
+        .and_then(keyvalues_parser::Value::get_str)
+        .map(ToString::to_string);
+
+    Ok(language)
+}
+
+fn map_steam_language<T: AsRef<str>>(steam_language: T) -> &'static str {
+    match steam_language.as_ref() {
+        "german" => "de",
+        "french" => "fr",
+        "italian" => "it",
+        "spanish" | "latam" => "es",
+        "schinese" => "zhhans",
+        "japanese" => "ja",
+        "polish" => "pl",
+        "brazilian" => "ptbr",
+        _ => "en",
+    }
+}
+
+#[cfg(windows)]
+fn get_windows_system_language() -> Result<Option<String>, Error> {
+    // Languages are BCP-47 language tags, e.g. "en-GB", "es-AR", "fr-FR"
+    // to_string_lossy() is fine here because language tags are ASCII-only.
+    let language = windows::System::UserProfile::GlobalizationPreferences::Languages()?
+        .into_iter()
+        .next()
+        .map(|l| l.to_string_lossy());
+
+    Ok(language)
+}
+
+#[cfg(not(windows))]
+fn get_windows_system_language() -> Result<Option<String>, Error> {
+    Ok(None)
+}
+
+fn map_windows_system_language<T: AsRef<str>>(system_language: T) -> &'static str {
+    let mut parts = system_language.as_ref().split('-');
+
+    match parts.next().unwrap_or("en") {
+        // These language values are listed in Starfield's MicrosoftGame.Config and
+        // appxmanifest.xml.
+        "en" => "en",
+        "fr" => "fr",
+        "es" => "es",
+        "pl" => "pl",
+        "de" => "de",
+        "it" => "it",
+        "ja" => "ja",
+        "pt" => {
+            if let Some("BR") = parts.next() {
+                "ptbr"
+            } else {
+                "en"
+            }
+        }
+        "zh" => {
+            if let Some("Hans") = parts.next() {
+                "zhhans"
+            } else {
+                "en"
+            }
+        }
+        _ => "en",
     }
 }
 
@@ -187,6 +283,264 @@ mod tests {
         std::fs::create_dir_all(&my_games_path).unwrap();
 
         (game_path, my_games_path)
+    }
+
+    #[test]
+    fn starfield_language_should_use_steam_acf_if_it_exists() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("common").join("Starfield");
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState"
+        {
+            "UserConfig"
+            {
+                "language" "german"
+            }
+        }"#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+        std::fs::create_dir_all(&game_path).unwrap();
+
+        let language = starfield_language(&game_path).unwrap();
+
+        assert_eq!("de", language);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn starfield_language_should_return_en_if_steam_acf_does_not_specify_a_language() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("common").join("Starfield");
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState"{}"#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+
+        let language = starfield_language(&game_path).unwrap();
+
+        assert_eq!("en", language);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn starfield_language_should_use_windows_language_if_steam_acf_does_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("common").join("Starfield");
+
+        assert!(starfield_language(&game_path).is_ok());
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn starfield_language_should_use_en_if_steam_acf_does_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("common").join("Starfield");
+
+        assert_eq!("en", starfield_language(&game_path).unwrap());
+    }
+
+    #[test]
+    fn read_steam_language_config_should_read_from_acf_file() {
+        let tmp_dir = tempdir().unwrap();
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState"
+        {
+            "appid"		"1716740"
+            "Universe"		"1"
+            "LauncherPath"		"C:\\Program Files (x86)\\Steam\\steam.exe"
+            "name"		"Starfield"
+            "StateFlags"		"4"
+            "installdir"		"Starfield"
+            "LastUpdated"		"1695657094"
+            "SizeOnDisk"		"131019631899"
+            "StagingSize"		"0"
+            "buildid"		"12212450"
+            "LastOwner"		"76561198033938668"
+            "UpdateResult"		"0"
+            "BytesToDownload"		"6109484544"
+            "BytesDownloaded"		"6109484544"
+            "BytesToStage"		"6171029640"
+            "BytesStaged"		"6171029640"
+            "TargetBuildID"		"12212450"
+            "AutoUpdateBehavior"		"0"
+            "AllowOtherDownloadsWhileRunning"		"0"
+            "ScheduledAutoUpdate"		"0"
+            "StagingFolder"		"0"
+            "InstalledDepots"
+            {
+                "1716741"
+                {
+                    "manifest"		"3276175983502685135"
+                    "size"		"108496536"
+                }
+                "1716742"
+                {
+                    "manifest"		"7068708531301311719"
+                    "size"		"124674684083"
+                }
+                "2401180"
+                {
+                    "manifest"		"1350450549444461803"
+                    "size"		"50772412"
+                    "dlcappid"		"2401180"
+                }
+                "2401181"
+                {
+                    "manifest"		"9009164480135609609"
+                    "size"		"14760227"
+                    "dlcappid"		"2401181"
+                }
+                "1716743"
+                {
+                    "manifest"		"1387979402837597913"
+                    "size"		"6171029640"
+                }
+            }
+            "SharedDepots"
+            {
+                "228989"		"228980"
+                "228990"		"228980"
+            }
+            "UserConfig"
+            {
+                "language"		"german"
+            }
+            "MountedConfig"
+            {
+                "language"		"german"
+            }
+        }"#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+
+        let language = read_steam_language_config(&app_manifest_path)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!("german", language);
+    }
+
+    #[test]
+    fn read_steam_language_config_should_error_if_acf_file_does_not_exist() {
+        let language = read_steam_language_config(&PathBuf::default());
+
+        assert!(language.is_err());
+    }
+
+    #[test]
+    fn read_steam_language_config_should_error_if_acf_file_has_no_content() {
+        let tmp_dir = tempdir().unwrap();
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        std::fs::write(&app_manifest_path, "").unwrap();
+
+        let language = read_steam_language_config(&app_manifest_path);
+
+        assert!(language.is_err());
+    }
+
+    #[test]
+    fn read_steam_language_config_should_error_if_acf_file_has_no_appstate_value() {
+        let tmp_dir = tempdir().unwrap();
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState""#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+
+        let language = read_steam_language_config(&app_manifest_path);
+
+        assert!(language.is_err());
+    }
+
+    #[test]
+    fn read_steam_language_config_should_return_none_if_acf_file_has_no_userconfig() {
+        let tmp_dir = tempdir().unwrap();
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState"{}"#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+
+        let language = read_steam_language_config(&app_manifest_path).unwrap();
+
+        assert!(language.is_none());
+    }
+
+    #[test]
+    fn read_steam_language_config_should_return_none_if_acf_file_has_no_language() {
+        let tmp_dir = tempdir().unwrap();
+        let app_manifest_path = tmp_dir.path().join("appmanifest_1716740.acf");
+
+        let content = r#""AppState"
+        {
+            "UserConfig"
+            {
+
+            }
+        }"#;
+
+        std::fs::write(&app_manifest_path, content).unwrap();
+
+        let language = read_steam_language_config(&app_manifest_path).unwrap();
+
+        assert!(language.is_none());
+    }
+
+    #[test]
+    fn map_steam_language_should_map_languages_supported_by_starfield() {
+        assert_eq!("de", map_steam_language("german"));
+        assert_eq!("fr", map_steam_language("french"));
+        assert_eq!("it", map_steam_language("italian"));
+        assert_eq!("es", map_steam_language("spanish"));
+        assert_eq!("es", map_steam_language("latam"));
+        assert_eq!("zhhans", map_steam_language("schinese"));
+        assert_eq!("ja", map_steam_language("japanese"));
+        assert_eq!("pl", map_steam_language("polish"));
+        assert_eq!("ptbr", map_steam_language("brazilian"));
+    }
+
+    #[test]
+    fn map_steam_language_should_map_unrecognised_languages_to_en() {
+        assert_eq!("en", map_steam_language("russian"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn get_windows_system_language_should_return_a_non_empty_option() {
+        let language = get_windows_system_language().unwrap();
+
+        assert!(language.is_some());
+        assert!(language.unwrap().len() >= 2);
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn get_windows_system_language_should_return_none() {
+        assert!(get_windows_system_language().unwrap().is_none());
+    }
+
+    #[test]
+    fn map_windows_system_language_should_map_languages_supported_by_starfield() {
+        assert_eq!("en", map_windows_system_language("en-whatever"));
+        assert_eq!("fr", map_windows_system_language("fr-whatever"));
+        assert_eq!("es", map_windows_system_language("es-whatever"));
+        assert_eq!("pl", map_windows_system_language("pl-whatever"));
+        assert_eq!("de", map_windows_system_language("de-whatever"));
+        assert_eq!("it", map_windows_system_language("it-whatever"));
+        assert_eq!("ja", map_windows_system_language("ja-whatever"));
+        assert_eq!("ptbr", map_windows_system_language("pt-BR"));
+        assert_eq!("zhhans", map_windows_system_language("zh-Hans"));
+    }
+
+    #[test]
+    fn map_windows_system_language_should_map_unrecognised_languages_to_en() {
+        assert_eq!("en", map_steam_language("ru"));
+        assert_eq!("en", map_steam_language("pt-PT"));
+        assert_eq!("en", map_steam_language("zh-Hant"));
     }
 
     #[test]

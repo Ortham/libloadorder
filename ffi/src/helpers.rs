@@ -75,6 +75,8 @@ fn map_error(err: &Error) -> c_uint {
         UnrepresentedHoist { .. } => LIBLO_ERROR_INVALID_ARGS,
         InstalledPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         IniParsingError { .. } => LIBLO_ERROR_FILE_PARSE_FAIL,
+        VdfParsingError(_) => LIBLO_ERROR_FILE_PARSE_FAIL,
+        SystemError(_, _) => LIBLO_ERROR_SYSTEM_ERROR,
     }
 }
 

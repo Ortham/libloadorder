@@ -20,6 +20,7 @@
 use std::borrow::Cow;
 use std::convert::From;
 use std::error;
+use std::ffi::OsString;
 use std::fmt;
 use std::io;
 use std::path::PathBuf;
@@ -108,6 +109,8 @@ pub enum Error {
         column: usize,
         message: String,
     },
+    VdfParsingError(String),
+    SystemError(i32, OsString),
 }
 
 impl From<io::Error> for Error {
@@ -163,6 +166,24 @@ impl From<ini::ParseError> for Error {
             column: error.col,
             message: error.msg,
         }
+    }
+}
+
+impl From<keyvalues_parser::error::Error> for Error {
+    fn from(error: keyvalues_parser::error::Error) -> Self {
+        match error {
+            keyvalues_parser::error::Error::ParseError(e) => Error::VdfParsingError(e.to_string()),
+            keyvalues_parser::error::Error::InvalidTokenStream(c) => {
+                Error::VdfParsingError(c.to_string())
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+impl From<windows::core::Error> for Error {
+    fn from(error: windows::core::Error) -> Self {
+        Error::SystemError(error.code().0, error.message().to_os_string())
     }
 }
 
@@ -231,6 +252,8 @@ impl fmt::Display for Error {
                 "Failed to parse ini file, error at line {}, column {}: {}",
                 line, column, message
             ),
+            Error::VdfParsingError(ref message) => write!(f, "Failed to parse VDF file: {}", message),
+            Error::SystemError(code, ref message) => write!(f, "Error returned by the operating system, code {}: {:?}", code, message),
         }
     }
 }
