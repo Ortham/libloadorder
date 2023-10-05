@@ -111,7 +111,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         self.plugins_mut().clear();
 
         let plugin_tuples = self.read_from_active_plugins_file()?;
-        let filenames = self.find_plugins_sorted();
+        let filenames = self.find_plugins();
 
         self.load_unique_plugins(plugin_tuples, filenames);
         hoist_masters(&mut self.plugins)?;
@@ -657,9 +657,9 @@ mod tests {
             load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -678,9 +678,9 @@ mod tests {
             load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -702,9 +702,9 @@ mod tests {
             load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -726,9 +726,9 @@ mod tests {
             load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -834,9 +834,9 @@ mod tests {
         let expected_filenames = vec![
             load_order.game_settings().master_file(),
             "Blank.esm",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esp",
             "Blàñk.esp",
         ];
 
@@ -855,11 +855,11 @@ mod tests {
         let expected_filenames = vec![
             load_order.game_settings().master_file(),
             "Blank.esm",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank.esl.esp",
-            "Blank.esp",
             "Blàñk.esp",
+            "Blank.esl.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -891,11 +891,11 @@ mod tests {
             "Fallout4.esm",
             "DLCCoast.esm",
             "Blank.esm",
+            "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blank DLC.esp",
-            "Blank.esp",
             "Blàñk.esp",
+            "Blank DLC.esp",
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -1055,10 +1055,10 @@ mod tests {
         assert_eq!(
             vec![
                 "Blank.esm",
+                "Blank.esp",
                 "*Blank - Different.esp",
                 "Blank - Master Dependent.esp",
-                "Blank.esp",
-                "Blàñk.esp"
+                "Blàñk.esp",
             ],
             lines
         );

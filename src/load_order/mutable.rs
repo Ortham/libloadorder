@@ -17,10 +17,11 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use std::fs::read_dir;
 use std::mem;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use encoding_rs::WINDOWS_1252;
 use rayon::prelude::*;
@@ -28,7 +29,8 @@ use rayon::prelude::*;
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
 use crate::game_settings::GameSettings;
-use crate::plugin::{trim_dot_ghost, Plugin};
+use crate::plugin::{has_plugin_extension, trim_dot_ghost, Plugin};
+use crate::GameId;
 
 pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
@@ -36,8 +38,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
 
     fn find_plugins(&self) -> Vec<String> {
-        let mut set: HashSet<String> = HashSet::new();
-
         // A game might store some plugins outside of its main plugins directory
         // so look for those plugins. They override any of the same names that
         // appear in the main plugins directory, so check for the additional
@@ -48,22 +48,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             .to_vec();
         directories.push(self.game_settings().plugins_directory());
 
-        directories
-            .iter()
-            .flat_map(read_dir)
-            .flatten()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
-            .filter_map(|e| e.file_name().to_str().map(str::to_owned))
-            .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
-            .collect()
-    }
-
-    fn find_plugins_sorted(&self) -> Vec<String> {
-        let mut filenames = self.find_plugins();
-        filenames.sort_unstable();
-
-        filenames
+        find_plugins_in_dirs(&directories, self.game_settings().id())
     }
 
     fn validate_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
@@ -255,6 +240,43 @@ pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<us
                 .unwrap_or(false)
         })
     }
+}
+
+fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
+    let mut set: HashSet<String> = HashSet::new();
+
+    let mut dir_entries: Vec<_> = directories
+        .iter()
+        .flat_map(read_dir)
+        .flatten()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
+        .filter(|e| {
+            e.file_name()
+                .to_str()
+                .map(|f| has_plugin_extension(f, game))
+                .unwrap_or(false)
+        })
+        .collect();
+
+    // Sort by file modification timestamps, in ascending order. If two timestamps are equal, sort
+    // by filenames (in ascending order for Starfield, descending otherwise).
+    dir_entries.sort_unstable_by(|e1, e2| {
+        let m1 = e1.metadata().and_then(|m| m.modified()).ok();
+        let m2 = e2.metadata().and_then(|m| m.modified()).ok();
+
+        match m1.cmp(&m2) {
+            Ordering::Equal if game == GameId::Starfield => e1.file_name().cmp(&e2.file_name()),
+            Ordering::Equal => e1.file_name().cmp(&e2.file_name()).reverse(),
+            x => x,
+        }
+    });
+
+    dir_entries
+        .into_iter()
+        .filter_map(|e| e.file_name().to_str().map(str::to_owned))
+        .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
+        .collect()
 }
 
 fn to_plugin(
@@ -729,6 +751,113 @@ mod tests {
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         assert!(load_order.validate_index(&plugin, 2).is_err());
+    }
+
+    #[test]
+    fn find_plugins_in_dirs_should_sort_files_by_modification_timestamp() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare_load_order(&tmp_dir.path());
+
+        let result = find_plugins_in_dirs(
+            &[load_order.game_settings.plugins_directory()],
+            load_order.game_settings.id(),
+        );
+
+        let plugin_names = [
+            load_order.game_settings.master_file(),
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(plugin_names.as_slice(), result);
+    }
+
+    #[test]
+    fn find_plugins_in_dirs_should_sort_files_by_descending_filename_if_timestamps_are_equal() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare_load_order(&tmp_dir.path());
+
+        let timestamp = 1321010051;
+        filetime::set_file_mtime(
+            load_order
+                .game_settings
+                .plugins_directory()
+                .join("Blank - Different.esp"),
+            filetime::FileTime::from_unix_time(timestamp, 0),
+        )
+        .unwrap();
+        filetime::set_file_mtime(
+            load_order
+                .game_settings
+                .plugins_directory()
+                .join("Blank - Master Dependent.esp"),
+            filetime::FileTime::from_unix_time(timestamp, 0),
+        )
+        .unwrap();
+
+        let result = find_plugins_in_dirs(
+            &[load_order.game_settings.plugins_directory()],
+            load_order.game_settings.id(),
+        );
+
+        let plugin_names = [
+            load_order.game_settings.master_file(),
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(plugin_names.as_slice(), result);
+    }
+
+    #[test]
+    fn find_plugins_in_dirs_should_sort_files_by_ascending_filename_if_timestamps_are_equal_and_game_is_starfield(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let (game_settings, plugins) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+        let load_order = TestLoadOrder {
+            game_settings,
+            plugins,
+        };
+
+        let timestamp = 1321009991;
+        filetime::set_file_mtime(
+            load_order
+                .game_settings
+                .plugins_directory()
+                .join("Blank - Different.esp"),
+            filetime::FileTime::from_unix_time(timestamp, 0),
+        )
+        .unwrap();
+        filetime::set_file_mtime(
+            load_order
+                .game_settings
+                .plugins_directory()
+                .join("Blank.esp"),
+            filetime::FileTime::from_unix_time(timestamp, 0),
+        )
+        .unwrap();
+
+        let result = find_plugins_in_dirs(
+            &[load_order.game_settings.plugins_directory()],
+            load_order.game_settings.id(),
+        );
+
+        let plugin_names = [
+            load_order.game_settings.master_file(),
+            "Blank.esm",
+            "Blank - Different.esp",
+            "Blank.esp",
+            "Blank - Master Dependent.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(plugin_names.as_slice(), result);
     }
 
     #[test]

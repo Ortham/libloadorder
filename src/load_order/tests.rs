@@ -87,6 +87,15 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
         .unwrap()
 }
 
+pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
+    let mut timestamp = 1321009871;
+    for plugin_name in plugin_names {
+        let path = parent_path.join(plugin_name);
+        filetime::set_file_mtime(path, FileTime::from_unix_time(timestamp, 0)).unwrap();
+        timestamp += 60;
+    }
+}
+
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
     let mut settings = game_settings_for_test(game_id, game_dir);
 
@@ -100,6 +109,16 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
         &settings,
     );
     copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
+
+    let plugin_names = [
+        settings.master_file(),
+        "Blank.esm",
+        "Blank.esp",
+        "Blank - Different.esp",
+        "Blank - Master Dependent.esp",
+        "Blàñk.esp",
+    ];
+    set_timestamp_order(&plugin_names, &settings.plugins_directory());
 
     // Refresh settings to account for newly-created plugin files.
     settings.refresh_implicitly_active_plugins().unwrap();

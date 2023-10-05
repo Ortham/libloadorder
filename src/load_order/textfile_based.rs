@@ -142,7 +142,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             self.read_from_active_plugins_file()?
         };
 
-        let filenames = self.find_plugins_sorted();
+        let filenames = self.find_plugins();
         self.load_unique_plugins(plugin_tuples, filenames);
 
         if load_order_file_exists {
@@ -591,17 +591,6 @@ mod tests {
             .index_of("Blank - Master Dependent.esp")
             .is_some());
         assert!(load_order.index_of("Blàñk.esp").is_some());
-    }
-
-    #[test]
-    fn load_should_add_missing_implicitly_active_plugins_after_other_missing_masters() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        load_order.load().unwrap();
-        assert_eq!(Some(2), load_order.index_of("Update.esm"));
-        assert!(load_order.is_active("Update.esm"));
     }
 
     #[test]

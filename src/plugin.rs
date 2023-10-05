@@ -74,7 +74,7 @@ impl Plugin {
             None => return Err(Error::NoFilename),
         };
 
-        if !has_valid_extension(filename, game_id) {
+        if !has_plugin_extension(filename, game_id) {
             return Err(Error::InvalidPlugin(filename.to_owned()));
         }
 
@@ -161,7 +161,7 @@ impl Plugin {
     }
 }
 
-fn has_valid_extension(filename: &str, game: GameId) -> bool {
+pub fn has_plugin_extension(filename: &str, game: GameId) -> bool {
     let valid_extensions = if game.supports_light_plugins() {
         VALID_EXTENSIONS_WITH_ESL
     } else {
