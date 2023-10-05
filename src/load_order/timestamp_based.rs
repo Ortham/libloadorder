@@ -17,7 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -162,20 +161,10 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         Ok(true)
     }
 
-    /// A timestamp-based load order is ambiguous if two or more plugins share
-    /// the same timestamp.
+    /// A timestamp-based load order is never ambiguous, as even if two or more plugins share the
+    /// same timestamp, they load in descending filename order.
     fn is_ambiguous(&self) -> Result<bool, Error> {
-        // All timestamps are already stored as part of the loaded plugin data,
-        // so just add all plugin timestamps to a set and return true if a
-        // timestamp value is already in the set.
-        let mut set: HashSet<SystemTime> = HashSet::new();
-
-        let all_timestamps_unique = self
-            .plugins
-            .iter()
-            .all(|plugin| set.insert(plugin.modification_time()));
-
-        Ok(!all_timestamps_unique)
+        Ok(false)
     }
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
@@ -194,7 +183,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     if a.is_master_file() == b.is_master_file() {
         match a.modification_time().cmp(&b.modification_time()) {
-            Ordering::Equal => a.name().cmp(b.name()),
+            Ordering::Equal => a.name().cmp(b.name()).reverse(),
             x => x,
         }
     } else if a.is_master_file() {
@@ -993,6 +982,28 @@ mod tests {
             .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
             .unwrap();
 
-        assert!(load_order.is_ambiguous().unwrap());
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn plugin_sorter_should_sort_in_descending_filename_order_if_timestamps_are_equal() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+
+        let mut plugin1 = Plugin::new("Blank.esp", &load_order.game_settings()).unwrap();
+        let mut plugin2 =
+            Plugin::new("Blank - Different.esp", &load_order.game_settings()).unwrap();
+
+        plugin1
+            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
+            .unwrap();
+
+        plugin2
+            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
+            .unwrap();
+
+        let ordering = plugin_sorter(&plugin1, &plugin2);
+
+        assert_eq!(Ordering::Less, ordering);
     }
 }
