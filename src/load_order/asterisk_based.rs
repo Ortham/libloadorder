@@ -206,7 +206,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     /// An asterisk-based load order can be ambiguous if there are installed
-    /// plugins that don't exist in the active plugins file.
+    /// plugins that are not implicitly active and not listed in plugins.txt.
     fn is_ambiguous(&self) -> Result<bool, Error> {
         let mut set: HashSet<String> = HashSet::new();
 
@@ -222,16 +222,18 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             })?;
         }
 
-        // Check if all loaded plugins aside from early loading plugins
-        // (which don't get written to the active plugins file) are named in the
-        // set.
-        let all_plugins_listed = self
+        // All implicitly active plugins have a defined load order position,
+        // even if they're not in plugins.txt or the early loaders.
+        // Plugins that are active but not implicitly active, and plugins that
+        // are inactive, only have a load order position if they're listed in
+        // plugins.txt, so check that they're all listed.
+        let plugins_listed = self
             .plugins
             .iter()
-            .filter(|plugin| !self.game_settings().loads_early(plugin.name()))
+            .filter(|plugin| !self.game_settings.is_implicitly_active(plugin.name()))
             .all(|plugin| set.contains(&plugin.name().to_lowercase()));
 
-        Ok(!all_plugins_listed)
+        Ok(!plugins_listed)
     }
 
     fn activate(&mut self, plugin_name: &str) -> Result<(), Error> {
@@ -1292,9 +1294,9 @@ mod tests {
     }
 
     #[test]
-    fn is_ambiguous_should_ignore_loaded_early_loading_plugins_not_listed_in_active_plugins_file() {
+    fn is_ambiguous_should_ignore_loaded_implicitly_active_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
@@ -1304,8 +1306,13 @@ mod tests {
 
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
 
-        copy_to_test_dir("Blank.esm", "Dawnguard.esm", &load_order.game_settings());
-        let plugin = Plugin::new("Dawnguard.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir(
+            "Blank.esm",
+            "BlueprintShips-Starfield.esm",
+            &load_order.game_settings(),
+        );
+        let plugin =
+            Plugin::new("BlueprintShips-Starfield.esm", &load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         assert!(!load_order.is_ambiguous().unwrap());
