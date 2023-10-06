@@ -3,6 +3,36 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [15.0.1] - 2023-10-06
+
+### Fixed
+
+- If two plugins in a timestamp-based load order have the same timestamp, they
+  are now sorted in descending filename order instead of ascending filename
+  order, matching the behaviour of all relevant games.
+- Plugins that are installed but not listed in the load order file (if relevant)
+  or the active plugins file (if the load order file is not relevant or does not
+  exist) are now sorted by ascending file modification timestamp instead of
+  ascending filename.
+
+  If two plugins share the same timestamp, then they are sorted by filename.
+  For Starfield, the filename sort order is ascending, while for all other games
+  it is descending.
+
+  This matches the games' behaviour for unlisted implicitly active plugins, and
+  matches the behaviour of xEdit and Wrye Bash for all unlisted plugins.
+- `WritableLoadOrder::save()` for asterisk-based load orders now sets the load
+  order by setting plugin timestamps when `plugins.txt` is being ignored, in
+  addition to writing `plugins.txt`. This ensures that the load order that is
+  saved is seen when it is next loaded, even if `plugins.txt` is still ignored.
+- `WritableLoadOrder::is_ambiguous()` now always returns false for
+  timestamp-based load orders, because there is never any real ambiguity.
+- `WritableLoadOrder::is_ambiguous()` for asterisk-based load orders now ignores
+  implicitly active plugins when checking that plugins are listed in
+  `plugins.txt`. Previously it only ignored early-loading plugins, which was
+  incorrect because implicitly-active plugin load order positions are always
+  well-defined.
+
 ## [15.0.0] - 2023-09-28
 
 ### Added
