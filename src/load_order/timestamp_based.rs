@@ -126,19 +126,9 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        let timestamps = padded_unique_timestamps(self.plugins());
+        save_load_order_using_timestamps(self)?;
 
-        let result: Result<Vec<()>, Error> = self
-            .plugins_mut()
-            .par_iter_mut()
-            .zip(timestamps.into_par_iter())
-            .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
-            .collect();
-
-        match result {
-            Ok(_) => self.save_active_plugins(),
-            Err(e) => Err(e),
-        }
+        self.save_active_plugins()
     }
 
     fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
@@ -178,6 +168,20 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         set_active_plugins(self, active_plugin_names)
     }
+}
+
+pub fn save_load_order_using_timestamps<T: MutableLoadOrder>(
+    load_order: &mut T,
+) -> Result<(), Error> {
+    let timestamps = padded_unique_timestamps(load_order.plugins());
+
+    load_order
+        .plugins_mut()
+        .par_iter_mut()
+        .zip(timestamps.into_par_iter())
+        .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
+        .collect::<Result<Vec<_>, Error>>()
+        .map(|_| ())
 }
 
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {

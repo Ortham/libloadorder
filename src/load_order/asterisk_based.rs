@@ -25,6 +25,7 @@ use unicase::eq;
 use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use super::strict_encode;
+use super::timestamp_based::save_load_order_using_timestamps;
 use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
@@ -138,6 +139,14 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             }
             writer.write_all(&strict_encode(plugin.name())?)?;
             writeln!(writer)?;
+        }
+
+        if self.ignore_active_plugins_file() {
+            // If the active plugins file is being ignored there's no harm in
+            // writing to it, but it won't actually have any impact on the load
+            // order used by the game. In that case, the only way to set the
+            // load order is to modify plugin timestamps, so do that.
+            save_load_order_using_timestamps(self)?;
         }
 
         Ok(())
@@ -1064,6 +1073,55 @@ mod tests {
             ],
             lines
         );
+    }
+
+    #[test]
+    fn save_should_modify_plugin_timestamps_if_active_plugins_file_is_ignored() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/Fallout4.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
+
+        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        let filename = "Blank.esp";
+        let plugin_path = load_order.game_settings.plugins_directory().join(filename);
+
+        let original_timestamp = plugin_path.metadata().unwrap().modified().unwrap();
+
+        assert_eq!(1, load_order.index_of(filename).unwrap());
+        load_order.set_plugin_index(filename, 2).unwrap();
+
+        load_order.save().unwrap();
+
+        let new_timestamp = plugin_path.metadata().unwrap().modified().unwrap();
+
+        assert_eq!(
+            original_timestamp + std::time::Duration::from_secs(60),
+            new_timestamp
+        );
+    }
+
+    #[test]
+    fn save_should_not_modify_plugin_timestamps_if_active_plugins_file_is_not_ignored() {
+        let tmp_dir = tempdir().unwrap();
+
+        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+
+        let filename = "Blank.esp";
+        let plugin_path = load_order.game_settings.plugins_directory().join(filename);
+
+        let original_timestamp = plugin_path.metadata().unwrap().modified().unwrap();
+
+        assert_eq!(1, load_order.index_of(filename).unwrap());
+        load_order.set_plugin_index(filename, 2).unwrap();
+
+        load_order.save().unwrap();
+
+        let new_timestamp = plugin_path.metadata().unwrap().modified().unwrap();
+
+        assert_eq!(original_timestamp, new_timestamp);
     }
 
     #[test]
