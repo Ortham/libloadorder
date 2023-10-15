@@ -21,7 +21,7 @@ use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
-use unicase::eq;
+use unicase::{eq, UniCase};
 
 use super::mutable::{
     generic_insert_position, hoist_masters, load_active_plugins, plugin_line_mapper,
@@ -218,15 +218,15 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             }
         };
 
-        let set: HashSet<String> = plugin_names
-            .into_iter()
-            .map(|name| trim_dot_ghost(&name).to_lowercase())
+        let set: HashSet<_> = plugin_names
+            .iter()
+            .map(|name| UniCase::new(trim_dot_ghost(&name)))
             .collect();
 
         let all_plugins_listed = self
             .plugins
             .iter()
-            .all(|plugin| set.contains(&plugin.name().to_lowercase()));
+            .all(|plugin| set.contains(&UniCase::new(plugin.name())));
 
         Ok(!all_plugins_listed)
     }

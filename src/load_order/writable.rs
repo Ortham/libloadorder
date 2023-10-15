@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::fs::create_dir_all;
 use std::path::Path;
 
-use unicase::eq;
+use unicase::{eq, UniCase};
 
 use super::mutable::MutableLoadOrder;
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
@@ -100,18 +100,16 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                         .rposition(|p| p.is_master_file())
                         .unwrap_or(0);
 
-                    let master_names: HashSet<String> = load_order.plugins()[*position]
-                        .masters()?
-                        .iter()
-                        .map(|m| m.to_lowercase())
-                        .collect();
+                    let masters = load_order.plugins()[*position].masters()?;
+                    let master_names: HashSet<_> =
+                        masters.iter().map(|m| UniCase::new(m.as_str())).collect();
 
                     if load_order
                         .plugins()
                         .iter()
                         .take(*position)
                         .skip(*previous_master_pos)
-                        .any(|p| !master_names.contains(&p.name().to_lowercase()))
+                        .any(|p| !master_names.contains(&UniCase::new(p.name())))
                     {
                         return Err(Error::NonMasterBeforeMaster);
                     }

@@ -25,6 +25,7 @@ use std::path::{Path, PathBuf};
 
 use encoding_rs::WINDOWS_1252;
 use rayon::prelude::*;
+use unicase::UniCase;
 
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
@@ -243,8 +244,6 @@ pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<us
 }
 
 fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
-    let mut set: HashSet<String> = HashSet::new();
-
     let mut dir_entries: Vec<_> = directories
         .iter()
         .flat_map(read_dir)
@@ -272,10 +271,12 @@ fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
         }
     });
 
+    let mut set = HashSet::new();
+
     dir_entries
         .into_iter()
         .filter_map(|e| e.file_name().to_str().map(str::to_owned))
-        .filter(|filename| set.insert(trim_dot_ghost(filename).to_lowercase()))
+        .filter(|filename| set.insert(UniCase::new(trim_dot_ghost(filename).to_string())))
         .collect()
 }
 
@@ -309,15 +310,15 @@ fn validate_master_file_index(
         .rposition(|p| p.is_master_file())
         .unwrap_or(0);
 
-    let master_names: HashSet<String> =
-        plugin.masters()?.iter().map(|m| m.to_lowercase()).collect();
+    let masters = plugin.masters()?;
+    let master_names: HashSet<_> = masters.iter().map(|m| UniCase::new(m.as_str())).collect();
 
     // Check that all of the plugins that load between this index and
     // the previous plugin are masters of this plugin.
     if preceding_plugins
         .iter()
         .skip(previous_master_pos + 1)
-        .any(|p| !master_names.contains(&p.name().to_lowercase()))
+        .any(|p| !master_names.contains(&UniCase::new(p.name())))
     {
         return Err(Error::NonMasterBeforeMaster);
     }
@@ -328,7 +329,7 @@ fn validate_master_file_index(
         .iter()
         .skip(index)
         .filter(|p| !p.is_master_file())
-        .find(|p| master_names.contains(&p.name().to_lowercase()))
+        .find(|p| master_names.contains(&UniCase::new(p.name())))
     {
         Err(Error::UnrepresentedHoist {
             plugin: p.name().to_string(),
@@ -441,8 +442,8 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 }
 
 fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
-    let unique_plugin_names: HashSet<String> =
-        plugin_names.par_iter().map(|s| s.to_lowercase()).collect();
+    let unique_plugin_names: HashSet<_> =
+        plugin_names.par_iter().map(|s| UniCase::new(s)).collect();
 
     unique_plugin_names.len() == plugin_names.len()
 }
@@ -458,7 +459,7 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
         Some(x) => x,
     };
 
-    let mut plugin_names: HashSet<String> = HashSet::new();
+    let mut plugin_names: HashSet<_> = HashSet::new();
 
     // Add each plugin that isn't a master file to the hashset.
     // When a master file is encountered, remove its masters from the hashset.
@@ -471,10 +472,10 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
             .take(last_master_pos - first_non_master_pos + 1)
         {
             if !plugin.is_master_file() {
-                plugin_names.insert(plugin.name().to_lowercase());
+                plugin_names.insert(UniCase::new(plugin.name().to_string()));
             } else {
                 for master in plugin.masters()? {
-                    plugin_names.remove(&master.to_lowercase());
+                    plugin_names.remove(&UniCase::new(master.clone()));
                 }
 
                 if !plugin_names.is_empty() {
@@ -489,11 +490,11 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
     plugin_names.clear();
     for plugin in plugins.iter().rev() {
         if !plugin.is_master_file() {
-            plugin_names.insert(plugin.name().to_lowercase());
+            plugin_names.insert(UniCase::new(plugin.name().to_string()));
         } else if let Some(m) = plugin
             .masters()?
             .iter()
-            .find(|m| plugin_names.contains(&m.to_lowercase()))
+            .find(|m| plugin_names.contains(&UniCase::new(m.to_string())))
         {
             return Err(Error::UnrepresentedHoist {
                 plugin: m.clone(),
@@ -509,19 +510,19 @@ fn remove_duplicates_icase(
     plugin_tuples: Vec<(String, bool)>,
     filenames: Vec<String>,
 ) -> Vec<(String, bool)> {
-    let mut set: HashSet<String> = HashSet::with_capacity(filenames.len());
+    let mut set: HashSet<_> = HashSet::with_capacity(filenames.len());
 
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .into_iter()
         .rev()
-        .filter(|(string, _)| set.insert(trim_dot_ghost(string).to_lowercase()))
+        .filter(|(string, _)| set.insert(UniCase::new(trim_dot_ghost(string).to_string())))
         .collect();
 
     unique_tuples.reverse();
 
     let unique_file_tuples_iter = filenames
         .into_iter()
-        .filter(|string| set.insert(trim_dot_ghost(string).to_lowercase()))
+        .filter(|string| set.insert(UniCase::new(trim_dot_ghost(string).to_string())))
         .map(|f| (f, false));
 
     unique_tuples.extend(unique_file_tuples_iter);

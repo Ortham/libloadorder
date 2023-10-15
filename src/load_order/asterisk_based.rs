@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use unicase::eq;
+use unicase::{eq, UniCase};
 
 use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
@@ -217,7 +217,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     /// An asterisk-based load order can be ambiguous if there are installed
     /// plugins that are not implicitly active and not listed in plugins.txt.
     fn is_ambiguous(&self) -> Result<bool, Error> {
-        let mut set: HashSet<String> = HashSet::new();
+        let mut set = HashSet::new();
 
         // Read plugins from the active plugins file. A set of plugin names is
         // more useful than the returned vec, so insert into the set during the
@@ -225,7 +225,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         if !self.ignore_active_plugins_file() {
             read_plugin_names(self.game_settings().active_plugins_file(), |line| {
                 plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
-                    set.insert(trim_dot_ghost(name).to_lowercase());
+                    set.insert(UniCase::new(trim_dot_ghost(name).to_string()));
                     None
                 })
             })?;
@@ -240,7 +240,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             .plugins
             .iter()
             .filter(|plugin| !self.game_settings.is_implicitly_active(plugin.name()))
-            .all(|plugin| set.contains(&plugin.name().to_lowercase()));
+            .all(|plugin| set.contains(&UniCase::new(plugin.name().to_string())));
 
         Ok(!plugins_listed)
     }
