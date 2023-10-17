@@ -59,7 +59,7 @@ pub trait WritableLoadOrder: ReadableLoadOrder {
 
 pub fn add<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<usize, Error> {
     match load_order.index_of(plugin_name) {
-        Some(_) => Err(Error::DuplicatePlugin),
+        Some(_) => Err(Error::DuplicatePlugin(plugin_name.to_string())),
         None => {
             let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
@@ -109,7 +109,7 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                     masters.retain(|m| !next_master_master_names.contains(&UniCase::new(m)));
 
                     // Finally, check if any remaining masters are non-master plugins.
-                    if masters.iter().any(|n| {
+                    if let Some(n) = masters.iter().find(|n| {
                         load_order
                             .index_of(n)
                             .map(|i| !load_order.plugins()[i].is_master_file())
@@ -117,7 +117,10 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                             // doesn't prevent removal of the target plugin.
                             .unwrap_or(false)
                     }) {
-                        return Err(Error::NonMasterBeforeMaster);
+                        return Err(Error::NonMasterBeforeMaster {
+                            master: plugin_name.to_string(),
+                            non_master: n.to_string(),
+                        });
                     }
                 }
             }
@@ -186,7 +189,10 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
                 && !plugin.is_override_plugin()
                 && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
         {
-            return Err(Error::TooManyActivePlugins);
+            return Err(Error::TooManyActivePlugins {
+                light_count: counts.light,
+                normal_count: counts.normal,
+            });
         } else {
             plugin.activate()?;
         }
@@ -217,7 +223,10 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
     if counts.normal > MAX_ACTIVE_NORMAL_PLUGINS || counts.light > MAX_ACTIVE_LIGHT_PLUGINS {
-        return Err(Error::TooManyActivePlugins);
+        return Err(Error::TooManyActivePlugins {
+            light_count: counts.light,
+            normal_count: counts.normal,
+        });
     }
 
     for plugin_name in load_order.game_settings().implicitly_active_plugins() {
@@ -242,7 +251,7 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 pub fn create_parent_dirs(path: &Path) -> Result<(), Error> {
     if let Some(x) = path.parent() {
         if !x.exists() {
-            create_dir_all(x)?
+            create_dir_all(x).map_err(|e| Error::IoError(x.to_path_buf(), e))?
         }
     }
     Ok(())
@@ -436,7 +445,10 @@ mod tests {
         std::fs::remove_file(&plugins_dir.join(plugin_to_remove)).unwrap();
 
         match remove(&mut load_order, plugin_to_remove).unwrap_err() {
-            Error::NonMasterBeforeMaster => {}
+            Error::NonMasterBeforeMaster { master, non_master } => {
+                assert_eq!("Blank - Different Master Dependent.esm", master);
+                assert_eq!("Blank - Different.esm", non_master);
+            }
             e => panic!("Unexpected error type: {:?}", e),
         }
     }

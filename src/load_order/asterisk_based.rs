@@ -123,9 +123,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        create_parent_dirs(self.game_settings().active_plugins_file())?;
+        let path = self.game_settings().active_plugins_file();
+        create_parent_dirs(path)?;
 
-        let file = File::create(self.game_settings().active_plugins_file())?;
+        let file = File::create(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut writer = BufWriter::new(file);
         for plugin in self.plugins() {
             if self.game_settings().loads_early(plugin.name()) {
@@ -135,10 +136,12 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             }
 
             if plugin.is_active() {
-                write!(writer, "*")?;
+                write!(writer, "*").map_err(|e| Error::IoError(path.clone(), e))?;
             }
-            writer.write_all(&strict_encode(plugin.name())?)?;
-            writeln!(writer)?;
+            writer
+                .write_all(&strict_encode(plugin.name())?)
+                .map_err(|e| Error::IoError(path.clone(), e))?;
+            writeln!(writer).map_err(|e| Error::IoError(path.clone(), e))?;
         }
 
         if self.ignore_active_plugins_file() {
@@ -161,12 +164,14 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
+        let game_master_file = self.game_settings().master_file();
+
         let is_game_master_first = plugin_names
             .first()
-            .map(|name| eq(*name, self.game_settings().master_file()))
+            .map(|name| eq(*name, game_master_file))
             .unwrap_or(false);
         if !is_game_master_first {
-            return Err(Error::GameMasterMustLoadFirst);
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
 
         // Check that all early loading plugins that are present load in
@@ -197,14 +202,13 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        if position != 0
-            && !self.plugins().is_empty()
-            && eq(plugin_name, self.game_settings().master_file())
-        {
-            return Err(Error::GameMasterMustLoadFirst);
+        let game_master_file = self.game_settings().master_file();
+
+        if position != 0 && !self.plugins().is_empty() && eq(plugin_name, game_master_file) {
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
-        if position == 0 && !eq(plugin_name, self.game_settings().master_file()) {
-            return Err(Error::GameMasterMustLoadFirst);
+        if position == 0 && !eq(plugin_name, game_master_file) {
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
 
         self.move_or_insert_plugin_with_index(plugin_name, position)

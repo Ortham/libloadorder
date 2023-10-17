@@ -41,7 +41,7 @@ impl GhostablePath for Path {
             Ok(self.to_path_buf())
         } else {
             let new_path = self.as_ghosted_path()?;
-            rename(self, &new_path)?;
+            rename(self, &new_path).map_err(|e| Error::IoError(self.to_path_buf(), e))?;
             Ok(new_path)
         }
     }
@@ -51,7 +51,7 @@ impl GhostablePath for Path {
             Ok(self.to_path_buf())
         } else {
             let new_path = self.as_unghosted_path()?;
-            rename(self, &new_path)?;
+            rename(self, &new_path).map_err(|e| Error::IoError(self.to_path_buf(), e))?;
             Ok(new_path)
         }
     }

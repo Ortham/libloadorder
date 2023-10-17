@@ -101,8 +101,14 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        if !are_plugin_names_unique(plugin_names) {
-            return Err(Error::DuplicatePlugin);
+        let mut unique_plugin_names = HashSet::new();
+
+        let non_unique_plugin = plugin_names
+            .iter()
+            .find(|n| !unique_plugin_names.insert(UniCase::new(*n)));
+
+        if let Some(n) = non_unique_plugin {
+            return Err(Error::DuplicatePlugin(n.to_string()));
         }
 
         let mut plugins = match map_to_plugins(self, plugin_names) {
@@ -178,7 +184,8 @@ where
         return Ok(Vec::new());
     }
 
-    let content = std::fs::read(file_path)?;
+    let content =
+        std::fs::read(file_path).map_err(|e| Error::IoError(file_path.to_path_buf(), e))?;
 
     // This should never fail, as although Windows-1252 has a few unused bytes
     // they get mapped to C1 control characters.
@@ -315,12 +322,15 @@ fn validate_master_file_index(
 
     // Check that all of the plugins that load between this index and
     // the previous plugin are masters of this plugin.
-    if preceding_plugins
+    if let Some(n) = preceding_plugins
         .iter()
         .skip(previous_master_pos + 1)
-        .any(|p| !master_names.contains(&UniCase::new(p.name())))
+        .find(|p| !master_names.contains(&UniCase::new(p.name())))
     {
-        return Err(Error::NonMasterBeforeMaster);
+        return Err(Error::NonMasterBeforeMaster {
+            master: plugin.name().to_string(),
+            non_master: n.name().to_string(),
+        });
     }
 
     // Check that none of the non-masters that load after index are
@@ -373,7 +383,10 @@ fn validate_non_master_file_index(
     {
         Ok(())
     } else {
-        Err(Error::NonMasterBeforeMaster)
+        Err(Error::NonMasterBeforeMaster {
+            master: next_master.name().to_string(),
+            non_master: plugin.name().to_string(),
+        })
     }
 }
 
@@ -441,12 +454,6 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     }
 }
 
-fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
-    let unique_plugin_names: HashSet<_> = plugin_names.par_iter().map(UniCase::new).collect();
-
-    unique_plugin_names.len() == plugin_names.len()
-}
-
 fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
     let first_non_master_pos = match find_first_non_master_position(plugins) {
         None => return Ok(()),
@@ -477,8 +484,11 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
                     plugin_names.remove(&UniCase::new(master.clone()));
                 }
 
-                if !plugin_names.is_empty() {
-                    return Err(Error::NonMasterBeforeMaster);
+                if let Some(n) = plugin_names.iter().next() {
+                    return Err(Error::NonMasterBeforeMaster {
+                        master: plugin.name().to_string(),
+                        non_master: n.to_string(),
+                    });
                 }
             }
         }

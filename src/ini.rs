@@ -28,7 +28,8 @@ type TestFiles = [Option<String>; 10];
 fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
     // Read ini as Windows-1252 bytes and then convert to UTF-8 before parsing,
     // as the ini crate expects the content to be valid UTF-8.
-    let contents = std::fs::read(ini_path)?;
+    let contents =
+        std::fs::read(ini_path).map_err(|e| Error::IoError(ini_path.to_path_buf(), e))?;
 
     // My Games is used if bUseMyGamesDirectory is not present or set to 1.
     let contents = WINDOWS_1252.decode_without_bom_handling(&contents).0;
@@ -40,7 +41,12 @@ fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
             enabled_escape: false,
         },
     )
-    .map_err(Error::from)
+    .map_err(|e| Error::IniParsingError {
+        path: ini_path.to_path_buf(),
+        line: e.line,
+        column: e.col,
+        message: e.msg.to_string(),
+    })
 }
 
 pub fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
@@ -196,9 +202,24 @@ fn starfield_language(game_path: &Path) -> Result<&'static str, Error> {
 }
 
 fn read_steam_language_config(appmanifest_acf_path: &Path) -> Result<Option<String>, Error> {
-    let content = std::fs::read_to_string(appmanifest_acf_path)?;
+    let content = std::fs::read_to_string(appmanifest_acf_path)
+        .map_err(|e| Error::IoError(appmanifest_acf_path.to_path_buf(), e))?;
 
-    let language = keyvalues_parser::Vdf::parse(&content)?
+    let language = keyvalues_parser::Vdf::parse(&content)
+        .map_err(|e| {
+            let detail = match e {
+                keyvalues_parser::error::Error::EscapedParseError(e) => e.to_string(),
+
+                keyvalues_parser::error::Error::RawParseError(e) => e.to_string(),
+
+                keyvalues_parser::error::Error::RenderError(e) => e.to_string(),
+                keyvalues_parser::error::Error::RawRenderError { invalid_char } => {
+                    format!("Invalid character \"{}\"", invalid_char)
+                }
+            };
+
+            Error::VdfParsingError(appmanifest_acf_path.to_path_buf(), detail)
+        })?
         .value
         .get_obj()
         .and_then(|o| o.get("UserConfig"))

@@ -252,7 +252,7 @@ impl GameSettings {
                 self.id,
                 self.plugins_directory
                     .parent()
-                    .expect("plugins directory path to have parent path component"),
+                    .expect("plugins directory path should have a parent path component"),
                 &self.my_games_path,
                 &self.plugins_directory,
                 &self.additional_plugins_directories,
@@ -512,7 +512,8 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
     }
 
     let dir_iter = plugins_path
-        .read_dir()?
+        .read_dir()
+        .map_err(|e| Error::IoError(plugins_path.to_path_buf(), e))?
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
         .filter(|e| {
@@ -557,7 +558,8 @@ fn early_loading_plugins(
 
     if let Some(file_path) = ccc_file_path(game_id, game_path) {
         if file_path.exists() {
-            let reader = BufReader::new(File::open(file_path)?);
+            let reader =
+                BufReader::new(File::open(&file_path).map_err(|e| Error::IoError(file_path, e))?);
 
             let lines = reader
                 .lines()

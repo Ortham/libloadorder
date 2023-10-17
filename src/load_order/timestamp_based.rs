@@ -63,19 +63,25 @@ impl TimestampBasedLoadOrder {
     }
 
     fn save_active_plugins(&mut self) -> Result<(), Error> {
-        create_parent_dirs(self.game_settings().active_plugins_file())?;
+        let path = self.game_settings().active_plugins_file();
+        create_parent_dirs(path)?;
 
         let prelude = get_file_prelude(self.game_settings())?;
 
-        let file = File::create(self.game_settings().active_plugins_file())?;
+        let file = File::create(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut writer = BufWriter::new(file);
-        writer.write_all(&prelude)?;
+        writer
+            .write_all(&prelude)
+            .map_err(|e| Error::IoError(path.clone(), e))?;
         for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
             if self.game_settings().id() == GameId::Morrowind {
-                write!(writer, "GameFile{}=", index)?;
+                write!(writer, "GameFile{}=", index)
+                    .map_err(|e| Error::IoError(path.clone(), e))?;
             }
-            writer.write_all(&strict_encode(plugin_name)?)?;
-            writeln!(writer)?;
+            writer
+                .write_all(&strict_encode(plugin_name)?)
+                .map_err(|e| Error::IoError(path.clone(), e))?;
+            writeln!(writer).map_err(|e| Error::IoError(path.clone(), e))?;
         }
 
         Ok(())
@@ -228,12 +234,15 @@ fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
 
 fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
     let mut prelude: Vec<u8> = Vec::new();
-    if game_settings.id() == GameId::Morrowind && game_settings.active_plugins_file().exists() {
-        let input = File::open(game_settings.active_plugins_file())?;
+
+    let path = game_settings.active_plugins_file();
+
+    if game_settings.id() == GameId::Morrowind && path.exists() {
+        let input = File::open(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buffered = BufReader::new(input);
 
         for line in buffered.split(b'\n') {
-            let line = line?;
+            let line = line.map_err(|e| Error::IoError(path.clone(), e))?;
             prelude.append(&mut line.clone());
             prelude.push(b'\n');
 

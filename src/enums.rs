@@ -77,19 +77,25 @@ impl GameId {
 #[derive(Debug)]
 pub enum Error {
     InvalidPath(PathBuf),
-    IoError(io::Error),
-    NoFilename,
+    IoError(PathBuf, io::Error),
+    NoFilename(PathBuf),
     SystemTimeError(time::SystemTimeError),
     NotUtf8(Vec<u8>),
     DecodeError(Cow<'static, str>),
     EncodeError(Cow<'static, str>),
-    PluginParsingError,
+    PluginParsingError(PathBuf),
     PluginNotFound(String),
-    TooManyActivePlugins,
+    TooManyActivePlugins {
+        light_count: usize,
+        normal_count: usize,
+    },
     InvalidRegex,
-    DuplicatePlugin,
-    NonMasterBeforeMaster,
-    GameMasterMustLoadFirst,
+    DuplicatePlugin(String),
+    NonMasterBeforeMaster {
+        master: String,
+        non_master: String,
+    },
+    GameMasterMustLoadFirst(String),
     InvalidEarlyLoadingPluginPosition {
         name: String,
         pos: usize,
@@ -105,18 +111,13 @@ pub enum Error {
     },
     InstalledPlugin(String),
     IniParsingError {
+        path: PathBuf,
         line: usize,
         column: usize,
         message: String,
     },
-    VdfParsingError(String),
+    VdfParsingError(PathBuf, String),
     SystemError(i32, OsString),
-}
-
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Self {
-        Error::IoError(error)
-    }
 }
 
 impl From<time::SystemTimeError> for Error {
@@ -137,55 +138,6 @@ impl From<FromUtf8Error> for Error {
     }
 }
 
-impl From<esplugin::Error> for Error {
-    fn from(error: esplugin::Error) -> Self {
-        match error {
-            esplugin::Error::IoError(x) => Error::IoError(x),
-            esplugin::Error::NoFilename => Error::NoFilename,
-            esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError(_, _) => {
-                Error::PluginParsingError
-            }
-            esplugin::Error::DecodeError => Error::DecodeError("invalid sequence".into()),
-        }
-    }
-}
-
-impl From<ini::Error> for Error {
-    fn from(error: ini::Error) -> Self {
-        match error {
-            ini::Error::Io(x) => Error::IoError(x),
-            ini::Error::Parse(x) => Error::from(x),
-        }
-    }
-}
-
-impl From<ini::ParseError> for Error {
-    fn from(error: ini::ParseError) -> Self {
-        Error::IniParsingError {
-            line: error.line,
-            column: error.col,
-            message: error.msg.to_string(),
-        }
-    }
-}
-
-impl From<keyvalues_parser::error::Error> for Error {
-    fn from(error: keyvalues_parser::error::Error) -> Self {
-        match error {
-            keyvalues_parser::error::Error::EscapedParseError(e) => {
-                Error::VdfParsingError(e.to_string())
-            }
-            keyvalues_parser::error::Error::RawParseError(e) => {
-                Error::VdfParsingError(e.to_string())
-            }
-            keyvalues_parser::error::Error::RenderError(e) => Error::VdfParsingError(e.to_string()),
-            keyvalues_parser::error::Error::RawRenderError { invalid_char } => {
-                Error::VdfParsingError(format!("Invalid character \"{}\"", invalid_char))
-            }
-        }
-    }
-}
-
 #[cfg(windows)]
 impl From<windows::core::Error> for Error {
     fn from(error: windows::core::Error) -> Self {
@@ -197,35 +149,35 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::InvalidPath(ref x) => write!(f, "The path \"{:?}\" is invalid", x),
-            Error::IoError(ref x) => x.fmt(f),
-            Error::NoFilename => write!(f, "The plugin path has no filename part"),
+            Error::IoError(ref p, ref x) => write!(f, "I/O error involving the path \"{:?}\": {}", p, x),
+            Error::NoFilename(ref p) => write!(f, "The plugin path \"{:?}\" has no filename part", p),
             Error::SystemTimeError(ref x) => x.fmt(f),
             Error::NotUtf8(ref x) => write!(f, "Expected a UTF-8 string, got bytes {:?}", x),
             Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
             Error::EncodeError(_) => write!(f, "Text could not be encoded in Windows-1252"),
-            Error::PluginParsingError => {
-                write!(f, "An error was encountered while parsing a plugin")
+            Error::PluginParsingError(ref p) => {
+                write!(f, "An error was encountered while parsing the plugin at \"{:?}\"", p)
             }
             Error::PluginNotFound(ref x) => {
                 write!(f, "The plugin \"{}\" is not in the load order", x)
             }
-            Error::TooManyActivePlugins => write!(f, "Maximum number of active plugins exceeded"),
+            Error::TooManyActivePlugins {light_count, normal_count } => write!(f, "Maximum number of active plugins exceeded: there are {} active normal plugins and {} active light plugins", normal_count, light_count),
             Error::InvalidRegex => write!(
                 f,
                 "Internal error: regex is invalid"
             ),
-            Error::DuplicatePlugin => write!(f, "The given plugin list contains duplicates"),
-            Error::NonMasterBeforeMaster => write!(
+            Error::DuplicatePlugin(ref n) => write!(f, "The given plugin list contains more than one instance of \"{}\"", n),
+            Error::NonMasterBeforeMaster{ref master, ref non_master} => write!(
                 f,
-                "Attempted to load a non-master plugin before a master plugin"
+                "Attempted to load the non-master plugin \"{}\" before the master plugin \"{}\"", non_master, master
             ),
-            Error::GameMasterMustLoadFirst => write!(
+            Error::GameMasterMustLoadFirst(ref n) => write!(
                 f,
-                "The game's master file must load first"
+                "The game's master file \"{}\" must load first", n
             ),
             Error::InvalidEarlyLoadingPluginPosition{ ref name, pos, expected_pos } => write!(
                 f,
-                "Attempted to load the early-loading plugin {} at position {}, its expected position is {}", name, pos, expected_pos
+                "Attempted to load the early-loading plugin \"{}\" at position {}, its expected position is {}", name, pos, expected_pos
             ),
             Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
             Error::ImplicitlyActivePlugin(ref x) => write!(
@@ -250,15 +202,16 @@ impl fmt::Display for Error {
                 plugin
             ),
             Error::IniParsingError {
+                ref path,
                 line,
                 column,
                 ref message,
             } => write!(
                 f,
-                "Failed to parse ini file, error at line {}, column {}: {}",
-                line, column, message
+                "Failed to parse ini file at \"{:?}\", error at line {}, column {}: {}",
+                path, line, column, message
             ),
-            Error::VdfParsingError(ref message) => write!(f, "Failed to parse VDF file: {}", message),
+            Error::VdfParsingError(ref path, ref message) => write!(f, "Failed to parse VDF file at \"{:?}\": {}", path, message),
             Error::SystemError(code, ref message) => write!(f, "Error returned by the operating system, code {}: {:?}", code, message),
         }
     }
@@ -267,7 +220,7 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
-            Error::IoError(ref x) => Some(x),
+            Error::IoError(_, ref x) => Some(x),
             Error::SystemTimeError(ref x) => Some(x),
             _ => None,
         }
