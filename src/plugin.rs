@@ -71,18 +71,22 @@ impl Plugin {
     pub(crate) fn with_path(path: &Path, game_id: GameId, active: bool) -> Result<Plugin, Error> {
         let filename = match path.file_name().and_then(OsStr::to_str) {
             Some(n) => n,
-            None => return Err(Error::NoFilename),
+            None => return Err(Error::NoFilename(path.to_path_buf())),
         };
 
         if !has_plugin_extension(filename, game_id) {
             return Err(Error::InvalidPlugin(filename.to_owned()));
         }
 
-        let file = File::open(path)?;
-        let modification_time = file.metadata()?.modified()?;
+        let file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
+        let modification_time = file
+            .metadata()
+            .and_then(|m| m.modified())
+            .map_err(|e| Error::IoError(path.to_path_buf(), e))?;
 
         let mut data = esplugin::Plugin::new(game_id.to_esplugin_id(), path);
-        data.parse_open_file(file, true)?;
+        data.parse_open_file(file, true)
+            .map_err(|e| file_error(path, e))?;
 
         Ok(Plugin {
             active,
@@ -121,7 +125,9 @@ impl Plugin {
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
-        self.data.masters().map_err(Error::from)
+        self.data
+            .masters()
+            .map_err(|e| file_error(self.data.path(), e))
     }
 
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
@@ -134,7 +140,8 @@ impl Plugin {
             self.data.path(),
             FileTime::from_system_time(SystemTime::now()),
             FileTime::from_system_time(time),
-        )?;
+        )
+        .map_err(|e| Error::IoError(self.data.path().to_path_buf(), e))?;
 
         self.modification_time = time;
         Ok(())
@@ -146,7 +153,9 @@ impl Plugin {
                 let new_path = self.data.path().unghost()?;
 
                 self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
-                self.data.parse_file(true)?;
+                self.data
+                    .parse_file(true)
+                    .map_err(|e| file_error(self.data.path(), e))?;
                 let modification_time = self.modification_time();
                 self.set_modification_time(modification_time)?;
             }
@@ -189,6 +198,19 @@ pub fn trim_dot_ghost(string: &str) -> &str {
         &string[..(string.len() - GHOST_FILE_EXTENSION.len())]
     } else {
         string
+    }
+}
+
+fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
+    match error {
+        esplugin::Error::IoError(x) => Error::IoError(file_path.to_path_buf(), x),
+        esplugin::Error::NoFilename => Error::NoFilename(file_path.to_path_buf()),
+        esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError(_, _) => {
+            Error::PluginParsingError(file_path.to_path_buf())
+        }
+        esplugin::Error::DecodeError => {
+            Error::DecodeError("invalid byte sequence in plugin string".into())
+        }
     }
 }
 

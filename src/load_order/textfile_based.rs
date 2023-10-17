@@ -69,23 +69,27 @@ impl TextfileBasedLoadOrder {
         if let Some(file_path) = self.game_settings().load_order_file() {
             create_parent_dirs(file_path)?;
 
-            let file = File::create(file_path)?;
+            let file = File::create(file_path).map_err(|e| Error::IoError(file_path.clone(), e))?;
             let mut writer = BufWriter::new(file);
             for plugin_name in self.plugin_names() {
-                writeln!(writer, "{}", plugin_name)?;
+                writeln!(writer, "{}", plugin_name)
+                    .map_err(|e| Error::IoError(file_path.clone(), e))?;
             }
         }
         Ok(())
     }
 
     fn save_active_plugins(&self) -> Result<(), Error> {
-        create_parent_dirs(self.game_settings().active_plugins_file())?;
+        let path = self.game_settings().active_plugins_file();
+        create_parent_dirs(path)?;
 
-        let file = File::create(self.game_settings().active_plugins_file())?;
+        let file = File::create(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut writer = BufWriter::new(file);
         for plugin_name in self.active_plugin_names() {
-            writer.write_all(&strict_encode(plugin_name)?)?;
-            writeln!(writer)?;
+            writer
+                .write_all(&strict_encode(plugin_name)?)
+                .map_err(|e| Error::IoError(path.clone(), e))?;
+            writeln!(writer).map_err(|e| Error::IoError(path.clone(), e))?;
         }
 
         Ok(())
@@ -170,22 +174,22 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        if plugin_names.is_empty() || !eq(plugin_names[0], self.game_settings().master_file()) {
-            return Err(Error::GameMasterMustLoadFirst);
+        let game_master_file = self.game_settings().master_file();
+        if plugin_names.is_empty() || !eq(plugin_names[0], game_master_file) {
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
 
         self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        if position != 0
-            && !self.plugins().is_empty()
-            && eq(plugin_name, self.game_settings().master_file())
-        {
-            return Err(Error::GameMasterMustLoadFirst);
+        let game_master_file = self.game_settings().master_file();
+
+        if position != 0 && !self.plugins().is_empty() && eq(plugin_name, game_master_file) {
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
-        if position == 0 && !eq(plugin_name, self.game_settings().master_file()) {
-            return Err(Error::GameMasterMustLoadFirst);
+        if position == 0 && !eq(plugin_name, game_master_file) {
+            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
         }
 
         self.move_or_insert_plugin_with_index(plugin_name, position)
@@ -254,8 +258,9 @@ where
     }
 
     let mut content: String = String::new();
-    let mut file = File::open(file_path)?;
-    file.read_to_string(&mut content)?;
+    let mut file = File::open(file_path).map_err(|e| Error::IoError(file_path.to_path_buf(), e))?;
+    file.read_to_string(&mut content)
+        .map_err(|e| Error::IoError(file_path.to_path_buf(), e))?;
 
     Ok(content.lines().filter_map(line_mapper).collect())
 }
