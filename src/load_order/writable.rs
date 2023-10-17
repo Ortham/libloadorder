@@ -87,30 +87,38 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                 return Err(Error::InstalledPlugin(plugin_name.to_string()));
             }
 
+            // If this is a master file that depends on a non-master file, it shouldn't be removed
+            // without first moving the non-master file later in the load order, unless the next
+            // master file also depends on that same non-master file. The non-master file also
+            // doesn't need to be moved if this is the last master file in the load order.
             if load_order.plugins()[index].is_master_file() {
-                let next_master_pos = &load_order
+                let next_master_index = &load_order
                     .plugins()
                     .iter()
                     .skip(index + 1)
                     .position(|p| p.is_master_file());
 
-                if let Some(position) = next_master_pos {
-                    let previous_master_pos = &load_order.plugins()[..index]
+                if let Some(next_master_index) = next_master_index {
+                    let next_master_masters = load_order.plugins()[*next_master_index].masters()?;
+                    let next_master_master_names: HashSet<_> = next_master_masters
                         .iter()
-                        .rposition(|p| p.is_master_file())
-                        .unwrap_or(0);
+                        .map(|m| UniCase::new(m))
+                        .collect();
 
-                    let masters = load_order.plugins()[*position].masters()?;
-                    let master_names: HashSet<_> =
-                        masters.iter().map(|m| UniCase::new(m.as_str())).collect();
+                    let mut masters = load_order.plugins()[index].masters()?;
 
-                    if load_order
-                        .plugins()
-                        .iter()
-                        .take(*position)
-                        .skip(*previous_master_pos)
-                        .any(|p| !master_names.contains(&UniCase::new(p.name())))
-                    {
+                    // Remove any masters that are also masters of the next master plugin.
+                    masters.retain(|m| !next_master_master_names.contains(&UniCase::new(m)));
+
+                    // Finally, check if any remaining masters are non-master plugins.
+                    if masters.iter().any(|n| {
+                        load_order
+                            .index_of(n)
+                            .map(|i| !load_order.plugins()[i].is_master_file())
+                            // If the master isn't installed, assume it's a master file and so
+                            // doesn't prevent removal of the target plugin.
+                            .unwrap_or(false)
+                    }) {
                         return Err(Error::NonMasterBeforeMaster);
                     }
                 }
@@ -399,13 +407,15 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
+        let plugin_to_remove = "Blank - Different Master Dependent.esm";
+
         let plugins_dir = &load_order.game_settings().plugins_directory();
         copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
+            plugin_to_remove,
+            plugin_to_remove,
             load_order.game_settings(),
         );
-        assert!(add(&mut load_order, "Blank - Different Master Dependent.esm").is_ok());
+        assert!(add(&mut load_order, plugin_to_remove).is_ok());
 
         copy_to_test_dir(
             "Blank - Different.esm",
@@ -422,7 +432,15 @@ mod tests {
         );
         assert!(add(&mut load_order, "Blank - Master Dependent.esm").is_ok());
 
-        assert!(remove(&mut load_order, "Blank - Different Master Dependent.esm").is_err());
+        let blank_master_dependent = load_order.plugins.remove(1);
+        load_order.plugins.insert(3, blank_master_dependent);
+
+        std::fs::remove_file(&plugins_dir.join(plugin_to_remove)).unwrap();
+
+        match remove(&mut load_order, plugin_to_remove).unwrap_err() {
+            Error::NonMasterBeforeMaster => {}
+            e => panic!("Unexpected error type: {:?}", e),
+        }
     }
 
     #[test]
