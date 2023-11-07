@@ -172,9 +172,15 @@ impl From<ini::ParseError> for Error {
 impl From<keyvalues_parser::error::Error> for Error {
     fn from(error: keyvalues_parser::error::Error) -> Self {
         match error {
-            keyvalues_parser::error::Error::ParseError(e) => Error::VdfParsingError(e.to_string()),
-            keyvalues_parser::error::Error::InvalidTokenStream(c) => {
-                Error::VdfParsingError(c.to_string())
+            keyvalues_parser::error::Error::EscapedParseError(e) => {
+                Error::VdfParsingError(e.to_string())
+            }
+            keyvalues_parser::error::Error::RawParseError(e) => {
+                Error::VdfParsingError(e.to_string())
+            }
+            keyvalues_parser::error::Error::RenderError(e) => Error::VdfParsingError(e.to_string()),
+            keyvalues_parser::error::Error::RawRenderError { invalid_char } => {
+                Error::VdfParsingError(format!("Invalid character \"{}\"", invalid_char))
             }
         }
     }
