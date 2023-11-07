@@ -564,6 +564,25 @@ mod tests {
     }
 
     #[test]
+    fn read_ini_should_support_inline_comments() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let ini_path = game_path.join("Oblivion.ini");
+
+        std::fs::write(
+            &ini_path,
+            "[General]\nsTestFile1=a #comment\nSTestFile2=b ;comment\nsTestFile3=c",
+        )
+        .unwrap();
+
+        let ini = read_ini(&ini_path).unwrap();
+
+        assert_eq!(Some("a"), ini.get_from(Some("General"), "sTestFile1"));
+        assert_eq!(Some("b"), ini.get_from(Some("General"), "sTestFile2"));
+        assert_eq!(Some("c"), ini.get_from(Some("General"), "sTestFile3"));
+    }
+
+    #[test]
     fn read_ini_should_read_as_windows_1252() {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
