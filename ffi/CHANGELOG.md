@@ -3,6 +3,12 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [15.0.2] - 2023-11-25
+
+### Changed
+
+- Updated to libloadorder v15.0.2.
+
 ## [15.0.1] - 2023-10-06
 
 ### Changed

@@ -3,6 +3,22 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [15.0.2] - 2023-11-25
+
+### Fixed
+
+- When parsing ini files, single and double quote characters are no longer
+  treated as special characters, and backslashes are no longer treated as
+  potentially the start of an escape sequence.
+
+### Changed
+
+- Case insensitivity is now consistently implemented using case folding instead
+  of a mix of case folding and lowercasing.
+- Updated rust-ini to 0.20.0.
+- Updated keyvalues-parser to 0.2.0.
+- Updated windows to 0.52.0.
+
 ## [15.0.1] - 2023-10-06
 
 ### Fixed
