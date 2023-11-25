@@ -33,7 +33,14 @@ fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
     // My Games is used if bUseMyGamesDirectory is not present or set to 1.
     let contents = WINDOWS_1252.decode_without_bom_handling(&contents).0;
 
-    ini::Ini::load_from_str(&contents).map_err(Error::from)
+    ini::Ini::load_from_str_opt(
+        &contents,
+        ini::ParseOption {
+            enabled_quote: false,
+            enabled_escape: false,
+        },
+    )
+    .map_err(Error::from)
 }
 
 pub fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
@@ -574,6 +581,75 @@ mod tests {
         let ini = read_ini(&ini_path).unwrap();
 
         assert_eq!(Some("À.esp"), ini.get_from(Some("General"), "sTestFile1"));
+    }
+
+    #[test]
+    fn read_ini_should_not_treat_quotes_as_special_characters() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let ini_path = game_path.join("Oblivion.ini");
+
+        std::fs::write(
+            &ini_path,
+            br#"[General]
+            a="double quoted string"
+            b=string "containing" double quotes
+            c='single quoted string'
+            d=string 'containing' double quotes
+            e="mismatched double quote
+            f='mismatched single quote
+        "#,
+        )
+        .unwrap();
+
+        let ini = read_ini(&ini_path).unwrap();
+
+        assert_eq!(
+            Some("\"double quoted string\""),
+            ini.get_from(Some("General"), "a")
+        );
+        assert_eq!(
+            Some("string \"containing\" double quotes"),
+            ini.get_from(Some("General"), "b")
+        );
+        assert_eq!(
+            Some("'single quoted string'"),
+            ini.get_from(Some("General"), "c")
+        );
+        assert_eq!(
+            Some("string 'containing' double quotes"),
+            ini.get_from(Some("General"), "d")
+        );
+        assert_eq!(
+            Some("\"mismatched double quote"),
+            ini.get_from(Some("General"), "e")
+        );
+        assert_eq!(
+            Some("'mismatched single quote"),
+            ini.get_from(Some("General"), "f")
+        );
+    }
+
+    #[test]
+    fn read_ini_should_not_treat_backslash_as_an_escape_character() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let ini_path = game_path.join("Oblivion.ini");
+
+        std::fs::write(
+            &ini_path,
+            br#"[General]
+            a=\\\0\a\b\t\r\n\x20
+            "#,
+        )
+        .unwrap();
+
+        let ini = read_ini(&ini_path).unwrap();
+
+        assert_eq!(
+            Some(r#"\\\0\a\b\t\r\n\x20"#),
+            ini.get_from(Some("General"), "a")
+        );
     }
 
     #[test]
