@@ -806,7 +806,7 @@ mod tests {
         load_order.plugins_mut().push(plugin);
 
         match load_order.save().unwrap_err() {
-            Error::EncodeError(s) => assert_eq!("unrepresentable character", s),
+            Error::EncodeError(s) => assert_eq!("Blȧnk.esm", s),
             e => panic!("Expected encode error, got {:?}", e),
         };
     }
