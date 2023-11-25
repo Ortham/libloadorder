@@ -100,10 +100,8 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
 
                 if let Some(next_master_index) = next_master_index {
                     let next_master_masters = load_order.plugins()[*next_master_index].masters()?;
-                    let next_master_master_names: HashSet<_> = next_master_masters
-                        .iter()
-                        .map(|m| UniCase::new(m))
-                        .collect();
+                    let next_master_master_names: HashSet<_> =
+                        next_master_masters.iter().map(UniCase::new).collect();
 
                     let mut masters = load_order.plugins()[index].masters()?;
 
