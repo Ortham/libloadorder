@@ -17,7 +17,6 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::borrow::Cow;
 use std::convert::From;
 use std::error;
 use std::ffi::OsString;
@@ -81,7 +80,7 @@ pub enum Error {
     NoFilename(PathBuf),
     SystemTimeError(time::SystemTimeError),
     NotUtf8(Vec<u8>),
-    DecodeError(Cow<'static, str>),
+    DecodeError(Vec<u8>),
     EncodeError(String),
     PluginParsingError(PathBuf),
     PluginNotFound(String),
@@ -147,7 +146,7 @@ impl fmt::Display for Error {
                 write!(f, "The plugin path {path:?} has no filename part"),
             Error::SystemTimeError(error) => error.fmt(f),
             Error::NotUtf8(bytes) => write!(f, "Expected a UTF-8 string, got bytes {bytes:02X?}"),
-            Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
+            Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252, bytes are {bytes:02X?}"),
             Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
             Error::PluginParsingError(path) => {
                 write!(f, "An error was encountered while parsing the plugin at {path:?}")

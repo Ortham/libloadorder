@@ -188,7 +188,7 @@ where
     // they get mapped to C1 control characters.
     let decoded_content = WINDOWS_1252
         .decode_without_bom_handling_and_without_replacement(&content)
-        .ok_or_else(|| Error::DecodeError("invalid sequence".into()))?;
+        .ok_or_else(|| Error::DecodeError(content.clone()))?;
 
     Ok(decoded_content.lines().filter_map(line_mapper).collect())
 }
