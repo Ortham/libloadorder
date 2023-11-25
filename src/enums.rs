@@ -89,7 +89,6 @@ pub enum Error {
         light_count: usize,
         normal_count: usize,
     },
-    InvalidRegex,
     DuplicatePlugin(String),
     NonMasterBeforeMaster {
         master: String,
@@ -126,12 +125,6 @@ impl From<time::SystemTimeError> for Error {
     }
 }
 
-impl From<regex::Error> for Error {
-    fn from(_: regex::Error) -> Self {
-        Error::InvalidRegex
-    }
-}
-
 impl From<FromUtf8Error> for Error {
     fn from(error: FromUtf8Error) -> Self {
         Error::NotUtf8(error.into_bytes())
@@ -162,10 +155,6 @@ impl fmt::Display for Error {
                 write!(f, "The plugin \"{}\" is not in the load order", x)
             }
             Error::TooManyActivePlugins {light_count, normal_count } => write!(f, "Maximum number of active plugins exceeded: there are {} active normal plugins and {} active light plugins", normal_count, light_count),
-            Error::InvalidRegex => write!(
-                f,
-                "Internal error: regex is invalid"
-            ),
             Error::DuplicatePlugin(ref n) => write!(f, "The given plugin list contains more than one instance of \"{}\"", n),
             Error::NonMasterBeforeMaster{ref master, ref non_master} => write!(
                 f,
