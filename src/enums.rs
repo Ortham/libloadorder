@@ -140,68 +140,53 @@ impl From<windows::core::Error> for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::InvalidPath(ref x) => write!(f, "The path {:?} is invalid", x),
-            Error::IoError(ref p, ref x) => write!(f, "I/O error involving the path {:?}: {}", p, x),
-            Error::NoFilename(ref p) => write!(f, "The plugin path {:?} has no filename part", p),
-            Error::SystemTimeError(ref x) => x.fmt(f),
-            Error::NotUtf8(ref x) => write!(f, "Expected a UTF-8 string, got bytes {:02X?}", x),
+        match self {
+            Error::InvalidPath(path) => write!(f, "The path {path:?} is invalid"),
+            Error::IoError(path, error) =>
+                write!(f, "I/O error involving the path {path:?}: {error}"),
+            Error::NoFilename(path) =>
+                write!(f, "The plugin path {path:?} has no filename part"),
+            Error::SystemTimeError(error) => error.fmt(f),
+            Error::NotUtf8(bytes) => write!(f, "Expected a UTF-8 string, got bytes {bytes:02X?}"),
             Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
             Error::EncodeError(_) => write!(f, "Text could not be encoded in Windows-1252"),
-            Error::PluginParsingError(ref p) => {
-                write!(f, "An error was encountered while parsing the plugin at {:?}", p)
+            Error::PluginParsingError(path) => {
+                write!(f, "An error was encountered while parsing the plugin at {path:?}")
             }
-            Error::PluginNotFound(ref x) => {
-                write!(f, "The plugin \"{}\" is not in the load order", x)
+            Error::PluginNotFound(name) => {
+                write!(f, "The plugin \"{name}\" is not in the load order")
             }
-            Error::TooManyActivePlugins {light_count, normal_count } => write!(f, "Maximum number of active plugins exceeded: there are {} active normal plugins and {} active light plugins", normal_count, light_count),
-            Error::DuplicatePlugin(ref n) => write!(f, "The given plugin list contains more than one instance of \"{}\"", n),
-            Error::NonMasterBeforeMaster{ref master, ref non_master} => write!(
-                f,
-                "Attempted to load the non-master plugin \"{}\" before the master plugin \"{}\"", non_master, master
-            ),
-            Error::GameMasterMustLoadFirst(ref n) => write!(
-                f,
-                "The game's master file \"{}\" must load first", n
-            ),
-            Error::InvalidEarlyLoadingPluginPosition{ ref name, pos, expected_pos } => write!(
-                f,
-                "Attempted to load the early-loading plugin \"{}\" at position {}, its expected position is {}", name, pos, expected_pos
-            ),
-            Error::InvalidPlugin(ref x) => write!(f, "The plugin file \"{}\" is invalid", x),
-            Error::ImplicitlyActivePlugin(ref x) => write!(
-                f,
-                "The implicitly active plugin \"{}\" cannot be deactivated",
-                x
-            ),
+            Error::TooManyActivePlugins {light_count, normal_count } =>
+                write!(f, "Maximum number of active plugins exceeded: there are {normal_count} active normal plugins and {light_count} active light plugins"),
+            Error::DuplicatePlugin(name) =>
+                write!(f, "The given plugin list contains more than one instance of \"{name}\""),
+            Error::NonMasterBeforeMaster{ master, non_master} =>
+                write!(f, "Attempted to load the non-master plugin \"{non_master}\" before the master plugin \"{master}\""),
+            Error::GameMasterMustLoadFirst(name) =>
+                write!(f, "The game's master file \"{name}\" must load first"),
+            Error::InvalidEarlyLoadingPluginPosition{ name, pos, expected_pos } =>
+                write!(f, "Attempted to load the early-loading plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
+            Error::InvalidPlugin(name) => write!(f, "The plugin file \"{name}\" is invalid"),
+            Error::ImplicitlyActivePlugin(name) =>
+                write!(f, "The implicitly active plugin \"{name}\" cannot be deactivated"),
             Error::NoLocalAppData => {
                 write!(f, "The game's local app data folder could not be detected")
             }
-            Error::NoDocumentsPath => {
-                write!(f, "The user's Documents path could not be detected")
-            }
-            Error::UnrepresentedHoist { ref plugin, ref master } => write!(
-                f,
-                "The plugin \"{}\" is a master of \"{}\", which will hoist it",
-                plugin, master
-            ),
-            Error::InstalledPlugin(ref plugin) => write!(
-                f,
-                "The plugin \"{}\" is installed, so cannot be removed from the load order",
-                plugin
-            ),
+            Error::NoDocumentsPath => write!(f, "The user's Documents path could not be detected"),
+            Error::UnrepresentedHoist { plugin, master } =>
+                write!(f, "The plugin \"{plugin}\" is a master of \"{master}\", which will hoist it"),
+            Error::InstalledPlugin(plugin) =>
+                write!(f, "The plugin \"{plugin}\" is installed, so cannot be removed from the load order"),
             Error::IniParsingError {
-                ref path,
+                path,
                 line,
                 column,
-                ref message,
-            } => write!(
-                f,
-                "Failed to parse ini file at {:?}, error at line {}, column {}: {}",
-                path, line, column, message
-            ),
-            Error::VdfParsingError(ref path, ref message) => write!(f, "Failed to parse VDF file at {:?}: {}", path, message),
-            Error::SystemError(code, ref message) => write!(f, "Error returned by the operating system, code {}: {:?}", code, message),
+                message,
+            } => write!(f, "Failed to parse ini file at {path:?}, error at line {line}, column {column}: {message}"),
+            Error::VdfParsingError(path, message) =>
+                write!(f, "Failed to parse VDF file at {path:?}: {message}"),
+            Error::SystemError(code, message) =>
+                write!(f, "Error returned by the operating system, code {code}: {message:?}"),
         }
     }
 }
