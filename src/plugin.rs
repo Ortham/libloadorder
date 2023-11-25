@@ -208,9 +208,7 @@ fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
         esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError(_, _) => {
             Error::PluginParsingError(file_path.to_path_buf())
         }
-        esplugin::Error::DecodeError => {
-            Error::DecodeError("invalid byte sequence in plugin string".into())
-        }
+        esplugin::Error::DecodeError => Error::PluginParsingError(file_path.to_path_buf()),
     }
 }
 
