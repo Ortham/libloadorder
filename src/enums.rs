@@ -141,15 +141,15 @@ impl From<windows::core::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::InvalidPath(ref x) => write!(f, "The path \"{:?}\" is invalid", x),
-            Error::IoError(ref p, ref x) => write!(f, "I/O error involving the path \"{:?}\": {}", p, x),
-            Error::NoFilename(ref p) => write!(f, "The plugin path \"{:?}\" has no filename part", p),
+            Error::InvalidPath(ref x) => write!(f, "The path {:?} is invalid", x),
+            Error::IoError(ref p, ref x) => write!(f, "I/O error involving the path {:?}: {}", p, x),
+            Error::NoFilename(ref p) => write!(f, "The plugin path {:?} has no filename part", p),
             Error::SystemTimeError(ref x) => x.fmt(f),
-            Error::NotUtf8(ref x) => write!(f, "Expected a UTF-8 string, got bytes {:?}", x),
+            Error::NotUtf8(ref x) => write!(f, "Expected a UTF-8 string, got bytes {:02X?}", x),
             Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
             Error::EncodeError(_) => write!(f, "Text could not be encoded in Windows-1252"),
             Error::PluginParsingError(ref p) => {
-                write!(f, "An error was encountered while parsing the plugin at \"{:?}\"", p)
+                write!(f, "An error was encountered while parsing the plugin at {:?}", p)
             }
             Error::PluginNotFound(ref x) => {
                 write!(f, "The plugin \"{}\" is not in the load order", x)
@@ -197,10 +197,10 @@ impl fmt::Display for Error {
                 ref message,
             } => write!(
                 f,
-                "Failed to parse ini file at \"{:?}\", error at line {}, column {}: {}",
+                "Failed to parse ini file at {:?}, error at line {}, column {}: {}",
                 path, line, column, message
             ),
-            Error::VdfParsingError(ref path, ref message) => write!(f, "Failed to parse VDF file at \"{:?}\": {}", path, message),
+            Error::VdfParsingError(ref path, ref message) => write!(f, "Failed to parse VDF file at {:?}: {}", path, message),
             Error::SystemError(code, ref message) => write!(f, "Error returned by the operating system, code {}: {:?}", code, message),
         }
     }
@@ -273,5 +273,29 @@ mod tests {
         assert!(GameId::Fallout4.supports_light_plugins());
         assert!(GameId::Fallout4VR.supports_light_plugins());
         assert!(GameId::Starfield.supports_light_plugins());
+    }
+
+    #[test]
+    fn error_display_should_print_double_quoted_paths() {
+        let string = format!("{}", Error::InvalidPath(PathBuf::from("foo")));
+
+        assert_eq!("The path \"foo\" is invalid", string);
+    }
+
+    #[test]
+    fn error_display_should_print_byte_vec_as_hex_array() {
+        let string = format!("{}", Error::NotUtf8(vec![0x2f, 0x47, 0x03]));
+
+        assert_eq!("Expected a UTF-8 string, got bytes [2F, 47, 03]", string);
+    }
+
+    #[test]
+    fn error_display_should_print_os_string_as_quoted_string() {
+        let string = format!("{}", Error::SystemError(1, OsString::from("foo")));
+
+        assert_eq!(
+            "Error returned by the operating system, code 1: \"foo\"",
+            string
+        );
     }
 }
