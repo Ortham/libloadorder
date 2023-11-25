@@ -75,7 +75,7 @@ impl Plugin {
         };
 
         if !has_plugin_extension(filename, game_id) {
-            return Err(Error::InvalidPlugin(filename.to_owned()));
+            return Err(Error::InvalidPath(path.to_path_buf()));
         }
 
         let file = File::open(path).map_err(|e| Error::IoError(path.to_path_buf(), e))?;
