@@ -42,9 +42,7 @@ fn strict_encode(string: &str) -> Result<Cow<'_, [u8]>, Error> {
     let (output, _, had_unmappable_chars) = WINDOWS_1252.encode(string);
 
     if had_unmappable_chars {
-        Err(Error::EncodeError(Cow::Borrowed(
-            "unrepresentable character",
-        )))
+        Err(Error::EncodeError(string.to_string()))
     } else {
         Ok(output)
     }

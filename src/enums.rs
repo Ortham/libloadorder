@@ -82,7 +82,7 @@ pub enum Error {
     SystemTimeError(time::SystemTimeError),
     NotUtf8(Vec<u8>),
     DecodeError(Cow<'static, str>),
-    EncodeError(Cow<'static, str>),
+    EncodeError(String),
     PluginParsingError(PathBuf),
     PluginNotFound(String),
     TooManyActivePlugins {
@@ -148,7 +148,7 @@ impl fmt::Display for Error {
             Error::SystemTimeError(error) => error.fmt(f),
             Error::NotUtf8(bytes) => write!(f, "Expected a UTF-8 string, got bytes {bytes:02X?}"),
             Error::DecodeError(_) => write!(f, "Text could not be decoded from Windows-1252"),
-            Error::EncodeError(_) => write!(f, "Text could not be encoded in Windows-1252"),
+            Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
             Error::PluginParsingError(path) => {
                 write!(f, "An error was encountered while parsing the plugin at {path:?}")
             }
