@@ -100,7 +100,6 @@ pub enum Error {
         pos: usize,
         expected_pos: usize,
     },
-    InvalidPlugin(String),
     ImplicitlyActivePlugin(String),
     NoLocalAppData,
     NoDocumentsPath,
@@ -166,7 +165,6 @@ impl fmt::Display for Error {
                 write!(f, "The game's master file \"{name}\" must load first"),
             Error::InvalidEarlyLoadingPluginPosition{ name, pos, expected_pos } =>
                 write!(f, "Attempted to load the early-loading plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
-            Error::InvalidPlugin(name) => write!(f, "The plugin file \"{name}\" is invalid"),
             Error::ImplicitlyActivePlugin(name) =>
                 write!(f, "The implicitly active plugin \"{name}\" cannot be deactivated"),
             Error::NoLocalAppData => {

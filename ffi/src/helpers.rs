@@ -67,7 +67,6 @@ fn map_error(err: &Error) -> c_uint {
         NonMasterBeforeMaster { .. } => LIBLO_ERROR_INVALID_ARGS,
         GameMasterMustLoadFirst(_) => LIBLO_ERROR_INVALID_ARGS,
         InvalidEarlyLoadingPluginPosition { .. } => LIBLO_ERROR_INVALID_ARGS,
-        InvalidPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         ImplicitlyActivePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         NoLocalAppData => LIBLO_ERROR_INVALID_ARGS,
         NoDocumentsPath => LIBLO_ERROR_INVALID_ARGS,

@@ -111,10 +111,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             return Err(Error::DuplicatePlugin(n.to_string()));
         }
 
-        let mut plugins = match map_to_plugins(self, plugin_names) {
-            Err(x) => return Err(Error::InvalidPlugin(x.to_string())),
-            Ok(x) => x,
-        };
+        let mut plugins = map_to_plugins(self, plugin_names)?;
 
         validate_load_order(&plugins)?;
 
@@ -445,8 +442,7 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 
         Ok(load_order.plugins_mut().remove(p))
     } else {
-        let plugin = Plugin::new(plugin_name, load_order.game_settings())
-            .map_err(|_| Error::InvalidPlugin(plugin_name.to_string()))?;
+        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
         load_order.validate_index(&plugin, insert_position)?;
 
