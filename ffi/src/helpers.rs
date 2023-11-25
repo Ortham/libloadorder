@@ -63,7 +63,6 @@ fn map_error(err: &Error) -> c_uint {
         PluginParsingError(_) => LIBLO_ERROR_FILE_PARSE_FAIL,
         PluginNotFound(_) => LIBLO_ERROR_INVALID_ARGS,
         TooManyActivePlugins { .. } => LIBLO_ERROR_INVALID_ARGS,
-        InvalidRegex => LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
         DuplicatePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
         NonMasterBeforeMaster { .. } => LIBLO_ERROR_INVALID_ARGS,
         GameMasterMustLoadFirst(_) => LIBLO_ERROR_INVALID_ARGS,
