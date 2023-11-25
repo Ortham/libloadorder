@@ -220,7 +220,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         let set: HashSet<_> = plugin_names
             .iter()
-            .map(|name| UniCase::new(trim_dot_ghost(&name)))
+            .map(|name| UniCase::new(trim_dot_ghost(name)))
             .collect();
 
         let all_plugins_listed = self
