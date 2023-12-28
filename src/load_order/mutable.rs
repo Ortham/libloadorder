@@ -787,22 +787,16 @@ mod tests {
         let load_order = prepare_load_order(&tmp_dir.path());
 
         let timestamp = 1321010051;
-        filetime::set_file_mtime(
-            load_order
-                .game_settings
-                .plugins_directory()
-                .join("Blank - Different.esp"),
-            filetime::FileTime::from_unix_time(timestamp, 0),
-        )
-        .unwrap();
-        filetime::set_file_mtime(
-            load_order
-                .game_settings
-                .plugins_directory()
-                .join("Blank - Master Dependent.esp"),
-            filetime::FileTime::from_unix_time(timestamp, 0),
-        )
-        .unwrap();
+        let plugin_path = load_order
+            .game_settings
+            .plugins_directory()
+            .join("Blank - Different.esp");
+        set_file_timestamps(&plugin_path, timestamp);
+        let plugin_path = load_order
+            .game_settings
+            .plugins_directory()
+            .join("Blank - Master Dependent.esp");
+        set_file_timestamps(&plugin_path, timestamp);
 
         let result = find_plugins_in_dirs(
             &[load_order.game_settings.plugins_directory()],
@@ -832,22 +826,16 @@ mod tests {
         };
 
         let timestamp = 1321009991;
-        filetime::set_file_mtime(
-            load_order
-                .game_settings
-                .plugins_directory()
-                .join("Blank - Different.esp"),
-            filetime::FileTime::from_unix_time(timestamp, 0),
-        )
-        .unwrap();
-        filetime::set_file_mtime(
-            load_order
-                .game_settings
-                .plugins_directory()
-                .join("Blank.esp"),
-            filetime::FileTime::from_unix_time(timestamp, 0),
-        )
-        .unwrap();
+        let plugin_path = load_order
+            .game_settings
+            .plugins_directory()
+            .join("Blank - Different.esp");
+        set_file_timestamps(&plugin_path, timestamp);
+        let plugin_path = load_order
+            .game_settings
+            .plugins_directory()
+            .join("Blank.esp");
+        set_file_timestamps(&plugin_path, timestamp);
 
         let result = find_plugins_in_dirs(
             &[load_order.game_settings.plugins_directory()],
