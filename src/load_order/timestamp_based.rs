@@ -263,7 +263,6 @@ mod tests {
     use crate::enums::GameId;
     use crate::load_order::tests::*;
     use crate::tests::copy_to_test_dir;
-    use filetime::{set_file_times, FileTime};
     use std::convert::TryInto;
     use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};
@@ -350,7 +349,7 @@ mod tests {
             .game_settings()
             .plugins_directory()
             .join("Blank.esp");
-        set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
+        set_file_timestamps(&plugin_path, 0);
 
         load_order.load().unwrap();
 
@@ -370,14 +369,14 @@ mod tests {
             .plugins_directory()
             .join("Blank.esp");
         write_file(&plugin_path);
-        set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
+        set_file_timestamps(&plugin_path, 0);
 
         let plugin_path = load_order
             .game_settings()
             .plugins_directory()
             .join("Blank - Different.esp");
         write_file(&plugin_path);
-        set_file_times(&plugin_path, FileTime::zero(), FileTime::zero()).unwrap();
+        set_file_timestamps(&plugin_path, 0);
 
         load_order.load().unwrap();
         assert!(load_order.index_of("Blank.esp").is_none());

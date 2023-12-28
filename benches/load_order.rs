@@ -1,15 +1,14 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Display;
-use std::fs::{copy, create_dir, File};
+use std::fs::{copy, create_dir, File, FileTimes};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use criterion::{BenchmarkId, Criterion};
 use encoding_rs::WINDOWS_1252;
-use filetime::{set_file_times, FileTime};
 use tempfile::TempDir;
 
 use loadorder::GameId;
@@ -47,12 +46,17 @@ fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filena
 
 fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
     for (index, filename) in filenames.iter().enumerate() {
-        set_file_times(
-            &plugins_directory.join(filename.as_ref()),
-            FileTime::zero(),
-            FileTime::from_unix_time(i64::try_from(index).unwrap(), 0),
-        )
-        .unwrap();
+        let times = FileTimes::new()
+            .set_accessed(SystemTime::UNIX_EPOCH)
+            .set_modified(
+                SystemTime::UNIX_EPOCH + Duration::from_secs(u64::try_from(index).unwrap()),
+            );
+        File::options()
+            .write(true)
+            .open(&plugins_directory.join(filename.as_ref()))
+            .unwrap()
+            .set_times(times)
+            .unwrap();
     }
 }
 

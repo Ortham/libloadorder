@@ -17,11 +17,10 @@ use std::ffi::OsStr;
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::fs::File;
+use std::fs::{File, FileTimes};
 use std::path::Path;
 use std::time::SystemTime;
 
-use filetime::{set_file_times, FileTime};
 use unicase::eq;
 
 use crate::enums::{Error, GameId};
@@ -136,12 +135,15 @@ impl Plugin {
         // timestamps between calls to WritableLoadOrder::load() and
         // WritableLoadOrder::save() could lead to libloadorder not setting all
         // the timestamps it needs to and producing an incorrect load order.
-        set_file_times(
-            self.data.path(),
-            FileTime::from_system_time(SystemTime::now()),
-            FileTime::from_system_time(time),
-        )
-        .map_err(|e| Error::IoError(self.data.path().to_path_buf(), e))?;
+        let times = FileTimes::new()
+            .set_accessed(SystemTime::now())
+            .set_modified(time);
+
+        File::options()
+            .write(true)
+            .open(self.data.path())
+            .and_then(|f| f.set_times(times))
+            .map_err(|e| Error::IoError(self.data.path().to_path_buf(), e))?;
 
         self.modification_time = time;
         Ok(())
@@ -361,20 +363,22 @@ mod tests {
         let settings = game_settings(GameId::Oblivion, &game_dir);
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+
+        let path = game_dir.join("Data").join("Blank.esp");
+        let file_size = path.metadata().unwrap().len();
+
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
         assert_ne!(UNIX_EPOCH, plugin.modification_time());
         plugin.set_modification_time(UNIX_EPOCH).unwrap();
-        let new_mtime = game_dir
-            .join("Data")
-            .join("Blank.esp")
-            .metadata()
-            .unwrap()
-            .modified()
-            .unwrap();
+
+        let metadata = path.metadata().unwrap();
+        let new_mtime = metadata.modified().unwrap();
+        let new_size = metadata.len();
 
         assert_eq!(UNIX_EPOCH, plugin.modification_time());
         assert_eq!(UNIX_EPOCH, new_mtime);
+        assert_eq!(file_size, new_size);
     }
 
     #[test]

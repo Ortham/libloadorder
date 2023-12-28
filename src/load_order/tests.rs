@@ -19,11 +19,10 @@
 
 use std::convert::TryFrom;
 use std::fmt::Display;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::fs::{create_dir_all, File, FileTimes, OpenOptions};
 use std::io::{self, Seek, Write};
 use std::path::Path;
-
-use filetime::{set_file_times, FileTime};
+use std::time::{Duration, SystemTime};
 
 use crate::enums::GameId;
 use crate::enums::LoadOrderMethod;
@@ -68,13 +67,23 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
 
 pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
     for (index, filename) in filenames.iter().enumerate() {
-        set_file_times(
+        set_file_timestamps(
             &plugins_directory.join(filename.as_ref()),
-            FileTime::zero(),
-            FileTime::from_unix_time(i64::try_from(index).unwrap(), 0),
-        )
-        .unwrap();
+            u64::try_from(index).unwrap(),
+        );
     }
+}
+
+pub fn set_file_timestamps(path: &Path, unix_seconds: u64) {
+    let times = FileTimes::new()
+        .set_accessed(SystemTime::UNIX_EPOCH)
+        .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(unix_seconds));
+    File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_times(times)
+        .unwrap();
 }
 
 pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
@@ -88,11 +97,16 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
 }
 
 pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
-    let mut timestamp = 1321009871;
+    let mut timestamp = SystemTime::UNIX_EPOCH + Duration::from_secs(1321009871);
     for plugin_name in plugin_names {
         let path = parent_path.join(plugin_name);
-        filetime::set_file_mtime(path, FileTime::from_unix_time(timestamp, 0)).unwrap();
-        timestamp += 60;
+        File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(timestamp)
+            .unwrap();
+        timestamp += Duration::from_secs(60);
     }
 }
 
