@@ -164,7 +164,7 @@ impl From<ini::ParseError> for Error {
         Error::IniParsingError {
             line: error.line,
             column: error.col,
-            message: error.msg,
+            message: error.msg.to_string(),
         }
     }
 }
