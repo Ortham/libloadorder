@@ -442,8 +442,7 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 }
 
 fn are_plugin_names_unique(plugin_names: &[&str]) -> bool {
-    let unique_plugin_names: HashSet<_> =
-        plugin_names.par_iter().map(|s| UniCase::new(s)).collect();
+    let unique_plugin_names: HashSet<_> = plugin_names.par_iter().map(UniCase::new).collect();
 
     unique_plugin_names.len() == plugin_names.len()
 }
