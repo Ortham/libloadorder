@@ -356,6 +356,9 @@ fn falloutnv_appdata_folder_name(game_path: &Path) -> &'static str {
 fn fallout4_appdata_folder_name(game_path: &Path) -> &'static str {
     if is_microsoft_store_install(GameId::Fallout4, game_path) {
         "Fallout4 MS"
+    } else if game_path.join("EOSSDK-Win64-Shipping.dll").exists() {
+        // EOSSDK-Win64-Shipping.dll is only installed by Epic.
+        "Fallout4 EPIC"
     } else {
         "Fallout4"
     }
@@ -882,6 +885,21 @@ mod tests {
 
         folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
         assert_eq!("Fallout4 MS", folder);
+    }
+
+    #[test]
+    fn appdata_folder_name_for_fallout4_should_have_epic_suffix_if_eossdk_dll_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4", folder);
+
+        let dll_path = game_path.join("EOSSDK-Win64-Shipping.dll");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4 EPIC", folder);
     }
 
     #[test]
