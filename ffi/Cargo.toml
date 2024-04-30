@@ -2,7 +2,6 @@
 name = "libloadorder-ffi"
 version = "15.0.2"
 authors = ["Oliver Hamlet <oliver@ortham.io>"]
-build = "build.rs"
 description = "A wrapper library providing a C FFI for libloadorder."
 documentation = "https://docs.rs/libloadorder-ffi"
 repository = "https://github.com/Ortham/libloadorder.git"
@@ -26,10 +25,3 @@ tempfile = "3.0.0"
 [lib]
 name = "loadorder_ffi"
 crate-type = ["staticlib"]
-
-[features]
-default = []
-ffi-headers = ["cbindgen"]
-
-[build-dependencies]
-cbindgen = { version = "0.26", optional = true }
