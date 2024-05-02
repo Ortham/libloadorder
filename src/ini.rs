@@ -105,7 +105,7 @@ fn read_test_files(ini_path: &Path) -> Result<TestFiles, Error> {
 fn merge_test_files(mut base: TestFiles, overrider: TestFiles) -> TestFiles {
     for i in 0..10 {
         if overrider[i].is_some() {
-            base[i] = overrider[i].clone();
+            base[i].clone_from(&overrider[i]);
         }
     }
 
