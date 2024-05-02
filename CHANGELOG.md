@@ -3,13 +3,44 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
-## [15.0.2] - 2023-11-25
+## [16.0.0] - 2024-05-02
+
+### Added
+
+- Support for Fallout 4 from the Epic Games Store.
+- `Cargo.lock` is no longer ignored by Git.
+
+### Changed
+
+- `Error::IoError`,  `Error::NoFilename`, `Error::PluginParsingError`,
+  `Error::TooManyActivePlugins`, `Error::DuplicatePlugin`,
+  `Error::NonMasterBeforeMaster`, `Error::GameMasterMustLoadFirst`,
+  `Error::IniParsingError` and `Error::VdfParsingError` now hold contextual
+  data.
+- `Error::DecodeError` now holds a `Vec<u8>`.
+- `Error::EncodeError` now holds a `String`.
+
+- Updated to Rust's 2021 edition.
+- Updated esplugin to 5.0.0.
+- Updated rust-ini to 0.21.0.
+- Updated windows to 0.56.0.
+
+### Removed
+
+- `Error::InvalidPlugin` as it doesn't provide any value over more granular
+  errors now that they hold contextual data.
+- `Error::InvalidRegex` as it was only used for a hardcoded regex.
+- The filetime dependency.
 
 ### Fixed
 
-- When parsing ini files, single and double quote characters are no longer
-  treated as special characters, and backslashes are no longer treated as
-  potentially the start of an escape sequence.
+- Removing a master file that is responsible for hoisting another plugin was not
+  validated correctly. The validation logic now correctly prevents such masters
+  from being removed until the plugin(s) they hoist are removed first, unless
+  the next master in the load order also hoists the same plugin(s) or the master
+  being removed is the last master in the load order.
+
+## [15.0.2] - 2023-11-25
 
 ### Changed
 
@@ -18,6 +49,12 @@ changelog does not include libloadorder-ffi changes.
 - Updated rust-ini to 0.20.0.
 - Updated keyvalues-parser to 0.2.0.
 - Updated windows to 0.52.0.
+
+### Fixed
+
+- When parsing ini files, single and double quote characters are no longer
+  treated as special characters, and backslashes are no longer treated as
+  potentially the start of an escape sequence.
 
 ## [15.0.1] - 2023-10-06
 

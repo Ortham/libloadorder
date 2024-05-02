@@ -3,6 +3,17 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [16.0.0] - 2024-05-02
+
+### Changed
+
+- Updated to libloadorder v16.0.0.
+
+### Removed
+
+- The `ffi-headers` build feature: if you want to generate C or C++ headers,
+  install and run cbindgen separately.
+
 ## [15.0.2] - 2023-11-25
 
 ### Changed
