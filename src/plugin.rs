@@ -206,11 +206,8 @@ pub fn trim_dot_ghost(string: &str) -> &str {
 fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
     match error {
         esplugin::Error::IoError(x) => Error::IoError(file_path.to_path_buf(), x),
-        esplugin::Error::NoFilename => Error::NoFilename(file_path.to_path_buf()),
-        esplugin::Error::ParsingIncomplete | esplugin::Error::ParsingError(_, _) => {
-            Error::PluginParsingError(file_path.to_path_buf())
-        }
-        esplugin::Error::DecodeError => Error::PluginParsingError(file_path.to_path_buf()),
+        esplugin::Error::NoFilename(_) => Error::NoFilename(file_path.to_path_buf()),
+        e => Error::PluginParsingError(file_path.to_path_buf(), Box::new(e)),
     }
 }
 

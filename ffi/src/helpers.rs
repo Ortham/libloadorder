@@ -60,7 +60,7 @@ fn map_error(err: &Error) -> c_uint {
         NotUtf8(_) => LIBLO_ERROR_FILE_NOT_UTF8,
         DecodeError(_) => LIBLO_ERROR_TEXT_DECODE_FAIL,
         EncodeError(_) => LIBLO_ERROR_TEXT_ENCODE_FAIL,
-        PluginParsingError(_) => LIBLO_ERROR_FILE_PARSE_FAIL,
+        PluginParsingError(_, _) => LIBLO_ERROR_FILE_PARSE_FAIL,
         PluginNotFound(_) => LIBLO_ERROR_INVALID_ARGS,
         TooManyActivePlugins { .. } => LIBLO_ERROR_INVALID_ARGS,
         DuplicatePlugin(_) => LIBLO_ERROR_INVALID_ARGS,

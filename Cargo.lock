@@ -287,9 +287,9 @@ dependencies = [
 
 [[package]]
 name = "esplugin"
-version = "4.1.1"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08465a86dfed3d40d627c990cf770b76f85e87583f9aab86bb096b07e7780f01"
+checksum = "dba101d9eee29cf54157b04d6441b850dee767ee3c3efb86543e96cd351707da"
 dependencies = [
  "encoding_rs",
  "nom",

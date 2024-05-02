@@ -82,7 +82,7 @@ pub enum Error {
     NotUtf8(Vec<u8>),
     DecodeError(Vec<u8>),
     EncodeError(String),
-    PluginParsingError(PathBuf),
+    PluginParsingError(PathBuf, Box<dyn error::Error + Send>),
     PluginNotFound(String),
     TooManyActivePlugins {
         light_count: usize,
@@ -148,8 +148,8 @@ impl fmt::Display for Error {
             Error::NotUtf8(bytes) => write!(f, "Expected a UTF-8 string, got bytes {bytes:02X?}"),
             Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252, bytes are {bytes:02X?}"),
             Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
-            Error::PluginParsingError(path) => {
-                write!(f, "An error was encountered while parsing the plugin at {path:?}")
+            Error::PluginParsingError(path, err) => {
+                write!(f, "An error was encountered while parsing the plugin at {path:?}: {err}")
             }
             Error::PluginNotFound(name) => {
                 write!(f, "The plugin \"{name}\" is not in the load order")
@@ -193,6 +193,7 @@ impl error::Error for Error {
         match *self {
             Error::IoError(_, ref x) => Some(x),
             Error::SystemTimeError(ref x) => Some(x),
+            Error::PluginParsingError(_, ref x) => Some(x.as_ref()),
             _ => None,
         }
     }
