@@ -25,7 +25,6 @@ use crate::enums::Error;
 pub const GHOST_FILE_EXTENSION: &str = ".ghost";
 
 pub trait GhostablePath {
-    fn ghost(&self) -> Result<PathBuf, Error>;
     fn unghost(&self) -> Result<PathBuf, Error>;
 
     fn is_ghosted(&self) -> bool;
@@ -36,16 +35,6 @@ pub trait GhostablePath {
 }
 
 impl GhostablePath for Path {
-    fn ghost(&self) -> Result<PathBuf, Error> {
-        if self.is_ghosted() {
-            Ok(self.to_path_buf())
-        } else {
-            let new_path = self.as_ghosted_path()?;
-            rename(self, &new_path).map_err(|e| Error::IoError(self.to_path_buf(), e))?;
-            Ok(new_path)
-        }
-    }
-
     fn unghost(&self) -> Result<PathBuf, Error> {
         if !self.is_ghosted() {
             Ok(self.to_path_buf())
@@ -121,34 +110,6 @@ mod tests {
             create_dir(&data_dir).unwrap();
         }
         copy(testing_plugins_dir.join(from_file), data_dir.join(to_file)).unwrap();
-    }
-
-    #[test]
-    fn ghost_should_rename_the_path_with_a_ghost_extension() {
-        let tmp_dir = tempdir().unwrap();
-        let game_dir = tmp_dir.path();
-        let data_dir = game_dir.join("Data");
-
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
-        let expected_path = data_dir.join("Blank.esp.ghost");
-        let ghosted_path = data_dir.join("Blank.esp").ghost().unwrap();
-
-        assert!(ghosted_path.exists());
-        assert_eq!(expected_path, ghosted_path);
-    }
-
-    #[test]
-    fn ghost_should_do_nothing_if_the_path_is_already_ghosted() {
-        let tmp_dir = tempdir().unwrap();
-        let game_dir = tmp_dir.path();
-        let data_dir = game_dir.join("Data");
-
-        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &game_dir);
-        let expected_path = data_dir.join("Blank.esp.ghost");
-        let ghosted_path = expected_path.ghost().unwrap();
-
-        assert!(ghosted_path.exists());
-        assert_eq!(expected_path, ghosted_path);
     }
 
     #[test]
