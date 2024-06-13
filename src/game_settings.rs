@@ -286,7 +286,7 @@ impl GameSettings {
         }
 
         let early_loading_plugins =
-            early_loading_plugins(game_id, game_path, !test_files.is_empty())?;
+            early_loading_plugins(game_id, game_path, my_games_path, !test_files.is_empty())?;
 
         let implicitly_active_plugins =
             implicitly_active_plugins(game_id, game_path, &early_loading_plugins, &test_files)?;
@@ -481,12 +481,16 @@ fn oblivion_plugins_file_path(game_path: &Path, local_path: &Path) -> Result<Pat
     Ok(parent_path.join(PLUGINS_TXT))
 }
 
-fn ccc_file_path(game_id: GameId, game_path: &Path) -> Option<PathBuf> {
+fn ccc_file_paths(game_id: GameId, game_path: &Path, my_games_path: &Path) -> Vec<PathBuf> {
     match game_id {
-        GameId::Fallout4 => Some(game_path.join("Fallout4.ccc")),
-        GameId::SkyrimSE => Some(game_path.join("Skyrim.ccc")),
-        GameId::Starfield => Some(game_path.join("Starfield.ccc")),
-        _ => None,
+        GameId::Fallout4 => vec![game_path.join("Fallout4.ccc")],
+        GameId::SkyrimSE => vec![game_path.join("Skyrim.ccc")],
+        // If the My Games CCC file is present, it overrides the other, even if empty.
+        GameId::Starfield => vec![
+            my_games_path.join("Starfield.ccc"),
+            game_path.join("Starfield.ccc"),
+        ],
+        _ => vec![],
     }
 }
 
@@ -543,6 +547,7 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
 fn early_loading_plugins(
     game_id: GameId,
     game_path: &Path,
+    my_games_path: &Path,
     has_test_files: bool,
 ) -> Result<Vec<String>, Error> {
     let mut plugin_names: Vec<String> = hardcoded_plugins(game_id)
@@ -556,7 +561,7 @@ fn early_loading_plugins(
         return Ok(plugin_names);
     }
 
-    if let Some(file_path) = ccc_file_path(game_id, game_path) {
+    for file_path in ccc_file_paths(game_id, game_path, my_games_path) {
         if file_path.exists() {
             let reader =
                 BufReader::new(File::open(&file_path).map_err(|e| Error::IoError(file_path, e))?);
@@ -566,6 +571,7 @@ fn early_loading_plugins(
                 .filter_map(|line| line.ok().filter(|l| !l.is_empty()));
 
             plugin_names.extend(lines);
+            break;
         }
     }
 
@@ -658,13 +664,20 @@ mod tests {
         game_path: &Path,
         plugin_names: &[&str],
     ) -> GameSettings {
-        let mut file = File::create(ccc_file_path(game_id, &game_path).unwrap()).unwrap();
+        let ccc_path = &ccc_file_paths(game_id, game_path, &PathBuf::new())[0];
+        create_ccc_file(ccc_path, plugin_names);
+
+        game_with_game_path(game_id, game_path)
+    }
+
+    fn create_ccc_file(path: &Path, plugin_names: &[&str]) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+
+        let mut file = File::create(path).unwrap();
 
         for plugin_name in plugin_names {
             writeln!(file, "{}", plugin_name).unwrap();
         }
-
-        game_with_game_path(game_id, game_path)
     }
 
     #[test]
@@ -1115,13 +1128,70 @@ mod tests {
     }
 
     #[test]
+    fn early_loading_plugins_should_use_the_starfield_ccc_file_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let my_games_path = tmp_dir.path().join("my games");
+
+        create_ccc_file(&game_path.join("Starfield.ccc"), &["test.esm"]);
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Starfield,
+            &game_path,
+            &PathBuf::default(),
+            my_games_path,
+        )
+        .unwrap();
+
+        assert_eq!(&["Starfield.esm", "Constellation.esm", "OldMars.esm", "test.esm"], settings.early_loading_plugins());
+    }
+
+    #[test]
+    fn early_loading_plugins_should_use_the_starfield_ccc_file_in_my_games_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let my_games_path = tmp_dir.path().join("my games");
+
+        create_ccc_file(&my_games_path.join("Starfield.ccc"), &["test.esm"]);
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Starfield,
+            &game_path,
+            &PathBuf::default(),
+            my_games_path,
+        )
+        .unwrap();
+
+        assert_eq!(&["Starfield.esm", "Constellation.esm", "OldMars.esm", "test.esm"], settings.early_loading_plugins());
+    }
+
+    #[test]
+    fn early_loading_plugins_should_use_the_first_ccc_file_that_exists() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let my_games_path = tmp_dir.path().join("my games");
+
+        create_ccc_file(&game_path.join("Starfield.ccc"), &["test1.esm"]);
+        create_ccc_file(&my_games_path.join("Starfield.ccc"), &["test2.esm"]);
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Starfield,
+            &game_path,
+            &PathBuf::default(),
+            my_games_path,
+        )
+        .unwrap();
+
+        assert_eq!(&["Starfield.esm", "Constellation.esm", "OldMars.esm", "test2.esm"], settings.early_loading_plugins());
+    }
+
+    #[test]
     fn early_loading_plugins_should_not_include_cc_plugins_for_fallout4_if_test_files_are_configured(
     ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
-        let ccc_path = ccc_file_path(GameId::Fallout4, &game_path).unwrap();
-        std::fs::write(&ccc_path, "ccBGSFO4001-PipBoy(Black).esl").unwrap();
+        create_ccc_file(&game_path.join("Fallout4.ccc"), &["ccBGSFO4001-PipBoy(Black).esl"]);
 
         let ini_path = game_path.join("Fallout4.ini");
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp\n").unwrap();
@@ -1149,9 +1219,9 @@ mod tests {
     ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
+        let my_games_path = tmp_dir.path().join("my games");
 
-        let ccc_path = ccc_file_path(GameId::Starfield, &game_path).unwrap();
-        std::fs::write(&ccc_path, "test.esp").unwrap();
+        create_ccc_file(&my_games_path.join("Starfield.ccc"), &["test.esp"]);
 
         let ini_path = game_path.join("Starfield.ini");
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp\n").unwrap();
@@ -1167,7 +1237,7 @@ mod tests {
             GameId::Starfield,
             game_path,
             &PathBuf::default(),
-            game_path.to_path_buf(),
+            my_games_path,
         )
         .unwrap();
 
