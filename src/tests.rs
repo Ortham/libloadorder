@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::fs::{copy, create_dir};
+use std::fs::{copy, create_dir_all};
 use std::path::{Path, PathBuf};
 
 use crate::enums::GameId;
@@ -27,7 +27,7 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());
     let data_dir = game_settings.plugins_directory();
     if !data_dir.exists() {
-        create_dir(&data_dir).unwrap();
+        create_dir_all(&data_dir).unwrap();
     }
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
@@ -35,7 +35,7 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
 pub fn copy_to_dir(from_path: &str, to_dir: &Path, to_file: &str, game_id: GameId) {
     let testing_plugins_dir = testing_plugins_dir(game_id);
     if !to_dir.exists() {
-        create_dir(to_dir).unwrap();
+        create_dir_all(to_dir).unwrap();
     }
     copy(testing_plugins_dir.join(from_path), to_dir.join(to_file)).unwrap();
 }

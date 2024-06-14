@@ -249,6 +249,7 @@ impl GameSettings {
 
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
         plugin_path(
+            self.id,
             plugin_name,
             &self.plugins_directory(),
             &self.additional_plugins_directories,
@@ -289,7 +290,12 @@ impl GameSettings {
             // Fallout 4 and Starfield ignore plugins.txt and Fallout4.ccc if there are valid
             // plugins listed as test files, so filter out invalid values.
             test_files.retain(|f| {
-                let path = plugin_path(f, plugins_directory, additional_plugins_directories);
+                let path = plugin_path(
+                    game_id,
+                    f,
+                    plugins_directory,
+                    additional_plugins_directories,
+                );
                 Plugin::with_path(&path, game_id, false).is_ok()
             });
         }
@@ -624,6 +630,7 @@ fn implicitly_active_plugins(
 }
 
 fn plugin_path(
+    game_id: GameId,
     plugin_name: &str,
     plugins_directory: &Path,
     additional_plugins_directories: &[PathBuf],
@@ -631,6 +638,16 @@ fn plugin_path(
     // There may be multiple directories that the plugin could be installed in, so check each in
     // turn. Plugins may be ghosted, so take that into account when checking.
     use crate::ghostable_path::GhostablePath;
+
+    // Starfield (at least as of 1.12.32.0) only loads plugins from its additional directory if
+    // they're also present in plugins_directory, so there's no point checking the additional
+    // directory if a plugin isn't present in plugins_directory.
+    if game_id == GameId::Starfield {
+        let path = plugins_directory.join(plugin_name);
+        if path.resolve_path().is_err() {
+            return path;
+        }
+    }
 
     additional_plugins_directories
         .iter()
@@ -1579,6 +1596,31 @@ mod tests {
             settings.plugins_directory().join(plugin_name),
             settings.plugin_path(plugin_name)
         );
+    }
+
+    #[test]
+    fn plugin_path_should_only_resolve_additional_starfield_plugin_paths_if_they_exist_in_the_plugins_directory(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let data_path = game_path.join("Data");
+        let other_dir = tmp_dir.path().join("other");
+
+        let plugin_name_1 = "external1.esp";
+        let plugin_name_2 = "external2.esp";
+
+        let mut settings = game_with_game_path(GameId::Starfield, &game_path);
+        settings.additional_plugins_directories = vec![other_dir.clone()];
+
+        copy_to_dir("Blank.esp", &other_dir, plugin_name_1, GameId::Starfield);
+        copy_to_dir("Blank.esp", &other_dir, plugin_name_2, GameId::Starfield);
+        copy_to_dir("Blank.esp", &data_path, plugin_name_2, GameId::Starfield);
+
+        let plugin_1_path = settings.plugin_path(plugin_name_1);
+        let plugin_2_path = settings.plugin_path(plugin_name_2);
+
+        assert_eq!(data_path.join(plugin_name_1), plugin_1_path);
+        assert_eq!(other_dir.join(plugin_name_2), plugin_2_path);
     }
 
     #[test]
