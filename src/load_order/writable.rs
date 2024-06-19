@@ -139,15 +139,21 @@ struct PluginCounts {
     normal: usize,
 }
 
+impl PluginCounts {
+    fn count_plugin(&mut self, plugin: &Plugin) {
+        if plugin.is_light_plugin() {
+            self.light += 1;
+        } else {
+            self.normal += 1;
+        }
+    }
+}
+
 fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCounts {
     let mut counts = PluginCounts::default();
 
     for plugin in load_order.plugins().iter().filter(|p| p.is_active()) {
-        if plugin.is_light_plugin() {
-            counts.light += 1;
-        } else if !plugin.is_update_plugin() {
-            counts.normal += 1;
-        }
+        counts.count_plugin(plugin);
     }
 
     counts
@@ -158,12 +164,7 @@ fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize])
 
     for index in existing_plugin_indexes {
         let plugin = &existing_plugins[*index];
-
-        if plugin.is_light_plugin() {
-            counts.light += 1;
-        } else if !plugin.is_update_plugin() {
-            counts.normal += 1;
-        }
+        counts.count_plugin(plugin);
     }
 
     counts
@@ -185,9 +186,7 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
         let is_light = plugin.is_light_plugin();
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
-            || (!is_light
-                && !plugin.is_update_plugin()
-                && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
+            || (!is_light && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
         {
             return Err(Error::TooManyActivePlugins {
                 light_count: counts.light,
@@ -537,8 +536,7 @@ mod tests {
     }
 
     #[test]
-    fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_an_update_plugin()
-    {
+    fn activate_should_fail_if_at_the_active_plugins_limit_and_the_plugin_is_an_update_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
@@ -554,12 +552,12 @@ mod tests {
 
         assert!(!load_order.is_active(plugin));
 
-        assert!(activate(&mut load_order, plugin).is_ok());
-        assert!(load_order.is_active(plugin));
+        assert!(activate(&mut load_order, plugin).is_err());
+        assert!(!load_order.is_active(plugin));
     }
 
     #[test]
-    fn activate_should_not_count_active_update_plugins_towards_limit() {
+    fn activate_should_count_active_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
@@ -575,8 +573,8 @@ mod tests {
 
         assert!(!load_order.is_active(plugin));
 
-        assert!(activate(&mut load_order, plugin).is_ok());
-        assert!(load_order.is_active(plugin));
+        assert!(activate(&mut load_order, plugin).is_err());
+        assert!(!load_order.is_active(plugin));
     }
 
     #[test]
@@ -706,7 +704,7 @@ mod tests {
     }
 
     #[test]
-    fn set_active_plugins_should_not_count_update_plugins_towards_limit() {
+    fn set_active_plugins_should_count_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
@@ -725,7 +723,7 @@ mod tests {
 
         let active_plugins: Vec<&str> = active_plugins.iter().map(|s| s.as_str()).collect();
 
-        assert!(set_active_plugins(&mut load_order, &active_plugins).is_ok());
-        assert_eq!(256, load_order.active_plugin_names().len());
+        assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
     }
 }
