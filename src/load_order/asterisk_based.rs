@@ -314,18 +314,32 @@ mod tests {
         }
     }
 
-    fn prepare_bulk_plugins(game_settings: &GameSettings) -> Vec<String> {
-        let mut plugins: Vec<String> = vec![game_settings.master_file().to_string()];
-        plugins.extend((0..260).map(|i| format!("Blank{}.esm", i)));
-        plugins.extend((0..5000).map(|i| format!("Blank{}.esl", i)));
-
-        for plugin in &plugins {
-            copy_to_test_dir("Blank - Different.esm", &plugin, game_settings);
+    fn prepare_bulk_plugins(
+        game_settings: &GameSettings,
+    ) -> (Vec<String>, Vec<String>, Vec<String>) {
+        let mut full_plugins = vec![game_settings.master_file().to_string()];
+        full_plugins.extend((0..260).map(|i| format!("Blank{}.full.esm", i)));
+        for plugin in &full_plugins {
+            copy_to_test_dir("Blank.full.esm", &plugin, game_settings);
         }
+
+        let medium_plugins: Vec<_> = (0..260).map(|i| format!("Blank{}.medium.esm", i)).collect();
+        for plugin in &medium_plugins {
+            copy_to_test_dir("Blank.medium.esm", &plugin, game_settings);
+        }
+
+        let small_plugins: Vec<_> = (0..5000).map(|i| format!("Blank{}.small.esm", i)).collect();
+        for plugin in &small_plugins {
+            copy_to_test_dir("Blank.small.esm", &plugin, game_settings);
+        }
+
+        let mut plugins: Vec<_> = full_plugins.iter().collect();
+        plugins.extend(medium_plugins.iter());
+        plugins.extend(small_plugins.iter());
 
         write_active_plugins_file(game_settings, &plugins);
 
-        plugins
+        (full_plugins, medium_plugins, small_plugins)
     }
 
     #[test]
@@ -1461,59 +1475,97 @@ mod tests {
     }
 
     #[test]
-    fn activate_should_check_normal_plugins_and_light_masters_active_limits_separately() {
+    fn activate_should_check_full_medium_and_small_plugins_active_limits_separately() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
-        let plugins = prepare_bulk_plugins(load_order.game_settings());
+        let (full, medium, light) = prepare_bulk_plugins(load_order.game_settings());
 
-        let mut plugin_refs: Vec<&str> = plugins[..254].iter().map(AsRef::as_ref).collect();
-        plugin_refs.extend(plugins[261..4356].iter().map(|s| s.as_str()));
+        let mut plugin_refs: Vec<_> = full[..254].iter().map(String::as_str).collect();
+        plugin_refs.extend(medium[..255].iter().map(String::as_str));
+        plugin_refs.extend(light[..4095].iter().map(String::as_str));
 
         load_order.load().unwrap();
         assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
 
-        let i = 4356;
-        assert!(load_order.activate(&plugins[i]).is_ok());
-        assert!(load_order.is_active(&plugins[i]));
+        let plugin = &full[254];
+        assert!(!load_order.is_active(plugin));
+        assert!(load_order.activate(plugin).is_ok());
+        assert!(load_order.is_active(plugin));
 
-        let i = 254;
-        assert!(load_order.activate(&plugins[i]).is_ok());
-        assert!(load_order.is_active(&plugins[i]));
+        let plugin = &medium[255];
+        assert!(!load_order.is_active(plugin));
+        assert!(load_order.activate(plugin).is_ok());
+        assert!(load_order.is_active(plugin));
 
-        let i = 256;
-        assert!(load_order.activate(&plugins[i]).is_err());
-        assert!(!load_order.is_active(&plugins[i]));
+        let plugin = &light[4095];
+        assert!(!load_order.is_active(plugin));
+        assert!(load_order.activate(plugin).is_ok());
+        assert!(load_order.is_active(plugin));
 
-        let i = 4357;
-        assert!(load_order.activate(&plugins[i]).is_err());
-        assert!(!load_order.is_active(&plugins[i]));
+        let plugin = &full[255];
+        assert!(load_order.activate(plugin).is_err());
+        assert!(!load_order.is_active(plugin));
+
+        let plugin = &medium[256];
+        assert!(load_order.activate(plugin).is_err());
+        assert!(!load_order.is_active(plugin));
+
+        let plugin = &light[4096];
+        assert!(load_order.activate(plugin).is_err());
+        assert!(!load_order.is_active(plugin));
     }
 
     #[test]
-    fn set_active_plugins_should_count_light_masters_and_normal_plugins_separately() {
+    fn set_active_plugins_should_count_full_medium_and_small_plugins_separately() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
-        let plugins = prepare_bulk_plugins(load_order.game_settings());
+        let (full, medium, light) = prepare_bulk_plugins(load_order.game_settings());
 
-        let mut plugin_refs: Vec<&str> = plugins[..255].iter().map(AsRef::as_ref).collect();
-        plugin_refs.extend(plugins[261..4357].iter().map(|s| s.as_str()));
+        let mut plugin_refs: Vec<&str> = full[..255].iter().map(AsRef::as_ref).collect();
+        plugin_refs.extend(medium[0..255].iter().map(|s| s.as_str()));
+        plugin_refs.extend(light[0..4096].iter().map(|s| s.as_str()));
 
         load_order.load().unwrap();
         assert!(load_order.set_active_plugins(&plugin_refs).is_ok());
-        assert_eq!(4351, load_order.active_plugin_names().len());
+        assert_eq!(4606, load_order.active_plugin_names().len());
     }
 
     #[test]
-    fn set_active_plugins_should_error_if_given_more_than_4096_light_masters() {
+    fn set_active_plugins_should_error_if_given_more_than_255_full_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
-        let plugins = prepare_bulk_plugins(load_order.game_settings());
+        let (full, _, _) = prepare_bulk_plugins(load_order.game_settings());
 
-        let mut plugin_refs: Vec<&str> = plugins[..255].iter().map(AsRef::as_ref).collect();
-        plugin_refs.extend(plugins[261..4358].iter().map(|s| s.as_str()));
+        let plugin_refs: Vec<&str> = full[..256].iter().map(AsRef::as_ref).collect();
+
+        assert!(load_order.set_active_plugins(&plugin_refs).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_error_if_given_more_than_256_medium_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let (_, medium, _) = prepare_bulk_plugins(load_order.game_settings());
+
+        let plugin_refs: Vec<&str> = medium[..257].iter().map(AsRef::as_ref).collect();
+
+        assert!(load_order.set_active_plugins(&plugin_refs).is_err());
+        assert_eq!(1, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_error_if_given_more_than_4096_light_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let (_, _, light) = prepare_bulk_plugins(load_order.game_settings());
+
+        let plugin_refs: Vec<&str> = light[..4097].iter().map(AsRef::as_ref).collect();
 
         assert!(load_order.set_active_plugins(&plugin_refs).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());

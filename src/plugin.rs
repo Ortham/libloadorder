@@ -120,6 +120,10 @@ impl Plugin {
         self.data.is_light_plugin()
     }
 
+    pub fn is_medium_plugin(&self) -> bool {
+        self.data.is_medium_plugin()
+    }
+
     pub fn masters(&self) -> Result<Vec<String>, Error> {
         self.data
             .masters()

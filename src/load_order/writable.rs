@@ -30,6 +30,7 @@ use crate::GameSettings;
 
 const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
 const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
+const MAX_ACTIVE_MEDIUM_PLUGINS: usize = 256;
 
 pub trait WritableLoadOrder: ReadableLoadOrder {
     fn game_settings_mut(&mut self) -> &mut GameSettings;
@@ -136,6 +137,7 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
 #[derive(Clone, Copy, Debug, Default)]
 struct PluginCounts {
     light: usize,
+    medium: usize,
     normal: usize,
 }
 
@@ -143,6 +145,8 @@ impl PluginCounts {
     fn count_plugin(&mut self, plugin: &Plugin) {
         if plugin.is_light_plugin() {
             self.light += 1;
+        } else if plugin.is_medium_plugin() {
+            self.medium += 1;
         } else {
             self.normal += 1;
         }
@@ -184,12 +188,16 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
 
     if !plugin.is_active() {
         let is_light = plugin.is_light_plugin();
+        let is_medium = plugin.is_medium_plugin();
+        let is_normal = !is_light && !is_medium;
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
-            || (!is_light && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
+            || (is_medium && counts.medium == MAX_ACTIVE_MEDIUM_PLUGINS)
+            || (is_normal && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
         {
             return Err(Error::TooManyActivePlugins {
                 light_count: counts.light,
+                medium_count: counts.medium,
                 normal_count: counts.normal,
             });
         } else {
@@ -221,9 +229,13 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
-    if counts.normal > MAX_ACTIVE_NORMAL_PLUGINS || counts.light > MAX_ACTIVE_LIGHT_PLUGINS {
+    if counts.normal > MAX_ACTIVE_NORMAL_PLUGINS
+        || counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS
+        || counts.light > MAX_ACTIVE_LIGHT_PLUGINS
+    {
         return Err(Error::TooManyActivePlugins {
             light_count: counts.light,
+            medium_count: counts.medium,
             normal_count: counts.normal,
         });
     }
