@@ -224,7 +224,7 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
             if pos > index && !plugins[pos].is_master_file() {
                 // Need to move the plugin to index, but can't do that while
                 // iterating, so store it for later.
-                from_to_map.insert(pos, index);
+                from_to_map.entry(pos).or_insert(index);
             }
         }
     }

@@ -616,7 +616,7 @@ mod tests {
     }
 
     #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
+    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_first_dependent() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -631,6 +631,7 @@ mod tests {
             load_order.game_settings(),
         );
         set_master_flag(&plugins_dir.join("Blank - Plugin Dependent.esp"), true).unwrap();
+        std::fs::copy(&plugins_dir.join("Blank - Plugin Dependent.esp"), &plugins_dir.join("Blank - Plugin Dependent 2.esp")).unwrap();
 
         let expected_filenames = vec![
             "Blank - Master Dependent.esp",
@@ -640,6 +641,7 @@ mod tests {
             "Skyrim.esm",
             "Blank - Plugin Dependent.esp",
             "Blank.esm",
+            "Blank - Plugin Dependent 2.esp",
         ];
         write_active_plugins_file(load_order.game_settings(), &expected_filenames);
 
@@ -650,6 +652,7 @@ mod tests {
             "Blank.esp",
             "Blank - Plugin Dependent.esp",
             "Blank.esm",
+            "Blank - Plugin Dependent 2.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blàñk.esp",
