@@ -153,9 +153,9 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             load_active_plugins(self, plugin_line_mapper)?;
         }
 
-        hoist_masters(&mut self.plugins)?;
-
         self.add_implicitly_active_plugins()?;
+
+        hoist_masters(&mut self.plugins)?;
 
         Ok(())
     }

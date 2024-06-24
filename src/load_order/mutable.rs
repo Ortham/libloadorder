@@ -201,9 +201,10 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
     }
 }
 
-/// If an ESM has an ESP as a master, the ESP will be loaded directly before the
-/// ESM instead of in its usual position. This function "hoists" such ESPs
-/// further up the load order.
+/// If an ESM has a master that is lower down in the load order, the master will
+/// be loaded directly before the ESM instead of in its usual position. This
+/// function "hoists" such masters further up the load order to match that
+/// behaviour.
 pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
     // Store plugins' current positions and where they need to move to.
     // Use a BTreeMap so that if a plugin needs to move for more than one ESM,
@@ -221,7 +222,7 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
                 .iter()
                 .position(|p| p.name_matches(&master))
                 .unwrap_or(0);
-            if pos > index && !plugins[pos].is_master_file() {
+            if pos > index {
                 // Need to move the plugin to index, but can't do that while
                 // iterating, so store it for later.
                 from_to_map.entry(pos).or_insert(index);

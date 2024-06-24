@@ -118,7 +118,6 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
 
         self.plugins = self.load_plugins_from_dir();
         self.plugins.par_sort_by(plugin_sorter);
-        hoist_masters(&mut self.plugins)?;
 
         let regex = Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")
             .expect("Hardcoded GameFile ini entry regex should be valid");
@@ -128,6 +127,8 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         load_active_plugins(self, line_mapper)?;
 
         self.add_implicitly_active_plugins()?;
+
+        hoist_masters(&mut self.plugins)?;
 
         Ok(())
     }
