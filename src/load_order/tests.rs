@@ -113,35 +113,47 @@ pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
 pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
     let mut settings = game_settings_for_test(game_id, game_dir);
 
-    copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
-    copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
-    copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-    copy_to_test_dir("Blank - Different.esp", "Blank - Different.esp", &settings);
-    copy_to_test_dir(
-        "Blank - Master Dependent.esp",
-        "Blank - Master Dependent.esp",
-        &settings,
-    );
-    copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
+    if game_id == GameId::Starfield {
+        copy_to_test_dir("Blank.full.esm", settings.master_file(), &settings);
+        copy_to_test_dir("Blank.full.esm", "Blank.full.esm", &settings);
+        copy_to_test_dir("Blank.medium.esm", "Blank.medium.esm", &settings);
+        copy_to_test_dir("Blank.small.esm", "Blank.small.esm", &settings);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        copy_to_test_dir("Blank - Override.esp", "Blank - Override.esp", &settings);
+    } else {
+        copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        copy_to_test_dir("Blank - Different.esp", "Blank - Different.esp", &settings);
+        copy_to_test_dir(
+            "Blank - Master Dependent.esp",
+            "Blank - Master Dependent.esp",
+            &settings,
+        );
+        copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
 
-    let plugin_names = [
-        settings.master_file(),
-        "Blank.esm",
-        "Blank.esp",
-        "Blank - Different.esp",
-        "Blank - Master Dependent.esp",
-        "Blàñk.esp",
-    ];
-    set_timestamp_order(&plugin_names, &settings.plugins_directory());
+        let plugin_names = [
+            settings.master_file(),
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blàñk.esp",
+        ];
+        set_timestamp_order(&plugin_names, &settings.plugins_directory());
+    }
 
     // Refresh settings to account for newly-created plugin files.
     settings.refresh_implicitly_active_plugins().unwrap();
 
-    let plugins = vec![
+    let mut plugins = vec![
         Plugin::new(settings.master_file(), &settings).unwrap(),
         Plugin::with_active("Blank.esp", &settings, true).unwrap(),
-        Plugin::new("Blank - Different.esp", &settings).unwrap(),
     ];
+
+    if game_id != GameId::Starfield {
+        plugins.push(Plugin::new("Blank - Different.esp", &settings).unwrap());
+    }
 
     (settings, plugins)
 }
@@ -157,16 +169,6 @@ pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
     file.seek(io::SeekFrom::Start(8))?;
 
     let value = if present { 1 } else { 0 };
-    file.write(&[value])?;
-
-    Ok(())
-}
-
-pub fn set_override_flag(plugin: &Path, present: bool) -> io::Result<()> {
-    let mut file = OpenOptions::new().write(true).open(plugin)?;
-    file.seek(io::SeekFrom::Start(9))?;
-
-    let value = if present { 2 } else { 0 };
     file.write(&[value])?;
 
     Ok(())

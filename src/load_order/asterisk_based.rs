@@ -1414,7 +1414,7 @@ mod tests {
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
 
         copy_to_test_dir(
-            "Blank.esm",
+            "Blank.full.esm",
             "BlueprintShips-Starfield.esm",
             &load_order.game_settings(),
         );

@@ -827,30 +827,28 @@ mod tests {
         };
 
         let timestamp = 1321009991;
-        let plugin_path = load_order
-            .game_settings
-            .plugins_directory()
-            .join("Blank - Different.esp");
-        set_file_timestamps(&plugin_path, timestamp);
-        let plugin_path = load_order
-            .game_settings
-            .plugins_directory()
-            .join("Blank.esp");
-        set_file_timestamps(&plugin_path, timestamp);
+
+        let plugin_names = [
+            "Blank - Override.esp",
+            "Blank.esp",
+            "Blank.full.esm",
+            "Blank.medium.esm",
+            "Blank.small.esm",
+            "Starfield.esm",
+        ];
+
+        for plugin_name in plugin_names {
+            let plugin_path = load_order
+                .game_settings
+                .plugins_directory()
+                .join(plugin_name);
+            set_file_timestamps(&plugin_path, timestamp);
+        }
 
         let result = find_plugins_in_dirs(
             &[load_order.game_settings.plugins_directory()],
             load_order.game_settings.id(),
         );
-
-        let plugin_names = [
-            load_order.game_settings.master_file(),
-            "Blank.esm",
-            "Blank - Different.esp",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blàñk.esp",
-        ];
 
         assert_eq!(plugin_names.as_slice(), result);
     }

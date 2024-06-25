@@ -45,7 +45,8 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
     let game_folder = match game_id {
         Morrowind => "Morrowind",
         Oblivion => "Oblivion",
-        Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR | Starfield => "SkyrimSE",
+        Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => "SkyrimSE",
+        Starfield => "Starfield",
         _ => "Skyrim",
     };
 
