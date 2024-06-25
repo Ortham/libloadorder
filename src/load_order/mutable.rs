@@ -949,7 +949,7 @@ mod tests {
     }
 
     #[test]
-    fn find_first_non_master_should_find_a_normal_esp() {
+    fn find_first_non_master_should_find_a_full_esp() {
         let tmp_dir = tempdir().unwrap();
         let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esp");
 

@@ -28,7 +28,7 @@ use crate::enums::Error;
 use crate::plugin::Plugin;
 use crate::GameSettings;
 
-const MAX_ACTIVE_NORMAL_PLUGINS: usize = 255;
+const MAX_ACTIVE_FULL_PLUGINS: usize = 255;
 const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 const MAX_ACTIVE_MEDIUM_PLUGINS: usize = 256;
 
@@ -138,7 +138,7 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
 struct PluginCounts {
     light: usize,
     medium: usize,
-    normal: usize,
+    full: usize,
 }
 
 impl PluginCounts {
@@ -148,7 +148,7 @@ impl PluginCounts {
         } else if plugin.is_medium_plugin() {
             self.medium += 1;
         } else {
-            self.normal += 1;
+            self.full += 1;
         }
     }
 }
@@ -189,16 +189,16 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
     if !plugin.is_active() {
         let is_light = plugin.is_light_plugin();
         let is_medium = plugin.is_medium_plugin();
-        let is_normal = !is_light && !is_medium;
+        let is_full = !is_light && !is_medium;
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
             || (is_medium && counts.medium == MAX_ACTIVE_MEDIUM_PLUGINS)
-            || (is_normal && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
+            || (is_full && counts.full == MAX_ACTIVE_FULL_PLUGINS)
         {
             return Err(Error::TooManyActivePlugins {
                 light_count: counts.light,
                 medium_count: counts.medium,
-                normal_count: counts.normal,
+                full_count: counts.full,
             });
         } else {
             plugin.activate()?;
@@ -229,14 +229,14 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
-    if counts.normal > MAX_ACTIVE_NORMAL_PLUGINS
+    if counts.full > MAX_ACTIVE_FULL_PLUGINS
         || counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS
         || counts.light > MAX_ACTIVE_LIGHT_PLUGINS
     {
         return Err(Error::TooManyActivePlugins {
             light_count: counts.light,
             medium_count: counts.medium,
-            normal_count: counts.normal,
+            full_count: counts.full,
         });
     }
 
@@ -520,7 +520,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_FULL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_and_insert(&mut load_order, &plugin);
@@ -536,7 +536,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_FULL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_and_insert(&mut load_order, &plugin);
@@ -552,7 +552,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_FULL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_and_insert(&mut load_order, &plugin);
@@ -573,7 +573,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
-        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_FULL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank - Override.esp", &plugin, &load_order.game_settings());
             load_and_insert(&mut load_order, &plugin);
@@ -725,7 +725,7 @@ mod tests {
 
         let mut active_plugins = vec!["Starfield.esm".to_string(), blank_override.to_string()];
 
-        for i in 0..(MAX_ACTIVE_NORMAL_PLUGINS - 1) {
+        for i in 0..(MAX_ACTIVE_FULL_PLUGINS - 1) {
             let plugin = format!("{}.esp", i);
             copy_to_test_dir("Blank.esp", &plugin, &load_order.game_settings());
             load_and_insert(&mut load_order, &plugin);

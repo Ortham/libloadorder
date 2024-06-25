@@ -638,7 +638,7 @@ mod tests {
 
         // .esm plugins are loaded as ESMs, .esl plugins are loaded as ESMs and
         // ESLs, ignoring their actual flags, so only worth testing a .esp that
-        // has the ESM flag set that has another (normal) .esp as a master.
+        // has the ESM flag set that has another (full) .esp as a master.
 
         let plugins_dir = &load_order.game_settings().plugins_directory();
         let plugin_name_1 = "Blank - Plugin Dependent.esp";
@@ -686,7 +686,7 @@ mod tests {
 
         // .esm plugins are loaded as ESMs, .esl plugins are loaded as ESMs and
         // ESLs, ignoring their actual flags, so only worth testing a .esp that
-        // has the ESM flag set that has another (normal) .esp as a master.
+        // has the ESM flag set that has another (full) .esp as a master.
 
         let plugin_name = "Blank - Master Dependent.esm";
         copy_to_test_dir(plugin_name, plugin_name, load_order.game_settings());

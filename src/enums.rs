@@ -87,7 +87,7 @@ pub enum Error {
     TooManyActivePlugins {
         light_count: usize,
         medium_count: usize,
-        normal_count: usize,
+        full_count: usize,
     },
     DuplicatePlugin(String),
     NonMasterBeforeMaster {
@@ -155,8 +155,8 @@ impl fmt::Display for Error {
             Error::PluginNotFound(name) => {
                 write!(f, "The plugin \"{name}\" is not in the load order")
             }
-            Error::TooManyActivePlugins {light_count, medium_count, normal_count } =>
-                write!(f, "Maximum number of active plugins exceeded: there are {normal_count} active normal plugins, {medium_count} active medium plugins and {light_count} active light plugins"),
+            Error::TooManyActivePlugins {light_count, medium_count, full_count } =>
+                write!(f, "Maximum number of active plugins exceeded: there are {full_count} active full plugins, {medium_count} active medium plugins and {light_count} active light plugins"),
             Error::DuplicatePlugin(name) =>
                 write!(f, "The given plugin list contains more than one instance of \"{name}\""),
             Error::NonMasterBeforeMaster{ master, non_master} =>

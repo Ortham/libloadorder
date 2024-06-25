@@ -16,4 +16,4 @@ There are a few hardcoded rules that trump load order, irrespective of the metho
   - Official Bethesda plugins are all hardcoded to always load in a certain order before other plugins. These include the game's main master file (`Skyrim.esm` or `Fallout4.esm`), DLC plugins (e.g. `Dragonborn.esm`, `DLCNukaWorld.esm`) and Creation Club plugins (e.g. `ccQDRSSE001-SurvivalMode.esl`).
   - Light plugins load amongst other plugins, but they all then get moved to the end of the load order so that in-game they all take up the `FE` load order slot. This movement does not affect conflict resolution.
 
-A plugin's type is usually indicated by its file extension, for example `.esm` is used by master plugins, `.esl` is used by light plugins and `.esp` is used by non-master, non-light (i.e. normal) plugins. However, this isn't necessarily accurate, see Plugin Types for details.
+A plugin's type is usually indicated by its file extension, for example `.esm` is used by master plugins, `.esl` is used by light plugins and `.esp` is used by non-master, non-light (i.e. full) plugins. However, this isn't necessarily accurate, see Plugin Types for details.
