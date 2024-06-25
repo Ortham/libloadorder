@@ -435,7 +435,7 @@ pub unsafe extern "C" fn lo_set_additional_plugins_directories(
 
         let plugin_paths = match to_path_buf_vec(paths, num_paths) {
             Ok(x) => x,
-            Err(x) => return error(x, "A plugin path contained a null byte"),
+            Err(x) => return error(x, "A plugin path was null or not valid UTF-8"),
         };
 
         handle
