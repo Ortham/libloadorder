@@ -145,7 +145,7 @@ fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCount
     for plugin in load_order.plugins().iter().filter(|p| p.is_active()) {
         if plugin.is_light_plugin() {
             counts.light += 1;
-        } else if !plugin.is_override_plugin() {
+        } else if !plugin.is_update_plugin() {
             counts.normal += 1;
         }
     }
@@ -161,7 +161,7 @@ fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize])
 
         if plugin.is_light_plugin() {
             counts.light += 1;
-        } else if !plugin.is_override_plugin() {
+        } else if !plugin.is_update_plugin() {
             counts.normal += 1;
         }
     }
@@ -186,7 +186,7 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
             || (!is_light
-                && !plugin.is_override_plugin()
+                && !plugin.is_update_plugin()
                 && counts.normal == MAX_ACTIVE_NORMAL_PLUGINS)
         {
             return Err(Error::TooManyActivePlugins {
@@ -537,7 +537,7 @@ mod tests {
     }
 
     #[test]
-    fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_an_override_plugin()
+    fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_an_update_plugin()
     {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
@@ -559,7 +559,7 @@ mod tests {
     }
 
     #[test]
-    fn activate_should_not_count_active_override_plugins_towards_limit() {
+    fn activate_should_not_count_active_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
@@ -706,7 +706,7 @@ mod tests {
     }
 
     #[test]
-    fn set_active_plugins_should_not_count_override_plugins_towards_limit() {
+    fn set_active_plugins_should_not_count_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 

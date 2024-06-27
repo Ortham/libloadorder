@@ -21,6 +21,7 @@ use std::fs::{File, FileTimes};
 use std::path::Path;
 use std::time::SystemTime;
 
+use esplugin::ParseOptions;
 use unicase::eq;
 
 use crate::enums::{Error, GameId};
@@ -84,7 +85,7 @@ impl Plugin {
             .map_err(|e| Error::IoError(path.to_path_buf(), e))?;
 
         let mut data = esplugin::Plugin::new(game_id.to_esplugin_id(), path);
-        data.parse_open_file(file, true)
+        data.parse_reader(file, ParseOptions::header_only())
             .map_err(|e| file_error(path, e))?;
 
         Ok(Plugin {
@@ -119,8 +120,8 @@ impl Plugin {
         self.data.is_light_plugin()
     }
 
-    pub fn is_override_plugin(&self) -> bool {
-        self.data.is_override_plugin()
+    pub fn is_update_plugin(&self) -> bool {
+        self.data.is_update_plugin()
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
@@ -154,9 +155,9 @@ impl Plugin {
             if self.data.path().is_ghosted() {
                 let new_path = self.data.path().unghost()?;
 
-                self.data = esplugin::Plugin::new(*self.data.game_id(), &new_path);
+                self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);
                 self.data
-                    .parse_file(true)
+                    .parse_file(ParseOptions::header_only())
                     .map_err(|e| file_error(self.data.path(), e))?;
                 let modification_time = self.modification_time();
                 self.set_modification_time(modification_time)?;
