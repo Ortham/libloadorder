@@ -98,9 +98,7 @@ pub fn to_c_string_array<S: AsRef<str>>(strings: &[S]) -> Result<(*mut *mut c_ch
     let mut c_strings = strings
         .iter()
         .map(to_c_string)
-        .collect::<Result<Vec<*mut c_char>, u32>>()?;
-
-    c_strings.shrink_to_fit();
+        .collect::<Result<Box<[*mut c_char]>, u32>>()?;
 
     let pointer = c_strings.as_mut_ptr();
     let size = c_strings.len();

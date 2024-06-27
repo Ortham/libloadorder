@@ -225,8 +225,10 @@ pub unsafe extern "C" fn lo_free_string_array(array: *mut *mut c_char, size: siz
         return;
     }
 
-    let vec = Vec::from_raw_parts(array, size, size);
-    for string in vec {
-        lo_free_string(string);
+    let strings = Box::from_raw(std::slice::from_raw_parts_mut(array, size));
+    for string in strings.iter() {
+        lo_free_string(*string);
     }
+
+    drop(strings);
 }
