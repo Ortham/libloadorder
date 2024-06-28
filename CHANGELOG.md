@@ -3,6 +3,47 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [17.0.0] - 2024-06-28
+
+### Added
+
+- Starfield's `Starfield.ccc` file will now be read from the
+  `My Games\Starfield` directory as well as its install directory, with the
+  former taking precedence over the latter, to match the game's behaviour.
+- Starfield plugins will now be loaded from the `My Games\Starfield\Data`
+  directory as well as the game install path's `Data` directory, but only for
+  plugins that are present in both directories. This matches the game's
+  behaviour.
+- Support for medium plugin (introduced by Starfield), which are now counted
+  separately to full plugins when checking active plugin limits, as they have
+  their own limit of 256 active medium plugins.
+
+### Changed
+
+- Master files are now hoisted to load before other master files that depend on
+  them, to match the behaviour of all supported games.
+- Starfield's `Starfield.esm`, `Constellation.esm` and `OldMars.esm` are no
+  longer treated as hardcoded: instead, they are now treated as implicitly
+  active, along with `BlueprintShips-Starfield.esm`, `SFBGS003.esm`,
+  `SFBGS006.esm`, `SFBGS007.esm` and `SFBGS008.esm`.
+- Plugins that have the update flag (introduced by Starfield) set are no longer
+  given special treatment when checking active plugin limits, to match
+  Starfield's current behaviour. Previously such plugins would not count towards
+  the maximum number of plugins you could have active at the same time.
+- `Error::TooManyActivePlugins` has gained a `medium_count` field, and its
+  `normal_count` field has been renamed to `full_count` to match the terminology
+  introduced by Starfield.
+- Updated esplugin to 6.0.0.
+- Updated libc to 0.2.155.
+- Updated regex to 1.10.5.
+- Updated windows to 0.57.0.
+
+### Fixed
+
+- If a non-master plugin was a master of two master plugins, it would be hoisted
+  to load before the master that loaded second instead of the master that loaded
+  first.
+
 ## [16.0.0] - 2024-05-02
 
 ### Added
