@@ -163,7 +163,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        self.move_or_insert_plugin_with_index(plugin_name, position)
+        MutableLoadOrder::set_plugin_index(self, plugin_name, position)
     }
 
     fn is_self_consistent(&self) -> Result<bool, Error> {
@@ -318,67 +318,6 @@ mod tests {
     fn write_file(path: &Path) {
         let mut file = File::create(&path).unwrap();
         writeln!(file).unwrap();
-    }
-
-    #[test]
-    fn insert_position_should_return_zero_if_given_the_game_master_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
-        let position = load_order.insert_position(&plugin);
-
-        assert_eq!(0, position.unwrap());
-    }
-
-    #[test]
-    fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        load_order.plugins_mut().clear();
-
-        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
-        let position = load_order.insert_position(&plugin);
-
-        assert!(position.is_none());
-    }
-
-    #[test]
-    fn insert_position_should_return_none_if_given_a_non_master_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let plugin =
-            Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings()).unwrap();
-        let position = load_order.insert_position(&plugin);
-
-        assert_eq!(None, position);
-    }
-
-    #[test]
-    fn insert_position_should_return_the_first_non_master_plugin_index_if_given_a_master_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
-        let position = load_order.insert_position(&plugin);
-
-        assert_eq!(1, position.unwrap());
-    }
-
-    #[test]
-    fn insert_position_should_return_none_if_no_non_masters_are_present() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        // Remove non-master plugins from the load order.
-        load_order.plugins_mut().retain(|p| p.is_master_file());
-
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
-        let position = load_order.insert_position(&plugin);
-
-        assert_eq!(None, position);
     }
 
     #[test]
@@ -779,126 +718,6 @@ mod tests {
             Error::EncodeError(s) => assert_eq!("Blȧnk.esm", s),
             e => panic!("Expected encode error, got {:?}", e),
         };
-    }
-
-    #[test]
-    fn set_load_order_should_error_if_the_first_element_given_is_not_the_game_master() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        let filenames = vec!["Blank.esp", "Skyrim.esm"];
-        assert!(load_order.set_load_order(&filenames).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn set_load_order_should_not_error_if_update_esm_loads_after_another_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-
-        let filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "Update.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-
-        assert!(load_order.set_load_order(&filenames).is_ok());
-    }
-
-    #[test]
-    fn set_load_order_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        copy_to_test_dir(
-            "Blank - Different.esm",
-            "ghosted.esm.ghost",
-            &load_order.game_settings(),
-        );
-
-        let filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "ghosted.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-
-        assert!(load_order.set_load_order(&filenames).is_ok());
-    }
-
-    #[test]
-    fn set_load_order_should_not_insert_missing_plugins() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-        ];
-        load_order.set_load_order(&filenames).unwrap();
-
-        assert_eq!(filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn set_load_order_should_not_lose_active_state_of_existing_plugins() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let filenames = vec![
-            "Skyrim.esm",
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-        ];
-        load_order.set_load_order(&filenames).unwrap();
-
-        assert!(load_order.is_active("Blank.esp"));
-    }
-
-    #[test]
-    fn set_plugin_index_should_error_if_setting_the_game_master_index_to_non_zero_in_bounds() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        assert!(load_order.set_plugin_index("Skyrim.esm", 1).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn set_plugin_index_should_error_if_setting_a_zero_index_for_a_non_game_master_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        assert!(load_order.set_plugin_index("Blank.esm", 0).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn set_plugin_index_should_insert_a_new_plugin() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let num_plugins = load_order.plugins().len();
-        assert_eq!(1, load_order.set_plugin_index("Blank.esm", 1).unwrap());
-        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
-        assert_eq!(num_plugins + 1, load_order.plugins().len());
     }
 
     #[test]
