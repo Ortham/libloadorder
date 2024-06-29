@@ -412,84 +412,34 @@ mod tests {
     }
 
     #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_first_dependent() {
+    fn load_should_hoist_masters_that_masters_depend_on_to_load_before_their_dependents() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
-        // .esm plugins are loaded as ESMs, .esl plugins are loaded as ESMs and
-        // ESLs, ignoring their actual flags, so only worth testing a .esp that
-        // has the ESM flag set that has another (full) .esp as a master.
+        let master_dependent_master = "Blank - Master Dependent.esm";
+        copy_to_test_dir(
+            master_dependent_master,
+            master_dependent_master,
+            load_order.game_settings(),
+        );
 
-        let plugins_dir = &load_order.game_settings().plugins_directory();
-        let plugin_name_1 = "Blank - Plugin Dependent.esp";
-        let plugin_name_2 = "Blank - Plugin Dependent 2.esp";
-        copy_to_test_dir(plugin_name_1, plugin_name_1, load_order.game_settings());
-        set_master_flag(&plugins_dir.join(plugin_name_1), true).unwrap();
-        std::fs::copy(
-            &plugins_dir.join(plugin_name_1),
-            &plugins_dir.join(plugin_name_2),
-        )
-        .unwrap();
-
-        let expected_filenames = vec![
+        let filenames = vec![
+            "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
+            "Blank.esm",
             "Blank - Different.esp",
             "Blàñk.esp",
             "Blank.esp",
             "Skyrim.esm",
-            plugin_name_1,
-            "Blank.esm",
-            plugin_name_2,
         ];
-        write_active_plugins_file(load_order.game_settings(), &expected_filenames);
-
-        load_order.load().unwrap();
-
-        let expected_filenames = vec![
-            "Skyrim.esm",
-            "Blank.esp",
-            plugin_name_1,
-            "Blank.esm",
-            plugin_name_2,
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-        ];
-
-        assert_eq!(expected_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn load_should_hoist_masters_that_masters_depend_on_to_load_before_their_first_dependent() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        // .esm plugins are loaded as ESMs, .esl plugins are loaded as ESMs and
-        // ESLs, ignoring their actual flags, so only worth testing a .esp that
-        // has the ESM flag set that has another (full) .esp as a master.
-
-        let plugin_name = "Blank - Master Dependent.esm";
-        copy_to_test_dir(plugin_name, plugin_name, load_order.game_settings());
-
-        let expected_filenames = vec![
-            plugin_name,
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
-            "Blank.esp",
-            "Skyrim.esm",
-            "Blank - Plugin Dependent.esp",
-            "Blank.esm",
-            "Blank - Plugin Dependent 2.esp",
-        ];
-        write_active_plugins_file(load_order.game_settings(), &expected_filenames);
+        write_active_plugins_file(load_order.game_settings(), &filenames);
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Skyrim.esm",
             "Blank.esm",
-            plugin_name,
+            "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blàñk.esp",

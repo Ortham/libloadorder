@@ -389,41 +389,34 @@ mod tests {
     }
 
     #[test]
-    fn load_should_hoist_non_masters_that_masters_depend_on_to_load_before_their_dependents() {
+    fn load_should_hoist_masters_that_masters_depend_on_to_load_before_their_dependents() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
-        let plugins_dir = &load_order.game_settings().plugins_directory();
+        let master_dependent_master = "Blank - Master Dependent.esm";
         copy_to_test_dir(
-            "Blank - Different.esm",
-            "Blank - Different.esm",
-            load_order.game_settings(),
-        );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
-        copy_to_test_dir(
-            "Blank - Different Master Dependent.esm",
-            "Blank - Different Master Dependent.esm",
+            master_dependent_master,
+            master_dependent_master,
             load_order.game_settings(),
         );
 
-        let expected_filenames = vec![
+        let filenames = vec![
+            "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank.esm",
-            "Blank - Different Master Dependent.esm",
             "Blank - Different.esp",
             "Blàñk.esp",
             "Blank.esp",
             "Skyrim.esm",
         ];
-        write_load_order_file(load_order.game_settings(), &expected_filenames);
+        write_load_order_file(load_order.game_settings(), &filenames);
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Skyrim.esm",
             "Blank.esm",
-            "Blank - Different.esm",
-            "Blank - Different Master Dependent.esm",
+            "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blàñk.esp",

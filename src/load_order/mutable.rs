@@ -532,7 +532,7 @@ fn move_elements<T>(vec: &mut Vec<T>, mut from_to_indices: BTreeMap<usize, usize
         vec.insert(to_index, element);
 
         for value in from_to_indices.values_mut() {
-            if *value > to_index {
+            if *value < from_index && *value > to_index {
                 *value += 1;
             }
         }
@@ -1469,6 +1469,60 @@ mod tests {
 
         load_order.replace_plugins(&filenames).unwrap();
         assert_eq!(filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn hoist_masters_should_hoist_plugins_that_masters_depend_on_to_load_before_their_first_dependent(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let (game_settings, _) = mock_game_files(GameId::SkyrimSE, &tmp_dir.path());
+
+        // Test both hoisting a master before a master and a non-master before a master.
+
+        let master_dependent_master = "Blank - Master Dependent.esm";
+        copy_to_test_dir(
+            master_dependent_master,
+            master_dependent_master,
+            &game_settings,
+        );
+
+        let plugin_dependent_master = "Blank - Plugin Dependent.esm";
+        copy_to_test_dir(
+            "Blank - Plugin Dependent.esp",
+            plugin_dependent_master,
+            &game_settings,
+        );
+
+        let plugin_names = vec![
+            "Skyrim.esm",
+            master_dependent_master,
+            "Blank.esm",
+            plugin_dependent_master,
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+            "Blank.esp",
+        ];
+        let mut plugins = plugin_names
+            .iter()
+            .map(|n| Plugin::new(n, &game_settings).unwrap())
+            .collect();
+
+        assert!(hoist_masters(&mut plugins).is_ok());
+
+        let expected_plugin_names = vec![
+            "Skyrim.esm",
+            "Blank.esm",
+            master_dependent_master,
+            "Blank.esp",
+            plugin_dependent_master,
+            "Blank - Master Dependent.esp",
+            "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        let plugin_names: Vec<_> = plugins.iter().map(Plugin::name).collect();
+        assert_eq!(expected_plugin_names, plugin_names);
     }
 
     #[test]
