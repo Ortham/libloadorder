@@ -400,6 +400,18 @@ mod tests {
     }
 
     #[test]
+    fn add_should_hoist_a_master_that_a_master_depends_on() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+
+        let plugin_name = "Blank - Master Dependent.esm";
+        copy_to_test_dir(plugin_name, plugin_name, load_order.game_settings());
+        assert_eq!(1, add(&mut load_order, plugin_name).unwrap());
+
+        assert_eq!(1, add(&mut load_order, "Blank.esm").unwrap());
+    }
+
+    #[test]
     fn remove_should_error_if_the_plugin_is_not_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());

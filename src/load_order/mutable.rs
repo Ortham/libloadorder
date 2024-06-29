@@ -330,16 +330,20 @@ pub fn validate_early_loader_positions(
 }
 
 fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
-    if plugin.is_master_file() {
-        find_first_non_master_position(plugins)
-    } else {
-        // Check that there isn't a master that would hoist this plugin.
-        plugins.iter().filter(|p| p.is_master_file()).position(|p| {
-            p.masters()
-                .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
-                .unwrap_or(false)
-        })
-    }
+    // Check that there isn't a master that would hoist this plugin.
+    let hoisted_index = plugins.iter().filter(|p| p.is_master_file()).position(|p| {
+        p.masters()
+            .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
+            .unwrap_or(false)
+    });
+
+    hoisted_index.or_else(|| {
+        if plugin.is_master_file() {
+            find_first_non_master_position(plugins)
+        } else {
+            None
+        }
+    })
 }
 
 fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
