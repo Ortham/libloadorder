@@ -20,7 +20,6 @@ use std::collections::HashSet;
 use std::fs::create_dir_all;
 use std::path::Path;
 
-use rayon::prelude::*;
 use unicase::{eq, UniCase};
 
 use super::mutable::MutableLoadOrder;
@@ -152,6 +151,17 @@ impl PluginCounts {
             self.full += 1;
         }
     }
+
+    fn max_active_full_plugins(&self) -> usize {
+        let modifier = if self.medium > 0 && self.light > 0 {
+            2
+        } else if self.medium > 0 || self.light > 0 {
+            1
+        } else {
+            0
+        };
+        MAX_ACTIVE_FULL_PLUGINS - modifier
+    }
 }
 
 fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCounts {
@@ -194,7 +204,7 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
             || (is_medium && counts.medium == MAX_ACTIVE_MEDIUM_PLUGINS)
-            || (is_full && counts.full == MAX_ACTIVE_FULL_PLUGINS)
+            || (is_full && counts.full == counts.max_active_full_plugins())
         {
             return Err(Error::TooManyActivePlugins {
                 light_count: counts.light,
@@ -230,7 +240,7 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
-    if counts.full > MAX_ACTIVE_FULL_PLUGINS
+    if counts.full > counts.max_active_full_plugins()
         || counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS
         || counts.light > MAX_ACTIVE_LIGHT_PLUGINS
     {
@@ -276,15 +286,14 @@ mod tests {
     use std::fs::remove_file;
     use std::path::Path;
 
+    use rayon::prelude::*;
     use tempfile::tempdir;
 
     use crate::enums::GameId;
     use crate::game_settings::GameSettings;
     use crate::load_order::mutable::MutableLoadOrder;
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-    use crate::load_order::tests::{
-        load_and_insert, mock_game_files, set_master_flag,
-    };
+    use crate::load_order::tests::{load_and_insert, mock_game_files, set_master_flag};
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -327,13 +336,24 @@ mod tests {
         }
     }
 
-    fn prepare_bulk_plugins<F>(load_order: &mut TestLoadOrder, source_plugin_name: &str, plugin_count: usize, name_generator: F) -> Vec<String> where F: Fn(usize) -> String {
+    fn prepare_bulk_plugins<F>(
+        load_order: &mut TestLoadOrder,
+        source_plugin_name: &str,
+        plugin_count: usize,
+        name_generator: F,
+    ) -> Vec<String>
+    where
+        F: Fn(usize) -> String,
+    {
         let names: Vec<_> = (0..plugin_count).map(name_generator).collect();
 
-        let plugins: Vec<_> = names.par_iter().map(|name| {
-            copy_to_test_dir(source_plugin_name, &name, load_order.game_settings());
-            Plugin::new(&name, load_order.game_settings()).unwrap()
-        }).collect();
+        let plugins: Vec<_> = names
+            .par_iter()
+            .map(|name| {
+                copy_to_test_dir(source_plugin_name, &name, load_order.game_settings());
+                Plugin::new(&name, load_order.game_settings()).unwrap()
+            })
+            .collect();
 
         for plugin in plugins {
             insert(load_order, plugin);
@@ -343,16 +363,26 @@ mod tests {
     }
 
     fn prepare_bulk_full_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
-        let plugin_name = if load_order.game_settings.id() == GameId::Starfield { "Blank.full.esm" } else { "Blank.esm" };
-        prepare_bulk_plugins(load_order, plugin_name, 260, |i| format!("Blank{}.full.esm", i))
+        let plugin_name = if load_order.game_settings.id() == GameId::Starfield {
+            "Blank.full.esm"
+        } else {
+            "Blank.esm"
+        };
+        prepare_bulk_plugins(load_order, plugin_name, 260, |i| {
+            format!("Blank{}.full.esm", i)
+        })
     }
 
     fn prepare_bulk_medium_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
-        prepare_bulk_plugins(load_order, "Blank.medium.esm", 260, |i| format!("Blank{}.medium.esm", i))
+        prepare_bulk_plugins(load_order, "Blank.medium.esm", 260, |i| {
+            format!("Blank{}.medium.esm", i)
+        })
     }
 
     fn prepare_bulk_light_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
-        prepare_bulk_plugins(load_order, "Blank.small.esm", 5000, |i| format!("Blank{}.small.esm", i))
+        prepare_bulk_plugins(load_order, "Blank.small.esm", 5000, |i| {
+            format!("Blank{}.small.esm", i)
+        })
     }
 
     #[test]
@@ -632,6 +662,88 @@ mod tests {
     }
 
     #[test]
+    fn activate_should_lower_the_full_plugin_limit_if_a_light_plugin_is_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins = prepare_bulk_full_plugins(&mut load_order);
+        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
+            activate(&mut load_order, &plugin).unwrap();
+        }
+
+        let plugin = "Blank.small.esm";
+        load_and_insert(&mut load_order, plugin);
+        activate(&mut load_order, plugin).unwrap();
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_ok());
+        assert!(load_order.is_active(plugin));
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 1];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_err());
+        assert!(!load_order.is_active(plugin));
+    }
+
+    #[test]
+    fn activate_should_lower_the_full_plugin_limit_if_a_medium_plugin_is_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins = prepare_bulk_full_plugins(&mut load_order);
+        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
+            activate(&mut load_order, &plugin).unwrap();
+        }
+
+        let plugin = "Blank.medium.esm";
+        load_and_insert(&mut load_order, plugin);
+        activate(&mut load_order, plugin).unwrap();
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_ok());
+        assert!(load_order.is_active(plugin));
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 1];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_err());
+        assert!(!load_order.is_active(plugin));
+    }
+
+    #[test]
+    fn activate_should_lower_the_full_plugin_limit_if_light_and_medium_plugins_are_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins = prepare_bulk_full_plugins(&mut load_order);
+        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 4] {
+            activate(&mut load_order, &plugin).unwrap();
+        }
+
+        for plugin in ["Blank.medium.esm", "Blank.small.esm"] {
+            load_and_insert(&mut load_order, plugin);
+            activate(&mut load_order, plugin).unwrap();
+        }
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 3];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_ok());
+        assert!(load_order.is_active(plugin));
+
+        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        assert!(!load_order.is_active(plugin));
+
+        assert!(activate(&mut load_order, plugin).is_err());
+        assert!(!load_order.is_active(plugin));
+    }
+
+    #[test]
     fn activate_should_check_full_medium_and_small_plugins_active_limits_separately() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
@@ -641,7 +753,7 @@ mod tests {
         let light = prepare_bulk_light_plugins(&mut load_order);
 
         let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(full[..253].iter().map(String::as_str));
+        plugin_refs.extend(full[..251].iter().map(String::as_str));
         plugin_refs.extend(medium[..255].iter().map(String::as_str));
         plugin_refs.extend(light[..4095].iter().map(String::as_str));
 
@@ -813,6 +925,74 @@ mod tests {
     }
 
     #[test]
+    fn set_active_plugins_should_lower_the_full_plugin_limit_if_a_light_plugin_is_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let full = prepare_bulk_full_plugins(&mut load_order);
+
+        let plugin = "Blank.small.esm";
+        load_and_insert(&mut load_order, plugin);
+
+        let mut plugin_refs = vec!["Starfield.esm", plugin];
+        plugin_refs.extend(full[..253].iter().map(String::as_str));
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
+        assert_eq!(255, load_order.active_plugin_names().len());
+
+        plugin_refs.push(full[253].as_str());
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
+        assert_eq!(255, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_lower_the_full_plugin_limit_if_a_medium_plugin_is_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let full = prepare_bulk_full_plugins(&mut load_order);
+
+        let plugin = "Blank.medium.esm";
+        load_and_insert(&mut load_order, plugin);
+
+        let mut plugin_refs = vec!["Starfield.esm", plugin];
+        plugin_refs.extend(full[..253].iter().map(String::as_str));
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
+        assert_eq!(255, load_order.active_plugin_names().len());
+
+        plugin_refs.push(full[253].as_str());
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
+        assert_eq!(255, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_lower_the_full_plugin_limit_if_light_and_plugins_are_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let full = prepare_bulk_full_plugins(&mut load_order);
+
+        let medium_plugin = "Blank.medium.esm";
+        let light_plugin = "Blank.small.esm";
+        load_and_insert(&mut load_order, medium_plugin);
+        load_and_insert(&mut load_order, light_plugin);
+
+        let mut plugin_refs = vec!["Starfield.esm", medium_plugin, light_plugin];
+        plugin_refs.extend(full[..252].iter().map(String::as_str));
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
+        assert_eq!(255, load_order.active_plugin_names().len());
+
+        plugin_refs.push(full[252].as_str());
+
+        assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
+        assert_eq!(255, load_order.active_plugin_names().len());
+    }
+
+    #[test]
     fn set_active_plugins_should_count_full_medium_and_small_plugins_separately() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
@@ -822,12 +1002,12 @@ mod tests {
         let light = prepare_bulk_light_plugins(&mut load_order);
 
         let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(full[..254].iter().map(String::as_str));
+        plugin_refs.extend(full[..252].iter().map(String::as_str));
         plugin_refs.extend(medium[..256].iter().map(String::as_str));
         plugin_refs.extend(light[..4096].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
-        assert_eq!(4607, load_order.active_plugin_names().len());
+        assert_eq!(4605, load_order.active_plugin_names().len());
     }
 
     #[test]
