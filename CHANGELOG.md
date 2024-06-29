@@ -3,6 +3,24 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [17.0.1] - 2024-06-29
+
+### Changed
+
+- The limit for the number of active full plugins that is enforced when
+  activating a plugin or setting the load order's active plugins is now reduced
+  if small or medium plugins are also active, to reflect that small plugins use
+  the `FE` index and medium plugins use the `FD` index.
+
+### Fixed
+
+- `Starfield.esm` was not allowed to load in any position other than at the
+  start of the load order.
+- Hoisting plugins when loading the current load order could move them too late
+  in the load order if more than one plugin needed hoisting.
+- Load order validation when setting a plugin's index or when setting the load
+  order did not check for master files hoisting other master files.
+
 ## [17.0.0] - 2024-06-28
 
 ### Added
