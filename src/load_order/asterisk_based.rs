@@ -20,9 +20,9 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use unicase::{eq, UniCase};
+use unicase::UniCase;
 
-use super::mutable::{generic_insert_position, hoist_masters, read_plugin_names, MutableLoadOrder};
+use super::mutable::{hoist_masters, read_plugin_names, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use super::strict_encode;
 use super::timestamp_based::save_load_order_using_timestamps;
@@ -79,27 +79,6 @@ impl ReadableLoadOrderBase for AsteriskBasedLoadOrder {
 impl MutableLoadOrder for AsteriskBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
-    }
-
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        if self.game_settings().loads_early(plugin.name()) {
-            if self.plugins().is_empty() {
-                return None;
-            }
-
-            let mut loaded_plugin_count = 0;
-            for plugin_name in self.game_settings().early_loading_plugins() {
-                if eq(plugin.name(), plugin_name) {
-                    return Some(loaded_plugin_count);
-                }
-
-                if self.index_of(plugin_name).is_some() {
-                    loaded_plugin_count += 1;
-                }
-            }
-        }
-
-        generic_insert_position(self.plugins(), plugin)
     }
 }
 
@@ -165,53 +144,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        let game_master_file = self.game_settings().master_file();
-
-        let is_game_master_first = plugin_names
-            .first()
-            .map(|name| eq(*name, game_master_file))
-            .unwrap_or(false);
-        if !is_game_master_first {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-
-        // Check that all early loading plugins that are present load in
-        // their hardcoded order.
-        let mut missing_plugins_count = 0;
-        for (i, plugin_name) in self
-            .game_settings()
-            .early_loading_plugins()
-            .iter()
-            .enumerate()
-        {
-            match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
-                Some(pos) => {
-                    let expected_pos = i - missing_plugins_count;
-                    if pos != expected_pos {
-                        return Err(Error::InvalidEarlyLoadingPluginPosition {
-                            name: plugin_name.clone(),
-                            pos,
-                            expected_pos,
-                        });
-                    }
-                }
-                None => missing_plugins_count += 1,
-            }
-        }
-
         self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        let game_master_file = self.game_settings().master_file();
-
-        if position != 0 && !self.plugins().is_empty() && eq(plugin_name, game_master_file) {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-        if position == 0 && !eq(plugin_name, game_master_file) {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 
@@ -1189,28 +1125,6 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_error_if_given_an_empty_list() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        let filenames = vec![];
-        assert!(load_order.set_load_order(&filenames).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
-    fn set_load_order_should_error_if_the_first_element_given_is_not_the_game_master() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        let filenames = vec!["Blank.esp"];
-        assert!(load_order.set_load_order(&filenames).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
     fn set_load_order_should_error_if_an_early_loading_plugin_loads_after_another_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -1343,23 +1257,118 @@ mod tests {
     }
 
     #[test]
-    fn set_plugin_index_should_error_if_setting_the_game_master_index_to_non_zero_in_bounds() {
+    fn set_plugin_index_should_error_if_moving_a_plugin_before_an_early_loader() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
-        assert!(load_order.set_plugin_index("Skyrim.esm", 1).is_err());
+
+        match load_order.set_plugin_index("Blank.esp", 0).unwrap_err() {
+            Error::InvalidEarlyLoadingPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!("Skyrim.esm", name);
+                assert_eq!(1, pos);
+                assert_eq!(0, expected_pos);
+            }
+            e => panic!(
+                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
+                e
+            ),
+        };
+
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
 
     #[test]
-    fn set_plugin_index_should_error_if_setting_a_zero_index_for_a_non_game_master_plugin() {
+    fn set_plugin_index_should_error_if_moving_an_early_loader_to_a_different_position() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
-        assert!(load_order.set_plugin_index("Blank.esm", 0).is_err());
+
+        match load_order.set_plugin_index("Skyrim.esm", 1).unwrap_err() {
+            Error::InvalidEarlyLoadingPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!("Skyrim.esm", name);
+                assert_eq!(1, pos);
+                assert_eq!(0, expected_pos);
+            }
+            e => panic!(
+                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
+                e
+            ),
+        };
+
         assert_eq!(existing_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn set_plugin_index_should_error_if_inserting_an_early_loader_to_the_wrong_position() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        load_order.set_plugin_index("Blank.esm", 1).unwrap();
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+
+        let existing_filenames = to_owned(load_order.plugin_names());
+
+        match load_order
+            .set_plugin_index("Dragonborn.esm", 2)
+            .unwrap_err()
+        {
+            Error::InvalidEarlyLoadingPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!("Dragonborn.esm", name);
+                assert_eq!(2, pos);
+                assert_eq!(1, expected_pos);
+            }
+            e => panic!(
+                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
+                e
+            ),
+        };
+
+        assert_eq!(existing_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn set_plugin_index_should_succeed_if_setting_an_early_loader_to_its_current_position() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        assert!(load_order.set_plugin_index("Skyrim.esm", 0).is_ok());
+        assert_eq!(
+            vec!["Skyrim.esm", "Blank.esp", "Blank - Different.esp"],
+            load_order.plugin_names()
+        );
+    }
+
+    #[test]
+    fn set_plugin_index_should_succeed_if_inserting_a_new_early_loader() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+
+        assert!(load_order.set_plugin_index("Dragonborn.esm", 1).is_ok());
+        assert_eq!(
+            vec![
+                "Skyrim.esm",
+                "Dragonborn.esm",
+                "Blank.esp",
+                "Blank - Different.esp"
+            ],
+            load_order.plugin_names()
+        );
     }
 
     #[test]

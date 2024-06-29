@@ -24,9 +24,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use rayon::prelude::*;
 use regex::Regex;
 
-use super::mutable::{
-    generic_insert_position, hoist_masters, load_active_plugins, MutableLoadOrder,
-};
+use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use super::strict_encode;
 use super::writable::{
@@ -101,10 +99,6 @@ impl ReadableLoadOrderBase for TimestampBasedLoadOrder {
 impl MutableLoadOrder for TimestampBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
-    }
-
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        generic_insert_position(self.plugins(), plugin)
     }
 }
 

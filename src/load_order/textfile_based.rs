@@ -24,8 +24,7 @@ use std::path::{Path, PathBuf};
 use unicase::{eq, UniCase};
 
 use super::mutable::{
-    generic_insert_position, hoist_masters, load_active_plugins, plugin_line_mapper,
-    read_plugin_names, MutableLoadOrder,
+    hoist_masters, load_active_plugins, plugin_line_mapper, read_plugin_names, MutableLoadOrder,
 };
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use super::strict_encode;
@@ -110,20 +109,6 @@ impl MutableLoadOrder for TextfileBasedLoadOrder {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
         &mut self.plugins
     }
-
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-        let is_game_master = eq(plugin.name(), self.game_settings().master_file());
-
-        if is_game_master {
-            if self.plugins().is_empty() {
-                None
-            } else {
-                Some(0)
-            }
-        } else {
-            generic_insert_position(self.plugins(), plugin)
-        }
-    }
 }
 
 impl WritableLoadOrder for TextfileBasedLoadOrder {
@@ -174,24 +159,10 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 
     fn set_load_order(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        let game_master_file = self.game_settings().master_file();
-        if plugin_names.is_empty() || !eq(plugin_names[0], game_master_file) {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-
         self.replace_plugins(plugin_names)
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        let game_master_file = self.game_settings().master_file();
-
-        if position != 0 && !self.plugins().is_empty() && eq(plugin_name, game_master_file) {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-        if position == 0 && !eq(plugin_name, game_master_file) {
-            return Err(Error::GameMasterMustLoadFirst(game_master_file.to_string()));
-        }
-
         self.move_or_insert_plugin_with_index(plugin_name, position)
     }
 
@@ -811,23 +782,12 @@ mod tests {
     }
 
     #[test]
-    fn set_load_order_should_error_if_given_an_empty_list() {
-        let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
-
-        let existing_filenames = to_owned(load_order.plugin_names());
-        let filenames = vec![];
-        assert!(load_order.set_load_order(&filenames).is_err());
-        assert_eq!(existing_filenames, load_order.plugin_names());
-    }
-
-    #[test]
     fn set_load_order_should_error_if_the_first_element_given_is_not_the_game_master() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
-        let filenames = vec!["Blank.esp"];
+        let filenames = vec!["Blank.esp", "Skyrim.esm"];
         assert!(load_order.set_load_order(&filenames).is_err());
         assert_eq!(existing_filenames, load_order.plugin_names());
     }

@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 
 use encoding_rs::WINDOWS_1252;
 use rayon::prelude::*;
-use unicase::UniCase;
+use unicase::{eq, UniCase};
 
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
@@ -36,7 +36,24 @@ use crate::GameId;
 pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
-    fn insert_position(&self, plugin: &Plugin) -> Option<usize>;
+    fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
+        if self.plugins().is_empty() {
+            return None;
+        }
+
+        let mut loaded_plugin_count = 0;
+        for plugin_name in self.game_settings().early_loading_plugins() {
+            if eq(plugin.name(), plugin_name) {
+                return Some(loaded_plugin_count);
+            }
+
+            if self.index_of(plugin_name).is_some() {
+                loaded_plugin_count += 1;
+            }
+        }
+
+        generic_insert_position(self.plugins(), plugin)
+    }
 
     fn find_plugins(&self) -> Vec<String> {
         // A game might store some plugins outside of its main plugins directory
@@ -77,6 +94,12 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         plugin_name: &str,
         position: usize,
     ) -> Result<usize, Error> {
+        self.validate_new_plugin_index(
+            plugin_name,
+            position,
+            self.game_settings().early_loading_plugins(),
+        )?;
+
         if let Some(x) = self.index_of(plugin_name) {
             if x == position {
                 return Ok(position);
@@ -101,6 +124,11 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
+        validate_early_loader_positions(
+            plugin_names,
+            self.game_settings().early_loading_plugins(),
+        )?;
+
         let mut unique_plugin_names = HashSet::new();
 
         let non_unique_plugin = plugin_names
@@ -142,6 +170,46 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
         for plugin_name in plugin_names {
             activate_unvalidated(self, &plugin_name)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_new_plugin_index(
+        &self,
+        plugin_name: &str,
+        position: usize,
+        early_loading_plugins: &[String],
+    ) -> Result<(), Error> {
+        let mut next_index = 0;
+        for early_loader in early_loading_plugins {
+            let names_match = eq(plugin_name, early_loader);
+
+            let expected_index = match self.index_of(early_loader) {
+                Some(i) => {
+                    next_index = i + 1;
+
+                    if !names_match && position == i {
+                        // We're trying to insert a plugin at this position but we don'
+                        return Err(Error::InvalidEarlyLoadingPluginPosition {
+                            name: early_loader.to_string(),
+                            pos: i + 1,
+                            expected_pos: i,
+                        });
+                    }
+
+                    i
+                }
+                None => next_index,
+            };
+
+            if names_match && position != expected_index {
+                return Err(Error::InvalidEarlyLoadingPluginPosition {
+                    name: plugin_name.to_string(),
+                    pos: position,
+                    expected_pos: expected_index,
+                });
+            }
         }
 
         Ok(())
@@ -235,7 +303,33 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
+pub fn validate_early_loader_positions(
+    plugin_names: &[&str],
+    early_loading_plugins: &[String],
+) -> Result<(), Error> {
+    // Check that all early loading plugins that are present load in
+    // their hardcoded order.
+    let mut missing_plugins_count = 0;
+    for (i, plugin_name) in early_loading_plugins.iter().enumerate() {
+        match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
+            Some(pos) => {
+                let expected_pos = i - missing_plugins_count;
+                if pos != expected_pos {
+                    return Err(Error::InvalidEarlyLoadingPluginPosition {
+                        name: plugin_name.clone(),
+                        pos,
+                        expected_pos,
+                    });
+                }
+            }
+            None => missing_plugins_count += 1,
+        }
+    }
+
+    Ok(())
+}
+
+fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
     if plugin.is_master_file() {
         find_first_non_master_position(plugins)
     } else {
@@ -590,10 +684,6 @@ mod tests {
     impl MutableLoadOrder for TestLoadOrder {
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
-        }
-
-        fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-            generic_insert_position(self.plugins(), plugin)
         }
     }
 

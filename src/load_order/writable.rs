@@ -279,7 +279,7 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::game_settings::GameSettings;
-    use crate::load_order::mutable::{generic_insert_position, MutableLoadOrder};
+    use crate::load_order::mutable::MutableLoadOrder;
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
     use crate::load_order::tests::{load_and_insert, mock_game_files, set_master_flag};
     use crate::tests::copy_to_test_dir;
@@ -302,10 +302,6 @@ mod tests {
     impl MutableLoadOrder for TestLoadOrder {
         fn plugins_mut(&mut self) -> &mut Vec<Plugin> {
             &mut self.plugins
-        }
-
-        fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
-            generic_insert_position(self.plugins(), plugin)
         }
     }
 
