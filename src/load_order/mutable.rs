@@ -416,6 +416,20 @@ fn validate_master_file_index(
     let masters = plugin.masters()?;
     let master_names: HashSet<_> = masters.iter().map(|m| UniCase::new(m.as_str())).collect();
 
+    // Check that none of the preceding plugins have this plugin as a master.
+    for preceding_plugin in preceding_plugins {
+        let preceding_masters = preceding_plugin.masters()?;
+        if preceding_masters
+            .iter()
+            .any(|m| eq(m.as_str(), plugin.name()))
+        {
+            return Err(Error::UnrepresentedHoist {
+                plugin: plugin.name().to_string(),
+                master: preceding_plugin.name().to_string(),
+            });
+        }
+    }
+
     // Check that all of the plugins that load between this index and
     // the previous plugin are masters of this plugin.
     if let Some(n) = preceding_plugins
@@ -429,12 +443,11 @@ fn validate_master_file_index(
         });
     }
 
-    // Check that none of the non-masters that load after index are
+    // Check that none of the plugins that load after index are
     // masters of this plugin.
     if let Some(p) = plugins
         .iter()
         .skip(index)
-        .filter(|p| !p.is_master_file())
         .find(|p| master_names.contains(&UniCase::new(p.name())))
     {
         Err(Error::UnrepresentedHoist {
@@ -551,7 +564,7 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
 
 fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
     let first_non_master_pos = match find_first_non_master_position(plugins) {
-        None => return Ok(()),
+        None => plugins.len(),
         Some(x) => x,
     };
 
@@ -589,22 +602,24 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
         }
     }
 
-    // Now check in reverse that no master file depends on a non-master that
+    // Now check in reverse that no master file depends on a plugin that
     // loads after it.
     plugin_names.clear();
     for plugin in plugins.iter().rev() {
-        if !plugin.is_master_file() {
-            plugin_names.insert(UniCase::new(plugin.name().to_string()));
-        } else if let Some(m) = plugin
-            .masters()?
-            .iter()
-            .find(|m| plugin_names.contains(&UniCase::new(m.to_string())))
-        {
-            return Err(Error::UnrepresentedHoist {
-                plugin: m.clone(),
-                master: plugin.name().to_string(),
-            });
+        if plugin.is_master_file() {
+            if let Some(m) = plugin
+                .masters()?
+                .iter()
+                .find(|m| plugin_names.contains(&UniCase::new(m.to_string())))
+            {
+                return Err(Error::UnrepresentedHoist {
+                    plugin: m.clone(),
+                    master: plugin.name().to_string(),
+                });
+            }
         }
+
+        plugin_names.insert(UniCase::new(plugin.name().to_string()));
     }
 
     Ok(())
@@ -797,6 +812,46 @@ mod tests {
         )
         .unwrap();
         assert!(load_order.validate_index(&plugin, 1).is_err());
+    }
+
+    #[test]
+    fn validate_index_should_error_for_a_master_plugin_that_has_a_later_master_as_a_master() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_hoisted_load_order(&tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Master Dependent.esm",
+            "Blank - Master Dependent.esm",
+            load_order.game_settings(),
+        );
+        copy_to_test_dir("Blank.esm", "Blank.esm", load_order.game_settings());
+
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let plugin =
+            Plugin::new("Blank - Master Dependent.esm", load_order.game_settings()).unwrap();
+        assert!(load_order.validate_index(&plugin, 1).is_err());
+    }
+
+    #[test]
+    fn validate_index_should_error_for_a_master_plugin_that_is_a_master_of_an_earlier_master() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_hoisted_load_order(&tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Master Dependent.esm",
+            "Blank - Master Dependent.esm",
+            load_order.game_settings(),
+        );
+        copy_to_test_dir("Blank.esm", "Blank.esm", load_order.game_settings());
+
+        let plugin =
+            Plugin::new("Blank - Master Dependent.esm", load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
+        assert!(load_order.validate_index(&plugin, 2).is_err());
     }
 
     #[test]
@@ -1037,6 +1092,26 @@ mod tests {
             Plugin::new("Blank.esm", &settings).unwrap(),
             Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
             Plugin::new("Blank.esp", &settings).unwrap(),
+        ];
+
+        assert!(validate_load_order(&plugins).is_err());
+    }
+
+    #[test]
+    fn validate_load_order_should_error_if_master_files_load_before_other_masters_they_have_as_masters(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(&tmp_dir.path());
+
+        copy_to_test_dir(
+            "Blank - Master Dependent.esm",
+            "Blank - Master Dependent.esm",
+            &settings,
+        );
+
+        let plugins = vec![
+            Plugin::new("Blank - Master Dependent.esm", &settings).unwrap(),
+            Plugin::new("Blank.esm", &settings).unwrap(),
         ];
 
         assert!(validate_load_order(&plugins).is_err());
