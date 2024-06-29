@@ -14,7 +14,7 @@ changelog does not include libloadorder-ffi changes.
   directory as well as the game install path's `Data` directory, but only for
   plugins that are present in both directories. This matches the game's
   behaviour.
-- Support for medium plugin (introduced by Starfield), which are now counted
+- Support for medium plugins (introduced by Starfield), which are now counted
   separately to full plugins when checking active plugin limits, as they have
   their own limit of 256 active medium plugins.
 
