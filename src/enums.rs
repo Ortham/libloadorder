@@ -27,6 +27,7 @@ use std::string::FromUtf8Error;
 use std::time;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[non_exhaustive]
 pub enum LoadOrderMethod {
     Timestamp,
     Textfile,
@@ -35,6 +36,7 @@ pub enum LoadOrderMethod {
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[non_exhaustive]
 pub enum GameId {
     Morrowind = 1,
     Oblivion,
@@ -74,6 +76,7 @@ impl GameId {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     InvalidPath(PathBuf),
     IoError(PathBuf, io::Error),

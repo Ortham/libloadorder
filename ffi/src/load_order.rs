@@ -51,6 +51,12 @@ pub unsafe extern "C" fn lo_get_load_order_method(
             LoadOrderMethod::Timestamp => LIBLO_METHOD_TIMESTAMP,
             LoadOrderMethod::Textfile => LIBLO_METHOD_TEXTFILE,
             LoadOrderMethod::Asterisk => LIBLO_METHOD_ASTERISK,
+            _ => {
+                return error(
+                    LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
+                    "Unrecognised load order method",
+                )
+            }
         };
 
         LIBLO_OK
