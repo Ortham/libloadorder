@@ -75,6 +75,7 @@ fn map_error(err: &Error) -> c_uint {
         IniParsingError { .. } => LIBLO_ERROR_FILE_PARSE_FAIL,
         VdfParsingError(_, _) => LIBLO_ERROR_FILE_PARSE_FAIL,
         SystemError(_, _) => LIBLO_ERROR_SYSTEM_ERROR,
+        _ => LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
     }
 }
 
