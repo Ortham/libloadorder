@@ -92,19 +92,20 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
             // without first moving the non-master file later in the load order, unless the next
             // master file also depends on that same non-master file. The non-master file also
             // doesn't need to be moved if this is the last master file in the load order.
-            if load_order.plugins()[index].is_master_file() {
-                let next_master_index = &load_order
+            let plugin = &load_order.plugins()[index];
+            if plugin.is_master_file() {
+                let next_master = &load_order
                     .plugins()
                     .iter()
                     .skip(index + 1)
-                    .position(|p| p.is_master_file());
+                    .find(|p| p.is_master_file());
 
-                if let Some(next_master_index) = next_master_index {
-                    let next_master_masters = load_order.plugins()[*next_master_index].masters()?;
+                if let Some(next_master) = next_master {
+                    let next_master_masters = next_master.masters()?;
                     let next_master_master_names: HashSet<_> =
                         next_master_masters.iter().map(UniCase::new).collect();
 
-                    let mut masters = load_order.plugins()[index].masters()?;
+                    let mut masters = plugin.masters()?;
 
                     // Remove any masters that are also masters of the next master plugin.
                     masters.retain(|m| !next_master_master_names.contains(&UniCase::new(m)));
@@ -112,8 +113,10 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                     // Finally, check if any remaining masters are non-master plugins.
                     if let Some(n) = masters.iter().find(|n| {
                         load_order
-                            .index_of(n)
-                            .map(|i| !load_order.plugins()[i].is_master_file())
+                            .plugins()
+                            .iter()
+                            .find(|p| p.name_matches(n))
+                            .map(|p| !p.is_master_file())
                             // If the master isn't installed, assume it's a master file and so
                             // doesn't prevent removal of the target plugin.
                             .unwrap_or(false)
