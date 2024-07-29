@@ -70,6 +70,8 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn validate_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
+        self.validate_early_loading_plugin_indexes(plugin.name(), index)?;
+
         if plugin.is_master_file() {
             validate_master_file_index(self.plugins(), plugin, index)
         } else {
@@ -90,12 +92,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn set_plugin_index(&mut self, plugin_name: &str, position: usize) -> Result<usize, Error> {
-        self.validate_new_plugin_index(
-            plugin_name,
-            position,
-            self.game_settings().early_loading_plugins(),
-        )?;
-
         if let Some(x) = self.index_of(plugin_name) {
             if x == position {
                 return Ok(position);
@@ -120,11 +116,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn replace_plugins(&mut self, plugin_names: &[&str]) -> Result<(), Error> {
-        validate_early_loader_positions(
-            plugin_names,
-            self.game_settings().early_loading_plugins(),
-        )?;
-
         let mut unique_plugin_names = HashSet::new();
 
         let non_unique_plugin = plugin_names
@@ -137,7 +128,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
         let mut plugins = map_to_plugins(self, plugin_names)?;
 
-        validate_load_order(&plugins)?;
+        validate_load_order(&plugins, self.game_settings().early_loading_plugins())?;
 
         mem::swap(&mut plugins, self.plugins_mut());
 
@@ -171,14 +162,15 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         Ok(())
     }
 
-    fn validate_new_plugin_index(
+    /// Check that the given plugin and index won't cause any early-loading
+    /// plugins to load in the wrong positions.
+    fn validate_early_loading_plugin_indexes(
         &self,
         plugin_name: &str,
         position: usize,
-        early_loading_plugins: &[String],
     ) -> Result<(), Error> {
         let mut next_index = 0;
-        for early_loader in early_loading_plugins {
+        for early_loader in self.game_settings().early_loading_plugins() {
             let names_match = eq(plugin_name, early_loader);
 
             let expected_index = match self.index_of(early_loader) {
@@ -186,7 +178,6 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
                     next_index = i + 1;
 
                     if !names_match && position == i {
-                        // We're trying to insert a plugin at this position but we don'
                         return Err(Error::InvalidEarlyLoadingPluginPosition {
                             name: early_loader.to_string(),
                             pos: i + 1,
@@ -299,15 +290,15 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn validate_early_loader_positions(
-    plugin_names: &[&str],
+fn validate_early_loader_positions(
+    plugins: &[Plugin],
     early_loading_plugins: &[String],
 ) -> Result<(), Error> {
     // Check that all early loading plugins that are present load in
     // their hardcoded order.
     let mut missing_plugins_count = 0;
     for (i, plugin_name) in early_loading_plugins.iter().enumerate() {
-        match plugin_names.iter().position(|n| eq(*n, plugin_name)) {
+        match plugins.iter().position(|p| eq(p.name(), plugin_name)) {
             Some(pos) => {
                 let expected_pos = i - missing_plugins_count;
                 if pos != expected_pos {
@@ -404,14 +395,6 @@ fn validate_master_file_index(
         plugins
     };
 
-    let previous_master_pos = preceding_plugins
-        .iter()
-        .rposition(|p| p.is_master_file())
-        .unwrap_or(0);
-
-    let masters = plugin.masters()?;
-    let master_names: HashSet<_> = masters.iter().map(|m| UniCase::new(m.as_str())).collect();
-
     // Check that none of the preceding plugins have this plugin as a master.
     for preceding_plugin in preceding_plugins {
         let preceding_masters = preceding_plugin.masters()?;
@@ -425,6 +408,14 @@ fn validate_master_file_index(
             });
         }
     }
+
+    let previous_master_pos = preceding_plugins
+        .iter()
+        .rposition(|p| p.is_master_file())
+        .unwrap_or(0);
+
+    let masters = plugin.masters()?;
+    let master_names: HashSet<_> = masters.iter().map(|m| UniCase::new(m.as_str())).collect();
 
     // Check that all of the plugins that load between this index and
     // the previous plugin are masters of this plugin.
@@ -558,7 +549,17 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     }
 }
 
-fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
+fn validate_load_order(plugins: &[Plugin], early_loading_plugins: &[String]) -> Result<(), Error> {
+    validate_early_loader_positions(plugins, early_loading_plugins)?;
+
+    validate_no_unhoisted_non_masters_before_masters(plugins)?;
+
+    validate_plugins_load_before_their_masters(plugins)?;
+
+    Ok(())
+}
+
+fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Result<(), Error> {
     let first_non_master_pos = match find_first_non_master_position(plugins) {
         None => plugins.len(),
         Some(x) => x,
@@ -598,9 +599,12 @@ fn validate_load_order(plugins: &[Plugin]) -> Result<(), Error> {
         }
     }
 
-    // Now check in reverse that no master file depends on a plugin that
-    // loads after it.
-    plugin_names.clear();
+    Ok(())
+}
+
+fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), Error> {
+    let mut plugin_names: HashSet<_> = HashSet::new();
+
     for plugin in plugins.iter().rev() {
         if plugin.is_master_file() {
             if let Some(m) = plugin
@@ -1641,7 +1645,7 @@ mod tests {
             Plugin::new("Blank.esm", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_ok());
+        assert!(validate_load_order(&plugins, &[]).is_ok());
     }
 
     #[test]
@@ -1654,7 +1658,7 @@ mod tests {
             Plugin::new("Blank - Different.esp", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_ok());
+        assert!(validate_load_order(&plugins, &[]).is_ok());
     }
 
     #[test]
@@ -1667,7 +1671,7 @@ mod tests {
             Plugin::new("Blank.esp", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_ok());
+        assert!(validate_load_order(&plugins, &[]).is_ok());
     }
 
     #[test]
@@ -1687,7 +1691,7 @@ mod tests {
             Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_ok());
+        assert!(validate_load_order(&plugins, &[]).is_ok());
     }
 
     #[test]
@@ -1707,7 +1711,7 @@ mod tests {
             Plugin::new("Blank - Plugin Dependent.esm", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_err());
+        assert!(validate_load_order(&plugins, &[]).is_err());
     }
 
     #[test]
@@ -1728,7 +1732,7 @@ mod tests {
             Plugin::new("Blank.esp", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_err());
+        assert!(validate_load_order(&plugins, &[]).is_err());
     }
 
     #[test]
@@ -1748,7 +1752,7 @@ mod tests {
             Plugin::new("Blank.esm", &settings).unwrap(),
         ];
 
-        assert!(validate_load_order(&plugins).is_err());
+        assert!(validate_load_order(&plugins, &[]).is_err());
     }
 
     #[test]
