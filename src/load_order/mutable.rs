@@ -474,7 +474,26 @@ fn validate_blueprint_plugin_index(
         }
     }
 
-    Ok(())
+    let following_plugins = if index < plugins.len() {
+        &plugins[index..]
+    } else {
+        &[]
+    };
+
+    // Check that all of the following plugins are blueprint plugins.
+    let last_non_blueprint_pos = following_plugins
+        .iter()
+        .rposition(|p| !p.is_blueprint_master())
+        .map(|i| index + i);
+
+    match last_non_blueprint_pos {
+        Some(i) => Err(Error::InvalidBlueprintPluginPosition {
+            name: plugin.name().to_string(),
+            pos: index,
+            expected_pos: i + 1,
+        }),
+        _ => Ok(()),
+    }
 }
 
 fn validate_master_file_index(
@@ -647,6 +666,8 @@ fn validate_load_order(plugins: &[Plugin], early_loading_plugins: &[String]) -> 
 
     validate_no_unhoisted_non_masters_before_masters(plugins)?;
 
+    validate_no_non_blueprint_plugins_after_blueprint_plugins(plugins)?;
+
     validate_plugins_load_before_their_masters(plugins)?;
 
     Ok(())
@@ -692,6 +713,31 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
                         non_master: n.to_string(),
                     });
                 }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_no_non_blueprint_plugins_after_blueprint_plugins(
+    plugins: &[Plugin],
+) -> Result<(), Error> {
+    let first_blueprint_plugin = plugins
+        .iter()
+        .enumerate()
+        .find(|(_, p)| p.is_blueprint_master());
+
+    if let Some((first_blueprint_pos, first_blueprint_plugin)) = first_blueprint_plugin {
+        let last_non_blueprint_pos = plugins.iter().rposition(|p| !p.is_blueprint_master());
+
+        if let Some(last_non_blueprint_pos) = last_non_blueprint_pos {
+            if last_non_blueprint_pos > first_blueprint_pos {
+                return Err(Error::InvalidBlueprintPluginPosition {
+                    name: first_blueprint_plugin.name().to_string(),
+                    pos: first_blueprint_pos,
+                    expected_pos: last_non_blueprint_pos,
+                });
             }
         }
     }
@@ -1367,6 +1413,34 @@ mod tests {
 
         let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
         assert!(load_order.validate_index(&plugin, 2).is_ok());
+    }
+
+    #[test]
+    fn validate_index_should_fail_for_a_blueprint_plugin_index_if_any_non_blueprint_plugins_follow_it(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+
+        let index = 1;
+        match load_order.validate_index(&plugin, index).unwrap_err() {
+            Error::InvalidBlueprintPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!(plugin_name, name);
+                assert_eq!(index, pos);
+                assert_eq!(2, expected_pos);
+            }
+            e => panic!("Unexpected error type: {:?}", e),
+        }
     }
 
     #[test]
@@ -2354,6 +2428,36 @@ mod tests {
         ];
 
         assert!(validate_load_order(&plugins, &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_load_order_should_fail_if_a_blueprint_plugin_loads_before_a_non_blueprint_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+
+        let plugins_dir = settings.plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugins = vec![
+            Plugin::new("Starfield.esm", &settings).unwrap(),
+            Plugin::new(plugin_name, &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+        ];
+
+        match validate_load_order(&plugins, &[]).unwrap_err() {
+            Error::InvalidBlueprintPluginPosition {
+                name,
+                pos,
+                expected_pos,
+            } => {
+                assert_eq!(plugin_name, name);
+                assert_eq!(1, pos);
+                assert_eq!(2, expected_pos);
+            }
+            e => panic!("Unexpected error type: {:?}", e),
+        }
     }
 
     #[test]
