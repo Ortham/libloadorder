@@ -114,6 +114,11 @@ pub enum Error {
     },
     VdfParsingError(PathBuf, String),
     SystemError(i32, OsString),
+    InvalidBlueprintPluginPosition {
+        name: String,
+        pos: usize,
+        expected_pos: usize,
+    },
 }
 
 #[cfg(windows)]
@@ -167,6 +172,8 @@ impl fmt::Display for Error {
                 write!(f, "Failed to parse VDF file at {path:?}: {message}"),
             Error::SystemError(code, message) =>
                 write!(f, "Error returned by the operating system, code {code}: {message:?}"),
+            Error::InvalidBlueprintPluginPosition{ name, pos, expected_pos } =>
+                write!(f, "Attempted to load the blueprint plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
         }
     }
 }
