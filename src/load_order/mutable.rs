@@ -18,7 +18,7 @@
  */
 
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::read_dir;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -41,14 +41,18 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             return None;
         }
 
-        let mut loaded_plugin_count = 0;
-        for plugin_name in self.game_settings().early_loading_plugins() {
-            if eq(plugin.name(), plugin_name) {
-                return Some(loaded_plugin_count);
-            }
+        // A blueprint plugin may be listed as an early loader (e.g. in a CCC
+        // file) but it still loads as a normal blueprint plugin.
+        if !plugin.is_blueprint_master() {
+            let mut loaded_plugin_count = 0;
+            for plugin_name in self.game_settings().early_loading_plugins() {
+                if eq(plugin.name(), plugin_name) {
+                    return Some(loaded_plugin_count);
+                }
 
-            if self.index_of(plugin_name).is_some() {
-                loaded_plugin_count += 1;
+                if self.index_of(plugin_name).is_some() {
+                    loaded_plugin_count += 1;
+                }
             }
         }
 
@@ -70,12 +74,18 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 
     fn validate_index(&self, plugin: &Plugin, index: usize) -> Result<(), Error> {
-        self.validate_early_loading_plugin_indexes(plugin.name(), index)?;
-
-        if plugin.is_master_file() {
-            validate_master_file_index(self.plugins(), plugin, index)
+        if plugin.is_blueprint_master() {
+            // Blueprint plugins load after all non-blueprint plugins of the
+            // same scale, even non-masters.
+            validate_blueprint_plugin_index(self.plugins(), plugin, index)
         } else {
-            validate_non_master_file_index(self.plugins(), plugin, index)
+            self.validate_early_loading_plugin_indexes(plugin.name(), index)?;
+
+            if plugin.is_master_file() {
+                validate_master_file_index(self.plugins(), plugin, index)
+            } else {
+                validate_non_master_file_index(self.plugins(), plugin, index)
+            }
         }
     }
 
@@ -173,9 +183,20 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         for early_loader in self.game_settings().early_loading_plugins() {
             let names_match = eq(plugin_name, early_loader);
 
-            let expected_index = match self.index_of(early_loader) {
-                Some(i) => {
-                    next_index = i + 1;
+            let early_loader_tuple = self
+                .plugins()
+                .iter()
+                .enumerate()
+                .find(|(_, p)| p.name_matches(early_loader));
+
+            let expected_index = match early_loader_tuple {
+                Some((i, early_loading_plugin)) => {
+                    // If the early loader is a blueprint plugin then it doesn't
+                    // actually load early and so the index of the next early
+                    // loader is unchanged.
+                    if !early_loading_plugin.is_blueprint_master() {
+                        next_index = i + 1;
+                    }
 
                     if !names_match && position == i {
                         return Err(Error::InvalidEarlyLoadingPluginPosition {
@@ -269,13 +290,16 @@ pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
 
     for (index, plugin) in plugins.iter().enumerate() {
         if !plugin.is_master_file() {
-            break;
+            continue;
         }
 
         for master in plugin.masters()? {
             let pos = plugins
                 .iter()
-                .position(|p| p.name_matches(&master))
+                .position(|p| {
+                    p.name_matches(&master)
+                        && (plugin.is_blueprint_master() || !p.is_blueprint_master())
+                })
                 .unwrap_or(0);
             if pos > index {
                 // Need to move the plugin to index, but can't do that while
@@ -317,13 +341,24 @@ fn validate_early_loader_positions(
 }
 
 fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
+    let is_master_of = |p: &Plugin| {
+        p.masters()
+            .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
+            .unwrap_or(false)
+    };
+
+    if plugin.is_blueprint_master() {
+        // Blueprint plugins load after all other plugins unless they are
+        // hoisted by another blueprint plugin.
+        return plugins
+            .iter()
+            .position(|p| p.is_blueprint_master() && is_master_of(p));
+    }
+
     // Check that there isn't a master that would hoist this plugin.
-    let hoisted_index = plugins.iter().position(|p| {
-        p.is_master_file()
-            && p.masters()
-                .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
-                .unwrap_or(false)
-    });
+    let hoisted_index = plugins
+        .iter()
+        .position(|p| p.is_master_file() && is_master_of(p));
 
     hoisted_index.or_else(|| {
         if plugin.is_master_file() {
@@ -383,6 +418,43 @@ fn to_plugin(
             || Plugin::new(plugin_name, game_settings),
             |p| Ok(p.clone()),
         )
+}
+
+fn validate_blueprint_plugin_index(
+    plugins: &[Plugin],
+    plugin: &Plugin,
+    index: usize,
+) -> Result<(), Error> {
+    // Blueprint plugins should only appear before other blueprint plugins, as
+    // they get moved after all non-blueprint plugins before conflicts are
+    // resolved and don't get hoisted by non-blueprint plugins. However, they
+    // do get hoisted by other blueprint plugins.
+    let preceding_plugins = if index < plugins.len() {
+        &plugins[..index]
+    } else {
+        plugins
+    };
+
+    // Check that none of the preceding blueprint plugins have this plugin as a
+    // master.
+    for preceding_plugin in preceding_plugins {
+        if !preceding_plugin.is_blueprint_master() {
+            continue;
+        }
+
+        let preceding_masters = preceding_plugin.masters()?;
+        if preceding_masters
+            .iter()
+            .any(|m| eq(m.as_str(), plugin.name()))
+        {
+            return Err(Error::UnrepresentedHoist {
+                plugin: plugin.name().to_string(),
+                master: preceding_plugin.name().to_string(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 fn validate_master_file_index(
@@ -566,7 +638,11 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
         Some(x) => x,
     };
 
-    let last_master_pos = match plugins.iter().rposition(|p| p.is_master_file()) {
+    // Ignore blueprint plugins because they load after non-masters.
+    let last_master_pos = match plugins
+        .iter()
+        .rposition(|p| p.is_master_file() && !p.is_blueprint_master())
+    {
         None => return Ok(()),
         Some(x) => x,
     };
@@ -604,23 +680,26 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
 }
 
 fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), Error> {
-    let mut plugin_names: HashSet<_> = HashSet::new();
+    let mut plugins_map: HashMap<UniCase<String>, &Plugin> = HashMap::new();
 
     for plugin in plugins.iter().rev() {
         if plugin.is_master_file() {
             if let Some(m) = plugin
                 .masters()?
                 .iter()
-                .find(|m| plugin_names.contains(&UniCase::new(m.to_string())))
+                .find_map(|m| plugins_map.get(&UniCase::new(m.to_string())))
             {
-                return Err(Error::UnrepresentedHoist {
-                    plugin: m.clone(),
-                    master: plugin.name().to_string(),
-                });
+                // Don't error if a non-blueprint plugin depends on a blueprint plugin.
+                if plugin.is_blueprint_master() || !m.is_blueprint_master() {
+                    return Err(Error::UnrepresentedHoist {
+                        plugin: m.name().to_string(),
+                        master: plugin.name().to_string(),
+                    });
+                }
             }
         }
 
-        plugin_names.insert(UniCase::new(plugin.name().to_string()));
+        plugins_map.insert(UniCase::new(plugin.name().to_string()), plugin);
     }
 
     Ok(())
@@ -726,7 +805,7 @@ mod tests {
             "Blank - Different.esm",
             load_order.game_settings(),
         );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        set_master_flag(game_id, &plugins_dir.join("Blank - Different.esm"), false).unwrap();
         copy_to_test_dir(
             "Blank - Different Master Dependent.esm",
             "Blank - Different Master Dependent.esm",
@@ -825,6 +904,85 @@ mod tests {
     }
 
     #[test]
+    fn insert_position_should_not_put_blueprint_plugins_before_non_blueprint_dependents() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(
+            dependent_plugin,
+            dependent_plugin,
+            &load_order.game_settings(),
+        );
+
+        let plugin = Plugin::new(dependent_plugin, &load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert!(position.is_none());
+    }
+
+    #[test]
+    fn insert_position_should_put_blueprint_plugins_before_blueprint_dependents() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(
+            dependent_plugin,
+            dependent_plugin,
+            &load_order.game_settings(),
+        );
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
+
+        let plugin = Plugin::new(dependent_plugin, &load_order.game_settings()).unwrap();
+        load_order.plugins.push(plugin);
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(2, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_not_treat_early_loading_blueprint_plugins_as_early_loading() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        std::fs::write(
+            plugins_dir.parent().unwrap().join("Starfield.ccc"),
+            plugin_name,
+        )
+        .unwrap();
+        load_order
+            .game_settings
+            .refresh_implicitly_active_plugins()
+            .unwrap();
+
+        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert!(position.is_none());
+    }
+
+    #[test]
     fn insert_position_should_return_none_if_given_a_non_master_plugin() {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
@@ -902,7 +1060,7 @@ mod tests {
         load_order.plugins.insert(1, plugin);
 
         let other_non_master = "Blank.esm";
-        set_master_flag(&plugins_dir.join(other_non_master), false).unwrap();
+        set_master_flag(GameId::Oblivion, &plugins_dir.join(other_non_master), false).unwrap();
         let plugin = Plugin::new(other_non_master, load_order.game_settings()).unwrap();
         load_order.plugins.insert(1, plugin);
 
@@ -1064,6 +1222,161 @@ mod tests {
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         assert!(load_order.validate_index(&plugin, 2).is_err());
+    }
+
+    #[test]
+    fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_last() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+        assert!(load_order.validate_index(&plugin, 2).is_ok());
+    }
+
+    #[test]
+    fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_only_followed_by_other_blueprint_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let other_plugin_name = "Blank.medium.esm";
+        set_blueprint_flag(
+            GameId::Starfield,
+            &plugins_dir.join(other_plugin_name),
+            true,
+        )
+        .unwrap();
+
+        let other_plugin = Plugin::new(other_plugin_name, load_order.game_settings()).unwrap();
+        load_order.plugins.push(other_plugin);
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+        assert!(load_order.validate_index(&plugin, 2).is_ok());
+    }
+
+    #[test]
+    fn validate_index_should_fail_for_a_blueprint_plugin_index_that_is_after_a_dependent_blueprint_plugin_index(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(
+            dependent_plugin,
+            dependent_plugin,
+            load_order.game_settings(),
+        );
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
+        let plugin = Plugin::new(dependent_plugin, load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+
+        let index = 3;
+        match load_order.validate_index(&plugin, index).unwrap_err() {
+            Error::UnrepresentedHoist { plugin, master } => {
+                assert_eq!(plugin_name, plugin);
+                assert_eq!(dependent_plugin, master);
+            }
+            e => panic!("Unexpected error type: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_after_a_dependent_non_blueprint_plugin_index(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(
+            dependent_plugin,
+            dependent_plugin,
+            load_order.game_settings(),
+        );
+        let plugin = Plugin::new(dependent_plugin, load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+
+        assert!(load_order.validate_index(&plugin, 3).is_ok());
+    }
+
+    #[test]
+    fn validate_index_should_succeed_when_an_early_loader_is_a_blueprint_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        std::fs::write(
+            plugins_dir.parent().unwrap().join("Starfield.ccc"),
+            format!("Starfield.esm\n{}", plugin_name),
+        )
+        .unwrap();
+        load_order
+            .game_settings
+            .refresh_implicitly_active_plugins()
+            .unwrap();
+
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+        load_order.plugins.push(plugin);
+
+        let plugin = Plugin::new("Blank.medium.esm", load_order.game_settings()).unwrap();
+        assert!(load_order.validate_index(&plugin, 1).is_ok());
+    }
+
+    #[test]
+    fn validate_index_should_succeed_for_an_early_loader_listed_after_a_blueprint_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let blueprint_plugin = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(blueprint_plugin), true).unwrap();
+
+        let early_loader = "Blank.medium.esm";
+
+        std::fs::write(
+            plugins_dir.parent().unwrap().join("Starfield.ccc"),
+            format!("Starfield.esm\n{}\n{}", blueprint_plugin, early_loader),
+        )
+        .unwrap();
+        load_order
+            .game_settings
+            .refresh_implicitly_active_plugins()
+            .unwrap();
+
+        let plugin = Plugin::new(blueprint_plugin, load_order.game_settings()).unwrap();
+        load_order.plugins.push(plugin);
+
+        let plugin = Plugin::new(early_loader, load_order.game_settings()).unwrap();
+
+        assert!(load_order.validate_index(&plugin, 1).is_ok());
     }
 
     #[test]
@@ -1562,6 +1875,82 @@ mod tests {
     }
 
     #[test]
+    fn hoist_masters_should_not_hoist_blueprint_plugins_that_are_masters_of_non_blueprint_plugins()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let (game_settings, _) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+
+        let blueprint_plugin = "Blank.full.esm";
+        set_blueprint_flag(
+            GameId::Starfield,
+            &game_settings.plugins_directory().join(blueprint_plugin),
+            true,
+        )
+        .unwrap();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(dependent_plugin, dependent_plugin, &game_settings);
+
+        let plugin_names = vec![
+            "Starfield.esm",
+            dependent_plugin,
+            "Blank.esp",
+            blueprint_plugin,
+        ];
+
+        let mut plugins = plugin_names
+            .iter()
+            .map(|n| Plugin::new(n, &game_settings).unwrap())
+            .collect();
+
+        assert!(hoist_masters(&mut plugins).is_ok());
+
+        let expected_plugin_names = plugin_names;
+
+        let plugin_names: Vec<_> = plugins.iter().map(Plugin::name).collect();
+        assert_eq!(expected_plugin_names, plugin_names);
+    }
+
+    #[test]
+    fn hoist_masters_should_hoist_blueprint_plugins_that_are_masters_of_blueprint_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let (game_settings, _) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = game_settings.plugins_directory();
+
+        let blueprint_plugin = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(blueprint_plugin), true).unwrap();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(dependent_plugin, dependent_plugin, &game_settings);
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
+
+        let plugin_names = vec![
+            "Starfield.esm",
+            "Blank.esp",
+            dependent_plugin,
+            blueprint_plugin,
+        ];
+
+        let mut plugins = plugin_names
+            .iter()
+            .map(|n| Plugin::new(n, &game_settings).unwrap())
+            .collect();
+
+        assert!(hoist_masters(&mut plugins).is_ok());
+
+        let expected_plugin_names = vec![
+            "Starfield.esm",
+            "Blank.esp",
+            blueprint_plugin,
+            dependent_plugin,
+        ];
+
+        let plugin_names: Vec<_> = plugins.iter().map(Plugin::name).collect();
+        assert_eq!(expected_plugin_names, plugin_names);
+    }
+
+    #[test]
     fn find_plugins_in_dirs_should_sort_files_by_modification_timestamp() {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
@@ -1785,6 +2174,81 @@ mod tests {
         ];
 
         assert!(validate_load_order(&plugins, &[]).is_err());
+    }
+
+    #[test]
+    fn validate_load_order_should_succeed_if_a_blueprint_plugin_loads_after_all_non_blueprint_plugins(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+
+        let plugins_dir = settings.plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugins = vec![
+            Plugin::new("Starfield.esm", &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+            Plugin::new(plugin_name, &settings).unwrap(),
+        ];
+
+        assert!(validate_load_order(&plugins, &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_load_order_should_succeed_if_a_blueprint_plugin_loads_after_a_non_blueprint_plugin_that_depends_on_it(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+
+        let plugins_dir = settings.plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(dependent_plugin, dependent_plugin, &settings);
+
+        let plugins = vec![
+            Plugin::new("Starfield.esm", &settings).unwrap(),
+            Plugin::new(dependent_plugin, &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+            Plugin::new(plugin_name, &settings).unwrap(),
+        ];
+
+        assert!(validate_load_order(&plugins, &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_load_order_should_fail_if_a_blueprint_plugin_loads_after_a_blueprint_plugin_that_depends_on_it(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+
+        let plugins_dir = settings.plugins_directory();
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let dependent_plugin = "Blank - Override.full.esm";
+        copy_to_test_dir(dependent_plugin, dependent_plugin, &settings);
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
+
+        let plugins = vec![
+            Plugin::new("Starfield.esm", &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+            Plugin::new(dependent_plugin, &settings).unwrap(),
+            Plugin::new(plugin_name, &settings).unwrap(),
+        ];
+
+        match validate_load_order(&plugins, &[]).unwrap_err() {
+            Error::UnrepresentedHoist { plugin, master } => {
+                assert_eq!(plugin_name, plugin);
+                assert_eq!(dependent_plugin, master);
+            }
+            e => panic!("Unexpected error type: {:?}", e),
+        }
     }
 
     #[test]

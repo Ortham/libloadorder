@@ -296,7 +296,9 @@ mod tests {
     use crate::game_settings::GameSettings;
     use crate::load_order::mutable::MutableLoadOrder;
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
-    use crate::load_order::tests::{load_and_insert, mock_game_files, set_master_flag};
+    use crate::load_order::tests::{
+        load_and_insert, mock_game_files, set_blueprint_flag, set_master_flag,
+    };
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -408,7 +410,12 @@ mod tests {
             "Blank - Different.esm",
             load_order.game_settings(),
         );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        set_master_flag(
+            GameId::Oblivion,
+            &plugins_dir.join("Blank - Different.esm"),
+            false,
+        )
+        .unwrap();
         assert!(add(&mut load_order, "Blank - Different.esm").is_ok());
 
         copy_to_test_dir(
@@ -470,7 +477,12 @@ mod tests {
             "Blank - Different.esm",
             load_order.game_settings(),
         );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        set_master_flag(
+            GameId::Oblivion,
+            &plugins_dir.join("Blank - Different.esm"),
+            false,
+        )
+        .unwrap();
         assert_eq!(1, add(&mut load_order, "Blank - Different.esm").unwrap());
     }
 
@@ -521,7 +533,12 @@ mod tests {
             "Blank - Different.esm",
             load_order.game_settings(),
         );
-        set_master_flag(&plugins_dir.join("Blank - Different.esm"), false).unwrap();
+        set_master_flag(
+            GameId::Oblivion,
+            &plugins_dir.join("Blank - Different.esm"),
+            false,
+        )
+        .unwrap();
         assert_eq!(1, add(&mut load_order, "Blank - Different.esm").unwrap());
 
         copy_to_test_dir(
@@ -543,6 +560,43 @@ mod tests {
             }
             e => panic!("Unexpected error type: {:?}", e),
         }
+    }
+
+    #[test]
+    fn remove_should_allow_removal_of_a_master_that_depends_on_a_blueprint_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = &load_order.game_settings().plugins_directory();
+
+        let plugin_to_remove = "Blank - Override.full.esm";
+        copy_to_test_dir(
+            plugin_to_remove,
+            plugin_to_remove,
+            load_order.game_settings(),
+        );
+        assert!(add(&mut load_order, plugin_to_remove).is_ok());
+
+        let blueprint_plugin = "Blank.full.esm";
+        copy_to_test_dir(
+            blueprint_plugin,
+            blueprint_plugin,
+            load_order.game_settings(),
+        );
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(blueprint_plugin), true).unwrap();
+        assert_eq!(3, add(&mut load_order, blueprint_plugin).unwrap());
+
+        let following_master_plugin = "Blank.medium.esm";
+        copy_to_test_dir(
+            following_master_plugin,
+            following_master_plugin,
+            load_order.game_settings(),
+        );
+        assert!(add(&mut load_order, following_master_plugin).is_ok());
+
+        std::fs::remove_file(&plugins_dir.join(plugin_to_remove)).unwrap();
+
+        assert!(remove(&mut load_order, plugin_to_remove).is_ok());
     }
 
     #[test]

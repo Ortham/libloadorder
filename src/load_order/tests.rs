@@ -20,7 +20,7 @@
 use std::convert::TryFrom;
 use std::fmt::Display;
 use std::fs::{create_dir_all, File, FileTimes, OpenOptions};
-use std::io::{self, Seek, Write};
+use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
@@ -163,13 +163,40 @@ pub fn to_owned(strs: Vec<&str>) -> Vec<String> {
 }
 
 /// Set the master flag to be present or not for the given plugin.
-/// Only valid for plugins for games other than Morrowind.
-pub fn set_master_flag(plugin: &Path, present: bool) -> io::Result<()> {
-    let mut file = OpenOptions::new().write(true).open(plugin)?;
-    file.seek(io::SeekFrom::Start(8))?;
+pub fn set_master_flag(game_id: GameId, plugin_path: &Path, present: bool) -> io::Result<()> {
+    set_flag(game_id, plugin_path, 0x1, present)
+}
 
-    let value = if present { 1 } else { 0 };
-    file.write(&[value])?;
+pub fn set_blueprint_flag(game_id: GameId, plugin_path: &Path, present: bool) -> io::Result<()> {
+    if game_id != GameId::Starfield {
+        return Ok(());
+    }
+
+    set_flag(game_id, plugin_path, 0x800, present)
+}
+
+fn set_flag(game_id: GameId, plugin_path: &Path, flag: u32, present: bool) -> io::Result<()> {
+    let flags_offset = match game_id {
+        GameId::Morrowind => 12,
+        _ => 8,
+    };
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(plugin_path)?;
+
+    let mut flags_bytes = [0, 0, 0, 0];
+    file.seek(io::SeekFrom::Start(flags_offset))?;
+    file.read_exact(&mut flags_bytes)?;
+
+    let flags = u32::from_le_bytes(flags_bytes);
+
+    let value = if present { flags | flag } else { flags ^ flag };
+    flags_bytes = value.to_le_bytes();
+
+    file.seek(io::SeekFrom::Start(flags_offset))?;
+    file.write(&flags_bytes)?;
 
     Ok(())
 }
