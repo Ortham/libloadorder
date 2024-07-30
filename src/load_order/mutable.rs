@@ -318,10 +318,11 @@ fn validate_early_loader_positions(
 
 fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
     // Check that there isn't a master that would hoist this plugin.
-    let hoisted_index = plugins.iter().filter(|p| p.is_master_file()).position(|p| {
-        p.masters()
-            .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
-            .unwrap_or(false)
+    let hoisted_index = plugins.iter().position(|p| {
+        p.is_master_file()
+            && p.masters()
+                .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
+                .unwrap_or(false)
     });
 
     hoisted_index.or_else(|| {
@@ -884,6 +885,37 @@ mod tests {
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(2, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_succeed_for_a_non_master_hoisted_after_another_non_master() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin = Plugin::new(
+            "Blank - Different Master Dependent.esm",
+            load_order.game_settings(),
+        )
+        .unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let other_non_master = "Blank.esm";
+        set_master_flag(&plugins_dir.join(other_non_master), false).unwrap();
+        let plugin = Plugin::new(other_non_master, load_order.game_settings()).unwrap();
+        load_order.plugins.insert(1, plugin);
+
+        let other_master = "Blank - Master Dependent.esm";
+        copy_to_test_dir(other_master, other_master, load_order.game_settings());
+        let plugin = Plugin::new(other_master, load_order.game_settings()).unwrap();
+        load_order.plugins.insert(2, plugin);
+
+        let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
+
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(3, position.unwrap());
     }
 
     #[test]
