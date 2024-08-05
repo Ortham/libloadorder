@@ -22,7 +22,7 @@ esplugin = "6.0.0"
 regex = "1.10.6"
 unicase = "2.0.0"
 rayon = "1.0.0"
-rust-ini = { version = "0.21.0", features = ["case-insensitive"] }
+rust-ini = { version = "0.21.1", features = ["case-insensitive"] }
 keyvalues-parser = "0.2.0"
 
 [target.'cfg(windows)'.dependencies]
