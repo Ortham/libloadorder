@@ -17,14 +17,11 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::convert::From;
 use std::error;
 use std::ffi::OsString;
 use std::fmt;
 use std::io;
 use std::path::PathBuf;
-use std::string::FromUtf8Error;
-use std::time;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 #[non_exhaustive]
@@ -81,8 +78,6 @@ pub enum Error {
     InvalidPath(PathBuf),
     IoError(PathBuf, io::Error),
     NoFilename(PathBuf),
-    SystemTimeError(time::SystemTimeError),
-    NotUtf8(Vec<u8>),
     DecodeError(Vec<u8>),
     EncodeError(String),
     PluginParsingError(PathBuf, Box<dyn error::Error + Send>),
@@ -97,7 +92,6 @@ pub enum Error {
         master: String,
         non_master: String,
     },
-    GameMasterMustLoadFirst(String),
     InvalidEarlyLoadingPluginPosition {
         name: String,
         pos: usize,
@@ -121,18 +115,6 @@ pub enum Error {
     SystemError(i32, OsString),
 }
 
-impl From<time::SystemTimeError> for Error {
-    fn from(error: time::SystemTimeError) -> Self {
-        Error::SystemTimeError(error)
-    }
-}
-
-impl From<FromUtf8Error> for Error {
-    fn from(error: FromUtf8Error) -> Self {
-        Error::NotUtf8(error.into_bytes())
-    }
-}
-
 #[cfg(windows)]
 impl From<windows::core::Error> for Error {
     fn from(error: windows::core::Error) -> Self {
@@ -148,8 +130,6 @@ impl fmt::Display for Error {
                 write!(f, "I/O error involving the path {path:?}: {error}"),
             Error::NoFilename(path) =>
                 write!(f, "The plugin path {path:?} has no filename part"),
-            Error::SystemTimeError(error) => error.fmt(f),
-            Error::NotUtf8(bytes) => write!(f, "Expected a UTF-8 string, got bytes {bytes:02X?}"),
             Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252, bytes are {bytes:02X?}"),
             Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
             Error::PluginParsingError(path, err) => {
@@ -164,8 +144,6 @@ impl fmt::Display for Error {
                 write!(f, "The given plugin list contains more than one instance of \"{name}\""),
             Error::NonMasterBeforeMaster{ master, non_master} =>
                 write!(f, "Attempted to load the non-master plugin \"{non_master}\" before the master plugin \"{master}\""),
-            Error::GameMasterMustLoadFirst(name) =>
-                write!(f, "The game's master file \"{name}\" must load first"),
             Error::InvalidEarlyLoadingPluginPosition{ name, pos, expected_pos } =>
                 write!(f, "Attempted to load the early-loading plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
             Error::ImplicitlyActivePlugin(name) =>
@@ -196,7 +174,6 @@ impl error::Error for Error {
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::IoError(_, ref x) => Some(x),
-            Error::SystemTimeError(ref x) => Some(x),
             Error::PluginParsingError(_, ref x) => Some(x.as_ref()),
             _ => None,
         }
@@ -267,13 +244,6 @@ mod tests {
         let string = format!("{}", Error::InvalidPath(PathBuf::from("foo")));
 
         assert_eq!("The path \"foo\" is invalid", string);
-    }
-
-    #[test]
-    fn error_display_should_print_byte_vec_as_hex_array() {
-        let string = format!("{}", Error::NotUtf8(vec![0x2f, 0x47, 0x03]));
-
-        assert_eq!("Expected a UTF-8 string, got bytes [2F, 47, 03]", string);
     }
 
     #[test]
