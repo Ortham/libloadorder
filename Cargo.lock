@@ -287,11 +287,12 @@ dependencies = [
 
 [[package]]
 name = "esplugin"
-version = "6.0.0"
+version = "6.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06a6ad4fdedeafc4f24c0ead8fc260add681c0fd268e72807fb84238081a4b9"
+checksum = "5d29f6c8d421c93c886413a613c7c8d331e7edeccbe986e53e09b996243a5a88"
 dependencies = [
  "encoding_rs",
+ "memchr",
  "nom",
  "unicase",
 ]
@@ -447,9 +448,9 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "memchr"
-version = "2.7.2"
+version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8640c5d730cb13ebd907d8d04b52f55ac9a2eec55b440c8892f40d56c76c1d"
+checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "minimal-lexical"
