@@ -33,10 +33,6 @@ pub static LIBLO_OK: c_uint = 0;
 #[no_mangle]
 pub static LIBLO_WARN_LO_MISMATCH: c_uint = 2;
 
-/// The specified file is not encoded in UTF-8.
-#[no_mangle]
-pub static LIBLO_ERROR_FILE_NOT_UTF8: c_uint = 5;
-
 /// The specified file could not be found.
 #[no_mangle]
 pub static LIBLO_ERROR_FILE_NOT_FOUND: c_uint = 6;
@@ -44,10 +40,6 @@ pub static LIBLO_ERROR_FILE_NOT_FOUND: c_uint = 6;
 /// A file could not be renamed.
 #[no_mangle]
 pub static LIBLO_ERROR_FILE_RENAME_FAIL: c_uint = 7;
-
-/// The modification date of a file could not be set.
-#[no_mangle]
-pub static LIBLO_ERROR_TIMESTAMP_WRITE_FAIL: c_uint = 9;
 
 /// There was an error parsing a plugin file.
 #[no_mangle]
