@@ -322,7 +322,12 @@ fn validate_early_loader_positions(
     // their hardcoded order.
     let mut missing_plugins_count = 0;
     for (i, plugin_name) in early_loading_plugins.iter().enumerate() {
-        match plugins.iter().position(|p| eq(p.name(), plugin_name)) {
+        // Blueprint masters never actually load early, so it's as
+        // if they're missing.
+        match plugins
+            .iter()
+            .position(|p| !p.is_blueprint_master() && eq(p.name(), plugin_name))
+        {
             Some(pos) => {
                 let expected_pos = i - missing_plugins_count;
                 if pos != expected_pos {
@@ -2194,6 +2199,37 @@ mod tests {
         ];
 
         assert!(validate_load_order(&plugins, &[]).is_ok());
+    }
+
+    #[test]
+    fn validate_load_order_should_succeed_if_an_early_loader_blueprint_plugin_loads_after_a_non_early_loader(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+
+        let plugins_dir = settings.plugins_directory();
+        let master_name = "Starfield.esm";
+        let other_early_loader = "Blank.medium.esm";
+
+        let plugin_name = "Blank.full.esm";
+        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+
+        let plugins = vec![
+            Plugin::new(master_name, &settings).unwrap(),
+            Plugin::new(other_early_loader, &settings).unwrap(),
+            Plugin::new("Blank.esp", &settings).unwrap(),
+            Plugin::new(plugin_name, &settings).unwrap(),
+        ];
+
+        assert!(validate_load_order(
+            &plugins,
+            &[
+                master_name.to_owned(),
+                plugin_name.to_owned(),
+                other_early_loader.to_owned()
+            ]
+        )
+        .is_ok());
     }
 
     #[test]
