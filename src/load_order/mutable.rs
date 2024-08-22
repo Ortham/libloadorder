@@ -50,7 +50,12 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
                     return Some(loaded_plugin_count);
                 }
 
-                if self.index_of(plugin_name).is_some() {
+                if self
+                    .plugins()
+                    .iter()
+                    .find(|p| !p.is_blueprint_master() && p.name_matches(plugin_name))
+                    .is_some()
+                {
                     loaded_plugin_count += 1;
                 }
             }
@@ -985,6 +990,42 @@ mod tests {
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
+    }
+
+    #[test]
+    fn insert_position_should_ignore_early_loading_blueprint_plugins_when_counting_early_loaders() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let plugin_name = "Blank.medium.esm";
+        let blueprint_plugin_name = "Blank.full.esm";
+        set_blueprint_flag(
+            GameId::Starfield,
+            &plugins_dir.join(blueprint_plugin_name),
+            true,
+        )
+        .unwrap();
+
+        std::fs::write(
+            plugins_dir.parent().unwrap().join("Starfield.ccc"),
+            format!("{}\n{}", blueprint_plugin_name, plugin_name),
+        )
+        .unwrap();
+        load_order
+            .game_settings
+            .refresh_implicitly_active_plugins()
+            .unwrap();
+
+        let blueprint_plugin =
+            Plugin::new(blueprint_plugin_name, &load_order.game_settings()).unwrap();
+        load_order.plugins.push(blueprint_plugin);
+
+        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(0, position.unwrap());
     }
 
     #[test]
