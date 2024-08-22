@@ -41,23 +41,33 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             return None;
         }
 
-        // A blueprint plugin may be listed as an early loader (e.g. in a CCC
-        // file) but it still loads as a normal blueprint plugin.
-        if !plugin.is_blueprint_master() {
-            let mut loaded_plugin_count = 0;
-            for plugin_name in self.game_settings().early_loading_plugins() {
-                if eq(plugin.name(), plugin_name) {
-                    return Some(loaded_plugin_count);
-                }
+        // A blueprint master may be listed as an early loader (e.g. in a CCC
+        // file) but it still loads as a normal blueprint master, and before
+        // all non-"early-loading" blueprint masters.
+        let mut loaded_plugin_count = if plugin.is_blueprint_master() {
+            match self.plugins().iter().position(|p| p.is_blueprint_master()) {
+                Some(index) => index,
+                None => return None,
+            }
+        } else {
+            0
+        };
 
-                if self
-                    .plugins()
-                    .iter()
-                    .find(|p| !p.is_blueprint_master() && p.name_matches(plugin_name))
-                    .is_some()
-                {
-                    loaded_plugin_count += 1;
-                }
+        for plugin_name in self.game_settings().early_loading_plugins() {
+            if eq(plugin.name(), plugin_name) {
+                return Some(loaded_plugin_count);
+            }
+
+            if self
+                .plugins()
+                .iter()
+                .find(|p| {
+                    p.is_blueprint_master() == plugin.is_blueprint_master()
+                        && p.name_matches(plugin_name)
+                })
+                .is_some()
+            {
+                loaded_plugin_count += 1;
             }
         }
 
@@ -967,18 +977,21 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_not_treat_early_loading_blueprint_plugins_as_early_loading() {
+    fn insert_position_should_insert_early_loading_blueprint_plugins_only_before_other_blueprint_plugins(
+    ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
-        let plugin_name = "Blank.full.esm";
-        set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+        let plugin_names = ["Blank.full.esm", "Blank.medium.esm", "Blank.small.esm"];
+        for plugin_name in plugin_names {
+            set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
+        }
 
         std::fs::write(
             plugins_dir.parent().unwrap().join("Starfield.ccc"),
-            plugin_name,
+            plugin_names[..2].join("\n"),
         )
         .unwrap();
         load_order
@@ -986,14 +999,29 @@ mod tests {
             .refresh_implicitly_active_plugins()
             .unwrap();
 
-        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_names[0], &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
+
+        load_order.plugins.push(plugin);
+
+        let plugin = Plugin::new(plugin_names[2], &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert!(position.is_none());
+
+        load_order.plugins.push(plugin);
+
+        let plugin = Plugin::new(plugin_names[1], &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(3, position.unwrap());
     }
 
     #[test]
-    fn insert_position_should_ignore_early_loading_blueprint_plugins_when_counting_early_loaders() {
+    fn insert_position_should_ignore_early_loading_blueprint_plugins_when_counting_other_early_loaders(
+    ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
 
