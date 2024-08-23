@@ -83,6 +83,7 @@ pub(crate) const STARFIELD_IMPLICITLY_ACTIVE_PLUGINS: &[&str] = &[
     "SFBGS003.esm",
     "SFBGS007.esm",
     "SFBGS008.esm",
+    "SFBGS004.esm",
 ];
 
 // It's safe to use relative paths like this because the Microsoft Store
