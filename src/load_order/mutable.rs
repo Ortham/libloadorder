@@ -45,7 +45,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         // file) but it still loads as a normal blueprint master, and before
         // all non-"early-loading" blueprint masters.
         let mut loaded_plugin_count = if plugin.is_blueprint_master() {
-            match self.plugins().iter().position(|p| p.is_blueprint_master()) {
+            match find_first_blueprint_master_position(self.plugins()) {
                 Some(index) => index,
                 None => return None,
             }
@@ -384,7 +384,7 @@ fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize>
         if plugin.is_master_file() {
             find_first_non_master_position(plugins)
         } else {
-            None
+            find_first_blueprint_master_position(plugins)
         }
     })
 }
@@ -774,6 +774,10 @@ fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(|p| !p.is_master_file())
 }
 
+fn find_first_blueprint_master_position(plugins: &[Plugin]) -> Option<usize> {
+    plugins.iter().position(|p| p.is_blueprint_master())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1057,7 +1061,8 @@ mod tests {
     }
 
     #[test]
-    fn insert_position_should_return_none_if_given_a_non_master_plugin() {
+    fn insert_position_should_return_none_if_given_a_non_master_plugin_and_no_blueprint_plugins_are_present(
+    ) {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
 
@@ -1066,6 +1071,32 @@ mod tests {
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
+    }
+
+    #[test]
+    fn insert_position_should_return_the_index_of_the_first_blueprint_plugin_if_given_a_non_master_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+
+        let plugins_dir = load_order.game_settings().plugins_directory();
+
+        let blueprint_plugin_name = "Blank.full.esm";
+        set_blueprint_flag(
+            GameId::Starfield,
+            &plugins_dir.join(blueprint_plugin_name),
+            true,
+        )
+        .unwrap();
+
+        let blueprint_plugin =
+            Plugin::new(blueprint_plugin_name, &load_order.game_settings()).unwrap();
+        load_order.plugins.push(blueprint_plugin);
+
+        let plugin = Plugin::new("Blank - Override.esp", &load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(2, position.unwrap());
     }
 
     #[test]
