@@ -1,6 +1,6 @@
 [package]
 name = "libloadorder-ffi"
-version = "17.0.1"
+version = "17.1.0"
 authors = ["Oliver Hamlet <oliver@ortham.io>"]
 description = "A wrapper library providing a C FFI for libloadorder."
 documentation = "https://docs.rs/libloadorder-ffi"

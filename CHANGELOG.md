@@ -3,6 +3,25 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [17.1.0] - 2024-08-23
+
+### Added
+
+- Support for blueprint masters, as introduced by Starfield.
+- Starfield's `SFBGS004.esm` plugin is now treated as implicitly active.
+
+### Changed
+
+- Updated esplugin to 6.1.0.
+- Updated regex to 1.10.6.
+- Updated rust-ini to 0.21.1.
+- Updated windows to 0.58.0.
+
+### Fixed
+
+- The wrong insert position could be calculated for a plugin being inserted into
+  a load order that contains one or more hoisted non-masters.
+
 ## [17.0.1] - 2024-06-29
 
 ### Changed
