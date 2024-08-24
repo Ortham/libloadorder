@@ -3,15 +3,24 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.0.0] - 2024-08-24
+
+Same as 17.1.0: the breaking changes intended for this release were accidentally
+in that release. The changelog entry for 17.1.0 has been updated to include
+those changes.
+
 ## [17.1.0] - 2024-08-23
 
 ### Added
 
 - Support for blueprint masters, as introduced by Starfield.
 - Starfield's `SFBGS004.esm` plugin is now treated as implicitly active.
+- `Error::InvalidBlueprintPluginPosition`, which is used when attempting to put
+  a blueprint plugin in a load order position that is invalid.
 
 ### Changed
 
+- The `Error`, `GameId` and `LoadOrderMethod` enums are now non-exhaustive.
 - Updated esplugin to 6.1.0.
 - Updated regex to 1.10.6.
 - Updated rust-ini to 0.21.1.
@@ -21,6 +30,11 @@ changelog does not include libloadorder-ffi changes.
 
 - The wrong insert position could be calculated for a plugin being inserted into
   a load order that contains one or more hoisted non-masters.
+
+### Removed
+
+- `Error::SystemTimeError`, `Error::NotUtf8` and
+  `Error::GameMasterMustLoadFirst` as they are unused.
 
 ## [17.0.1] - 2024-06-29
 

@@ -3,11 +3,22 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [18.0.0] - 2024-08-23
+
+### Changed
+
+- Updated to libloadorder v18.0.0.
+
 ## [17.1.0] - 2024-08-23
 
 ### Changed
 
 - Updated to libloadorder v17.1.0.
+
+### Removed
+
+- `LIBLO_ERROR_FILE_NOT_UTF8` and `LIBLO_ERROR_TIMESTAMP_WRITE_FAIL` as they are
+  unused.
 
 ## [17.0.1] - 2024-06-29
 
