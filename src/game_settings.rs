@@ -591,6 +591,8 @@ fn early_loading_plugins(
         }
     }
 
+    deduplicate(&mut plugin_names);
+
     Ok(plugin_names)
 }
 
@@ -622,11 +624,15 @@ fn implicitly_active_plugins(
         plugin_names.push("BlueprintShips-Starfield.esm".to_string());
     }
 
-    // Remove duplicates, keeping only the first instance of each plugin.
-    let mut set = std::collections::HashSet::<unicase::UniCase<String>>::new();
-    plugin_names.retain(|e| set.insert(unicase::UniCase::new(e.clone())));
+    deduplicate(&mut plugin_names);
 
     Ok(plugin_names)
+}
+
+/// Remove duplicates, keeping only the first instance of each plugin.
+fn deduplicate(plugin_names: &mut Vec<String>) {
+    let mut set = std::collections::HashSet::new();
+    plugin_names.retain(|e| set.insert(unicase::UniCase::new(e.clone())));
 }
 
 fn plugin_path(
@@ -1318,6 +1324,40 @@ mod tests {
         .unwrap();
 
         assert!(!settings.loads_early("test.esp"));
+    }
+
+    #[test]
+    fn early_loading_plugins_should_ignore_later_duplicate_entries() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+        let my_games_path = tmp_dir.path().join("my games");
+
+        create_ccc_file(
+            &my_games_path.join("Starfield.ccc"),
+            &["Starfield.esm", "test.esm"],
+        );
+
+        let settings = GameSettings::with_local_and_my_games_paths(
+            GameId::Starfield,
+            game_path,
+            &PathBuf::default(),
+            my_games_path,
+        )
+        .unwrap();
+
+        let expected = &[
+            "Starfield.esm",
+            "ShatteredSpace.esm",
+            "Constellation.esm",
+            "OldMars.esm",
+            "SFBGS003.esm",
+            "SFBGS004.esm",
+            "SFBGS006.esm",
+            "SFBGS007.esm",
+            "SFBGS008.esm",
+            "test.esm",
+        ];
+        assert_eq!(expected, settings.early_loading_plugins());
     }
 
     #[test]
