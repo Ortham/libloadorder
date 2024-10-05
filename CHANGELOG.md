@@ -3,6 +3,13 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.1.1] - 2024-10-05
+
+### Fixed
+
+- Incorrect validation errors when a game's CCC file contained a plugin with a
+  hardcoded load order position.
+
 ## [18.1.0] - 2024-10-05
 
 ### Added
