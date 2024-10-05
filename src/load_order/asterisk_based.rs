@@ -30,7 +30,7 @@ use super::writable::{
     activate, add, create_parent_dirs, deactivate, remove, set_active_plugins, WritableLoadOrder,
 };
 use crate::enums::{Error, GameId};
-use crate::game_settings::{GameSettings, STARFIELD_IMPLICITLY_ACTIVE_PLUGINS};
+use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug)]
@@ -222,11 +222,10 @@ fn ignore_active_plugins_file_fallout4(game_settings: &GameSettings) -> bool {
 
 fn ignore_active_plugins_file_starfield(game_settings: &GameSettings) -> bool {
     // The implicitly active plugins are the early loading plugins plus test file plugins plus
-    // a set of plugins that are hardcoded to be implicitly active.
+    // BlueprintShips-Starfield.esm.
     game_settings.id() == GameId::Starfield
         && game_settings.implicitly_active_plugins().len()
-            > game_settings.early_loading_plugins().len()
-                + STARFIELD_IMPLICITLY_ACTIVE_PLUGINS.len()
+            > game_settings.early_loading_plugins().len() + 1
 }
 
 #[cfg(test)]

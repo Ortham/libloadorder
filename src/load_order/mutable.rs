@@ -1103,7 +1103,7 @@ mod tests {
         let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
-        assert_eq!(0, position.unwrap());
+        assert_eq!(1, position.unwrap());
     }
 
     #[test]

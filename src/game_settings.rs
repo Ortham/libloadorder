@@ -74,16 +74,16 @@ const FALLOUT4_HARDCODED_PLUGINS: &[&str] = &[
 
 const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm"];
 
-pub(crate) const STARFIELD_IMPLICITLY_ACTIVE_PLUGINS: &[&str] = &[
+pub(crate) const STARFIELD_HARDCODED_PLUGINS: &[&str] = &[
     "Starfield.esm",
+    "ShatteredSpace.esm",
     "Constellation.esm",
     "OldMars.esm",
-    "BlueprintShips-Starfield.esm",
-    "SFBGS006.esm",
     "SFBGS003.esm",
+    "SFBGS004.esm",
+    "SFBGS006.esm",
     "SFBGS007.esm",
     "SFBGS008.esm",
-    "SFBGS004.esm",
 ];
 
 // It's safe to use relative paths like this because the Microsoft Store
@@ -517,6 +517,7 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
         GameId::SkyrimVR => SKYRIM_VR_HARDCODED_PLUGINS,
         GameId::Fallout4 => FALLOUT4_HARDCODED_PLUGINS,
         GameId::Fallout4VR => FALLOUT4VR_HARDCODED_PLUGINS,
+        GameId::Starfield => STARFIELD_HARDCODED_PLUGINS,
         _ => &[],
     }
 }
@@ -616,11 +617,9 @@ fn implicitly_active_plugins(
         // earlier (e.g. by listing in plugins.txt or by being a master of another master).
         plugin_names.push("Update.esm".to_string());
     } else if game_id == GameId::Starfield {
-        // None of Starfield's plugins have hardcoded positions, but the base game's official plugins are all implicitly active.
-        let plugins = STARFIELD_IMPLICITLY_ACTIVE_PLUGINS
-            .iter()
-            .map(ToString::to_string);
-        plugin_names.extend(plugins);
+        // BlueprintShips-Starfield.esm is always active but loads after all other plugins if not
+        // made to load earlier.
+        plugin_names.push("BlueprintShips-Starfield.esm".to_string());
     }
 
     // Remove duplicates, keeping only the first instance of each plugin.
@@ -1087,7 +1086,18 @@ mod tests {
         assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Starfield);
-        assert!(settings.early_loading_plugins().is_empty());
+        plugins = vec![
+            "Starfield.esm",
+            "ShatteredSpace.esm",
+            "Constellation.esm",
+            "OldMars.esm",
+            "SFBGS003.esm",
+            "SFBGS004.esm",
+            "SFBGS006.esm",
+            "SFBGS007.esm",
+            "SFBGS008.esm",
+        ];
+        assert_eq!(plugins, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1170,7 +1180,19 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(&["test.esm"], settings.early_loading_plugins());
+        let expected = &[
+            "Starfield.esm",
+            "ShatteredSpace.esm",
+            "Constellation.esm",
+            "OldMars.esm",
+            "SFBGS003.esm",
+            "SFBGS004.esm",
+            "SFBGS006.esm",
+            "SFBGS007.esm",
+            "SFBGS008.esm",
+            "test.esm",
+        ];
+        assert_eq!(expected, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1189,7 +1211,19 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(&["test.esm"], settings.early_loading_plugins());
+        let expected = &[
+            "Starfield.esm",
+            "ShatteredSpace.esm",
+            "Constellation.esm",
+            "OldMars.esm",
+            "SFBGS003.esm",
+            "SFBGS004.esm",
+            "SFBGS006.esm",
+            "SFBGS007.esm",
+            "SFBGS008.esm",
+            "test.esm",
+        ];
+        assert_eq!(expected, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1209,7 +1243,19 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(&["test2.esm"], settings.early_loading_plugins());
+        let expected = &[
+            "Starfield.esm",
+            "ShatteredSpace.esm",
+            "Constellation.esm",
+            "OldMars.esm",
+            "SFBGS003.esm",
+            "SFBGS004.esm",
+            "SFBGS006.esm",
+            "SFBGS007.esm",
+            "SFBGS008.esm",
+            "test2.esm",
+        ];
+        assert_eq!(expected, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1271,7 +1317,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(settings.early_loading_plugins().is_empty());
+        assert!(!settings.loads_early("test.esp"));
     }
 
     #[test]
