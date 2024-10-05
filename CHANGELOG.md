@@ -3,6 +3,21 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.1.0] - 2024-10-05
+
+### Added
+
+- `ShatteredSpace.esm` is now recognised as a Starfield plugin with a hardcoded
+  load order index of `01`.
+
+### Changed
+
+- Starfield's official plugins were treated as being implicitly active, but now
+  `Starfield.esm`, `Constellation.esm`, `OldMars.esm`, `SFBGS003.esm`,
+  `SFBGS004.esm`, `SFBGS006.esm`, `SFBGS007.esm` and `SFBGS008.esm` have
+  hardcoded load order indexes, to match the behaviour of Starfield v1.14.70.0.
+- Updated regex to 1.11.0.
+
 ## [18.0.0] - 2024-08-24
 
 Same as 17.1.0: the breaking changes intended for this release were accidentally
