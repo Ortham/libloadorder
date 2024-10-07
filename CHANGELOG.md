@@ -3,6 +3,20 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.1.2] - 2024-10-07
+
+### Fixed
+
+- Performance regressions introduced in v18.0.0 as part of blueprint plugin
+  support. Most operations now perform better than in v17.0.1, with the biggest
+  relative change being `WritableLoadOrder.set_plugin_index()` seeing a 188x
+  improvement, and the slowest function `WritableLoadOrder.load()` seeing a 2x
+  improvement.
+
+### Changed
+
+- Updated esplugin to 6.1.1.
+
 ## [18.1.1] - 2024-10-05
 
 ### Fixed
