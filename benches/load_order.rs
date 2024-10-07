@@ -92,13 +92,21 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     plugins.push(game_settings.master_file().to_string());
     copy_to_test_dir("Blank.esm", game_settings.master_file(), game_settings);
 
-    for i in 0..plugins_count {
+    // Make 10% of the load order master files.
+    let masters_count = plugins_count / 10;
+
+    for i in 0..masters_count {
         plugins.push(format!("Blank{}.esm", i));
         copy_to_test_dir(
             "Blank - Different.esm",
             plugins.last().unwrap(),
             game_settings,
         );
+    }
+
+    for i in masters_count..plugins_count {
+        plugins.push(format!("Blank{}.esp", i));
+        copy_to_test_dir("Blank.esp", plugins.last().unwrap(), game_settings);
     }
 
     let mut plugins_as_ref: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
