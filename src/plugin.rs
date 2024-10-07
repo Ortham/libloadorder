@@ -125,7 +125,7 @@ impl Plugin {
     }
 
     pub fn is_blueprint_master(&self) -> bool {
-        self.is_master_file() && self.data.is_blueprint_plugin()
+        self.data.is_blueprint_plugin() && self.is_master_file()
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {
