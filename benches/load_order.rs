@@ -255,6 +255,7 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
         Parameters::new(GameId::Skyrim, 500, 250),
         Parameters::new(GameId::Fallout4, 20, 20),
         Parameters::new(GameId::Fallout4, 500, 250),
+        Parameters::new(GameId::Fallout4, 1500, 250),
     ];
 
     parameterised_benchmark!(
