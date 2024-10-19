@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.1.3] - 2024-10-20
+
+### Fixed
+
+- The order that is used for Starfield's hardcoded plugins has been updated to
+  match the order the game uses: `ShatteredSpace.esm` has been moved after
+  `OldMars.esm`.
+
 ## [18.1.2] - 2024-10-07
 
 ### Fixed
