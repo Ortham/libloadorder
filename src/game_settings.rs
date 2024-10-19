@@ -76,9 +76,9 @@ const FALLOUT4VR_HARDCODED_PLUGINS: &[&str] = &["Fallout4.esm", "Fallout4_VR.esm
 
 pub(crate) const STARFIELD_HARDCODED_PLUGINS: &[&str] = &[
     "Starfield.esm",
-    "ShatteredSpace.esm",
     "Constellation.esm",
     "OldMars.esm",
+    "ShatteredSpace.esm",
     "SFBGS003.esm",
     "SFBGS004.esm",
     "SFBGS006.esm",
@@ -1094,9 +1094,9 @@ mod tests {
         settings = game_with_generic_paths(GameId::Starfield);
         plugins = vec![
             "Starfield.esm",
-            "ShatteredSpace.esm",
             "Constellation.esm",
             "OldMars.esm",
+            "ShatteredSpace.esm",
             "SFBGS003.esm",
             "SFBGS004.esm",
             "SFBGS006.esm",
@@ -1188,9 +1188,9 @@ mod tests {
 
         let expected = &[
             "Starfield.esm",
-            "ShatteredSpace.esm",
             "Constellation.esm",
             "OldMars.esm",
+            "ShatteredSpace.esm",
             "SFBGS003.esm",
             "SFBGS004.esm",
             "SFBGS006.esm",
@@ -1219,9 +1219,9 @@ mod tests {
 
         let expected = &[
             "Starfield.esm",
-            "ShatteredSpace.esm",
             "Constellation.esm",
             "OldMars.esm",
+            "ShatteredSpace.esm",
             "SFBGS003.esm",
             "SFBGS004.esm",
             "SFBGS006.esm",
@@ -1251,9 +1251,9 @@ mod tests {
 
         let expected = &[
             "Starfield.esm",
-            "ShatteredSpace.esm",
             "Constellation.esm",
             "OldMars.esm",
+            "ShatteredSpace.esm",
             "SFBGS003.esm",
             "SFBGS004.esm",
             "SFBGS006.esm",
@@ -1347,9 +1347,9 @@ mod tests {
 
         let expected = &[
             "Starfield.esm",
-            "ShatteredSpace.esm",
             "Constellation.esm",
             "OldMars.esm",
+            "ShatteredSpace.esm",
             "SFBGS003.esm",
             "SFBGS004.esm",
             "SFBGS006.esm",
