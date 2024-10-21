@@ -20,7 +20,7 @@ coveralls = { repository = "Ortham/libloadorder" }
 encoding_rs = "0.8"
 esplugin = "6.1.1"
 regex = "1.11.0"
-unicase = "2.0.0"
+unicase = "2.8.0"
 rayon = "1.0.0"
 rust-ini = { version = "0.21.1", features = ["case-insensitive"] }
 keyvalues-parser = "0.2.0"
