@@ -892,9 +892,9 @@ mod tests {
     #[test]
     fn insert_position_should_return_zero_if_given_the_game_master_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
-        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Skyrim.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(0, position.unwrap());
@@ -903,11 +903,11 @@ mod tests {
     #[test]
     fn insert_position_should_return_none_for_the_game_master_if_no_plugins_are_loaded() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         load_order.plugins_mut().clear();
 
-        let plugin = Plugin::new("Skyrim.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Skyrim.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
@@ -916,13 +916,13 @@ mod tests {
     #[test]
     fn insert_position_should_return_the_hardcoded_index_of_an_early_loading_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         load_order.plugins_mut().insert(1, plugin);
 
-        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
-        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
@@ -936,17 +936,17 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esm").unwrap();
 
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         copy_to_test_dir(
             "Blank.esm",
             "Blank - Different.esm",
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
-        let plugin = Plugin::new("Blank - Different.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         load_order.plugins_mut().insert(1, plugin);
 
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(2, position.unwrap());
@@ -955,11 +955,11 @@ mod tests {
     #[test]
     fn insert_position_should_not_count_installed_unloaded_early_loading_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
-        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
-        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir("Blank.esm", "Update.esm", load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
@@ -968,16 +968,16 @@ mod tests {
     #[test]
     fn insert_position_should_not_put_blueprint_plugins_before_non_blueprint_dependents() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let dependent_plugin = "Blank - Override.full.esm";
         copy_to_test_dir(
             dependent_plugin,
             dependent_plugin,
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
 
-        let plugin = Plugin::new(dependent_plugin, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(dependent_plugin, load_order.game_settings()).unwrap();
         load_order.plugins.insert(1, plugin);
 
         let plugins_dir = load_order.game_settings().plugins_directory();
@@ -985,7 +985,7 @@ mod tests {
         let plugin_name = "Blank.full.esm";
         set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
 
-        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
@@ -994,7 +994,7 @@ mod tests {
     #[test]
     fn insert_position_should_put_blueprint_plugins_before_blueprint_dependents() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1002,17 +1002,17 @@ mod tests {
         copy_to_test_dir(
             dependent_plugin,
             dependent_plugin,
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
         set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
 
-        let plugin = Plugin::new(dependent_plugin, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(dependent_plugin, load_order.game_settings()).unwrap();
         load_order.plugins.push(plugin);
 
         let plugin_name = "Blank.full.esm";
         set_blueprint_flag(GameId::Starfield, &plugins_dir.join(plugin_name), true).unwrap();
 
-        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(2, position.unwrap());
@@ -1022,7 +1022,7 @@ mod tests {
     fn insert_position_should_insert_early_loading_blueprint_plugins_only_before_other_blueprint_plugins(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1041,21 +1041,21 @@ mod tests {
             .refresh_implicitly_active_plugins()
             .unwrap();
 
-        let plugin = Plugin::new(plugin_names[0], &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_names[0], load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
 
         load_order.plugins.push(plugin);
 
-        let plugin = Plugin::new(plugin_names[2], &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_names[2], load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert!(position.is_none());
 
         load_order.plugins.push(plugin);
 
-        let plugin = Plugin::new(plugin_names[1], &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_names[1], load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(3, position.unwrap());
@@ -1065,7 +1065,7 @@ mod tests {
     fn insert_position_should_ignore_early_loading_blueprint_plugins_when_counting_other_early_loaders(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1089,10 +1089,10 @@ mod tests {
             .unwrap();
 
         let blueprint_plugin =
-            Plugin::new(blueprint_plugin_name, &load_order.game_settings()).unwrap();
+            Plugin::new(blueprint_plugin_name, load_order.game_settings()).unwrap();
         load_order.plugins.push(blueprint_plugin);
 
-        let plugin = Plugin::new(plugin_name, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
@@ -1102,10 +1102,10 @@ mod tests {
     fn insert_position_should_return_none_if_given_a_non_master_plugin_and_no_blueprint_plugins_are_present(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let plugin =
-            Plugin::new("Blank - Master Dependent.esp", &load_order.game_settings()).unwrap();
+            Plugin::new("Blank - Master Dependent.esp", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
@@ -1115,7 +1115,7 @@ mod tests {
     fn insert_position_should_return_the_index_of_the_first_blueprint_plugin_if_given_a_non_master_plugin(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1128,10 +1128,10 @@ mod tests {
         .unwrap();
 
         let blueprint_plugin =
-            Plugin::new(blueprint_plugin_name, &load_order.game_settings()).unwrap();
+            Plugin::new(blueprint_plugin_name, load_order.game_settings()).unwrap();
         load_order.plugins.push(blueprint_plugin);
 
-        let plugin = Plugin::new("Blank - Override.esp", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank - Override.esp", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(2, position.unwrap());
@@ -1140,9 +1140,9 @@ mod tests {
     #[test]
     fn insert_position_should_return_the_first_non_master_plugin_index_if_given_a_master_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
@@ -1151,12 +1151,12 @@ mod tests {
     #[test]
     fn insert_position_should_return_none_if_no_non_masters_are_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         // Remove non-master plugins from the load order.
         load_order.plugins_mut().retain(|p| p.is_master_file());
 
-        let plugin = Plugin::new("Blank.esm", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(None, position);
@@ -1165,10 +1165,10 @@ mod tests {
     #[test]
     fn insert_position_should_return_the_first_non_master_index_if_given_a_light_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         copy_to_test_dir("Blank.esm", "Blank.esl", load_order.game_settings());
-        let plugin = Plugin::new("Blank.esl", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank.esl", load_order.game_settings()).unwrap();
 
         load_order.plugins_mut().insert(1, plugin);
 
@@ -1181,7 +1181,7 @@ mod tests {
             "Blank - Different.esl",
             load_order.game_settings(),
         );
-        let plugin = Plugin::new("Blank - Different.esl", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("Blank - Different.esl", load_order.game_settings()).unwrap();
 
         let position = load_order.insert_position(&plugin);
 
@@ -1191,7 +1191,7 @@ mod tests {
     #[test]
     fn insert_position_should_succeed_for_a_non_master_hoisted_after_another_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1222,7 +1222,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_for_a_master_plugin_and_index_directly_after_a_master() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         assert!(load_order.validate_index(&plugin, 1).is_ok());
@@ -1231,7 +1231,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_for_a_master_plugin_and_index_after_a_hoisted_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         load_order.plugins.insert(1, plugin);
@@ -1247,7 +1247,7 @@ mod tests {
     #[test]
     fn validate_index_should_error_for_a_master_plugin_and_index_after_unrelated_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         load_order.plugins.insert(1, plugin);
@@ -1259,7 +1259,7 @@ mod tests {
     #[test]
     fn validate_index_should_error_for_a_master_plugin_that_has_a_later_non_master_as_a_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let plugin = Plugin::new("Blank - Different.esm", load_order.game_settings()).unwrap();
         load_order.plugins.insert(2, plugin);
@@ -1275,7 +1275,7 @@ mod tests {
     #[test]
     fn validate_index_should_error_for_a_master_plugin_that_has_a_later_master_as_a_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         copy_to_test_dir(
             "Blank - Master Dependent.esm",
@@ -1295,7 +1295,7 @@ mod tests {
     #[test]
     fn validate_index_should_error_for_a_master_plugin_that_is_a_master_of_an_earlier_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         copy_to_test_dir(
             "Blank - Master Dependent.esm",
@@ -1315,7 +1315,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_for_a_non_master_plugin_and_an_index_with_no_later_masters() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugin =
             Plugin::new("Blank - Master Dependent.esp", load_order.game_settings()).unwrap();
@@ -1326,7 +1326,7 @@ mod tests {
     fn validate_index_should_succeed_for_a_non_master_plugin_that_is_a_master_of_the_next_master_file(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
@@ -1343,7 +1343,7 @@ mod tests {
     fn validate_index_should_error_for_a_non_master_plugin_that_is_not_a_master_of_the_next_master_file(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugin =
             Plugin::new("Blank - Master Dependent.esp", load_order.game_settings()).unwrap();
@@ -1354,7 +1354,7 @@ mod tests {
     fn validate_index_should_error_for_a_non_master_plugin_and_an_index_not_before_a_master_that_depends_on_it(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::SkyrimSE, tmp_dir.path());
 
         let plugin = Plugin::new(
             "Blank - Different Master Dependent.esm",
@@ -1370,7 +1370,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_last() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1385,7 +1385,7 @@ mod tests {
     fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_only_followed_by_other_blueprint_plugins(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1411,7 +1411,7 @@ mod tests {
     fn validate_index_should_fail_for_a_blueprint_plugin_index_if_any_non_blueprint_plugins_follow_it(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1439,7 +1439,7 @@ mod tests {
     fn validate_index_should_fail_for_a_blueprint_plugin_index_that_is_after_a_dependent_blueprint_plugin_index(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1472,7 +1472,7 @@ mod tests {
     fn validate_index_should_succeed_for_a_blueprint_plugin_index_that_is_after_a_dependent_non_blueprint_plugin_index(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1496,7 +1496,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_when_an_early_loader_is_a_blueprint_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1523,7 +1523,7 @@ mod tests {
     #[test]
     fn validate_index_should_succeed_for_an_early_loader_listed_after_a_blueprint_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = load_order.game_settings().plugins_directory();
 
@@ -1553,7 +1553,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_inserting_a_non_master_before_a_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order
@@ -1565,7 +1565,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_moving_a_non_master_before_a_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Blank.esp", 0).is_err());
@@ -1575,7 +1575,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_inserting_a_master_after_a_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Blank.esm", 2).is_err());
@@ -1585,7 +1585,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_moving_a_master_after_a_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("Morrowind.esm", 2).is_err());
@@ -1595,7 +1595,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_setting_the_index_of_an_invalid_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         assert!(load_order.set_plugin_index("missing.esm", 0).is_err());
@@ -1605,7 +1605,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_moving_a_plugin_before_an_early_loader() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
 
@@ -1631,7 +1631,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_moving_an_early_loader_to_a_different_position() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
 
@@ -1657,10 +1657,10 @@ mod tests {
     #[test]
     fn set_plugin_index_should_error_if_inserting_an_early_loader_to_the_wrong_position() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         load_order.set_plugin_index("Blank.esm", 1).unwrap();
-        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", load_order.game_settings());
 
         let existing_filenames = to_owned(load_order.plugin_names());
 
@@ -1689,7 +1689,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_succeed_if_setting_an_early_loader_to_its_current_position() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.set_plugin_index("Skyrim.esm", 0).is_ok());
         assert_eq!(
@@ -1701,9 +1701,9 @@ mod tests {
     #[test]
     fn set_plugin_index_should_succeed_if_inserting_a_new_early_loader() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", load_order.game_settings());
 
         assert!(load_order.set_plugin_index("Dragonborn.esm", 1).is_ok());
         assert_eq!(
@@ -1720,7 +1720,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_insert_a_new_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
         assert_eq!(1, load_order.set_plugin_index("Blank.esm", 1).unwrap());
@@ -1731,7 +1731,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_allow_non_masters_to_be_hoisted() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let filenames = vec!["Blank.esm", "Blank - Different Master Dependent.esm"];
 
@@ -1750,7 +1750,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_allow_a_master_file_to_load_after_another_that_hoists_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let filenames = vec![
             "Blank - Different.esm",
@@ -1769,7 +1769,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_move_an_existing_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let num_plugins = load_order.plugins().len();
         let index = load_order
@@ -1783,7 +1783,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_move_an_existing_plugin_later_correctly() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         load_and_insert(&mut load_order, "Blank - Master Dependent.esp");
         let num_plugins = load_order.plugins().len();
@@ -1795,7 +1795,7 @@ mod tests {
     #[test]
     fn set_plugin_index_should_preserve_an_existing_plugins_active_state() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         load_and_insert(&mut load_order, "Blank - Master Dependent.esp");
         assert_eq!(2, load_order.set_plugin_index("Blank.esp", 2).unwrap());
@@ -1811,7 +1811,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_error_if_given_duplicate_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "blank.esp"];
@@ -1822,7 +1822,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_error_if_given_an_invalid_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "missing.esp"];
@@ -1833,7 +1833,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_error_if_given_a_list_with_plugins_before_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let existing_filenames = to_owned(load_order.plugin_names());
         let filenames = vec!["Blank.esp", "Blank.esm"];
@@ -1844,9 +1844,9 @@ mod tests {
     #[test]
     fn replace_plugins_should_error_if_an_early_loading_plugin_loads_after_another_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Update.esm", load_order.game_settings());
 
         let filenames = vec![
             "Skyrim.esm",
@@ -1875,9 +1875,9 @@ mod tests {
     #[test]
     fn replace_plugins_should_not_error_if_an_early_loading_plugin_is_missing() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "Dragonborn.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Dragonborn.esm", load_order.game_settings());
 
         let filenames = vec![
             "Skyrim.esm",
@@ -1901,7 +1901,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank - Different.esp").unwrap();
 
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let filenames = vec![
             "Skyrim.esm",
@@ -1918,12 +1918,12 @@ mod tests {
     #[test]
     fn replace_plugins_should_not_distinguish_between_ghosted_and_unghosted_filenames() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         copy_to_test_dir(
             "Blank - Different.esm",
             "ghosted.esm.ghost",
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
 
         let filenames = vec![
@@ -1942,7 +1942,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_not_insert_missing_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let filenames = vec![
             "Blank.esm",
@@ -1958,7 +1958,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_not_lose_active_state_of_existing_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         let filenames = vec![
             "Blank.esm",
@@ -1974,7 +1974,7 @@ mod tests {
     #[test]
     fn replace_plugins_should_accept_hoisted_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare_hoisted(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare_hoisted(GameId::Oblivion, tmp_dir.path());
 
         let filenames = vec![
             "Blank.esm",
@@ -1995,7 +1995,7 @@ mod tests {
     fn hoist_masters_should_hoist_plugins_that_masters_depend_on_to_load_before_their_first_dependent(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let (game_settings, _) = mock_game_files(GameId::SkyrimSE, &tmp_dir.path());
+        let (game_settings, _) = mock_game_files(GameId::SkyrimSE, tmp_dir.path());
 
         // Test both hoisting a master before a master and a non-master before a master.
 
@@ -2013,7 +2013,7 @@ mod tests {
             &game_settings,
         );
 
-        let plugin_names = vec![
+        let plugin_names = [
             "Skyrim.esm",
             master_dependent_master,
             "Blank.esm",
@@ -2049,7 +2049,7 @@ mod tests {
     fn hoist_masters_should_not_hoist_blueprint_plugins_that_are_masters_of_non_blueprint_plugins()
     {
         let tmp_dir = tempdir().unwrap();
-        let (game_settings, _) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+        let (game_settings, _) = mock_game_files(GameId::Starfield, tmp_dir.path());
 
         let blueprint_plugin = "Blank.full.esm";
         set_blueprint_flag(
@@ -2085,7 +2085,7 @@ mod tests {
     #[test]
     fn hoist_masters_should_hoist_blueprint_plugins_that_are_masters_of_blueprint_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let (game_settings, _) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+        let (game_settings, _) = mock_game_files(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = game_settings.plugins_directory();
 
@@ -2096,7 +2096,7 @@ mod tests {
         copy_to_test_dir(dependent_plugin, dependent_plugin, &game_settings);
         set_blueprint_flag(GameId::Starfield, &plugins_dir.join(dependent_plugin), true).unwrap();
 
-        let plugin_names = vec![
+        let plugin_names = [
             "Starfield.esm",
             "Blank.esp",
             dependent_plugin,
@@ -2124,7 +2124,7 @@ mod tests {
     #[test]
     fn find_plugins_in_dirs_should_sort_files_by_modification_timestamp() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let result = find_plugins_in_dirs(
             &[load_order.game_settings.plugins_directory()],
@@ -2146,7 +2146,7 @@ mod tests {
     #[test]
     fn find_plugins_in_dirs_should_sort_files_by_descending_filename_if_timestamps_are_equal() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let timestamp = 1321010051;
         let plugin_path = load_order
@@ -2181,7 +2181,7 @@ mod tests {
     fn find_plugins_in_dirs_should_sort_files_by_ascending_filename_if_timestamps_are_equal_and_game_is_starfield(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let (game_settings, plugins) = mock_game_files(GameId::Starfield, &tmp_dir.path());
+        let (game_settings, plugins) = mock_game_files(GameId::Starfield, tmp_dir.path());
         let load_order = TestLoadOrder {
             game_settings,
             plugins,
@@ -2230,7 +2230,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_be_ok_if_there_are_only_master_files() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         let plugins = vec![
             Plugin::new(settings.master_file(), &settings).unwrap(),
@@ -2243,7 +2243,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_be_ok_if_there_are_no_master_files() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         let plugins = vec![
             Plugin::new("Blank.esp", &settings).unwrap(),
@@ -2256,7 +2256,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_be_ok_if_master_files_are_before_all_others() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         let plugins = vec![
             Plugin::new("Blank.esm", &settings).unwrap(),
@@ -2269,7 +2269,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_be_ok_if_hoisted_non_masters_load_before_masters() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         copy_to_test_dir(
             "Blank - Plugin Dependent.esp",
@@ -2289,7 +2289,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_error_if_non_masters_are_hoisted_earlier_than_needed() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         copy_to_test_dir(
             "Blank - Plugin Dependent.esp",
@@ -2310,7 +2310,7 @@ mod tests {
     fn validate_load_order_should_error_if_master_files_load_before_non_masters_they_have_as_masters(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         copy_to_test_dir(
             "Blank - Plugin Dependent.esp",
@@ -2331,7 +2331,7 @@ mod tests {
     fn validate_load_order_should_error_if_master_files_load_before_other_masters_they_have_as_masters(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::SkyrimSE, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::SkyrimSE, tmp_dir.path()).game_settings;
 
         copy_to_test_dir(
             "Blank - Master Dependent.esm",
@@ -2351,7 +2351,7 @@ mod tests {
     fn validate_load_order_should_succeed_if_a_blueprint_plugin_loads_after_all_non_blueprint_plugins(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::Starfield, tmp_dir.path()).game_settings;
 
         let plugins_dir = settings.plugins_directory();
 
@@ -2371,7 +2371,7 @@ mod tests {
     fn validate_load_order_should_succeed_if_an_early_loader_blueprint_plugin_loads_after_a_non_early_loader(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::Starfield, tmp_dir.path()).game_settings;
 
         let plugins_dir = settings.plugins_directory();
         let master_name = "Starfield.esm";
@@ -2402,7 +2402,7 @@ mod tests {
     fn validate_load_order_should_succeed_if_a_blueprint_plugin_loads_after_a_non_blueprint_plugin_that_depends_on_it(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::Starfield, tmp_dir.path()).game_settings;
 
         let plugins_dir = settings.plugins_directory();
 
@@ -2425,7 +2425,7 @@ mod tests {
     #[test]
     fn validate_load_order_should_fail_if_a_blueprint_plugin_loads_before_a_non_blueprint_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::Starfield, tmp_dir.path()).game_settings;
 
         let plugins_dir = settings.plugins_directory();
 
@@ -2456,7 +2456,7 @@ mod tests {
     fn validate_load_order_should_fail_if_a_blueprint_plugin_loads_after_a_blueprint_plugin_that_depends_on_it(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let settings = prepare(GameId::Starfield, &tmp_dir.path()).game_settings;
+        let settings = prepare(GameId::Starfield, tmp_dir.path()).game_settings;
 
         let plugins_dir = settings.plugins_directory();
 
@@ -2486,7 +2486,7 @@ mod tests {
     #[test]
     fn find_first_non_master_should_find_a_full_esp() {
         let tmp_dir = tempdir().unwrap();
-        let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esp");
+        let plugins = prepare_plugins(tmp_dir.path(), "Blank.esp");
 
         let first_non_master = super::find_first_non_master_position(&plugins);
         assert_eq!(1, first_non_master.unwrap());
@@ -2495,7 +2495,7 @@ mod tests {
     #[test]
     fn find_first_non_master_should_find_a_light_flagged_esp() {
         let tmp_dir = tempdir().unwrap();
-        let plugins = prepare_plugins(&tmp_dir.path(), "Blank.esl");
+        let plugins = prepare_plugins(tmp_dir.path(), "Blank.esl");
 
         let first_non_master = super::find_first_non_master_position(&plugins);
         assert_eq!(1, first_non_master.unwrap());

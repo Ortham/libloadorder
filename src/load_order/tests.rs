@@ -37,7 +37,7 @@ pub fn write_load_order_file<T: AsRef<str> + Display>(
     game_settings: &GameSettings,
     filenames: &[T],
 ) {
-    let mut file = File::create(&game_settings.load_order_file().unwrap()).unwrap();
+    let mut file = File::create(game_settings.load_order_file().unwrap()).unwrap();
 
     for filename in filenames {
         writeln!(file, "{}", filename).unwrap();
@@ -45,7 +45,7 @@ pub fn write_load_order_file<T: AsRef<str> + Display>(
 }
 
 pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
-    let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
+    let mut file = File::create(game_settings.active_plugins_file()).unwrap();
 
     if game_settings.id() == GameId::Morrowind {
         writeln!(file, "isrealmorrowindini=false").unwrap();
@@ -61,7 +61,7 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
 
         file.write_all(&strict_encode(filename.as_ref()).unwrap())
             .unwrap();
-        writeln!(file, "").unwrap();
+        writeln!(file).unwrap();
     }
 }
 
@@ -196,7 +196,7 @@ fn set_flag(game_id: GameId, plugin_path: &Path, flag: u32, present: bool) -> io
     flags_bytes = value.to_le_bytes();
 
     file.seek(io::SeekFrom::Start(flags_offset))?;
-    file.write(&flags_bytes)?;
+    file.write_all(&flags_bytes)?;
 
     Ok(())
 }

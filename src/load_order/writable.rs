@@ -355,8 +355,8 @@ mod tests {
         let plugins: Vec<_> = names
             .par_iter()
             .map(|name| {
-                copy_to_test_dir(source_plugin_name, &name, load_order.game_settings());
-                Plugin::new(&name, load_order.game_settings()).unwrap()
+                copy_to_test_dir(source_plugin_name, name, load_order.game_settings());
+                Plugin::new(name, load_order.game_settings()).unwrap()
             })
             .collect();
 
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn add_should_error_if_the_plugin_is_already_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(add(&mut load_order, "Blank.esm").is_ok());
         assert!(add(&mut load_order, "Blank.esm").is_err());
@@ -402,7 +402,7 @@ mod tests {
     #[test]
     fn add_should_error_if_given_a_master_that_would_hoist_a_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins_dir = &load_order.game_settings().plugins_directory();
         copy_to_test_dir(
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn add_should_error_if_the_plugin_is_not_valid() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(add(&mut load_order, "invalid.esm").is_err());
     }
@@ -438,7 +438,7 @@ mod tests {
     #[test]
     fn add_should_insert_a_master_before_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert_eq!(1, add(&mut load_order, "Blank.esm").unwrap());
         assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn add_should_append_a_non_master() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert_eq!(
             3,
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn add_should_hoist_a_non_master_that_a_master_depends_on() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins_dir = &load_order.game_settings().plugins_directory();
         copy_to_test_dir(
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn add_should_hoist_a_master_that_a_master_depends_on() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugin_name = "Blank - Master Dependent.esm";
         copy_to_test_dir(plugin_name, plugin_name, load_order.game_settings());
@@ -501,14 +501,14 @@ mod tests {
     #[test]
     fn remove_should_error_if_the_plugin_is_not_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
         assert!(remove(&mut load_order, "Blank.esm").is_err());
     }
 
     #[test]
     fn remove_should_error_if_the_plugin_is_installed() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
         assert!(remove(&mut load_order, "Blank.esp").is_err());
     }
 
@@ -516,7 +516,7 @@ mod tests {
     fn remove_should_error_if_removing_a_master_would_leave_a_non_master_it_hoisted_loading_too_early(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugin_to_remove = "Blank - Different Master Dependent.esm";
 
@@ -551,7 +551,7 @@ mod tests {
         let blank_master_dependent = load_order.plugins.remove(1);
         load_order.plugins.insert(3, blank_master_dependent);
 
-        std::fs::remove_file(&plugins_dir.join(plugin_to_remove)).unwrap();
+        std::fs::remove_file(plugins_dir.join(plugin_to_remove)).unwrap();
 
         match remove(&mut load_order, plugin_to_remove).unwrap_err() {
             Error::NonMasterBeforeMaster { master, non_master } => {
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn remove_should_allow_removal_of_a_master_that_depends_on_a_blueprint_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins_dir = &load_order.game_settings().plugins_directory();
 
@@ -594,7 +594,7 @@ mod tests {
         );
         assert!(add(&mut load_order, following_master_plugin).is_ok());
 
-        std::fs::remove_file(&plugins_dir.join(plugin_to_remove)).unwrap();
+        std::fs::remove_file(plugins_dir.join(plugin_to_remove)).unwrap();
 
         assert!(remove(&mut load_order, plugin_to_remove).is_ok());
     }
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     fn remove_should_remove_the_given_plugin_from_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         remove_file(
             load_order
@@ -619,7 +619,7 @@ mod tests {
     #[test]
     fn activate_should_activate_the_plugin_with_the_given_filename() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(activate(&mut load_order, "Blank - Different.esp").is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn activate_should_error_if_the_plugin_is_not_valid() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(activate(&mut load_order, "missing.esp").is_err());
         assert!(load_order.index_of("missing.esp").is_none());
@@ -637,7 +637,7 @@ mod tests {
     #[test]
     fn activate_should_error_if_the_plugin_is_not_already_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(activate(&mut load_order, "Blank.esm").is_err());
         assert!(!load_order.is_active("Blank.esm"));
@@ -646,7 +646,7 @@ mod tests {
     #[test]
     fn activate_should_be_case_insensitive() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(activate(&mut load_order, "Blank - different.esp").is_ok());
         assert!(load_order.is_active("Blank - Different.esp"));
@@ -655,11 +655,11 @@ mod tests {
     #[test]
     fn activate_should_throw_if_increasing_the_number_of_active_plugins_past_the_limit() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         assert!(activate(&mut load_order, "Blank - Different.esp").is_err());
@@ -669,11 +669,11 @@ mod tests {
     #[test]
     fn activate_should_succeed_if_at_the_active_plugins_limit_and_the_plugin_is_already_active() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         assert!(load_order.is_active("Blank.esp"));
@@ -683,15 +683,15 @@ mod tests {
     #[test]
     fn activate_should_fail_if_at_the_active_plugins_limit_and_the_plugin_is_an_update_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         let plugin = "Blank - Override.esp";
-        load_and_insert(&mut load_order, &plugin);
+        load_and_insert(&mut load_order, plugin);
 
         assert!(!load_order.is_active(plugin));
 
@@ -702,15 +702,15 @@ mod tests {
     #[test]
     fn activate_should_count_active_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         let plugin = "Blank - Override.esp";
-        load_and_insert(&mut load_order, &plugin);
+        load_and_insert(&mut load_order, plugin);
 
         assert!(!load_order.is_active(plugin));
 
@@ -721,11 +721,11 @@ mod tests {
     #[test]
     fn activate_should_lower_the_full_plugin_limit_if_a_light_plugin_is_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         let plugin = "Blank.small.esm";
@@ -748,11 +748,11 @@ mod tests {
     #[test]
     fn activate_should_lower_the_full_plugin_limit_if_a_medium_plugin_is_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         let plugin = "Blank.medium.esm";
@@ -775,11 +775,11 @@ mod tests {
     #[test]
     fn activate_should_lower_the_full_plugin_limit_if_light_and_medium_plugins_are_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 4] {
-            activate(&mut load_order, &plugin).unwrap();
+            activate(&mut load_order, plugin).unwrap();
         }
 
         for plugin in ["Blank.medium.esm", "Blank.small.esm"] {
@@ -803,7 +803,7 @@ mod tests {
     #[test]
     fn activate_should_check_full_medium_and_small_plugins_active_limits_separately() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
         let medium = prepare_bulk_medium_plugins(&mut load_order);
@@ -847,7 +847,7 @@ mod tests {
     #[test]
     fn deactivate_should_deactivate_the_plugin_with_the_given_filename() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(load_order.is_active("Blank.esp"));
         assert!(deactivate(&mut load_order, "Blank.esp").is_ok());
@@ -857,7 +857,7 @@ mod tests {
     #[test]
     fn deactivate_should_error_if_the_plugin_is_not_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(deactivate(&mut load_order, "missing.esp").is_err());
         assert!(load_order.index_of("missing.esp").is_none());
@@ -866,7 +866,7 @@ mod tests {
     #[test]
     fn deactivate_should_error_if_given_an_implicitly_active_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
         assert!(activate(&mut load_order, "Skyrim.esm").is_ok());
         assert!(deactivate(&mut load_order, "Skyrim.esm").is_err());
@@ -876,7 +876,7 @@ mod tests {
     #[test]
     fn deactivate_should_error_if_given_a_missing_implicitly_active_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
         assert!(deactivate(&mut load_order, "Update.esm").is_err());
         assert!(load_order.index_of("Update.esm").is_none());
@@ -885,7 +885,7 @@ mod tests {
     #[test]
     fn deactivate_should_do_nothing_if_the_plugin_is_inactive() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
         assert!(!load_order.is_active("Blank - Different.esp"));
         assert!(deactivate(&mut load_order, "Blank - Different.esp").is_ok());
@@ -895,7 +895,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_passed_an_invalid_plugin_name() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let active_plugins = ["missing.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
@@ -906,7 +906,7 @@ mod tests {
     fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_active_plugins()
     {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
         let active_plugins = ["Blank.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
@@ -916,7 +916,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_a_missing_implicitly_active_plugin_is_given() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
         let active_plugins = ["Skyrim.esm", "Update.esm"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
@@ -926,7 +926,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_given_plugins_not_in_the_load_order() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
@@ -941,7 +941,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_deactivate_all_plugins_not_given() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let active_plugins = ["Blank - Different.esp"];
         assert!(load_order.is_active("Blank.esp"));
@@ -952,7 +952,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_activate_all_given_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let active_plugins = ["Blank - Different.esp"];
         assert!(!load_order.is_active("Blank - Different.esp"));
@@ -963,7 +963,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_count_update_plugins_towards_limit() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let blank_override = "Blank - Override.esp";
         load_and_insert(&mut load_order, blank_override);
@@ -984,7 +984,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_lower_the_full_plugin_limit_if_a_light_plugin_is_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
 
@@ -1006,7 +1006,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_lower_the_full_plugin_limit_if_a_medium_plugin_is_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
 
@@ -1028,7 +1028,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_lower_the_full_plugin_limit_if_light_and_plugins_are_present() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
 
@@ -1052,7 +1052,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_count_full_medium_and_small_plugins_separately() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
         let medium = prepare_bulk_medium_plugins(&mut load_order);
@@ -1070,7 +1070,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_given_more_than_255_full_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
 
@@ -1084,7 +1084,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_given_more_than_256_medium_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let medium = prepare_bulk_medium_plugins(&mut load_order);
 
@@ -1098,7 +1098,7 @@ mod tests {
     #[test]
     fn set_active_plugins_should_error_if_given_more_than_4096_light_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let light = prepare_bulk_light_plugins(&mut load_order);
 

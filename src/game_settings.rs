@@ -1028,7 +1028,7 @@ mod tests {
 
         std::fs::write(ini_path, "[General]\nbUseMyGamesDirectory=0\n").unwrap();
 
-        let settings = game_with_game_path(GameId::Oblivion, &game_path);
+        let settings = game_with_game_path(GameId::Oblivion, game_path);
         assert_eq!(
             game_path.join("Plugins.txt"),
             *settings.active_plugins_file()
@@ -1471,7 +1471,7 @@ mod tests {
         File::create(data_path.join("plugin1.nam")).unwrap();
         File::create(data_path.join("plugin2.NAM")).unwrap();
 
-        let settings = game_with_game_path(GameId::FalloutNV, &game_path);
+        let settings = game_with_game_path(GameId::FalloutNV, game_path);
         let expected_plugins = vec!["plugin1.esm", "plugin1.esp", "plugin2.esm", "plugin2.esp"];
         let mut plugins = settings.implicitly_active_plugins().to_vec();
         plugins.sort();
@@ -1505,7 +1505,7 @@ mod tests {
         create_dir(&data_path).unwrap();
         File::create(data_path.join("plugin.nam")).unwrap();
 
-        let settings = game_with_game_path(GameId::Fallout3, &game_path);
+        let settings = game_with_game_path(GameId::Fallout3, game_path);
         assert!(settings.implicitly_active_plugins().is_empty());
     }
 

@@ -17,7 +17,7 @@ use loadorder::LoadOrderMethod;
 use loadorder::WritableLoadOrder;
 
 fn write_load_order_file<T: AsRef<str> + Display>(game_settings: &GameSettings, filenames: &[T]) {
-    let mut file = File::create(&game_settings.load_order_file().unwrap()).unwrap();
+    let mut file = File::create(game_settings.load_order_file().unwrap()).unwrap();
 
     for filename in filenames {
         writeln!(file, "{}", filename).unwrap();
@@ -25,7 +25,7 @@ fn write_load_order_file<T: AsRef<str> + Display>(game_settings: &GameSettings, 
 }
 
 fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
-    let mut file = File::create(&game_settings.active_plugins_file()).unwrap();
+    let mut file = File::create(game_settings.active_plugins_file()).unwrap();
 
     if game_settings.id() == GameId::Morrowind {
         writeln!(file, "isrealmorrowindini=false").unwrap();
@@ -40,7 +40,7 @@ fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filena
         }
         file.write_all(&WINDOWS_1252.encode(filename.as_ref()).0)
             .unwrap();
-        writeln!(file, "").unwrap();
+        writeln!(file).unwrap();
     }
 }
 
@@ -53,7 +53,7 @@ fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
             );
         File::options()
             .write(true)
-            .open(&plugins_directory.join(filename.as_ref()))
+            .open(plugins_directory.join(filename.as_ref()))
             .unwrap()
             .set_times(times)
             .unwrap();

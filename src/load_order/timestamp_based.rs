@@ -273,17 +273,17 @@ mod tests {
     }
 
     fn write_file(path: &Path) {
-        let mut file = File::create(&path).unwrap();
+        let mut file = File::create(path).unwrap();
         writeln!(file).unwrap();
     }
 
     #[test]
     fn load_should_reload_existing_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(!load_order.plugins()[1].is_master_file());
-        copy_to_test_dir("Blank.esm", "Blank.esp", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Blank.esp", load_order.game_settings());
         let plugin_path = load_order
             .game_settings()
             .plugins_directory()
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn load_should_remove_plugins_that_fail_to_load() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esp").is_some());
         assert!(load_order.index_of("Blank - Different.esp").is_some());
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn load_should_sort_installed_plugins_into_their_timestamp_order_with_master_files_first() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         set_timestamps(
             &load_order.game_settings().plugins_directory(),
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn load_should_hoist_masters_that_masters_depend_on_to_load_before_their_dependents() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let master_dependent_master = "Blank - Master Dependent.esm";
         copy_to_test_dir(
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn load_should_empty_the_load_order_if_the_plugins_directory_does_not_exist() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
         tmp_dir.close().unwrap();
 
         load_order.load().unwrap();
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn load_should_decode_active_plugins_file_from_windows_1252() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn load_should_handle_crlf_and_lf_in_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
 
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn load_should_ignore_active_plugins_file_lines_starting_with_a_hash_for_oblivion() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -446,7 +446,7 @@ mod tests {
     #[test]
     fn load_should_ignore_plugins_in_active_plugins_file_that_are_not_installed() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn load_should_load_plugin_states_from_active_plugins_file_for_oblivion() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn load_should_succeed_when_active_plugins_file_is_missing() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(load_order.load().is_ok());
         assert!(load_order.active_plugin_names().is_empty());
@@ -484,7 +484,7 @@ mod tests {
     #[test]
     fn load_should_load_plugin_states_from_active_plugins_file_for_morrowind() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -497,7 +497,7 @@ mod tests {
     #[test]
     fn save_should_preserve_the_existing_set_of_timestamps() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let mapper = |p: &Plugin| {
             p.modification_time()
@@ -532,7 +532,7 @@ mod tests {
     #[test]
     fn save_should_deduplicate_plugin_timestamps() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let mapper = |p: &Plugin| {
             p.modification_time()
@@ -578,7 +578,7 @@ mod tests {
     #[test]
     fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         remove_dir_all(
             load_order
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     fn save_should_write_active_plugins_file_for_oblivion() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         load_order.save().unwrap();
 
@@ -613,7 +613,7 @@ mod tests {
     #[test]
     fn save_should_write_active_plugins_file_for_morrowind() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -633,15 +633,15 @@ mod tests {
     #[test]
     fn save_should_error_if_an_active_plugin_filename_cannot_be_encoded_in_windows_1252() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Oblivion, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let filename = "Bl\u{0227}nk.esm";
         copy_to_test_dir(
             "Blank - Different.esm",
             filename,
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
-        let mut plugin = Plugin::new(filename, &load_order.game_settings()).unwrap();
+        let mut plugin = Plugin::new(filename, load_order.game_settings()).unwrap();
         plugin.activate().unwrap();
         load_order.plugins_mut().push(plugin);
 
@@ -654,7 +654,7 @@ mod tests {
     #[test]
     fn is_self_consistent_should_return_true() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
     }
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_return_false_if_all_loaded_plugins_have_unique_timestamps() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         for (index, plugin) in load_order.plugins_mut().iter_mut().enumerate() {
             plugin
@@ -676,7 +676,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_return_false_if_two_loaded_plugins_have_the_same_timestamp() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
         // Give two files the same timestamp.
         load_order.plugins_mut()[0]
@@ -692,11 +692,10 @@ mod tests {
     #[test]
     fn plugin_sorter_should_sort_in_descending_filename_order_if_timestamps_are_equal() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Morrowind, &tmp_dir.path());
+        let load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
-        let mut plugin1 = Plugin::new("Blank.esp", &load_order.game_settings()).unwrap();
-        let mut plugin2 =
-            Plugin::new("Blank - Different.esp", &load_order.game_settings()).unwrap();
+        let mut plugin1 = Plugin::new("Blank.esp", load_order.game_settings()).unwrap();
+        let mut plugin2 = Plugin::new("Blank - Different.esp", load_order.game_settings()).unwrap();
 
         plugin1
             .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))

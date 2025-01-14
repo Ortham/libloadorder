@@ -257,7 +257,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         assert!(load_order.ignore_active_plugins_file());
     }
@@ -266,7 +266,7 @@ mod tests {
     fn ignore_active_plugins_file_should_be_false_for_fallout4_when_test_files_are_not_configured()
     {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }
@@ -279,7 +279,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let load_order = prepare(GameId::Fallout4VR, &tmp_dir.path());
+        let load_order = prepare(GameId::Fallout4VR, tmp_dir.path());
 
         assert!(load_order.ignore_active_plugins_file());
     }
@@ -288,7 +288,7 @@ mod tests {
     fn ignore_active_plugins_file_should_be_false_for_fallout4vr_when_test_files_are_not_configured(
     ) {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Fallout4VR, &tmp_dir.path());
+        let load_order = prepare(GameId::Fallout4VR, tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }
@@ -301,7 +301,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         assert!(load_order.ignore_active_plugins_file());
     }
@@ -310,7 +310,7 @@ mod tests {
     fn ignore_active_plugins_file_should_be_false_for_starfield_when_test_files_are_not_configured()
     {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }
@@ -323,7 +323,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=a").unwrap();
 
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }
@@ -336,7 +336,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=a").unwrap();
 
-        let load_order = prepare(GameId::SkyrimVR, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimVR, tmp_dir.path());
 
         assert!(!load_order.ignore_active_plugins_file());
     }
@@ -344,10 +344,10 @@ mod tests {
     #[test]
     fn load_should_reload_existing_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(!load_order.plugins()[1].is_master_file());
-        copy_to_test_dir("Blank.esm", "Blank.esp", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Blank.esp", load_order.game_settings());
         let plugin_path = load_order
             .game_settings()
             .plugins_directory()
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn load_should_remove_plugins_that_fail_to_load() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esp").is_some());
         assert!(load_order.index_of("Blank - Different.esp").is_some());
@@ -389,7 +389,7 @@ mod tests {
     #[test]
     fn load_should_get_load_order_from_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -413,7 +413,7 @@ mod tests {
     #[test]
     fn load_should_hoist_masters_that_masters_depend_on_to_load_before_their_dependents() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let master_dependent_master = "Blank - Master Dependent.esm";
         copy_to_test_dir(
@@ -451,7 +451,7 @@ mod tests {
     #[test]
     fn load_should_decode_active_plugins_file_from_windows_1252() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -472,7 +472,7 @@ mod tests {
     #[test]
     fn load_should_handle_crlf_and_lf_in_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
 
@@ -493,7 +493,7 @@ mod tests {
     #[test]
     fn load_should_ignore_active_plugins_file_lines_starting_with_a_hash() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn load_should_ignore_plugins_in_active_plugins_file_that_are_not_installed() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -541,7 +541,7 @@ mod tests {
     #[test]
     fn load_should_add_missing_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.index_of("Blank.esm").is_none());
         assert!(load_order
@@ -561,9 +561,9 @@ mod tests {
     #[test]
     fn load_should_recognise_light_master_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "ccTest.esl", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "ccTest.esl", load_order.game_settings());
 
         load_order.load().unwrap();
 
@@ -573,9 +573,9 @@ mod tests {
     #[test]
     fn load_should_add_missing_early_loading_plugins_in_their_hardcoded_positions() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "Update.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Update.esm", load_order.game_settings());
         load_order.load().unwrap();
         assert_eq!(Some(1), load_order.index_of("Update.esm"));
         assert!(load_order.is_active("Update.esm"));
@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn load_should_empty_the_load_order_if_the_plugins_directory_does_not_exist() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
         tmp_dir.close().unwrap();
 
         load_order.load().unwrap();
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     fn load_should_load_plugin_states_from_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn load_should_succeed_when_active_plugins_file_is_missing() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.load().is_ok());
         assert_eq!(1, load_order.active_plugin_names().len());
@@ -617,7 +617,7 @@ mod tests {
     #[test]
     fn load_should_not_duplicate_a_plugin_that_has_a_ghosted_duplicate() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         use std::fs::copy;
 
@@ -650,9 +650,9 @@ mod tests {
     #[test]
     fn load_should_not_move_light_master_esp_files_before_non_masters() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esl", "Blank.esl.esp", &load_order.game_settings());
+        copy_to_test_dir("Blank.esl", "Blank.esl.esp", load_order.game_settings());
 
         load_order.load().unwrap();
 
@@ -680,7 +680,7 @@ mod tests {
 
         let mut load_order = prepare(GameId::Fallout4, &game_path);
 
-        copy_to_test_dir("Blank.esm", "Blank.esm", &load_order.game_settings());
+        copy_to_test_dir("Blank.esm", "Blank.esm", load_order.game_settings());
 
         let dlc_path = tmp_dir
             .path()
@@ -713,7 +713,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         write_active_plugins_file(
             load_order.game_settings(),
@@ -731,7 +731,7 @@ mod tests {
     #[test]
     fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         remove_dir_all(
             load_order
@@ -755,7 +755,7 @@ mod tests {
     #[test]
     fn save_should_write_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         load_order.save().unwrap();
 
@@ -769,14 +769,14 @@ mod tests {
     #[test]
     fn save_should_write_unghosted_plugin_names() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         copy_to_test_dir(
             "Blank - Different.esm",
             "ghosted.esm.ghost",
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
-        let plugin = Plugin::new("ghosted.esm.ghost", &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("ghosted.esm.ghost", load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         load_order.save().unwrap();
@@ -798,15 +798,15 @@ mod tests {
     #[test]
     fn save_should_error_if_a_plugin_filename_cannot_be_encoded_in_windows_1252() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let filename = "Bl\u{0227}nk.esm";
         copy_to_test_dir(
             "Blank - Different.esm",
             filename,
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
-        let plugin = Plugin::new(filename, &load_order.game_settings()).unwrap();
+        let plugin = Plugin::new(filename, load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         match load_order.save().unwrap_err() {
@@ -818,10 +818,10 @@ mod tests {
     #[test]
     fn save_should_omit_early_loading_plugins_from_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        copy_to_test_dir("Blank.esm", "HearthFires.esm", &load_order.game_settings());
-        let plugin = Plugin::new("HearthFires.esm", &load_order.game_settings()).unwrap();
+        copy_to_test_dir("Blank.esm", "HearthFires.esm", load_order.game_settings());
+        let plugin = Plugin::new("HearthFires.esm", load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         load_order.save().unwrap();
@@ -845,7 +845,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank - Different.esp").unwrap();
 
-        let mut load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         load_order.load().unwrap();
 
@@ -876,7 +876,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         let filename = "Blank.esp";
         let plugin_path = load_order.game_settings.plugins_directory().join(filename);
@@ -900,7 +900,7 @@ mod tests {
     fn save_should_not_modify_plugin_timestamps_if_active_plugins_file_is_not_ignored() {
         let tmp_dir = tempdir().unwrap();
 
-        let mut load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         let filename = "Blank.esp";
         let plugin_path = load_order.game_settings.plugins_directory().join(filename);
@@ -920,7 +920,7 @@ mod tests {
     #[test]
     fn is_self_consistent_should_return_true() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.is_self_consistent().unwrap());
     }
@@ -928,7 +928,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_return_false_if_all_loaded_plugins_are_listed_in_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
@@ -943,7 +943,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_ignore_plugins_that_are_listed_in_active_plugins_file_but_not_loaded() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         assert!(load_order.index_of("missing.esp").is_none());
 
@@ -962,7 +962,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_ignore_loaded_implicitly_active_plugins() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Starfield, &tmp_dir.path());
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
@@ -975,10 +975,10 @@ mod tests {
         copy_to_test_dir(
             "Blank.full.esm",
             "BlueprintShips-Starfield.esm",
-            &load_order.game_settings(),
+            load_order.game_settings(),
         );
         let plugin =
-            Plugin::new("BlueprintShips-Starfield.esm", &load_order.game_settings()).unwrap();
+            Plugin::new("BlueprintShips-Starfield.esm", load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         assert!(!load_order.is_ambiguous().unwrap());
@@ -987,7 +987,7 @@ mod tests {
     #[test]
     fn is_ambiguous_should_return_true_if_there_are_loaded_plugins_not_in_active_plugins_file() {
         let tmp_dir = tempdir().unwrap();
-        let load_order = prepare(GameId::SkyrimSE, &tmp_dir.path());
+        let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
@@ -1011,7 +1011,7 @@ mod tests {
         create_parent_dirs(&ini_path).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
-        let load_order = prepare(GameId::Fallout4, &tmp_dir.path());
+        let load_order = prepare(GameId::Fallout4, tmp_dir.path());
 
         write_active_plugins_file(load_order.game_settings(), &load_order.plugin_names());
 

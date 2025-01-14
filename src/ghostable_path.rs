@@ -118,7 +118,7 @@ mod tests {
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
-        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", game_dir);
         let expected_path = data_dir.join("Blank.esp");
         let ghosted_path = data_dir.join("Blank.esp.ghost").unghost().unwrap();
 
@@ -132,7 +132,7 @@ mod tests {
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", game_dir);
         let expected_path = data_dir.join("Blank.esp");
         let ghosted_path = expected_path.unghost().unwrap();
 
@@ -190,7 +190,7 @@ mod tests {
         let game_dir = tmp_dir.path();
         let data_dir = game_dir.join("Data");
 
-        copy_to_test_dir("Blank.esp", "Blank.esp", &game_dir);
+        copy_to_test_dir("Blank.esp", "Blank.esp", game_dir);
         let mut expected_path = data_dir.join("Blank.esp");
         let mut resolved_path = data_dir.join("Blank.esp.ghost").resolve_path().unwrap();
 
@@ -202,7 +202,7 @@ mod tests {
         assert!(resolved_path.exists());
         assert_eq!(expected_path, resolved_path);
 
-        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", &game_dir);
+        copy_to_test_dir("Blank.esm", "Blank.esm.ghost", game_dir);
         expected_path = data_dir.join("Blank.esm.ghost");
         resolved_path = data_dir.join("Blank.esm").resolve_path().unwrap();
 
