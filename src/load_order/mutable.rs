@@ -45,10 +45,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         // file) but it still loads as a normal blueprint master, and before
         // all non-"early-loading" blueprint masters.
         let mut loaded_plugin_count = if plugin.is_blueprint_master() {
-            match find_first_blueprint_master_position(self.plugins()) {
-                Some(index) => index,
-                None => return None,
-            }
+            find_first_blueprint_master_position(self.plugins())?
         } else {
             0
         };
@@ -58,15 +55,10 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
                 return Some(loaded_plugin_count);
             }
 
-            if self
-                .plugins()
-                .iter()
-                .find(|p| {
-                    p.is_blueprint_master() == plugin.is_blueprint_master()
-                        && p.name_matches(plugin_name)
-                })
-                .is_some()
-            {
+            if self.plugins().iter().any(|p| {
+                p.is_blueprint_master() == plugin.is_blueprint_master()
+                    && p.name_matches(plugin_name)
+            }) {
                 loaded_plugin_count += 1;
             }
         }

@@ -70,7 +70,7 @@ impl<T: ReadableLoadOrderBase> ReadableLoadOrder for T {
         self.plugins()
             .iter()
             .find(|p| p.name_matches(plugin_name))
-            .map_or(false, |p| p.is_active())
+            .is_some_and(|p| p.is_active())
     }
 }
 
