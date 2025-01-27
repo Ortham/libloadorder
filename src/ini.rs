@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use encoding_rs::WINDOWS_1252;
 
@@ -293,6 +293,87 @@ fn map_windows_system_language<T: AsRef<str>>(system_language: T) -> &'static st
         }
         _ => "en",
     }
+}
+
+fn read_openmw_cfg(openmw_cfg_path: &Path) -> Result<ini::Ini, Error> {
+    if !openmw_cfg_path.exists() {
+        return Ok(ini::Ini::new());
+    }
+
+    // openmw.cfg is encoded in UTF-8, see:
+    // <https://github.com/OpenMW/openmw/blob/openmw-0.48.0/components/config/gamesettings.cpp#L237>
+    ini::Ini::load_from_file_opt(
+        openmw_cfg_path,
+        ini::ParseOption {
+            enabled_quote: false,
+            enabled_escape: false,
+        },
+    )
+    .map_err(|e| match e {
+        ini::Error::Io(e) => Error::IoError(openmw_cfg_path.to_path_buf(), e),
+        ini::Error::Parse(e) => Error::IniParsingError {
+            path: openmw_cfg_path.to_path_buf(),
+            line: e.line,
+            column: e.col,
+            message: e.msg.to_string(),
+        },
+    })
+}
+
+fn parse_openmw_data_value(value: &str) -> PathBuf {
+    // Values may be enclosed in double quotes and use & as an escape, see:
+    // <https://github.com/OpenMW/openmw/blob/openmw-0.48.0/components/config/gamesettings.cpp#L124>
+    if !value.starts_with("\"") {
+        return PathBuf::from(value);
+    }
+
+    // Although the cfg file is encoded in UTF-8, OpenMW iterates over UTF-16
+    // code points. This iterates over Unicode scalar values: the only
+    // difference is the absence of surrogate code points in the latter, which
+    // is not a problem because they're only a representational artifact of
+    // UTF-16, so the result will be the same in both cases.
+    let mut result = String::with_capacity(value.len() - 1);
+    let mut chars = value[1..].chars();
+
+    while let Some(c) = chars.next() {
+        if c == '"' {
+            break;
+        }
+
+        if c == '&' {
+            if let Some(c) = chars.next() {
+                result.push(c);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result.into()
+}
+
+pub fn read_openmw_data_paths(openmw_cfg_path: &Path) -> Result<Vec<PathBuf>, Error> {
+    let ini = read_openmw_cfg(openmw_cfg_path)?;
+
+    let data: Vec<_> = ini
+        .general_section()
+        .get_all("data")
+        .map(parse_openmw_data_value)
+        .collect();
+
+    Ok(data)
+}
+
+pub fn read_openmw_active_plugin_names(openmw_cfg_path: &Path) -> Result<Vec<String>, Error> {
+    let ini = read_openmw_cfg(openmw_cfg_path)?;
+
+    let active_plugin_names: Vec<_> = ini
+        .general_section()
+        .get_all("content")
+        .map(|v| v.to_string())
+        .collect();
+
+    Ok(active_plugin_names)
 }
 
 #[cfg(test)]
@@ -1020,5 +1101,50 @@ mod tests {
         let files = test_files(GameId::Starfield, &game_path, &my_games_path).unwrap();
 
         assert_eq!(vec!["a", "b"], files);
+    }
+
+    #[test]
+    fn read_openmw_data_paths_should_strip_enclosing_double_quotes_and_ampersand_escapes() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        std::fs::write(
+            &ini_path,
+            "data=\"C:\\Path\\&&&\"&a&&&&\\Data Files\"\ndata=/games/path",
+        )
+        .unwrap();
+
+        let data_paths = read_openmw_data_paths(&ini_path).unwrap();
+
+        let expected_paths: &[PathBuf] =
+            &["C:\\Path\\&\"a&&\\Data Files".into(), "/games/path".into()];
+        assert_eq!(expected_paths, data_paths);
+    }
+
+    #[test]
+    fn read_openmw_data_paths_should_not_error_if_the_given_path_does_not_exist() {
+        let data_paths = read_openmw_data_paths(Path::new("missing")).unwrap();
+
+        assert!(data_paths.is_empty());
+    }
+
+    #[test]
+    fn read_openmw_active_plugin_names_should_return_content_values_in_order() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        std::fs::write(&ini_path, "content=a\ncontent=b\ncontent=c").unwrap();
+
+        let data_paths = read_openmw_active_plugin_names(&ini_path).unwrap();
+
+        let expected_names: &[String] = &["a".to_string(), "b".to_string(), "c".to_string()];
+        assert_eq!(expected_names, data_paths);
+    }
+
+    #[test]
+    fn read_openmw_active_plugin_names_should_not_error_if_the_given_path_does_not_exist() {
+        let data_paths = read_openmw_active_plugin_names(Path::new("missing")).unwrap();
+
+        assert!(data_paths.is_empty());
     }
 }
