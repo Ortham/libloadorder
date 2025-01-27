@@ -650,11 +650,20 @@ fn deduplicate(plugin_names: &mut Vec<String>) {
     plugin_names.retain(|e| set.insert(unicase::UniCase::new(e.clone())));
 }
 
-fn find_map_path(directory: &Path, plugin_name: &str) -> Option<PathBuf> {
-    // Plugins may be ghosted, so take that into account when checking.
-    use crate::ghostable_path::GhostablePath;
+fn find_map_path(directory: &Path, plugin_name: &str, game_id: GameId) -> Option<PathBuf> {
+    if game_id.allow_plugin_ghosting() {
+        // Plugins may be ghosted, so take that into account when checking.
+        use crate::ghostable_path::GhostablePath;
 
-    directory.join(plugin_name).resolve_path().ok()
+        directory.join(plugin_name).resolve_path().ok()
+    } else {
+        let path = directory.join(plugin_name);
+        if path.exists() {
+            Some(path)
+        } else {
+            None
+        }
+    }
 }
 
 fn plugin_path(
@@ -681,7 +690,7 @@ fn plugin_path(
 
     additional_plugins_directories
         .iter()
-        .find_map(|d| find_map_path(d, plugin_name))
+        .find_map(|d| find_map_path(d, plugin_name, game_id))
         .unwrap_or_else(|| plugins_directory.join(plugin_name))
 }
 
@@ -1871,6 +1880,29 @@ mod tests {
         let plugin_path = settings.plugin_path(plugin_name);
 
         assert_eq!(expected_plugin_path, plugin_path);
+    }
+
+    #[test]
+    fn plugin_path_should_not_resolve_ghosted_paths_for_openmw() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let other_dir = tmp_dir.path().join("other");
+
+        let plugin_name = "external.esp";
+
+        let mut settings = game_with_game_path(GameId::OpenMW, &game_path);
+        settings.additional_plugins_directories = vec![other_dir.clone()];
+
+        copy_to_dir(
+            "Blank.esp",
+            &other_dir,
+            "external.esp.ghost",
+            GameId::OpenMW,
+        );
+
+        let plugin_path = settings.plugin_path(plugin_name);
+
+        assert_eq!(game_path.join("Data Files").join(plugin_name), plugin_path);
     }
 
     #[test]

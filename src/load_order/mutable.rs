@@ -157,12 +157,16 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         plugin_name_tuples: Vec<(String, bool)>,
         installed_filenames: Vec<String>,
     ) {
-        let plugins: Vec<_> = remove_duplicates_icase(plugin_name_tuples, installed_filenames)
-            .into_par_iter()
-            .filter_map(|(filename, active)| {
-                Plugin::with_active(&filename, self.game_settings(), active).ok()
-            })
-            .collect();
+        let plugins: Vec<_> = remove_duplicates_icase(
+            plugin_name_tuples,
+            installed_filenames,
+            self.game_settings().id(),
+        )
+        .into_par_iter()
+        .filter_map(|(filename, active)| {
+            Plugin::with_active(&filename, self.game_settings(), active).ok()
+        })
+        .collect();
 
         for plugin in plugins {
             insert(self, plugin);
@@ -414,7 +418,7 @@ fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
     dir_entries
         .into_iter()
         .filter_map(|e| e.file_name().to_str().map(str::to_owned))
-        .filter(|filename| set.insert(UniCase::new(trim_dot_ghost(filename).to_string())))
+        .filter(|filename| set.insert(UniCase::new(trim_dot_ghost(filename, game).to_string())))
         .collect()
 }
 
@@ -766,9 +770,10 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
 fn remove_duplicates_icase(
     plugin_tuples: Vec<(String, bool)>,
     filenames: Vec<String>,
+    game_id: GameId,
 ) -> Vec<(String, bool)> {
-    fn get_key_from_filename(filename: &str) -> UniCase<&str> {
-        UniCase::new(trim_dot_ghost(filename))
+    fn get_key_from_filename(filename: &str, game_id: GameId) -> UniCase<&str> {
+        UniCase::new(trim_dot_ghost(filename, game_id))
     }
 
     let mut set: HashSet<_> = HashSet::with_capacity(filenames.len());
@@ -776,7 +781,7 @@ fn remove_duplicates_icase(
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
         .iter()
         .rev()
-        .filter(|(filename, _)| set.insert(get_key_from_filename(filename)))
+        .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
         .map(|(filename, active)| (filename.to_string(), *active))
         .collect();
 
@@ -784,7 +789,7 @@ fn remove_duplicates_icase(
 
     let unique_file_tuples_iter = filenames
         .iter()
-        .filter(|filename| set.insert(get_key_from_filename(filename)))
+        .filter(|filename| set.insert(get_key_from_filename(filename, game_id)))
         .map(|f| (f.to_string(), false));
 
     unique_tuples.extend(unique_file_tuples_iter);

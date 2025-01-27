@@ -38,12 +38,15 @@ const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
     ".esl.ghost",
 ];
 
+const VALID_EXTENSIONS_OPENMW: &[&str] = &[".esp", ".esm"];
+
 #[derive(Clone, Debug)]
 pub struct Plugin {
     active: bool,
     modification_time: SystemTime,
     data: esplugin::Plugin,
     name: String,
+    game_id: GameId,
 }
 
 impl Plugin {
@@ -58,11 +61,16 @@ impl Plugin {
     ) -> Result<Plugin, Error> {
         let filepath = game_settings.plugin_path(filename);
 
-        use crate::ghostable_path::GhostablePath;
-        let filepath = if active {
-            filepath.unghost()?
+        let filepath = if game_settings.id().allow_plugin_ghosting() {
+            use crate::ghostable_path::GhostablePath;
+
+            if active {
+                filepath.unghost()?
+            } else {
+                filepath.resolve_path()?
+            }
         } else {
-            filepath.resolve_path()?
+            filepath
         };
 
         Plugin::with_path(&filepath, game_settings.id(), active)
@@ -92,7 +100,8 @@ impl Plugin {
             active,
             modification_time,
             data,
-            name: trim_dot_ghost(filename).to_string(),
+            name: trim_dot_ghost(filename, game_id).to_string(),
+            game_id,
         })
     }
 
@@ -101,7 +110,7 @@ impl Plugin {
     }
 
     pub fn name_matches(&self, string: &str) -> bool {
-        eq(self.name(), trim_dot_ghost(string))
+        eq(self.name(), trim_dot_ghost(string, self.game_id))
     }
 
     pub fn modification_time(&self) -> SystemTime {
@@ -156,17 +165,19 @@ impl Plugin {
 
     pub fn activate(&mut self) -> Result<(), Error> {
         if !self.is_active() {
-            use crate::ghostable_path::GhostablePath;
+            if self.game_id.allow_plugin_ghosting() {
+                use crate::ghostable_path::GhostablePath;
 
-            if self.data.path().has_ghost_extension() {
-                let new_path = self.data.path().unghost()?;
+                if self.data.path().has_ghost_extension() {
+                    let new_path = self.data.path().unghost()?;
 
-                self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);
-                self.data
-                    .parse_file(ParseOptions::header_only())
-                    .map_err(|e| file_error(self.data.path(), e))?;
-                let modification_time = self.modification_time();
-                self.set_modification_time(modification_time)?;
+                    self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);
+                    self.data
+                        .parse_file(ParseOptions::header_only())
+                        .map_err(|e| file_error(self.data.path(), e))?;
+                    let modification_time = self.modification_time();
+                    self.set_modification_time(modification_time)?;
+                }
             }
 
             self.active = true;
@@ -180,7 +191,9 @@ impl Plugin {
 }
 
 pub fn has_plugin_extension(filename: &str, game: GameId) -> bool {
-    let valid_extensions = if game.supports_light_plugins() {
+    let valid_extensions = if game == GameId::OpenMW {
+        VALID_EXTENSIONS_OPENMW
+    } else if game.supports_light_plugins() {
         VALID_EXTENSIONS_WITH_ESL
     } else {
         VALID_EXTENSIONS
@@ -202,7 +215,15 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
             .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(suffix_byte))
 }
 
-pub fn trim_dot_ghost(string: &str) -> &str {
+pub fn trim_dot_ghost(string: &str, game_id: GameId) -> &str {
+    if game_id.allow_plugin_ghosting() {
+        trim_dot_ghost_unchecked(string)
+    } else {
+        string
+    }
+}
+
+pub fn trim_dot_ghost_unchecked(string: &str) -> &str {
     use crate::ghostable_path::GHOST_FILE_EXTENSION;
 
     if iends_with_ascii(string, GHOST_FILE_EXTENSION) {
@@ -273,6 +294,23 @@ mod tests {
         assert_eq!(name, plugin.name());
         assert!(!game_dir.join("Data").join(name).exists());
         assert!(game_dir.join("Data").join(ghosted_name).exists());
+    }
+
+    #[test]
+    fn with_active_should_not_resolve_ghosted_plugin_paths_for_openmw() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "Blank.esp";
+        let ghosted_name = "Blank.esp.ghost";
+
+        copy_to_test_dir(name, ghosted_name, &settings);
+        match Plugin::with_active(ghosted_name, &settings, false).unwrap_err() {
+            Error::InvalidPath(p) => assert_eq!(game_dir.join("Data Files").join(ghosted_name), p),
+            e => panic!("Expected invalid path error, got {:?}", e),
+        }
     }
 
     #[test]
@@ -466,6 +504,37 @@ mod tests {
     }
 
     #[test]
+    fn activate_should_not_unghost_an_openmw_plugin() {
+        // It's not possible to create an OpenMW Plugin from a path ending in
+        // .ghost outside of this module, so this is just for internal
+        // consistency.
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let plugin_name = "Blank.esp.ghost";
+        copy_to_test_dir("Blank.esp", plugin_name, &settings);
+
+        let data = esplugin::Plugin::new(
+            GameId::OpenMW.to_esplugin_id(),
+            &game_dir.join("Data Files").join(plugin_name),
+        );
+
+        let mut plugin = Plugin {
+            active: false,
+            modification_time: SystemTime::now(),
+            data,
+            name: plugin_name.to_string(),
+            game_id: GameId::OpenMW,
+        };
+
+        plugin.activate().unwrap();
+        assert!(plugin.is_active());
+        assert_eq!(plugin_name, plugin.name());
+    }
+
+    #[test]
     fn deactivate_should_not_ghost_a_plugin() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
@@ -482,11 +551,29 @@ mod tests {
     }
 
     #[test]
-    fn trim_dot_ghost_should_trim_the_ghost_extension() {
+    fn trim_dot_ghost_should_trim_the_ghost_extension_if_the_game_allows_ghosting() {
         let ghosted = "plugin.esp.ghost";
         let unghosted = "plugin.esp";
 
-        assert_eq!(unghosted, trim_dot_ghost(ghosted));
-        assert_eq!(unghosted, trim_dot_ghost(unghosted));
+        assert_eq!(ghosted, trim_dot_ghost(ghosted, GameId::OpenMW));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Morrowind));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Oblivion));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Skyrim));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::SkyrimSE));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::SkyrimVR));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Fallout3));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::FalloutNV));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Fallout4));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Fallout4VR));
+        assert_eq!(unghosted, trim_dot_ghost(ghosted, GameId::Starfield));
+    }
+
+    #[test]
+    fn trim_dot_ghost_unchecked_should_trim_the_ghost_extension() {
+        let ghosted = "plugin.esp.ghost";
+        let unghosted = "plugin.esp";
+
+        assert_eq!(unghosted, trim_dot_ghost_unchecked(ghosted));
+        assert_eq!(unghosted, trim_dot_ghost_unchecked(unghosted));
     }
 }

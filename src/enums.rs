@@ -72,6 +72,10 @@ impl GameId {
             Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR | Starfield
         )
     }
+
+    pub fn allow_plugin_ghosting(self) -> bool {
+        self != GameId::OpenMW
+    }
 }
 
 #[derive(Debug)]
@@ -247,6 +251,21 @@ mod tests {
         assert!(GameId::Fallout4.supports_light_plugins());
         assert!(GameId::Fallout4VR.supports_light_plugins());
         assert!(GameId::Starfield.supports_light_plugins());
+    }
+
+    #[test]
+    fn game_id_allow_plugin_ghosting_should_be_false_for_openmw_only() {
+        assert!(!GameId::OpenMW.allow_plugin_ghosting());
+        assert!(GameId::Morrowind.allow_plugin_ghosting());
+        assert!(GameId::Oblivion.allow_plugin_ghosting());
+        assert!(GameId::Skyrim.allow_plugin_ghosting());
+        assert!(GameId::SkyrimSE.allow_plugin_ghosting());
+        assert!(GameId::SkyrimVR.allow_plugin_ghosting());
+        assert!(GameId::Fallout3.allow_plugin_ghosting());
+        assert!(GameId::FalloutNV.allow_plugin_ghosting());
+        assert!(GameId::Fallout4.allow_plugin_ghosting());
+        assert!(GameId::Fallout4VR.allow_plugin_ghosting());
+        assert!(GameId::Starfield.allow_plugin_ghosting());
     }
 
     #[test]

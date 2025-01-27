@@ -33,7 +33,8 @@ use super::writable::{
 };
 use crate::enums::Error;
 use crate::game_settings::GameSettings;
-use crate::plugin::{trim_dot_ghost, Plugin};
+use crate::plugin::{trim_dot_ghost, trim_dot_ghost_unchecked, Plugin};
+use crate::GameId;
 
 #[derive(Clone, Debug)]
 pub struct TextfileBasedLoadOrder {
@@ -195,7 +196,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         let set: HashSet<_> = plugin_names
             .iter()
-            .map(|name| UniCase::new(trim_dot_ghost(name)))
+            .map(|name| UniCase::new(trim_dot_ghost(name, self.game_settings.id())))
             .collect();
 
         let all_plugins_listed = self
@@ -268,9 +269,13 @@ fn check_self_consistency(game_settings: &GameSettings) -> Result<SelfConsistenc
 
             let are_equal = load_order_plugin_names
                 .iter()
-                .filter(|l| active_plugin_names.iter().any(|a| plugin_names_match(a, l)))
+                .filter(|l| {
+                    active_plugin_names
+                        .iter()
+                        .any(|a| plugin_names_match(game_settings.id(), a, l))
+                })
                 .zip(active_plugin_names.iter())
-                .all(|(l, a)| plugin_names_match(l, a));
+                .all(|(l, a)| plugin_names_match(game_settings.id(), l, a));
 
             if are_equal {
                 Ok(SelfConsistency::ConsistentWithNames(
@@ -291,8 +296,15 @@ fn active_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
     plugin_line_mapper(line).map(|s| (s, true))
 }
 
-fn plugin_names_match(name1: &str, name2: &str) -> bool {
-    eq(trim_dot_ghost(name1), trim_dot_ghost(name2))
+fn plugin_names_match(game_id: GameId, name1: &str, name2: &str) -> bool {
+    if game_id.allow_plugin_ghosting() {
+        eq(
+            trim_dot_ghost_unchecked(name1),
+            trim_dot_ghost_unchecked(name2),
+        )
+    } else {
+        eq(name1, name2)
+    }
 }
 
 #[cfg(test)]

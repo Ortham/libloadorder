@@ -166,7 +166,9 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         if !self.ignore_active_plugins_file() {
             read_plugin_names(self.game_settings().active_plugins_file(), |line| {
                 plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
-                    set.insert(UniCase::new(trim_dot_ghost(name).to_string()));
+                    set.insert(UniCase::new(
+                        trim_dot_ghost(name, self.game_settings.id()).to_string(),
+                    ));
                     None
                 })
             })?;
