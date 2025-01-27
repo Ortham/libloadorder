@@ -101,27 +101,9 @@ const MS_FO4_VAULT_TEC_PATH: &str = "../../Fallout 4- Vault-Tec Workshop (PC)/Co
 const PLUGINS_TXT: &str = "Plugins.txt";
 
 impl GameSettings {
-    #[cfg(windows)]
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
-        let local_app_data_path = match dirs::data_local_dir() {
-            Some(x) => x,
-            None => return Err(Error::NoLocalAppData),
-        };
-        let local_path = match appdata_folder_name(game_id, game_path) {
-            Some(x) => local_app_data_path.join(x),
-            None => local_app_data_path,
-        };
+        let local_path = local_path(game_id, game_path)?.unwrap_or_default();
         GameSettings::with_local_path(game_id, game_path, &local_path)
-    }
-
-    #[cfg(not(windows))]
-    pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
-        if appdata_folder_name(game_id, game_path).is_some() {
-            Err(Error::NoLocalAppData)
-        } else {
-            // It doesn't matter what local_path is passed in, as it isn't used.
-            GameSettings::with_local_path(game_id, game_path, &PathBuf::new())
-        }
     }
 
     pub fn with_local_path(
@@ -129,12 +111,7 @@ impl GameSettings {
         game_path: &Path,
         local_path: &Path,
     ) -> Result<GameSettings, Error> {
-        let my_games_path = match my_games_folder_name(game_id, game_path) {
-            Some(folder) => documents_path(local_path)
-                .map(|d| d.join("My Games").join(folder))
-                .ok_or_else(|| Error::NoDocumentsPath)?,
-            None => PathBuf::default(),
-        };
+        let my_games_path = my_games_path(game_id, game_path, local_path)?.unwrap_or_default();
 
         GameSettings::with_local_and_my_games_paths(game_id, game_path, local_path, my_games_path)
     }
@@ -311,6 +288,30 @@ impl GameSettings {
     }
 }
 
+#[cfg(windows)]
+fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
+    let local_app_data_path = match dirs::data_local_dir() {
+        Some(x) => x,
+        None => return Err(Error::NoLocalAppData),
+    };
+
+    match appdata_folder_name(game_id, game_path) {
+        Some(x) => Ok(Some(local_app_data_path.join(x))),
+        None => Ok(None),
+    }
+}
+
+#[cfg(not(windows))]
+fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
+    if appdata_folder_name(game_id, game_path).is_none() {
+        // There is no local path, the value doesn't matter.
+        Ok(None)
+    } else {
+        // A local app data path is needed, but there's no way to get it.
+        Err(Error::NoLocalAppData)
+    }
+}
+
 // The local path can vary depending on where the game was bought from.
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
@@ -378,6 +379,20 @@ fn fallout4_appdata_folder_name(game_path: &Path) -> &'static str {
     } else {
         "Fallout4"
     }
+}
+
+fn my_games_path(
+    game_id: GameId,
+    game_path: &Path,
+    local_path: &Path,
+) -> Result<Option<PathBuf>, Error> {
+    my_games_folder_name(game_id, game_path)
+        .map(|folder| {
+            documents_path(local_path)
+                .map(|d| d.join("My Games").join(folder))
+                .ok_or_else(|| Error::NoDocumentsPath)
+        })
+        .transpose()
 }
 
 fn my_games_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
@@ -740,6 +755,13 @@ mod tests {
     }
 
     #[test]
+    fn new_should_use_an_empty_local_path_for_morrowind() {
+        let settings = GameSettings::new(GameId::Morrowind, Path::new("game")).unwrap();
+
+        assert_eq!(PathBuf::new(), settings.my_games_path);
+    }
+
+    #[test]
     fn id_should_be_the_id_the_struct_was_created_with() {
         let settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(GameId::Morrowind, settings.id());
@@ -942,6 +964,117 @@ mod tests {
 
         folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
         assert_eq!("Fallout4 MS", folder);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn my_games_path_should_be_in_documents_path_on_windows() {
+        let empty_path = Path::new("");
+        let parent_path = dirs::document_dir().unwrap().join("My Games");
+
+        let path = my_games_path(GameId::Morrowind, empty_path, empty_path).unwrap();
+        assert!(path.is_none());
+
+        let path = my_games_path(GameId::Oblivion, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Oblivion"), path);
+
+        let path = my_games_path(GameId::Skyrim, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim"), path);
+
+        let path = my_games_path(GameId::SkyrimSE, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim Special Edition"), path);
+
+        let path = my_games_path(GameId::SkyrimVR, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim VR"), path);
+
+        let path = my_games_path(GameId::Fallout3, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout3"), path);
+
+        let path = my_games_path(GameId::FalloutNV, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("FalloutNV"), path);
+
+        let path = my_games_path(GameId::Fallout4, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout4"), path);
+
+        let path = my_games_path(GameId::Fallout4VR, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout4VR"), path);
+
+        let path = my_games_path(GameId::Starfield, empty_path, empty_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Starfield"), path);
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn my_games_path_should_be_relative_to_local_path_on_linux() {
+        let empty_path = Path::new("");
+        let local_path = Path::new("wineprefix/drive_c/Users/user/AppData/Local/Game");
+        let parent_path = Path::new("wineprefix/drive_c/Users/user/Documents/My Games");
+
+        let path = my_games_path(GameId::Morrowind, empty_path, local_path).unwrap();
+        assert!(path.is_none());
+
+        let path = my_games_path(GameId::Oblivion, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Oblivion"), path);
+
+        let path = my_games_path(GameId::Skyrim, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim"), path);
+
+        let path = my_games_path(GameId::SkyrimSE, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim Special Edition"), path);
+
+        let path = my_games_path(GameId::SkyrimVR, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Skyrim VR"), path);
+
+        let path = my_games_path(GameId::Fallout3, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout3"), path);
+
+        let path = my_games_path(GameId::FalloutNV, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("FalloutNV"), path);
+
+        let path = my_games_path(GameId::Fallout4, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout4"), path);
+
+        let path = my_games_path(GameId::Fallout4VR, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Fallout4VR"), path);
+
+        let path = my_games_path(GameId::Starfield, empty_path, local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(parent_path.join("Starfield"), path);
     }
 
     #[test]
