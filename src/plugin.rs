@@ -38,7 +38,7 @@ const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
     ".esl.ghost",
 ];
 
-const VALID_EXTENSIONS_OPENMW: &[&str] = &[".esp", ".esm"];
+const VALID_EXTENSIONS_OPENMW: &[&str] = &[".esp", ".esm", ".omwaddon", ".omwgame", ".omwscripts"];
 
 #[derive(Clone, Debug)]
 pub struct Plugin {
@@ -93,8 +93,14 @@ impl Plugin {
             .map_err(|e| Error::IoError(path.to_path_buf(), e))?;
 
         let mut data = esplugin::Plugin::new(game_id.to_esplugin_id(), path);
-        data.parse_reader(file, ParseOptions::header_only())
-            .map_err(|e| file_error(path, e))?;
+
+        // OpenMW has .omwscripts plugins that form part of the load order but
+        // are not of the same file format as the .esm/.esp/.omwgame/.omwaddon
+        // files.
+        if !iends_with_ascii(filename, ".omwscripts") {
+            data.parse_reader(file, ParseOptions::header_only())
+                .map_err(|e| file_error(path, e))?;
+        }
 
         Ok(Plugin {
             active,
@@ -251,6 +257,10 @@ mod tests {
     use tempfile::tempdir;
 
     fn game_settings(game_id: GameId, game_path: &Path) -> GameSettings {
+        if game_id == GameId::OpenMW {
+            std::fs::create_dir(game_path.join("Data Files")).unwrap();
+        }
+
         GameSettings::with_local_and_my_games_paths(
             game_id,
             game_path,
@@ -408,6 +418,20 @@ mod tests {
     }
 
     #[test]
+    fn is_master_file_should_be_false_for_an_omwscripts_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "plugin.omwscripts";
+        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+    }
+
+    #[test]
     fn is_light_plugin_should_be_true_for_esl_files_only() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
@@ -433,6 +457,62 @@ mod tests {
         let plugin = Plugin::new("Blank - Different.esl", &settings).unwrap();
 
         assert!(plugin.is_light_plugin());
+    }
+
+    #[test]
+    fn is_light_plugin_should_be_false_for_an_omwscripts_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "plugin.omwscripts";
+        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(!plugin.is_light_plugin());
+    }
+
+    #[test]
+    fn is_medium_plugin_should_be_false_for_an_omwscripts_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "plugin.omwscripts";
+        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(!plugin.is_light_plugin());
+    }
+
+    #[test]
+    fn is_blueprint_master_should_be_false_for_an_omwscripts_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "plugin.omwscripts";
+        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(!plugin.is_blueprint_master());
+    }
+
+    #[test]
+    fn masters_should_be_empty_for_an_omwscripts_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OpenMW, game_dir);
+
+        let name = "plugin.omwscripts";
+        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(plugin.masters().unwrap().is_empty());
     }
 
     #[test]
@@ -548,6 +628,96 @@ mod tests {
 
         assert!(!plugin.is_active());
         assert!(game_dir.join("Data").join("Blank.esp").exists());
+    }
+
+    #[test]
+    fn has_plugin_extension_should_recognise_openmw_extensions_for_openmw() {
+        assert!(has_plugin_extension("plugin.omwgame", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.omwaddon", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.omwscripts", GameId::OpenMW));
+    }
+
+    #[test]
+    fn has_plugin_extension_should_recognise_esp_and_esm_extensions_for_all_games() {
+        assert!(has_plugin_extension("plugin.esp", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.esp", GameId::Morrowind));
+        assert!(has_plugin_extension("plugin.esp", GameId::Oblivion));
+        assert!(has_plugin_extension("plugin.esp", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esp", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esp", GameId::SkyrimVR));
+        assert!(has_plugin_extension("plugin.esp", GameId::Fallout3));
+        assert!(has_plugin_extension("plugin.esp", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esp", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esp", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esp", GameId::Starfield));
+
+        assert!(has_plugin_extension("plugin.esm", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.esm", GameId::Morrowind));
+        assert!(has_plugin_extension("plugin.esm", GameId::Oblivion));
+        assert!(has_plugin_extension("plugin.esm", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esm", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esm", GameId::SkyrimVR));
+        assert!(has_plugin_extension("plugin.esm", GameId::Fallout3));
+        assert!(has_plugin_extension("plugin.esm", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esm", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esm", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esm", GameId::Starfield));
+    }
+
+    #[test]
+    fn has_plugin_extension_should_recognise_ghosted_esp_and_esm_extensions_for_all_games_other_than_openmw(
+    ) {
+        assert!(!has_plugin_extension("plugin.esp.ghost", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Morrowind));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Oblivion));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::SkyrimVR));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Fallout3));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esp.ghost", GameId::Starfield));
+
+        assert!(!has_plugin_extension("plugin.esm.ghost", GameId::OpenMW));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Morrowind));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Oblivion));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::SkyrimVR));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Fallout3));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esm.ghost", GameId::Starfield));
+    }
+
+    #[test]
+    fn has_plugin_extension_should_recognise_esl_extension_and_ghosted_esl_for_fo4_and_later_games()
+    {
+        assert!(!has_plugin_extension("plugin.esl", GameId::OpenMW));
+        assert!(!has_plugin_extension("plugin.esl", GameId::Morrowind));
+        assert!(!has_plugin_extension("plugin.esl", GameId::Oblivion));
+        assert!(!has_plugin_extension("plugin.esl", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esl", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esl", GameId::SkyrimVR));
+        assert!(!has_plugin_extension("plugin.esl", GameId::Fallout3));
+        assert!(!has_plugin_extension("plugin.esl", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esl", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esl", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esl", GameId::Starfield));
+
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::OpenMW));
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::Morrowind));
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::Oblivion));
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::Skyrim));
+        assert!(has_plugin_extension("plugin.esl.ghost", GameId::SkyrimSE));
+        assert!(has_plugin_extension("plugin.esl.ghost", GameId::SkyrimVR));
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::Fallout3));
+        assert!(!has_plugin_extension("plugin.esl.ghost", GameId::FalloutNV));
+        assert!(has_plugin_extension("plugin.esl.ghost", GameId::Fallout4));
+        assert!(has_plugin_extension("plugin.esl.ghost", GameId::Fallout4VR));
+        assert!(has_plugin_extension("plugin.esl.ghost", GameId::Starfield));
     }
 
     #[test]
