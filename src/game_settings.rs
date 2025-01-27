@@ -156,7 +156,7 @@ impl GameSettings {
     pub fn load_order_method(&self) -> LoadOrderMethod {
         use crate::enums::GameId::*;
         match self.id {
-            Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
+            Morrowind | OpenMW | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
             SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR | Starfield => LoadOrderMethod::Asterisk,
         }
@@ -173,7 +173,7 @@ impl GameSettings {
     pub fn master_file(&self) -> &'static str {
         use crate::enums::GameId::*;
         match self.id {
-            Morrowind => "Morrowind.esm",
+            Morrowind | OpenMW => "Morrowind.esm",
             Oblivion => "Oblivion.esm",
             Skyrim | SkyrimSE | SkyrimVR => "Skyrim.esm",
             Fallout3 => "Fallout3.esm",
@@ -316,7 +316,7 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
     match game_id {
-        Morrowind => None,
+        Morrowind | OpenMW => None,
         Oblivion => Some("Oblivion"),
         Skyrim => Some(skyrim_appdata_folder_name(game_path)),
         SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
@@ -451,7 +451,7 @@ fn documents_path(local_path: &Path) -> Option<PathBuf> {
 
 fn plugins_folder_name(game_id: GameId) -> &'static str {
     match game_id {
-        GameId::Morrowind => "Data Files",
+        GameId::Morrowind | GameId::OpenMW => "Data Files",
         _ => "Data",
     }
 }
@@ -491,7 +491,7 @@ fn plugins_file_path(
     local_path: &Path,
 ) -> Result<PathBuf, Error> {
     match game_id {
-        GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
+        GameId::Morrowind | GameId::OpenMW => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
         // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the
         // games themselves read Plugins.txt.
@@ -769,7 +769,10 @@ mod tests {
 
     #[test]
     fn load_order_method_should_be_timestamp_for_tes3_tes4_fo3_and_fonv() {
-        let mut settings = game_with_generic_paths(GameId::Morrowind);
+        let mut settings = game_with_generic_paths(GameId::OpenMW);
+        assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
+
+        settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
 
         settings = game_with_generic_paths(GameId::Oblivion);
@@ -808,7 +811,10 @@ mod tests {
 
     #[test]
     fn master_file_should_be_mapped_from_game_id() {
-        let mut settings = game_with_generic_paths(GameId::Morrowind);
+        let mut settings = game_with_generic_paths(GameId::OpenMW);
+        assert_eq!("Morrowind.esm", settings.master_file());
+
+        settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!("Morrowind.esm", settings.master_file());
 
         settings = game_with_generic_paths(GameId::Oblivion);
@@ -843,6 +849,8 @@ mod tests {
     fn appdata_folder_name_should_be_mapped_from_game_id() {
         // The game path is unused for most game IDs.
         let game_path = Path::new("");
+
+        assert!(appdata_folder_name(GameId::OpenMW, game_path).is_none());
 
         assert!(appdata_folder_name(GameId::Morrowind, game_path).is_none());
 
@@ -987,6 +995,9 @@ mod tests {
         let empty_path = Path::new("");
         let parent_path = dirs::document_dir().unwrap().join("My Games");
 
+        let path = my_games_path(GameId::OpenMW, empty_path, empty_path).unwrap();
+        assert!(path.is_none());
+
         let path = my_games_path(GameId::Morrowind, empty_path, empty_path).unwrap();
         assert!(path.is_none());
 
@@ -1094,6 +1105,7 @@ mod tests {
 
     #[test]
     fn plugins_folder_name_should_be_mapped_from_game_id() {
+        assert_eq!("Data Files", plugins_folder_name(GameId::OpenMW));
         assert_eq!("Data Files", plugins_folder_name(GameId::Morrowind));
         assert_eq!("Data", plugins_folder_name(GameId::Oblivion));
         assert_eq!("Data", plugins_folder_name(GameId::Skyrim));
@@ -1108,7 +1120,13 @@ mod tests {
 
     #[test]
     fn active_plugins_file_should_be_mapped_from_game_id() {
-        let mut settings = game_with_generic_paths(GameId::Morrowind);
+        let mut settings = game_with_generic_paths(GameId::OpenMW);
+        assert_eq!(
+            Path::new("game/Morrowind.ini"),
+            settings.active_plugins_file()
+        );
+
+        settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(
             Path::new("game/Morrowind.ini"),
             settings.active_plugins_file()
@@ -1223,6 +1241,9 @@ mod tests {
             "DLCUltraHighResolution.esm",
         ];
         assert_eq!(plugins, settings.early_loading_plugins());
+
+        settings = game_with_generic_paths(GameId::OpenMW);
+        assert!(settings.early_loading_plugins().is_empty());
 
         settings = game_with_generic_paths(GameId::Morrowind);
         assert!(settings.early_loading_plugins().is_empty());
@@ -1723,6 +1744,9 @@ mod tests {
         settings = game_with_generic_paths(GameId::SkyrimSE);
         assert!(settings.load_order_file().is_none());
 
+        settings = game_with_generic_paths(GameId::OpenMW);
+        assert!(settings.load_order_file().is_none());
+
         settings = game_with_generic_paths(GameId::Morrowind);
         assert!(settings.load_order_file().is_none());
 
@@ -1747,6 +1771,7 @@ mod tests {
         File::create(game_path.join("appxmanifest.xml")).unwrap();
 
         let game_ids = [
+            GameId::OpenMW,
             GameId::Morrowind,
             GameId::Oblivion,
             GameId::Skyrim,

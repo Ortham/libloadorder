@@ -47,13 +47,13 @@ pub fn write_load_order_file<T: AsRef<str> + Display>(
 pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
     let mut file = File::create(game_settings.active_plugins_file()).unwrap();
 
-    if game_settings.id() == GameId::Morrowind {
+    if matches!(game_settings.id(), GameId::Morrowind | GameId::OpenMW) {
         writeln!(file, "isrealmorrowindini=false").unwrap();
         writeln!(file, "[Game Files]").unwrap();
     }
 
     for filename in filenames {
-        if game_settings.id() == GameId::Morrowind {
+        if matches!(game_settings.id(), GameId::Morrowind | GameId::OpenMW) {
             write!(file, "GameFile0=").unwrap();
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
@@ -161,7 +161,7 @@ pub fn set_blueprint_flag(game_id: GameId, plugin_path: &Path, present: bool) ->
 
 fn set_flag(game_id: GameId, plugin_path: &Path, flag: u32, present: bool) -> io::Result<()> {
     let flags_offset = match game_id {
-        GameId::Morrowind => 12,
+        GameId::Morrowind | GameId::OpenMW => 12,
         _ => 8,
     };
 

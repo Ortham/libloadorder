@@ -55,6 +55,7 @@ fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == LIBLO_GAME_FO4 => Ok(GameId::Fallout4),
         x if x == LIBLO_GAME_FO4VR => Ok(GameId::Fallout4VR),
         x if x == LIBLO_GAME_STARFIELD => Ok(GameId::Starfield),
+        x if x == LIBLO_GAME_OPENMW => Ok(GameId::OpenMW),
         _ => Err(LIBLO_ERROR_INVALID_ARGS),
     }
 }

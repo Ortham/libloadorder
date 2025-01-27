@@ -45,12 +45,14 @@ pub enum GameId {
     Fallout4VR,
     SkyrimVR,
     Starfield,
+    OpenMW,
 }
 
 impl GameId {
     pub fn to_esplugin_id(self) -> esplugin::GameId {
         match self {
             GameId::Morrowind => esplugin::GameId::Morrowind,
+            GameId::OpenMW => esplugin::GameId::Morrowind,
             GameId::Oblivion => esplugin::GameId::Oblivion,
             GameId::Skyrim => esplugin::GameId::Skyrim,
             GameId::SkyrimSE => esplugin::GameId::SkyrimSE,
@@ -234,6 +236,7 @@ mod tests {
 
     #[test]
     fn game_id_supports_light_plugins_should_be_false_until_fallout_4() {
+        assert!(!GameId::OpenMW.supports_light_plugins());
         assert!(!GameId::Morrowind.supports_light_plugins());
         assert!(!GameId::Oblivion.supports_light_plugins());
         assert!(!GameId::Skyrim.supports_light_plugins());

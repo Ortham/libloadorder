@@ -146,3 +146,7 @@ pub static LIBLO_GAME_FO4VR: c_uint = 8;
 /// Game code for Starfield.
 #[no_mangle]
 pub static LIBLO_GAME_STARFIELD: c_uint = 10;
+
+/// Game code for OpenMW.
+#[no_mangle]
+pub static LIBLO_GAME_OPENMW: c_uint = 11;
