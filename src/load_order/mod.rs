@@ -19,6 +19,7 @@
 
 mod asterisk_based;
 mod mutable;
+mod openmw;
 mod readable;
 #[cfg(test)]
 mod tests;
@@ -33,6 +34,7 @@ use encoding_rs::WINDOWS_1252;
 use super::enums::Error;
 
 pub use self::asterisk_based::AsteriskBasedLoadOrder;
+pub use self::openmw::OpenMWLoadOrder;
 pub use self::readable::ReadableLoadOrder;
 pub use self::textfile_based::TextfileBasedLoadOrder;
 pub use self::timestamp_based::TimestampBasedLoadOrder;
