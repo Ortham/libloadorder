@@ -107,6 +107,10 @@ pub static LIBLO_METHOD_TEXTFILE: c_uint = 1;
 #[no_mangle]
 pub static LIBLO_METHOD_ASTERISK: c_uint = 2;
 
+/// The load order system used by OpenMW.
+#[no_mangle]
+pub static LIBLO_METHOD_OPENMW: c_uint = 3;
+
 /// Game code for The Elder Scrolls III: Morrowind.
 #[no_mangle]
 pub static LIBLO_GAME_TES3: c_uint = 1;

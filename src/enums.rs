@@ -29,6 +29,7 @@ pub enum LoadOrderMethod {
     Timestamp,
     Textfile,
     Asterisk,
+    OpenMW,
 }
 
 #[allow(clippy::upper_case_acronyms)]

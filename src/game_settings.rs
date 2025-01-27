@@ -167,6 +167,7 @@ impl GameSettings {
             LoadOrderMethod::Asterisk => Box::new(AsteriskBasedLoadOrder::new(self)),
             LoadOrderMethod::Textfile => Box::new(TextfileBasedLoadOrder::new(self)),
             LoadOrderMethod::Timestamp => Box::new(TimestampBasedLoadOrder::new(self)),
+            LoadOrderMethod::OpenMW => Box::new(TimestampBasedLoadOrder::new(self)),
         }
     }
 
