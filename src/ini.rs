@@ -17,7 +17,10 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs::create_dir_all,
+    path::{Path, PathBuf},
+};
 
 use encoding_rs::WINDOWS_1252;
 
@@ -374,6 +377,60 @@ pub fn read_openmw_active_plugin_names(openmw_cfg_path: &Path) -> Result<Vec<Str
         .collect();
 
     Ok(active_plugin_names)
+}
+
+fn escape_openmw_data_value(value: &Path) -> Result<String, Error> {
+    let str_value = value
+        .to_str()
+        .ok_or_else(|| Error::InvalidPath(value.to_path_buf()))?;
+
+    let mut result = String::with_capacity(str_value.len() + 2);
+
+    result.push('"');
+    for char in str_value.chars() {
+        if char == '&' || char == '"' {
+            result.push('&');
+        }
+
+        result.push(char);
+    }
+    result.push('"');
+
+    Ok(result)
+}
+
+pub fn write_openmw_cfg(
+    openmw_cfg_path: &Path,
+    data_paths: &[PathBuf],
+    active_plugin_names: &[&str],
+) -> Result<(), Error> {
+    let mut ini = read_openmw_cfg(openmw_cfg_path)?;
+
+    // Remove existing data paths.
+    let _ = ini.general_section_mut().remove_all("data").count();
+
+    // Add data paths.
+    for data_path in data_paths {
+        ini.general_section_mut()
+            .append("data", escape_openmw_data_value(data_path)?);
+    }
+
+    // Remove existing load order.
+    let _ = ini.general_section_mut().remove_all("content").count();
+
+    // Add plugins in load order.
+    for plugin_name in active_plugin_names {
+        ini.general_section_mut()
+            .append("content", plugin_name.to_string());
+    }
+
+    if let Some(parent_path) = openmw_cfg_path.parent().filter(|p| !p.exists()) {
+        create_dir_all(parent_path).map_err(|e| Error::IoError(parent_path.to_path_buf(), e))?;
+    }
+
+    // OpenMW's launcher doesn't escape backslashes.
+    ini.write_to_file_policy(openmw_cfg_path, ini::EscapePolicy::Nothing)
+        .map_err(|e| Error::IoError(openmw_cfg_path.to_path_buf(), e))
 }
 
 #[cfg(test)]
@@ -1146,5 +1203,87 @@ mod tests {
         let data_paths = read_openmw_active_plugin_names(Path::new("missing")).unwrap();
 
         assert!(data_paths.is_empty());
+    }
+
+    #[test]
+    fn write_openmw_cfg_should_write_data_and_content_entries() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        std::fs::write(&ini_path, "").unwrap();
+
+        let data_paths = &["C:\\Path\\&\"a&&\\Data Files".into(), "/games/path".into()];
+        let active_plugin_names = &["a", "b", "c"];
+        write_openmw_cfg(&ini_path, data_paths, active_plugin_names).unwrap();
+
+        let file_content = std::fs::read_to_string(ini_path).unwrap();
+        let lines: Vec<_> = file_content.lines().collect();
+
+        assert_eq!(
+            vec![
+                "data=\"C:\\Path\\&&&\"a&&&&\\Data Files\"",
+                "data=\"/games/path\"",
+                "content=a",
+                "content=b",
+                "content=c"
+            ],
+            lines
+        );
+    }
+
+    #[test]
+    fn write_openmw_cfg_should_preserve_existing_entries_other_than_data_and_content() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        std::fs::write(
+            &ini_path,
+            "key1=value1\ndata=foo\nkey2=value2\nkey2=value3\ncontent=a\ncontent=b\ncontent=c\nkey3=value3")
+        .unwrap();
+
+        write_openmw_cfg(&ini_path, &[], &[]).unwrap();
+
+        let file_content = std::fs::read_to_string(ini_path).unwrap();
+        let lines: Vec<_> = file_content.lines().collect();
+
+        assert_eq!(
+            vec!["key1=value1", "key2=value2", "key2=value3", "key3=value3"],
+            lines
+        );
+    }
+
+    #[test]
+    fn write_openmw_cfg_should_not_error_if_the_given_path_does_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        write_openmw_cfg(&ini_path, &["foo".into()], &["bar"]).unwrap();
+
+        let file_content = std::fs::read_to_string(ini_path).unwrap();
+        let lines: Vec<_> = file_content.lines().collect();
+
+        assert_eq!(vec!["data=\"foo\"", "content=bar"], lines);
+    }
+
+    #[test]
+    fn write_should_create_parent_path_if_it_does_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("a/b/c/d/openmw.cfg");
+
+        assert!(write_openmw_cfg(&ini_path, &["foo".into()], &["bar"]).is_ok());
+    }
+
+    #[test]
+    fn write_openmw_cfg_strips_comments() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("openmw.cfg");
+
+        std::fs::write(&ini_path, "#Comment").unwrap();
+
+        write_openmw_cfg(&ini_path, &[], &[]).unwrap();
+
+        let file_content = std::fs::read_to_string(ini_path).unwrap();
+
+        assert_eq!("", file_content);
     }
 }
