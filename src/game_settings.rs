@@ -635,6 +635,13 @@ fn deduplicate(plugin_names: &mut Vec<String>) {
     plugin_names.retain(|e| set.insert(unicase::UniCase::new(e.clone())));
 }
 
+fn find_map_path(directory: &Path, plugin_name: &str) -> Option<PathBuf> {
+    // Plugins may be ghosted, so take that into account when checking.
+    use crate::ghostable_path::GhostablePath;
+
+    directory.join(plugin_name).resolve_path().ok()
+}
+
 fn plugin_path(
     game_id: GameId,
     plugin_name: &str,
@@ -642,13 +649,15 @@ fn plugin_path(
     additional_plugins_directories: &[PathBuf],
 ) -> PathBuf {
     // There may be multiple directories that the plugin could be installed in, so check each in
-    // turn. Plugins may be ghosted, so take that into account when checking.
-    use crate::ghostable_path::GhostablePath;
+    // turn.
 
     // Starfield (at least as of 1.12.32.0) only loads plugins from its additional directory if
     // they're also present in plugins_directory, so there's no point checking the additional
     // directory if a plugin isn't present in plugins_directory.
     if game_id == GameId::Starfield {
+        // Plugins may be ghosted, so take that into account when checking.
+        use crate::ghostable_path::GhostablePath;
+
         let path = plugins_directory.join(plugin_name);
         if path.resolve_path().is_err() {
             return path;
@@ -657,7 +666,7 @@ fn plugin_path(
 
     additional_plugins_directories
         .iter()
-        .find_map(|d| d.join(plugin_name).resolve_path().ok())
+        .find_map(|d| find_map_path(d, plugin_name))
         .unwrap_or_else(|| plugins_directory.join(plugin_name))
 }
 

@@ -26,7 +26,6 @@ use unicase::eq;
 
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
-use crate::ghostable_path::{GhostablePath, GHOST_FILE_EXTENSION};
 
 const VALID_EXTENSIONS: &[&str] = &[".esp", ".esm", ".esp.ghost", ".esm.ghost"];
 
@@ -59,6 +58,7 @@ impl Plugin {
     ) -> Result<Plugin, Error> {
         let filepath = game_settings.plugin_path(filename);
 
+        use crate::ghostable_path::GhostablePath;
         let filepath = if active {
             filepath.unghost()?
         } else {
@@ -156,6 +156,8 @@ impl Plugin {
 
     pub fn activate(&mut self) -> Result<(), Error> {
         if !self.is_active() {
+            use crate::ghostable_path::GhostablePath;
+
             if self.data.path().has_ghost_extension() {
                 let new_path = self.data.path().unghost()?;
 
@@ -201,6 +203,8 @@ fn iends_with_ascii(string: &str, suffix: &str) -> bool {
 }
 
 pub fn trim_dot_ghost(string: &str) -> &str {
+    use crate::ghostable_path::GHOST_FILE_EXTENSION;
+
     if iends_with_ascii(string, GHOST_FILE_EXTENSION) {
         &string[..(string.len() - GHOST_FILE_EXTENSION.len())]
     } else {
