@@ -767,20 +767,25 @@ fn remove_duplicates_icase(
     plugin_tuples: Vec<(String, bool)>,
     filenames: Vec<String>,
 ) -> Vec<(String, bool)> {
+    fn get_key_from_filename(filename: &str) -> UniCase<&str> {
+        UniCase::new(trim_dot_ghost(filename))
+    }
+
     let mut set: HashSet<_> = HashSet::with_capacity(filenames.len());
 
     let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
-        .into_iter()
+        .iter()
         .rev()
-        .filter(|(string, _)| set.insert(UniCase::new(trim_dot_ghost(string).to_string())))
+        .filter(|(filename, _)| set.insert(get_key_from_filename(filename)))
+        .map(|(filename, active)| (filename.to_string(), *active))
         .collect();
 
     unique_tuples.reverse();
 
     let unique_file_tuples_iter = filenames
-        .into_iter()
-        .filter(|string| set.insert(UniCase::new(trim_dot_ghost(string).to_string())))
-        .map(|f| (f, false));
+        .iter()
+        .filter(|filename| set.insert(get_key_from_filename(filename)))
+        .map(|f| (f.to_string(), false));
 
     unique_tuples.extend(unique_file_tuples_iter);
 
