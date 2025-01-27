@@ -961,6 +961,7 @@ mod tests {
         assert_eq!("Data", plugins_folder_name(GameId::FalloutNV));
         assert_eq!("Data", plugins_folder_name(GameId::Fallout4));
         assert_eq!("Data", plugins_folder_name(GameId::Fallout4VR));
+        assert_eq!("Data", plugins_folder_name(GameId::Starfield));
     }
 
     #[test]
@@ -1014,6 +1015,12 @@ mod tests {
         );
 
         settings = game_with_generic_paths(GameId::Fallout4VR);
+        assert_eq!(
+            Path::new("local/Plugins.txt"),
+            settings.active_plugins_file()
+        );
+
+        settings = game_with_generic_paths(GameId::Starfield);
         assert_eq!(
             Path::new("local/Plugins.txt"),
             settings.active_plugins_file()
@@ -1675,6 +1682,31 @@ mod tests {
     }
 
     #[test]
+    fn plugin_path_should_append_plugin_name_to_additional_plugin_directory_if_the_ghosted_path_exists(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let other_dir = tmp_dir.path().join("other");
+
+        let plugin_name = "external.esp";
+        let ghosted_plugin_name = "external.esp.ghost";
+        let expected_plugin_path = other_dir.join(ghosted_plugin_name);
+
+        let mut settings = game_with_generic_paths(GameId::Fallout4);
+        settings.additional_plugins_directories = vec![other_dir.clone()];
+
+        copy_to_dir(
+            "Blank.esp",
+            &other_dir,
+            ghosted_plugin_name,
+            GameId::Fallout4,
+        );
+
+        let plugin_path = settings.plugin_path(plugin_name);
+
+        assert_eq!(expected_plugin_path, plugin_path);
+    }
+
+    #[test]
     fn plugin_path_should_return_plugins_dir_subpath_if_name_does_not_match_any_external_plugin() {
         let settings = game_with_generic_paths(GameId::Fallout4);
 
@@ -1686,7 +1718,7 @@ mod tests {
     }
 
     #[test]
-    fn plugin_path_should_only_resolve_additional_starfield_plugin_paths_if_they_exist_in_the_plugins_directory(
+    fn plugin_path_should_only_resolve_additional_starfield_plugin_paths_if_they_exist_or_are_ghosted_in_the_plugins_directory(
     ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path().join("game");
@@ -1695,6 +1727,8 @@ mod tests {
 
         let plugin_name_1 = "external1.esp";
         let plugin_name_2 = "external2.esp";
+        let plugin_name_3 = "external3.esp";
+        let ghosted_plugin_name_3 = "external3.esp.ghost";
 
         let mut settings = game_with_game_path(GameId::Starfield, &game_path);
         settings.additional_plugins_directories = vec![other_dir.clone()];
@@ -1702,12 +1736,21 @@ mod tests {
         copy_to_dir("Blank.esp", &other_dir, plugin_name_1, GameId::Starfield);
         copy_to_dir("Blank.esp", &other_dir, plugin_name_2, GameId::Starfield);
         copy_to_dir("Blank.esp", &data_path, plugin_name_2, GameId::Starfield);
+        copy_to_dir("Blank.esp", &other_dir, plugin_name_3, GameId::Starfield);
+        copy_to_dir(
+            "Blank.esp",
+            &data_path,
+            ghosted_plugin_name_3,
+            GameId::Starfield,
+        );
 
         let plugin_1_path = settings.plugin_path(plugin_name_1);
         let plugin_2_path = settings.plugin_path(plugin_name_2);
+        let plugin_3_path = settings.plugin_path(plugin_name_3);
 
         assert_eq!(data_path.join(plugin_name_1), plugin_1_path);
         assert_eq!(other_dir.join(plugin_name_2), plugin_2_path);
+        assert_eq!(other_dir.join(plugin_name_3), plugin_3_path);
     }
 
     #[test]

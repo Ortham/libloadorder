@@ -236,6 +236,42 @@ mod tests {
     }
 
     #[test]
+    fn with_active_should_unghost_active_ghosted_plugin_paths() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::Oblivion, game_dir);
+
+        let name = "Blank.esp";
+        let ghosted_name = "Blank.esp.ghost";
+
+        copy_to_test_dir(name, ghosted_name, &settings);
+        let plugin = Plugin::with_active(ghosted_name, &settings, true).unwrap();
+
+        assert_eq!(name, plugin.name());
+        assert!(game_dir.join("Data").join(name).exists());
+        assert!(!game_dir.join("Data").join(ghosted_name).exists());
+    }
+
+    #[test]
+    fn with_active_should_resolve_inactive_ghosted_plugin_paths() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::Oblivion, game_dir);
+
+        let name = "Blank.esp";
+        let ghosted_name = "Blank.esp.ghost";
+
+        copy_to_test_dir(name, ghosted_name, &settings);
+        let plugin = Plugin::with_active(ghosted_name, &settings, false).unwrap();
+
+        assert_eq!(name, plugin.name());
+        assert!(!game_dir.join("Data").join(name).exists());
+        assert!(game_dir.join("Data").join(ghosted_name).exists());
+    }
+
+    #[test]
     fn name_should_return_the_plugin_filename_without_any_ghost_extension() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
@@ -439,5 +475,14 @@ mod tests {
 
         assert!(!plugin.is_active());
         assert!(game_dir.join("Data").join("Blank.esp").exists());
+    }
+
+    #[test]
+    fn trim_dot_ghost_should_trim_the_ghost_extension() {
+        let ghosted = "plugin.esp.ghost";
+        let unghosted = "plugin.esp";
+
+        assert_eq!(unghosted, trim_dot_ghost(ghosted));
+        assert_eq!(unghosted, trim_dot_ghost(unghosted));
     }
 }
