@@ -156,7 +156,7 @@ impl Plugin {
 
     pub fn activate(&mut self) -> Result<(), Error> {
         if !self.is_active() {
-            if self.data.path().is_ghosted() {
+            if self.data.path().has_ghost_extension() {
                 let new_path = self.data.path().unghost()?;
 
                 self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);

@@ -27,7 +27,7 @@ pub const GHOST_FILE_EXTENSION: &str = ".ghost";
 pub trait GhostablePath {
     fn unghost(&self) -> Result<PathBuf, Error>;
 
-    fn is_ghosted(&self) -> bool;
+    fn has_ghost_extension(&self) -> bool;
 
     fn resolve_path(&self) -> Result<PathBuf, Error>;
     fn as_ghosted_path(&self) -> Result<PathBuf, Error>;
@@ -36,7 +36,7 @@ pub trait GhostablePath {
 
 impl GhostablePath for Path {
     fn unghost(&self) -> Result<PathBuf, Error> {
-        if !self.is_ghosted() {
+        if !self.has_ghost_extension() {
             Ok(self.to_path_buf())
         } else {
             let new_path = self.as_unghosted_path()?;
@@ -45,7 +45,7 @@ impl GhostablePath for Path {
         }
     }
 
-    fn is_ghosted(&self) -> bool {
+    fn has_ghost_extension(&self) -> bool {
         match self.extension() {
             None => false,
             Some(x) => x == "ghost",
@@ -56,7 +56,7 @@ impl GhostablePath for Path {
         if self.exists() {
             Ok(self.to_path_buf())
         } else {
-            let alt_path = if self.is_ghosted() {
+            let alt_path = if self.has_ghost_extension() {
                 self.as_unghosted_path()?
             } else {
                 self.as_ghosted_path()?
@@ -71,7 +71,7 @@ impl GhostablePath for Path {
     }
 
     fn as_ghosted_path(&self) -> Result<PathBuf, Error> {
-        if self.is_ghosted() {
+        if self.has_ghost_extension() {
             Ok(self.to_path_buf())
         } else {
             self.file_name()
@@ -86,7 +86,7 @@ impl GhostablePath for Path {
     }
 
     fn as_unghosted_path(&self) -> Result<PathBuf, Error> {
-        if !self.is_ghosted() {
+        if !self.has_ghost_extension() {
             Ok(self.to_path_buf())
         } else {
             self.file_stem()
@@ -141,10 +141,10 @@ mod tests {
     }
 
     #[test]
-    fn is_ghosted_should_be_true_iff_path_ends_in_dot_ghost() {
-        assert!(Path::new("Data/plugin.esp.ghost").is_ghosted());
-        assert!(!Path::new("Data/plugin.esp").is_ghosted());
-        assert!(!Path::new("Data/plugin").is_ghosted());
+    fn has_ghost_extension_should_be_true_iff_path_ends_in_dot_ghost() {
+        assert!(Path::new("Data/plugin.esp.ghost").has_ghost_extension());
+        assert!(!Path::new("Data/plugin.esp").has_ghost_extension());
+        assert!(!Path::new("Data/plugin").has_ghost_extension());
     }
 
     #[test]
