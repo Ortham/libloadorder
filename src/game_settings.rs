@@ -179,6 +179,7 @@ impl GameSettings {
         }
     }
 
+    #[deprecated = "The master file is not necessarily of any significance: you should probably use early_loading_plugins() instead."]
     pub fn master_file(&self) -> &'static str {
         use crate::enums::GameId::*;
         match self.id {
@@ -1042,6 +1043,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn master_file_should_be_mapped_from_game_id() {
         let mut settings = game_with_generic_paths(GameId::OpenMW);
         assert_eq!("Morrowind.esm", settings.master_file());
