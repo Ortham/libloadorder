@@ -251,16 +251,12 @@ fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
 mod tests {
     use super::*;
 
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_test_dir, create_file};
     use std::path::{Path, PathBuf};
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::tempdir;
 
     fn game_settings(game_id: GameId, game_path: &Path) -> GameSettings {
-        if game_id == GameId::OpenMW {
-            std::fs::create_dir(game_path.join("Data Files")).unwrap();
-        }
-
         GameSettings::with_local_and_my_games_paths(
             game_id,
             game_path,
@@ -318,7 +314,9 @@ mod tests {
 
         copy_to_test_dir(name, ghosted_name, &settings);
         match Plugin::with_active(ghosted_name, &settings, false).unwrap_err() {
-            Error::InvalidPath(p) => assert_eq!(game_dir.join("Data Files").join(ghosted_name), p),
+            Error::InvalidPath(p) => {
+                assert_eq!(game_dir.join("resources/vfs").join(ghosted_name), p)
+            }
             e => panic!("Expected invalid path error, got {:?}", e),
         }
     }
@@ -425,7 +423,7 @@ mod tests {
         let settings = game_settings(GameId::OpenMW, game_dir);
 
         let name = "plugin.omwscripts";
-        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(!plugin.is_master_file());
@@ -477,7 +475,7 @@ mod tests {
         let settings = game_settings(GameId::OpenMW, game_dir);
 
         let name = "plugin.omwscripts";
-        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(!plugin.is_light_plugin());
@@ -491,7 +489,7 @@ mod tests {
         let settings = game_settings(GameId::OpenMW, game_dir);
 
         let name = "plugin.omwscripts";
-        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(!plugin.is_light_plugin());
@@ -505,7 +503,7 @@ mod tests {
         let settings = game_settings(GameId::OpenMW, game_dir);
 
         let name = "plugin.omwscripts";
-        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(!plugin.is_blueprint_master());
@@ -519,7 +517,7 @@ mod tests {
         let settings = game_settings(GameId::OpenMW, game_dir);
 
         let name = "plugin.omwscripts";
-        std::fs::write(settings.plugins_directory().join(name), "").unwrap();
+        create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(plugin.masters().unwrap().is_empty());

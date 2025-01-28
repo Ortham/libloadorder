@@ -89,10 +89,7 @@ impl TimestampBasedLoadOrder {
             .write_all(&prelude)
             .map_err(|e| Error::IoError(path.clone(), e))?;
         for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
-            if matches!(
-                self.game_settings().id(),
-                GameId::Morrowind | GameId::OpenMW
-            ) {
+            if self.game_settings().id() == GameId::Morrowind {
                 write!(writer, "GameFile{}=", index)
                     .map_err(|e| Error::IoError(path.clone(), e))?;
             }
@@ -220,7 +217,7 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
 }
 
 fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<String> {
-    if matches!(game_id, GameId::Morrowind | GameId::OpenMW) {
+    if game_id == GameId::Morrowind {
         line = regex
             .captures(line)
             .and_then(|c| c.get(1))
@@ -253,7 +250,7 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 
     let path = game_settings.active_plugins_file();
 
-    if matches!(game_settings.id(), GameId::Morrowind | GameId::OpenMW) && path.exists() {
+    if game_settings.id() == GameId::Morrowind && path.exists() {
         let input = File::open(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let buffered = BufReader::new(input);
 

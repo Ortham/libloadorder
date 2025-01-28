@@ -59,3 +59,8 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
         .join(game_folder)
         .join(plugins_folder)
 }
+
+pub fn create_file(path: &Path) {
+    create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, "").unwrap();
+}

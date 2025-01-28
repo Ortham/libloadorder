@@ -47,13 +47,13 @@ pub fn write_load_order_file<T: AsRef<str> + Display>(
 pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
     let mut file = File::create(game_settings.active_plugins_file()).unwrap();
 
-    if matches!(game_settings.id(), GameId::Morrowind | GameId::OpenMW) {
+    if game_settings.id() == GameId::Morrowind {
         writeln!(file, "isrealmorrowindini=false").unwrap();
         writeln!(file, "[Game Files]").unwrap();
     }
 
     for filename in filenames {
-        if matches!(game_settings.id(), GameId::Morrowind | GameId::OpenMW) {
+        if game_settings.id() == GameId::Morrowind {
             write!(file, "GameFile0=").unwrap();
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();

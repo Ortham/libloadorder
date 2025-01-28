@@ -23,10 +23,13 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::enums::{Error, GameId, LoadOrderMethod};
-use crate::ini::{test_files, use_my_games_directory};
+use crate::ini::{
+    read_openmw_active_plugin_names, read_openmw_data_paths, test_files, use_my_games_directory,
+};
 use crate::is_enderal;
 use crate::load_order::{
-    AsteriskBasedLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder, WritableLoadOrder,
+    AsteriskBasedLoadOrder, OpenMWLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder,
+    WritableLoadOrder,
 };
 use crate::plugin::Plugin;
 
@@ -86,6 +89,8 @@ pub(crate) const STARFIELD_HARDCODED_PLUGINS: &[&str] = &[
     "SFBGS008.esm",
 ];
 
+const OPENMW_HARDCODED_PLUGINS: &[&str] = &["builtin.omwscripts"];
+
 // It's safe to use relative paths like this because the Microsoft Store
 // version of Fallout 4 won't launch if a DLC is installed and its install
 // path changed (e.g. by renaming a directory), so the DLC plugins must be
@@ -124,9 +129,9 @@ impl GameSettings {
     ) -> Result<GameSettings, Error> {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
-        let plugins_directory = game_path.join(plugins_folder_name(game_id));
+        let plugins_directory = game_path.join(plugins_folder_relative_path(game_id));
         let additional_plugins_directories =
-            additional_plugins_directories(game_id, game_path, &my_games_path);
+            additional_plugins_directories(game_id, game_path, &my_games_path)?;
 
         let (early_loading_plugins, implicitly_active_plugins) =
             GameSettings::load_implicitly_active_plugins(
@@ -156,7 +161,8 @@ impl GameSettings {
     pub fn load_order_method(&self) -> LoadOrderMethod {
         use crate::enums::GameId::*;
         match self.id {
-            Morrowind | OpenMW | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
+            OpenMW => LoadOrderMethod::OpenMW,
+            Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
             Skyrim => LoadOrderMethod::Textfile,
             SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR | Starfield => LoadOrderMethod::Asterisk,
         }
@@ -167,7 +173,7 @@ impl GameSettings {
             LoadOrderMethod::Asterisk => Box::new(AsteriskBasedLoadOrder::new(self)),
             LoadOrderMethod::Textfile => Box::new(TextfileBasedLoadOrder::new(self)),
             LoadOrderMethod::Timestamp => Box::new(TimestampBasedLoadOrder::new(self)),
-            LoadOrderMethod::OpenMW => Box::new(TimestampBasedLoadOrder::new(self)),
+            LoadOrderMethod::OpenMW => Box::new(OpenMWLoadOrder::new(self)),
         }
     }
 
@@ -226,6 +232,22 @@ impl GameSettings {
         self.additional_plugins_directories = paths;
     }
 
+    fn game_path(&self) -> &Path {
+        let mut ancestors = self.plugins_directory.ancestors();
+
+        let descendants_count = Path::new(plugins_folder_relative_path(self.id))
+            .components()
+            .count();
+
+        for _ in 0..descendants_count {
+            ancestors.next();
+        }
+
+        ancestors
+            .next()
+            .expect("game path to be an ancestor of plugins directory")
+    }
+
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
         plugin_path(
             self.id,
@@ -239,9 +261,7 @@ impl GameSettings {
         let (early_loading_plugins, implicitly_active_plugins) =
             GameSettings::load_implicitly_active_plugins(
                 self.id,
-                self.plugins_directory
-                    .parent()
-                    .expect("plugins directory path should have a parent path component"),
+                self.game_path(),
                 &self.my_games_path,
                 &self.plugins_directory,
                 &self.additional_plugins_directories,
@@ -291,6 +311,14 @@ impl GameSettings {
 
 #[cfg(windows)]
 fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
+    if game_id == GameId::OpenMW {
+        // OpenMW doesn't have a directory in %LOCALAPPDATA%, it stores
+        // everything in its My Games folder.
+        return dirs::document_dir()
+            .map(|d| Some(d.join("My Games").join("OpenMW")))
+            .ok_or_else(|| Error::NoDocumentsPath);
+    }
+
     let local_app_data_path = match dirs::data_local_dir() {
         Some(x) => x,
         None => return Err(Error::NoLocalAppData),
@@ -304,7 +332,12 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 
 #[cfg(not(windows))]
 fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
-    if appdata_folder_name(game_id, game_path).is_none() {
+    if game_id == GameId::OpenMW {
+        // OpenMW is available as a native Linux application.
+        return dirs::config_dir()
+            .map(|d| Some(d.join("openmw")))
+            .ok_or_else(|| Error::NoDocumentsPath);
+    } else if appdata_folder_name(game_id, game_path).is_none() {
         // There is no local path, the value doesn't matter.
         Ok(None)
     } else {
@@ -387,6 +420,12 @@ fn my_games_path(
     game_path: &Path,
     local_path: &Path,
 ) -> Result<Option<PathBuf>, Error> {
+    if game_id == GameId::OpenMW {
+        // OpenMW has a single "user directory", so the local path and my games
+        // path are the same value.
+        return Ok(Some(local_path.to_path_buf()));
+    }
+
     my_games_folder_name(game_id, game_path)
         .map(|folder| {
             documents_path(local_path)
@@ -399,6 +438,7 @@ fn my_games_path(
 fn my_games_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     use crate::enums::GameId::*;
     match game_id {
+        OpenMW => Some("OpenMW"),
         Skyrim => Some(skyrim_my_games_folder_name(game_path)),
         // For all other games the name is the same as the AppData\Local folder name.
         _ => appdata_folder_name(game_id, game_path),
@@ -450,20 +490,34 @@ fn documents_path(local_path: &Path) -> Option<PathBuf> {
         })
 }
 
-fn plugins_folder_name(game_id: GameId) -> &'static str {
+fn plugins_folder_relative_path(game_id: GameId) -> &'static str {
     match game_id {
-        GameId::Morrowind | GameId::OpenMW => "Data Files",
+        GameId::OpenMW => "resources/vfs",
+        GameId::Morrowind => "Data Files",
         _ => "Data",
     }
+}
+
+fn additional_openmw_data_paths(
+    game_path: &Path,
+    my_games_path: &Path,
+) -> Result<Vec<PathBuf>, Error> {
+    let mut paths = vec![my_games_path.join("data")];
+
+    paths.extend(read_openmw_data_paths(&game_path.join("openmw.cfg"))?);
+
+    paths.extend(read_openmw_data_paths(&my_games_path.join("openmw.cfg"))?);
+
+    Ok(paths)
 }
 
 fn additional_plugins_directories(
     game_id: GameId,
     game_path: &Path,
     my_games_path: &Path,
-) -> Vec<PathBuf> {
+) -> Result<Vec<PathBuf>, Error> {
     if game_id == GameId::Fallout4 && is_microsoft_store_install(game_id, game_path) {
-        vec![
+        Ok(vec![
             game_path.join(MS_FO4_AUTOMATRON_PATH),
             game_path.join(MS_FO4_NUKA_WORLD_PATH),
             game_path.join(MS_FO4_WASTELAND_PATH),
@@ -471,11 +525,13 @@ fn additional_plugins_directories(
             game_path.join(MS_FO4_VAULT_TEC_PATH),
             game_path.join(MS_FO4_FAR_HARBOR_PATH),
             game_path.join(MS_FO4_CONTRAPTIONS_PATH),
-        ]
+        ])
     } else if game_id == GameId::Starfield {
-        vec![my_games_path.join("Data")]
+        Ok(vec![my_games_path.join("Data")])
+    } else if game_id == GameId::OpenMW {
+        additional_openmw_data_paths(game_path, my_games_path)
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 
@@ -492,7 +548,8 @@ fn plugins_file_path(
     local_path: &Path,
 ) -> Result<PathBuf, Error> {
     match game_id {
-        GameId::Morrowind | GameId::OpenMW => Ok(game_path.join("Morrowind.ini")),
+        GameId::OpenMW => Ok(local_path.join("openmw.cfg")),
+        GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
         // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the
         // games themselves read Plugins.txt.
@@ -534,6 +591,7 @@ fn hardcoded_plugins(game_id: GameId) -> &'static [&'static str] {
         GameId::Fallout4 => FALLOUT4_HARDCODED_PLUGINS,
         GameId::Fallout4VR => FALLOUT4VR_HARDCODED_PLUGINS,
         GameId::Starfield => STARFIELD_HARDCODED_PLUGINS,
+        GameId::OpenMW => OPENMW_HARDCODED_PLUGINS,
         _ => &[],
     }
 }
@@ -607,6 +665,13 @@ fn early_loading_plugins(
         }
     }
 
+    if game_id == GameId::OpenMW {
+        // Load non-user content from the global openmw.cfg.
+        plugin_names.extend(read_openmw_active_plugin_names(
+            &game_path.join("openmw.cfg"),
+        )?);
+    }
+
     deduplicate(&mut plugin_names);
 
     Ok(plugin_names)
@@ -667,6 +732,17 @@ fn find_map_path(directory: &Path, plugin_name: &str, game_id: GameId) -> Option
     }
 }
 
+fn pick_plugin_path<'a>(
+    game_id: GameId,
+    plugin_name: &str,
+    plugins_directory: &Path,
+    mut dir_iter: impl Iterator<Item = &'a PathBuf>,
+) -> PathBuf {
+    dir_iter
+        .find_map(|d| find_map_path(d, plugin_name, game_id))
+        .unwrap_or_else(|| plugins_directory.join(plugin_name))
+}
+
 fn plugin_path(
     game_id: GameId,
     plugin_name: &str,
@@ -689,17 +765,32 @@ fn plugin_path(
         }
     }
 
-    additional_plugins_directories
-        .iter()
-        .find_map(|d| find_map_path(d, plugin_name, game_id))
-        .unwrap_or_else(|| plugins_directory.join(plugin_name))
+    // In OpenMW, if there are multiple directories containing the same filename, the last directory
+    // listed "wins".
+    match game_id {
+        GameId::OpenMW => pick_plugin_path(
+            game_id,
+            plugin_name,
+            plugins_directory,
+            additional_plugins_directories.iter().rev(),
+        ),
+        _ => pick_plugin_path(
+            game_id,
+            plugin_name,
+            plugins_directory,
+            additional_plugins_directories.iter(),
+        ),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     #[cfg(windows)]
     use std::env;
-    use std::{fs::create_dir, io::Write};
+    use std::{
+        fs::{create_dir, create_dir_all},
+        io::Write,
+    };
     use tempfile::tempdir;
 
     use crate::tests::copy_to_dir;
@@ -738,7 +829,7 @@ mod tests {
     }
 
     fn create_ccc_file(path: &Path, plugin_names: &[&str]) {
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        create_dir_all(path.parent().unwrap()).unwrap();
 
         let mut file = File::create(path).unwrap();
 
@@ -749,7 +840,7 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn new_should_determine_correct_local_path() {
+    fn new_should_determine_correct_local_path_on_windows() {
         let settings = GameSettings::new(GameId::Skyrim, Path::new("game")).unwrap();
         let local_app_data = env::var("LOCALAPPDATA").unwrap();
         let local_app_data_path = Path::new(&local_app_data);
@@ -765,10 +856,41 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
+    fn new_should_use_my_games_as_local_path_for_openmw_on_windows() {
+        let my_games_path = dirs::document_dir()
+            .unwrap()
+            .join("My Games")
+            .join("OpenMW");
+
+        let settings = GameSettings::new(GameId::OpenMW, Path::new("game")).unwrap();
+
+        assert_eq!(
+            &my_games_path.join("openmw.cfg"),
+            settings.active_plugins_file()
+        );
+        assert_eq!(my_games_path, settings.my_games_path);
+    }
+
+    #[test]
     fn new_should_use_an_empty_local_path_for_morrowind() {
         let settings = GameSettings::new(GameId::Morrowind, Path::new("game")).unwrap();
 
         assert_eq!(PathBuf::new(), settings.my_games_path);
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn new_should_determine_correct_local_path_for_openmw_on_linux() {
+        let config_path = dirs::config_dir().unwrap().join("openmw");
+
+        let settings = GameSettings::new(GameId::OpenMW, Path::new("game")).unwrap();
+
+        assert_eq!(
+            &config_path.join("openmw.cfg"),
+            settings.active_plugins_file()
+        );
+        assert_eq!(config_path, settings.my_games_path);
     }
 
     #[test]
@@ -779,10 +901,7 @@ mod tests {
 
     #[test]
     fn load_order_method_should_be_timestamp_for_tes3_tes4_fo3_and_fonv() {
-        let mut settings = game_with_generic_paths(GameId::OpenMW);
-        assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
-
-        settings = game_with_generic_paths(GameId::Morrowind);
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(LoadOrderMethod::Timestamp, settings.load_order_method());
 
         settings = game_with_generic_paths(GameId::Oblivion);
@@ -817,6 +936,13 @@ mod tests {
 
         settings = game_with_generic_paths(GameId::Starfield);
         assert_eq!(LoadOrderMethod::Asterisk, settings.load_order_method());
+    }
+
+    #[test]
+    fn load_order_method_should_be_openmw_for_openmw() {
+        let settings = game_with_generic_paths(GameId::OpenMW);
+
+        assert_eq!(LoadOrderMethod::OpenMW, settings.load_order_method());
     }
 
     #[test]
@@ -1005,9 +1131,6 @@ mod tests {
         let empty_path = Path::new("");
         let parent_path = dirs::document_dir().unwrap().join("My Games");
 
-        let path = my_games_path(GameId::OpenMW, empty_path, empty_path).unwrap();
-        assert!(path.is_none());
-
         let path = my_games_path(GameId::Morrowind, empty_path, empty_path).unwrap();
         assert!(path.is_none());
 
@@ -1114,25 +1237,42 @@ mod tests {
     }
 
     #[test]
-    fn plugins_folder_name_should_be_mapped_from_game_id() {
-        assert_eq!("Data Files", plugins_folder_name(GameId::OpenMW));
-        assert_eq!("Data Files", plugins_folder_name(GameId::Morrowind));
-        assert_eq!("Data", plugins_folder_name(GameId::Oblivion));
-        assert_eq!("Data", plugins_folder_name(GameId::Skyrim));
-        assert_eq!("Data", plugins_folder_name(GameId::SkyrimSE));
-        assert_eq!("Data", plugins_folder_name(GameId::SkyrimVR));
-        assert_eq!("Data", plugins_folder_name(GameId::Fallout3));
-        assert_eq!("Data", plugins_folder_name(GameId::FalloutNV));
-        assert_eq!("Data", plugins_folder_name(GameId::Fallout4));
-        assert_eq!("Data", plugins_folder_name(GameId::Fallout4VR));
-        assert_eq!("Data", plugins_folder_name(GameId::Starfield));
+    #[cfg(windows)]
+    fn my_games_path_should_be_local_path_for_openmw() {
+        let local_path = Path::new("path/to/local");
+
+        let path = my_games_path(GameId::OpenMW, Path::new(""), local_path)
+            .unwrap()
+            .unwrap();
+        assert_eq!(local_path, path);
+    }
+
+    #[test]
+    fn plugins_folder_relative_path_should_be_mapped_from_game_id() {
+        assert_eq!(
+            "resources/vfs",
+            plugins_folder_relative_path(GameId::OpenMW)
+        );
+        assert_eq!(
+            "Data Files",
+            plugins_folder_relative_path(GameId::Morrowind)
+        );
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Oblivion));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Skyrim));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::SkyrimSE));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::SkyrimVR));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout3));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::FalloutNV));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout4));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout4VR));
+        assert_eq!("Data", plugins_folder_relative_path(GameId::Starfield));
     }
 
     #[test]
     fn active_plugins_file_should_be_mapped_from_game_id() {
         let mut settings = game_with_generic_paths(GameId::OpenMW);
         assert_eq!(
-            Path::new("game/Morrowind.ini"),
+            Path::new("local/openmw.cfg"),
             settings.active_plugins_file()
         );
 
@@ -1253,7 +1393,8 @@ mod tests {
         assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::OpenMW);
-        assert!(settings.early_loading_plugins().is_empty());
+        plugins = vec!["builtin.omwscripts"];
+        assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Morrowind);
         assert!(settings.early_loading_plugins().is_empty());
@@ -1504,6 +1645,21 @@ mod tests {
         .unwrap();
 
         assert!(!settings.loads_early("test.esp"));
+    }
+
+    #[test]
+    fn early_loading_plugins_should_include_plugins_from_global_config_for_openmw() {
+        let tmp_dir = tempdir().unwrap();
+        let global_cfg_path = tmp_dir.path().join("openmw.cfg");
+
+        create_dir_all(global_cfg_path.parent().unwrap()).unwrap();
+        std::fs::write(&global_cfg_path, "content=test.esm\ncontent=test.esp").unwrap();
+
+        let settings = game_with_game_path(GameId::OpenMW, tmp_dir.path());
+
+        let expected = &["builtin.omwscripts", "test.esm", "test.esp"];
+
+        assert_eq!(expected, settings.early_loading_plugins());
     }
 
     #[test]
@@ -1781,7 +1937,6 @@ mod tests {
         File::create(game_path.join("appxmanifest.xml")).unwrap();
 
         let game_ids = [
-            GameId::OpenMW,
             GameId::Morrowind,
             GameId::Oblivion,
             GameId::Skyrim,
@@ -1838,6 +1993,36 @@ mod tests {
             vec![Path::new("my games").join("Data")],
             settings.additional_plugins_directories()
         );
+    }
+
+    #[test]
+    fn additional_plugins_directories_should_read_from_openmw_cfgs() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path().join("game");
+        let my_games_path = tmp_dir.path().join("my games");
+        let global_cfg_path = game_path.join("openmw.cfg");
+        let cfg_path = my_games_path.join("openmw.cfg");
+
+        create_dir_all(global_cfg_path.parent().unwrap()).unwrap();
+        std::fs::write(&global_cfg_path, "data=\"/foo/bar\"").unwrap();
+
+        create_dir_all(cfg_path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &cfg_path,
+            "data=\"C:\\Path\\&&&\"&a&&&&\\Data Files\"\ndata=/games/path",
+        )
+        .unwrap();
+
+        let settings =
+            GameSettings::with_local_path(GameId::OpenMW, &game_path, &my_games_path).unwrap();
+
+        let expected: Vec<PathBuf> = vec![
+            my_games_path.join("data"),
+            "/foo/bar".into(),
+            "C:\\Path\\&\"a&&\\Data Files".into(),
+            "/games/path".into(),
+        ];
+        assert_eq!(expected, settings.additional_plugins_directories());
     }
 
     #[test]
@@ -1903,7 +2088,29 @@ mod tests {
 
         let plugin_path = settings.plugin_path(plugin_name);
 
-        assert_eq!(game_path.join("Data Files").join(plugin_name), plugin_path);
+        assert_eq!(
+            game_path.join("resources/vfs").join(plugin_name),
+            plugin_path
+        );
+    }
+
+    #[test]
+    fn plugin_path_should_return_the_last_directory_that_contains_a_file_for_openmw() {
+        let tmp_dir = tempdir().unwrap();
+        let other_dir_1 = tmp_dir.path().join("other1");
+        let other_dir_2 = tmp_dir.path().join("other2");
+
+        let plugin_name = "Blank.esp";
+
+        let mut settings = game_with_game_path(GameId::OpenMW, tmp_dir.path());
+        settings.additional_plugins_directories = vec![other_dir_1.clone(), other_dir_2.clone()];
+
+        copy_to_dir("Blank.esp", &other_dir_1, plugin_name, GameId::OpenMW);
+        copy_to_dir("Blank.esp", &other_dir_2, plugin_name, GameId::OpenMW);
+
+        let plugin_path = settings.plugin_path(plugin_name);
+
+        assert_eq!(other_dir_2.join(plugin_name), plugin_path);
     }
 
     #[test]
