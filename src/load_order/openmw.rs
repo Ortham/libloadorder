@@ -221,7 +221,7 @@ impl WritableLoadOrder for OpenMWLoadOrder {
         self.plugins_mut().clear();
 
         let plugin_tuples = self.read_from_active_plugins_file()?;
-        let paths = self.find_plugins();
+        let paths = self.game_settings.find_plugins();
 
         self.load_unique_plugins(&plugin_tuples, &paths);
 

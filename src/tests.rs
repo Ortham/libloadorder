@@ -17,8 +17,9 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::fs::{copy, create_dir_all};
+use std::fs::{copy, create_dir_all, File, FileTimes};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 use crate::enums::GameId;
 use crate::game_settings::GameSettings;
@@ -63,4 +64,25 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
 pub fn create_file(path: &Path) {
     create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(path, "").unwrap();
+}
+
+pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
+    for (index, filename) in filenames.iter().enumerate() {
+        set_file_timestamps(
+            &plugins_directory.join(filename.as_ref()),
+            1321009871 + u64::try_from(index * 60).unwrap(),
+        );
+    }
+}
+
+pub fn set_file_timestamps(path: &Path, unix_seconds: u64) {
+    let times = FileTimes::new()
+        .set_accessed(SystemTime::UNIX_EPOCH)
+        .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(unix_seconds));
+    File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_times(times)
+        .unwrap();
 }

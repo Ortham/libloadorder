@@ -17,8 +17,10 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
+use std::cmp::Ordering;
+use std::fs::{read_dir, DirEntry, File};
 use std::io::{BufRead, BufReader};
+use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -31,7 +33,7 @@ use crate::load_order::{
     AsteriskBasedLoadOrder, OpenMWLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder,
     WritableLoadOrder,
 };
-use crate::plugin::Plugin;
+use crate::plugin::{has_plugin_extension, Plugin};
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
@@ -232,6 +234,25 @@ impl GameSettings {
         self.additional_plugins_directories = paths;
     }
 
+    /// Find installed plugins and return them in their "inactive load order",
+    /// which is generally the order in which the game launcher would display
+    /// them if they were all inactive, ignoring rules like master files
+    /// loading before others and about early-loading plugins.
+    pub(crate) fn find_plugins(&self) -> Vec<PathBuf> {
+        let main_dir_iter = once(&self.plugins_directory);
+        let other_directories_iter = self.additional_plugins_directories.iter();
+
+        // For most games, plugins in the additional directories override any of
+        // the same names that appear in the main plugins directory, so check
+        // for the additional paths first. For OpenMW the main directory is
+        // listed first.
+        if self.id == GameId::OpenMW {
+            find_plugins_in_directories(main_dir_iter.chain(other_directories_iter), self.id)
+        } else {
+            find_plugins_in_directories(other_directories_iter.chain(main_dir_iter), self.id)
+        }
+    }
+
     pub(crate) fn game_path(&self) -> &Path {
         let mut ancestors = self.plugins_directory.ancestors();
 
@@ -256,7 +277,7 @@ impl GameSettings {
         plugin_path(
             self.id,
             plugin_name,
-            &self.plugins_directory(),
+            &self.plugins_directory,
             &self.additional_plugins_directories,
         )
     }
@@ -796,6 +817,68 @@ fn plugin_path(
     }
 }
 
+fn sort_plugins_dir_entries(a: &DirEntry, b: &DirEntry) -> Ordering {
+    // Sort by file modification timestamps, in ascending order. If two
+    // timestamps are equal, sort by filenames in descending order.
+    let m_a = a.metadata().and_then(|m| m.modified()).ok();
+    let m_b = b.metadata().and_then(|m| m.modified()).ok();
+
+    match m_a.cmp(&m_b) {
+        Ordering::Equal => a.file_name().cmp(&b.file_name()).reverse(),
+        x => x,
+    }
+}
+
+fn sort_plugins_dir_entries_starfield(a: &DirEntry, b: &DirEntry) -> Ordering {
+    // Sort by file modification timestamps, in ascending order. If two
+    // timestamps are equal, sort by filenames in ascending order.
+    let m_a = a.metadata().and_then(|m| m.modified()).ok();
+    let m_b = b.metadata().and_then(|m| m.modified()).ok();
+
+    match m_a.cmp(&m_b) {
+        Ordering::Equal => a.file_name().cmp(&b.file_name()),
+        x => x,
+    }
+}
+
+fn sort_plugins_dir_entries_openmw(a: &DirEntry, b: &DirEntry) -> Ordering {
+    // Preserve the directory ordering, but sort case-sensitive
+    // lexicographically within directories.
+    if a.path().parent() == b.path().parent() {
+        a.file_name().cmp(&b.file_name())
+    } else {
+        Ordering::Equal
+    }
+}
+
+fn find_plugins_in_directories<'a>(
+    directories_iter: impl Iterator<Item = &'a PathBuf>,
+    game_id: GameId,
+) -> Vec<PathBuf> {
+    let mut dir_entries: Vec<_> = directories_iter
+        .flat_map(read_dir)
+        .flatten()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
+        .filter(|e| {
+            e.file_name()
+                .to_str()
+                .map(|f| has_plugin_extension(f, game_id))
+                .unwrap_or(false)
+        })
+        .collect();
+
+    let compare = match game_id {
+        GameId::OpenMW => sort_plugins_dir_entries_openmw,
+        GameId::Starfield => sort_plugins_dir_entries_starfield,
+        _ => sort_plugins_dir_entries,
+    };
+
+    dir_entries.sort_by(compare);
+
+    dir_entries.into_iter().map(|e| e.path()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(windows)]
@@ -806,7 +889,7 @@ mod tests {
     };
     use tempfile::tempdir;
 
-    use crate::tests::copy_to_dir;
+    use crate::tests::{copy_to_dir, set_file_timestamps};
 
     use super::*;
 
@@ -2212,5 +2295,112 @@ mod tests {
 
         expected_plugins.push("plugin.esp");
         assert_eq!(expected_plugins, settings.implicitly_active_plugins());
+    }
+
+    #[test]
+    fn find_plugins_in_directories_should_sort_files_by_modification_timestamp() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let plugin_names = [
+            "Blank.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blàñk.esp",
+        ];
+
+        copy_to_dir("Blank.esp", game_path, "Blàñk.esp", GameId::Oblivion);
+
+        for (i, plugin_name) in plugin_names.iter().enumerate() {
+            let path = game_path.join(plugin_name);
+            if !path.exists() {
+                copy_to_dir(plugin_name, game_path, plugin_name, GameId::Oblivion);
+            }
+            set_file_timestamps(&path, i.try_into().unwrap());
+        }
+
+        let result = find_plugins_in_directories(once(&game_path.to_path_buf()), GameId::Oblivion);
+
+        let expected: Vec<_> = plugin_names.iter().map(|n| game_path.join(n)).collect();
+
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn find_plugins_in_directories_should_sort_files_by_descending_filename_if_timestamps_are_equal(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let plugin_names = [
+            "Blank.esm",
+            "Blank.esp",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blàñk.esp",
+        ];
+
+        copy_to_dir("Blank.esp", game_path, "Blàñk.esp", GameId::Oblivion);
+
+        for (i, plugin_name) in plugin_names.iter().enumerate() {
+            let path = game_path.join(plugin_name);
+            if !path.exists() {
+                copy_to_dir(plugin_name, game_path, plugin_name, GameId::Oblivion);
+            }
+            set_file_timestamps(&path, i.try_into().unwrap());
+        }
+
+        let timestamp = 3;
+        set_file_timestamps(&game_path.join("Blank - Different.esp"), timestamp);
+        set_file_timestamps(&game_path.join("Blank - Master Dependent.esp"), timestamp);
+
+        let result = find_plugins_in_directories(once(&game_path.to_path_buf()), GameId::Oblivion);
+
+        let plugin_paths = vec![
+            game_path.join("Blank.esm"),
+            game_path.join("Blank.esp"),
+            game_path.join("Blank - Master Dependent.esp"),
+            game_path.join("Blank - Different.esp"),
+            game_path.join("Blàñk.esp"),
+        ];
+
+        assert_eq!(plugin_paths, result);
+    }
+
+    #[test]
+    fn find_plugins_in_directories_should_sort_files_by_ascending_filename_if_timestamps_are_equal_and_game_is_starfield(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let plugin_names = [
+            "Blank.full.esm",
+            "Blank.small.esm",
+            "Blank.medium.esm",
+            "Blank.esp",
+            "Blank - Override.esp",
+        ];
+
+        let timestamp = 1321009991;
+
+        for plugin_name in &plugin_names {
+            let path = game_path.join(plugin_name);
+            if !path.exists() {
+                copy_to_dir(plugin_name, game_path, plugin_name, GameId::Starfield);
+            }
+            set_file_timestamps(&path, timestamp);
+        }
+
+        let result = find_plugins_in_directories(once(&game_path.to_path_buf()), GameId::Starfield);
+
+        let plugin_paths = vec![
+            game_path.join("Blank - Override.esp"),
+            game_path.join("Blank.esp"),
+            game_path.join("Blank.full.esm"),
+            game_path.join("Blank.medium.esm"),
+            game_path.join("Blank.small.esm"),
+        ];
+
+        assert_eq!(plugin_paths, result);
     }
 }

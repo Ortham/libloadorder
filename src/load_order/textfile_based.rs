@@ -132,7 +132,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
             self.read_from_active_plugins_file()?
         };
 
-        let paths = self.find_plugins();
+        let paths = self.game_settings.find_plugins();
         self.load_unique_plugins(&plugin_tuples, &paths);
 
         if load_order_file_exists {
@@ -313,7 +313,7 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_test_dir, set_file_timestamps};
     use std::fs::{remove_dir_all, File};
     use std::io::Write;
     use std::path::Path;

@@ -17,19 +17,17 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use std::convert::TryFrom;
 use std::fmt::Display;
-use std::fs::{create_dir_all, File, FileTimes, OpenOptions};
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
-use std::time::{Duration, SystemTime};
 
 use crate::enums::GameId;
 use crate::enums::LoadOrderMethod;
 use crate::game_settings::GameSettings;
 use crate::load_order::strict_encode;
 use crate::plugin::Plugin;
-use crate::tests::copy_to_test_dir;
+use crate::tests::{copy_to_test_dir, set_timestamps};
 
 use super::mutable::MutableLoadOrder;
 
@@ -65,27 +63,6 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
     }
 }
 
-pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
-    for (index, filename) in filenames.iter().enumerate() {
-        set_file_timestamps(
-            &plugins_directory.join(filename.as_ref()),
-            u64::try_from(index).unwrap(),
-        );
-    }
-}
-
-pub fn set_file_timestamps(path: &Path, unix_seconds: u64) {
-    let times = FileTimes::new()
-        .set_accessed(SystemTime::UNIX_EPOCH)
-        .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(unix_seconds));
-    File::options()
-        .write(true)
-        .open(path)
-        .unwrap()
-        .set_times(times)
-        .unwrap();
-}
-
 pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
     let local_path = game_path.join("local");
     create_dir_all(&local_path).unwrap();
@@ -97,20 +74,6 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
     } else {
         GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, my_games_path)
             .unwrap()
-    }
-}
-
-pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
-    let mut timestamp = SystemTime::UNIX_EPOCH + Duration::from_secs(1321009871);
-    for plugin_name in plugin_names {
-        let path = parent_path.join(plugin_name);
-        File::options()
-            .write(true)
-            .open(path)
-            .unwrap()
-            .set_modified(timestamp)
-            .unwrap();
-        timestamp += Duration::from_secs(60);
     }
 }
 
@@ -139,7 +102,7 @@ pub fn mock_game_files(settings: &mut GameSettings) {
             "Blank - Master Dependent.esp",
             "Blàñk.esp",
         ];
-        set_timestamp_order(&plugin_names, &settings.plugins_directory());
+        set_timestamps(&settings.plugins_directory(), &plugin_names);
     }
 
     // Refresh settings to account for newly-created plugin files.

@@ -66,14 +66,13 @@ impl TimestampBasedLoadOrder {
     }
 
     fn load_plugins_from_dir(&self) -> Vec<Plugin> {
-        let paths = self.find_plugins();
-        let game_settings = self.game_settings();
+        let paths = self.game_settings.find_plugins();
 
-        let filenames = get_unique_filenames(paths, game_settings.id());
+        let filenames = get_unique_filenames(paths, self.game_settings.id());
 
         filenames
             .par_iter()
-            .filter_map(|f| Plugin::new(f, game_settings).ok())
+            .filter_map(|f| Plugin::new(f, &self.game_settings).ok())
             .collect()
     }
 
@@ -274,7 +273,7 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_test_dir, set_file_timestamps, set_timestamps};
     use std::convert::TryInto;
     use std::fs::{remove_dir_all, File};
     use std::io::{Read, Write};

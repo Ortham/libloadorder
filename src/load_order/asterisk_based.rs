@@ -91,7 +91,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         self.plugins_mut().clear();
 
         let plugin_tuples = self.read_from_active_plugins_file()?;
-        let paths = self.find_plugins();
+        let paths = self.game_settings.find_plugins();
 
         self.load_unique_plugins(&plugin_tuples, &paths);
 
@@ -236,7 +236,7 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::{copy_to_dir, copy_to_test_dir};
+    use crate::tests::{copy_to_dir, copy_to_test_dir, set_file_timestamps};
     use std::fs::{create_dir_all, remove_dir_all, File};
     use std::path::Path;
     use std::time::Duration;
