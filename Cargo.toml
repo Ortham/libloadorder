@@ -1,7 +1,7 @@
 [package]
 name = "libloadorder"
-version = "18.1.3"
-authors = ["Oliver Hamlet <oliver@ortham.io>"]
+version = "18.2.0"
+authors = ["Oliver Hamlet <oliver@ortham.net>"]
 description = "A cross-platform library for manipulating the load order and active status of plugins for the Elder Scrolls and Fallout games."
 documentation = "https://docs.rs/libloadorder"
 repository = "https://github.com/Ortham/libloadorder.git"

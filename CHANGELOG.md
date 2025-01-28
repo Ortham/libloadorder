@@ -3,6 +3,57 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.2.0] - 2025-02-01
+
+### Added
+
+- Support for OpenMW using the new `GameId::OpenMW` and
+  `LoadOrderMethod::OpenMW` enum values.
+
+  - Support has been implemented for OpenMW 0.49.0 RC3. 0.48.0 should also be
+    compatible, as there appears to be only minor load order differences between
+    the two.
+  - When calling `GameSettings::new()` or `GameSettings::with_local_path()`, the
+    `game_path` must be the path to the OpenMW installation directory, e.g.
+    `C:\Program Files\OpenMW` on Windows, not the Morrowind install path.
+  - `GameSettings::new()` will use OpenMW's `My Games\OpenMW` directory on
+    Windows and its `$HOME/.config/openmw` directory on Linux as the game's
+    local path.
+  - OpenMW supports loading plugins from multiple data directories.
+    `GameSettings::plugins_directory()` will be the `resources/vfs` directory
+    within the game path, and `GameSettings::additional_plugins_directories()`
+    will contain OpenMW's local data path, followed by the data paths listed in
+    the global and user `openmw.cfg` files.
+  - When the load order is saved, the user `openmw.cfg` will be written to,
+    replacing the `content` entries with the active plugins in their load order,
+    and replacing the `data` entries with the paths in
+    `GameSettings::additional_plugins_directories()`, aside from hardcoded paths
+    and paths that are present in the global `openmw.cfg` file.
+  - The OpenMW Launcher derives the load order of inactive plugins from the
+    order in which their parent data paths are listed and from their filenames.
+    libloadorder attempts to do the same.
+  - While libloadorder allows you to change the load order positions of inactive
+    plugins, OpenMW provides no way to persist those changes.
+  - Unlike Morrowind, OpenMW does not load master-flagged plugins before
+    non-master-flagged plugins: all plugins are effectively non-masters.
+  - The OpenMW Launcher may hide some plugins from view, and may automatically
+    activate inactive dependencies of active plugins. libloadorder always shows
+    the full load order and does not automatically activate any plugins.
+  - libloadorder does not support ghosted OpenMW plugins.
+
+### Changed
+
+- Deprecated `GameSettings::master_file()`. It's not used in any load order
+  operations, apart from appearing as an early-loading plugin for some games,
+  and is misleading for OpenMW and some total conversion installs for other
+  games, e.g. Nehrim.
+- Updated encoding_rs to 0.8.35.
+- Updated dirs to 6.0.0.
+- Updated libc to 0.2.169.
+- Updated regex to 1.11.1.
+- Updated unicase to 2.8.1.
+- Updated windows to 0.59.0.
+
 ## [18.1.3] - 2024-10-20
 
 ### Fixed

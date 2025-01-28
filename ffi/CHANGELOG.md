@@ -3,6 +3,20 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [18.2.0] - 2025-02-01
+
+### Added
+
+- Support for OpenMW using the new `LIBLO_GAME_OPENMW` and `LIBLO_METHOD_OPENMW`
+  constants.
+- `lo_get_additional_plugins_directories()` as the counterpart to the existing
+  `lo_set_additional_plugins_directories()`.
+
+### Changed
+
+- Updated to libloadorder v18.2.0.
+- Updated to libc v0.2.169.
+
 ## [18.1.3] - 2024-10-20
 
 ### Changed
