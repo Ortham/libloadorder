@@ -232,7 +232,7 @@ impl GameSettings {
         self.additional_plugins_directories = paths;
     }
 
-    fn game_path(&self) -> &Path {
+    pub(crate) fn game_path(&self) -> &Path {
         let mut ancestors = self.plugins_directory.ancestors();
 
         let descendants_count = Path::new(plugins_folder_relative_path(self.id))
@@ -246,6 +246,10 @@ impl GameSettings {
         ancestors
             .next()
             .expect("game path to be an ancestor of plugins directory")
+    }
+
+    pub(crate) fn my_games_path(&self) -> &PathBuf {
+        &self.my_games_path
     }
 
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
@@ -498,13 +502,22 @@ fn plugins_folder_relative_path(game_id: GameId) -> &'static str {
     }
 }
 
-fn additional_openmw_data_paths(
+pub(crate) fn read_only_openmw_data_paths(
     game_path: &Path,
     my_games_path: &Path,
 ) -> Result<Vec<PathBuf>, Error> {
     let mut paths = vec![my_games_path.join("data")];
 
     paths.extend(read_openmw_data_paths(&game_path.join("openmw.cfg"))?);
+
+    Ok(paths)
+}
+
+fn additional_openmw_data_paths(
+    game_path: &Path,
+    my_games_path: &Path,
+) -> Result<Vec<PathBuf>, Error> {
+    let mut paths = read_only_openmw_data_paths(game_path, my_games_path)?;
 
     paths.extend(read_openmw_data_paths(&my_games_path.join("openmw.cfg"))?);
 

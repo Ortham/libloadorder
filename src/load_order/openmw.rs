@@ -3,7 +3,8 @@ use std::{collections::HashSet, path::PathBuf};
 use unicase::UniCase;
 
 use crate::{
-    ini::read_openmw_active_plugin_names,
+    game_settings::read_only_openmw_data_paths,
+    ini::{read_openmw_active_plugin_names, write_openmw_cfg},
     load_order::mutable::filename_str,
     plugin::{iends_with_ascii, Plugin},
     Error, GameId, GameSettings,
@@ -232,7 +233,27 @@ impl WritableLoadOrder for OpenMWLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        todo!()
+        let read_only_data_paths: HashSet<_> = read_only_openmw_data_paths(
+            self.game_settings.game_path(),
+            self.game_settings.my_games_path(),
+        )?
+        .into_iter()
+        .collect();
+
+        // Filter out the additional plugins dirs that come from read-only
+        // sources (e.g. hardcoded values or global config).
+        let data_paths: Vec<_> = self
+            .game_settings
+            .additional_plugins_directories()
+            .iter()
+            .filter(|p| !read_only_data_paths.contains(p.as_path()))
+            .cloned()
+            .collect();
+
+        let cfg_path = self.game_settings.active_plugins_file();
+        write_openmw_cfg(cfg_path, &data_paths, &self.active_plugin_names())?;
+
+        Ok(())
     }
 
     fn add(&mut self, plugin_name: &str) -> Result<usize, Error> {
@@ -318,6 +339,11 @@ mod tests {
         }
 
         write(cfg_path, file_content).unwrap();
+    }
+
+    fn read_lines(path: &Path) -> Vec<String> {
+        let content = std::fs::read_to_string(path).unwrap();
+        content.lines().map(|s| s.to_string()).collect()
     }
 
     #[test]
@@ -526,5 +552,98 @@ mod tests {
         load_order.load().unwrap();
 
         assert_eq!(active_plugin_names, load_order.plugin_names().as_slice());
+    }
+
+    #[test]
+    fn save_should_write_active_openmw_plugin_positions() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(tmp_dir.path());
+
+        let cfg_path = cfg_path(tmp_dir.path());
+
+        let parent_path = load_order.game_settings.plugins_directory();
+        let active_plugin_names = &[
+            "Blank.omwgame",
+            "Blank - Master Dependent.esp",
+            "Blank - Different.omwaddon",
+            "Blàñk.esp",
+            "Blank.omwscripts",
+            "Blank.esp",
+        ];
+
+        std::fs::rename(
+            parent_path.join("Blank.esm"),
+            parent_path.join("Blank.omwgame"),
+        )
+        .unwrap();
+        std::fs::rename(
+            parent_path.join("Blank - Different.esp"),
+            parent_path.join("Blank - Different.omwaddon"),
+        )
+        .unwrap();
+        std::fs::write(parent_path.join("Blank.omwscripts"), "").unwrap();
+
+        for plugin_name in active_plugin_names {
+            let plugin =
+                Plugin::with_active(plugin_name, load_order.game_settings(), true).unwrap();
+            load_order.plugins.push(plugin);
+        }
+
+        load_order.save().unwrap();
+
+        let lines = read_lines(&cfg_path);
+
+        let expected_lines: Vec<_> = active_plugin_names
+            .iter()
+            .map(|n| format!("content={}", n))
+            .collect();
+
+        assert_eq!(expected_lines, lines);
+    }
+
+    #[test]
+    fn save_should_write_data_paths() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(tmp_dir.path());
+
+        let cfg_path = cfg_path(tmp_dir.path());
+
+        write_cfg(
+            &cfg_path,
+            &["C:\\Games\\Morrowind\\Data Files", "C:\\Other\\Directory"],
+            &["a.esm", "b.esm"],
+        );
+
+        load_order
+            .game_settings
+            .set_additional_plugins_directories(vec!["C:\\Path\\&\"a&&\\Data Files".into()]);
+
+        load_order.save().unwrap();
+
+        let lines = read_lines(&cfg_path);
+
+        let expected_lines = vec!["data=\"C:\\Path\\&&&\"a&&&&\\Data Files\"".to_string()];
+
+        assert_eq!(expected_lines, lines);
+    }
+
+    #[test]
+    fn save_should_skip_writing_data_paths_that_are_in_global_config() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(tmp_dir.path());
+
+        let global_cfg_path = load_order.game_settings.game_path().join("openmw.cfg");
+
+        write_cfg(
+            &global_cfg_path,
+            &["C:\\Games\\Morrowind\\Data Files", "C:\\Other\\Directory"],
+            &["a.esm", "b.esm"],
+        );
+
+        load_order.save().unwrap();
+
+        let lines = read_lines(&cfg_path(tmp_dir.path()));
+
+        assert!(lines.is_empty());
     }
 }
