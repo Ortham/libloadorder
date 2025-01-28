@@ -17,12 +17,15 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rayon::prelude::*;
 use regex::Regex;
+use unicase::UniCase;
 
 use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
@@ -32,7 +35,7 @@ use super::writable::{
 };
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
-use crate::plugin::Plugin;
+use crate::plugin::{trim_dot_ghost, Plugin};
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 
@@ -40,6 +43,18 @@ const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 pub struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
+}
+
+/// Retains the first occurrence for each unique filename that is valid Unicode.
+fn get_unique_filenames(file_paths: Vec<PathBuf>, game_id: GameId) -> Vec<String> {
+    let mut set = HashSet::new();
+
+    file_paths
+        .iter()
+        .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+        .filter(|n| set.insert(UniCase::new(trim_dot_ghost(n, game_id))))
+        .map(|n| n.to_string())
+        .collect()
 }
 
 impl TimestampBasedLoadOrder {
@@ -51,8 +66,10 @@ impl TimestampBasedLoadOrder {
     }
 
     fn load_plugins_from_dir(&self) -> Vec<Plugin> {
-        let filenames = self.find_plugins();
+        let paths = self.find_plugins();
         let game_settings = self.game_settings();
+
+        let filenames = get_unique_filenames(paths, game_settings.id());
 
         filenames
             .par_iter()

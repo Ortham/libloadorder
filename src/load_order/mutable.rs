@@ -66,7 +66,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         generic_insert_position(self.plugins(), plugin)
     }
 
-    fn find_plugins(&self) -> Vec<String> {
+    fn find_plugins(&self) -> Vec<PathBuf> {
         // A game might store some plugins outside of its main plugins directory
         // so look for those plugins. They override any of the same names that
         // appear in the main plugins directory, so check for the additional
@@ -155,11 +155,11 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn load_unique_plugins(
         &mut self,
         plugin_name_tuples: Vec<(String, bool)>,
-        installed_filenames: Vec<String>,
+        installed_files: Vec<PathBuf>,
     ) {
         let plugins: Vec<_> = remove_duplicates_icase(
             plugin_name_tuples,
-            installed_filenames,
+            installed_files,
             self.game_settings().id(),
         )
         .into_par_iter()
@@ -385,7 +385,7 @@ fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize>
     })
 }
 
-fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
+fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<PathBuf> {
     let mut dir_entries: Vec<_> = directories
         .iter()
         .flat_map(read_dir)
@@ -413,13 +413,7 @@ fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<String> {
         }
     });
 
-    let mut set = HashSet::new();
-
-    dir_entries
-        .into_iter()
-        .filter_map(|e| e.file_name().to_str().map(str::to_owned))
-        .filter(|filename| set.insert(UniCase::new(trim_dot_ghost(filename, game).to_string())))
-        .collect()
+    dir_entries.into_iter().map(|e| e.path()).collect()
 }
 
 fn to_plugin(
@@ -767,18 +761,23 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
     Ok(())
 }
 
+fn filename_str(file_path: &Path) -> Option<&str> {
+    file_path.file_name().and_then(|n| n.to_str())
+}
+
 fn remove_duplicates_icase(
     plugin_tuples: Vec<(String, bool)>,
-    filenames: Vec<String>,
+    file_paths: Vec<PathBuf>,
     game_id: GameId,
 ) -> Vec<(String, bool)> {
     fn get_key_from_filename(filename: &str, game_id: GameId) -> UniCase<&str> {
         UniCase::new(trim_dot_ghost(filename, game_id))
     }
 
-    let mut set: HashSet<_> = HashSet::with_capacity(filenames.len());
+    let mut set: HashSet<_> = HashSet::with_capacity(file_paths.len());
 
-    let mut unique_tuples: Vec<(String, bool)> = plugin_tuples
+    // If the same filename is listed multiple times, keep the last entry.
+    let mut unique_tuples: Vec<_> = plugin_tuples
         .iter()
         .rev()
         .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
@@ -787,8 +786,10 @@ fn remove_duplicates_icase(
 
     unique_tuples.reverse();
 
-    let unique_file_tuples_iter = filenames
+    // If multiple file paths have the same filename, keep the first path.
+    let unique_file_tuples_iter = file_paths
         .iter()
+        .filter_map(|p| filename_str(p))
         .filter(|filename| set.insert(get_key_from_filename(filename, game_id)))
         .map(|f| (f.to_string(), false));
 
@@ -2151,20 +2152,18 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        let result = find_plugins_in_dirs(
-            &[load_order.game_settings.plugins_directory()],
-            load_order.game_settings.id(),
-        );
+        let parent_path = load_order.game_settings.plugins_directory();
+        let result = find_plugins_in_dirs(&[parent_path.clone()], load_order.game_settings.id());
 
-        let plugin_names = [
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Different.esp",
-            "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+        let plugin_paths = [
+            parent_path.join("Blank.esm"),
+            parent_path.join("Blank.esp"),
+            parent_path.join("Blank - Different.esp"),
+            parent_path.join("Blank - Master Dependent.esp"),
+            parent_path.join("Blàñk.esp"),
         ];
 
-        assert_eq!(plugin_names.as_slice(), result);
+        assert_eq!(plugin_paths.as_slice(), result);
     }
 
     #[test]
@@ -2172,32 +2171,24 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
+        let parent_path = load_order.game_settings.plugins_directory();
         let timestamp = 1321010051;
-        let plugin_path = load_order
-            .game_settings
-            .plugins_directory()
-            .join("Blank - Different.esp");
+        let plugin_path = parent_path.join("Blank - Different.esp");
         set_file_timestamps(&plugin_path, timestamp);
-        let plugin_path = load_order
-            .game_settings
-            .plugins_directory()
-            .join("Blank - Master Dependent.esp");
+        let plugin_path = parent_path.join("Blank - Master Dependent.esp");
         set_file_timestamps(&plugin_path, timestamp);
 
-        let result = find_plugins_in_dirs(
-            &[load_order.game_settings.plugins_directory()],
-            load_order.game_settings.id(),
-        );
+        let result = find_plugins_in_dirs(&[parent_path.clone()], load_order.game_settings.id());
 
-        let plugin_names = [
-            "Blank.esm",
-            "Blank.esp",
-            "Blank - Master Dependent.esp",
-            "Blank - Different.esp",
-            "Blàñk.esp",
+        let plugin_paths = [
+            parent_path.join("Blank.esm"),
+            parent_path.join("Blank.esp"),
+            parent_path.join("Blank - Master Dependent.esp"),
+            parent_path.join("Blank - Different.esp"),
+            parent_path.join("Blàñk.esp"),
         ];
 
-        assert_eq!(plugin_names.as_slice(), result);
+        assert_eq!(plugin_paths.as_slice(), result);
     }
 
     #[test]
@@ -2208,20 +2199,17 @@ mod tests {
 
         let timestamp = 1321009991;
 
-        let plugin_names = [
-            "Blank - Override.esp",
-            "Blank.esp",
-            "Blank.full.esm",
-            "Blank.medium.esm",
-            "Blank.small.esm",
+        let parent_path = load_order.game_settings.plugins_directory();
+        let plugin_paths = [
+            parent_path.join("Blank - Override.esp"),
+            parent_path.join("Blank.esp"),
+            parent_path.join("Blank.full.esm"),
+            parent_path.join("Blank.medium.esm"),
+            parent_path.join("Blank.small.esm"),
         ];
 
-        for plugin_name in plugin_names {
-            let plugin_path = load_order
-                .game_settings
-                .plugins_directory()
-                .join(plugin_name);
-            set_file_timestamps(&plugin_path, timestamp);
+        for plugin_path in &plugin_paths {
+            set_file_timestamps(plugin_path, timestamp);
         }
 
         let result = find_plugins_in_dirs(
@@ -2229,7 +2217,7 @@ mod tests {
             load_order.game_settings.id(),
         );
 
-        assert_eq!(plugin_names.as_slice(), result);
+        assert_eq!(plugin_paths.as_slice(), result);
     }
 
     #[test]
