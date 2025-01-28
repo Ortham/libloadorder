@@ -110,30 +110,25 @@ pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
     }
 }
 
-pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<Plugin>) {
-    let mut settings = game_settings_for_test(game_id, game_dir);
-
-    if game_id == GameId::Starfield {
-        copy_to_test_dir("Blank.full.esm", settings.master_file(), &settings);
-        copy_to_test_dir("Blank.full.esm", "Blank.full.esm", &settings);
-        copy_to_test_dir("Blank.medium.esm", "Blank.medium.esm", &settings);
-        copy_to_test_dir("Blank.small.esm", "Blank.small.esm", &settings);
-        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-        copy_to_test_dir("Blank - Override.esp", "Blank - Override.esp", &settings);
+pub fn mock_game_files(settings: &mut GameSettings) {
+    if settings.id() == GameId::Starfield {
+        copy_to_test_dir("Blank.full.esm", "Blank.full.esm", settings);
+        copy_to_test_dir("Blank.medium.esm", "Blank.medium.esm", settings);
+        copy_to_test_dir("Blank.small.esm", "Blank.small.esm", settings);
+        copy_to_test_dir("Blank.esp", "Blank.esp", settings);
+        copy_to_test_dir("Blank - Override.esp", "Blank - Override.esp", settings);
     } else {
-        copy_to_test_dir("Blank.esm", settings.master_file(), &settings);
-        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
-        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
-        copy_to_test_dir("Blank - Different.esp", "Blank - Different.esp", &settings);
+        copy_to_test_dir("Blank.esm", "Blank.esm", settings);
+        copy_to_test_dir("Blank.esp", "Blank.esp", settings);
+        copy_to_test_dir("Blank - Different.esp", "Blank - Different.esp", settings);
         copy_to_test_dir(
             "Blank - Master Dependent.esp",
             "Blank - Master Dependent.esp",
-            &settings,
+            settings,
         );
-        copy_to_test_dir("Blank.esp", "Blàñk.esp", &settings);
+        copy_to_test_dir("Blank.esp", "Blàñk.esp", settings);
 
         let plugin_names = [
-            settings.master_file(),
             "Blank.esm",
             "Blank.esp",
             "Blank - Different.esp",
@@ -145,17 +140,6 @@ pub fn mock_game_files(game_id: GameId, game_dir: &Path) -> (GameSettings, Vec<P
 
     // Refresh settings to account for newly-created plugin files.
     settings.refresh_implicitly_active_plugins().unwrap();
-
-    let mut plugins = vec![
-        Plugin::new(settings.master_file(), &settings).unwrap(),
-        Plugin::with_active("Blank.esp", &settings, true).unwrap(),
-    ];
-
-    if game_id != GameId::Starfield {
-        plugins.push(Plugin::new("Blank - Different.esp", &settings).unwrap());
-    }
-
-    (settings, plugins)
 }
 
 pub fn to_owned(strs: Vec<&str>) -> Vec<String> {
@@ -212,4 +196,34 @@ pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &st
             load_order.plugins_mut().push(plugin);
         }
     }
+}
+
+pub fn prepend_master<T: MutableLoadOrder>(load_order: &mut T) {
+    let source = match load_order.game_settings().id() {
+        GameId::Starfield => "Blank.full.esm",
+        _ => "Blank.esm",
+    };
+
+    copy_to_test_dir(source, source, load_order.game_settings());
+
+    let plugin = Plugin::new(source, load_order.game_settings()).unwrap();
+    load_order.plugins_mut().insert(0, plugin);
+}
+
+pub fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
+    let source = match load_order.game_settings().id() {
+        GameId::Starfield => "Blank.full.esm",
+        _ => "Blank.esm",
+    };
+
+    let target = match load_order.game_settings().id() {
+        GameId::SkyrimSE => "Skyrim.esm",
+        GameId::Starfield => "Starfield.esm",
+        _ => unimplemented!(),
+    };
+
+    copy_to_test_dir(source, target, load_order.game_settings());
+
+    let plugin = Plugin::new(target, load_order.game_settings()).unwrap();
+    load_order.plugins_mut().insert(0, plugin);
 }

@@ -83,7 +83,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::enums::GameId;
-    use crate::load_order::tests::mock_game_files;
+    use crate::load_order::tests::{game_settings_for_test, mock_game_files};
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -102,7 +102,14 @@ mod tests {
     }
 
     fn prepare(game_dir: &Path) -> TestLoadOrder {
-        let (game_settings, plugins) = mock_game_files(GameId::Oblivion, game_dir);
+        let mut game_settings = game_settings_for_test(GameId::Oblivion, game_dir);
+        mock_game_files(&mut game_settings);
+
+        let plugins = vec![
+            Plugin::with_active("Blank.esp", &game_settings, true).unwrap(),
+            Plugin::new("Blank - Different.esp", &game_settings).unwrap(),
+        ];
+
         TestLoadOrder {
             game_settings,
             plugins,
@@ -110,22 +117,19 @@ mod tests {
     }
 
     fn prepare_with_ghosted_plugin(game_dir: &Path) -> TestLoadOrder {
-        let (game_settings, mut plugins) = mock_game_files(GameId::Oblivion, game_dir);
+        let mut load_order = prepare(game_dir);
 
         copy_to_test_dir(
             "Blank - Different.esm",
             "Blank - Different.esm.ghost",
-            &game_settings,
+            &load_order.game_settings,
         );
-        plugins.insert(
-            1,
-            Plugin::new("Blank - Different.esm.ghost", &game_settings).unwrap(),
+        load_order.plugins.insert(
+            0,
+            Plugin::new("Blank - Different.esm.ghost", &load_order.game_settings).unwrap(),
         );
 
-        TestLoadOrder {
-            game_settings,
-            plugins,
-        }
+        load_order
     }
 
     #[test]
@@ -133,7 +137,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(tmp_dir.path());
 
-        let expected_plugin_names = vec!["Oblivion.esm", "Blank.esp", "Blank - Different.esp"];
+        let expected_plugin_names = vec!["Blank.esp", "Blank - Different.esp"];
         assert_eq!(expected_plugin_names, load_order.plugin_names());
     }
 
@@ -143,7 +147,6 @@ mod tests {
         let load_order = prepare_with_ghosted_plugin(tmp_dir.path());
 
         let expected_plugin_names = vec![
-            "Oblivion.esm",
             "Blank - Different.esm",
             "Blank.esp",
             "Blank - Different.esp",
@@ -164,7 +167,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(tmp_dir.path());
 
-        assert_eq!(1, load_order.index_of("Blank.esp").unwrap());
+        assert_eq!(0, load_order.index_of("Blank.esp").unwrap());
     }
 
     #[test]
@@ -172,7 +175,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(tmp_dir.path());
 
-        assert_eq!(1, load_order.index_of("blank.esp").unwrap());
+        assert_eq!(0, load_order.index_of("blank.esp").unwrap());
     }
 
     #[test]
@@ -188,7 +191,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(tmp_dir.path());
 
-        assert_eq!("Blank.esp", load_order.plugin_at(1).unwrap());
+        assert_eq!("Blank.esp", load_order.plugin_at(0).unwrap());
     }
 
     #[test]
@@ -196,7 +199,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare_with_ghosted_plugin(tmp_dir.path());
 
-        assert_eq!("Blank - Different.esm", load_order.plugin_at(1).unwrap());
+        assert_eq!("Blank - Different.esm", load_order.plugin_at(0).unwrap());
     }
 
     #[test]

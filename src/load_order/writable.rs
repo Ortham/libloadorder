@@ -297,7 +297,8 @@ mod tests {
     use crate::load_order::mutable::MutableLoadOrder;
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
     use crate::load_order::tests::{
-        load_and_insert, mock_game_files, set_blueprint_flag, set_master_flag,
+        game_settings_for_test, load_and_insert, mock_game_files, prepend_early_loader,
+        prepend_master, set_blueprint_flag, set_master_flag,
     };
     use crate::tests::copy_to_test_dir;
 
@@ -323,7 +324,15 @@ mod tests {
     }
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TestLoadOrder {
-        let (game_settings, plugins) = mock_game_files(game_id, game_dir);
+        let mut game_settings = game_settings_for_test(game_id, game_dir);
+        mock_game_files(&mut game_settings);
+
+        let mut plugins = vec![Plugin::with_active("Blank.esp", &game_settings, true).unwrap()];
+
+        if game_id != GameId::Starfield {
+            plugins.push(Plugin::new("Blank - Different.esp", &game_settings).unwrap());
+        }
+
         TestLoadOrder {
             game_settings,
             plugins,
@@ -440,8 +449,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        assert_eq!(1, add(&mut load_order, "Blank.esm").unwrap());
-        assert_eq!(1, load_order.index_of("Blank.esm").unwrap());
+        assert!(!load_order.plugins[1].is_master_file());
+
+        assert_eq!(0, add(&mut load_order, "Blank.esm").unwrap());
+        assert_eq!(0, load_order.index_of("Blank.esm").unwrap());
     }
 
     #[test]
@@ -450,11 +461,11 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert_eq!(
-            3,
+            2,
             add(&mut load_order, "Blank - Master Dependent.esp").unwrap()
         );
         assert_eq!(
-            3,
+            2,
             load_order.index_of("Blank - Master Dependent.esp").unwrap()
         );
     }
@@ -483,7 +494,7 @@ mod tests {
             false,
         )
         .unwrap();
-        assert_eq!(1, add(&mut load_order, "Blank - Different.esm").unwrap());
+        assert_eq!(0, add(&mut load_order, "Blank - Different.esm").unwrap());
     }
 
     #[test]
@@ -493,9 +504,9 @@ mod tests {
 
         let plugin_name = "Blank - Master Dependent.esm";
         copy_to_test_dir(plugin_name, plugin_name, load_order.game_settings());
-        assert_eq!(1, add(&mut load_order, plugin_name).unwrap());
+        assert_eq!(0, add(&mut load_order, plugin_name).unwrap());
 
-        assert_eq!(1, add(&mut load_order, "Blank.esm").unwrap());
+        assert_eq!(0, add(&mut load_order, "Blank.esm").unwrap());
     }
 
     #[test]
@@ -517,6 +528,8 @@ mod tests {
     ) {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
+
+        prepend_master(&mut load_order);
 
         let plugin_to_remove = "Blank - Different Master Dependent.esm";
 
@@ -584,7 +597,7 @@ mod tests {
             load_order.game_settings(),
         );
         set_blueprint_flag(GameId::Starfield, &plugins_dir.join(blueprint_plugin), true).unwrap();
-        assert_eq!(3, add(&mut load_order, blueprint_plugin).unwrap());
+        assert_eq!(2, add(&mut load_order, blueprint_plugin).unwrap());
 
         let following_master_plugin = "Blank.medium.esm";
         copy_to_test_dir(
@@ -809,14 +822,14 @@ mod tests {
         let medium = prepare_bulk_medium_plugins(&mut load_order);
         let light = prepare_bulk_light_plugins(&mut load_order);
 
-        let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(full[..251].iter().map(String::as_str));
+        let mut plugin_refs = Vec::with_capacity(4603);
+        plugin_refs.extend(full[..252].iter().map(String::as_str));
         plugin_refs.extend(medium[..255].iter().map(String::as_str));
         plugin_refs.extend(light[..4095].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
 
-        let plugin = &full[254];
+        let plugin = &full[252];
         assert!(!load_order.is_active(plugin));
         assert!(activate(&mut load_order, plugin).is_ok());
         assert!(load_order.is_active(plugin));
@@ -831,7 +844,7 @@ mod tests {
         assert!(activate(&mut load_order, plugin).is_ok());
         assert!(load_order.is_active(plugin));
 
-        let plugin = &full[255];
+        let plugin = &full[253];
         assert!(activate(&mut load_order, plugin).is_err());
         assert!(!load_order.is_active(plugin));
 
@@ -866,7 +879,9 @@ mod tests {
     #[test]
     fn deactivate_should_error_if_given_an_implicitly_active_plugin() {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
+
+        prepend_early_loader(&mut load_order);
 
         assert!(activate(&mut load_order, "Skyrim.esm").is_ok());
         assert!(deactivate(&mut load_order, "Skyrim.esm").is_err());
@@ -906,7 +921,9 @@ mod tests {
     fn set_active_plugins_should_error_if_the_given_plugins_are_missing_implicitly_active_plugins()
     {
         let tmp_dir = tempdir().unwrap();
-        let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
+        let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
+
+        prepend_early_loader(&mut load_order);
 
         let active_plugins = ["Blank.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
@@ -918,7 +935,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Skyrim, tmp_dir.path());
 
-        let active_plugins = ["Skyrim.esm", "Update.esm"];
+        let active_plugins = ["Update.esm", "Blank.esp"];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
     }
@@ -968,10 +985,10 @@ mod tests {
         let blank_override = "Blank - Override.esp";
         load_and_insert(&mut load_order, blank_override);
 
-        let mut active_plugins = vec!["Starfield.esm".to_string(), blank_override.to_string()];
+        let mut active_plugins = vec![blank_override.to_string()];
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in plugins.into_iter().take(MAX_ACTIVE_FULL_PLUGINS - 1) {
+        for plugin in plugins.into_iter().take(MAX_ACTIVE_FULL_PLUGINS) {
             active_plugins.push(plugin);
         }
 
@@ -991,13 +1008,13 @@ mod tests {
         let plugin = "Blank.small.esm";
         load_and_insert(&mut load_order, plugin);
 
-        let mut plugin_refs = vec!["Starfield.esm", plugin];
-        plugin_refs.extend(full[..253].iter().map(String::as_str));
+        let mut plugin_refs = vec![plugin];
+        plugin_refs.extend(full[..254].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
         assert_eq!(255, load_order.active_plugin_names().len());
 
-        plugin_refs.push(full[253].as_str());
+        plugin_refs.push(full[254].as_str());
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(255, load_order.active_plugin_names().len());
@@ -1013,13 +1030,13 @@ mod tests {
         let plugin = "Blank.medium.esm";
         load_and_insert(&mut load_order, plugin);
 
-        let mut plugin_refs = vec!["Starfield.esm", plugin];
-        plugin_refs.extend(full[..253].iter().map(String::as_str));
+        let mut plugin_refs = vec![plugin];
+        plugin_refs.extend(full[..254].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
         assert_eq!(255, load_order.active_plugin_names().len());
 
-        plugin_refs.push(full[253].as_str());
+        plugin_refs.push(full[254].as_str());
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(255, load_order.active_plugin_names().len());
@@ -1037,13 +1054,13 @@ mod tests {
         load_and_insert(&mut load_order, medium_plugin);
         load_and_insert(&mut load_order, light_plugin);
 
-        let mut plugin_refs = vec!["Starfield.esm", medium_plugin, light_plugin];
-        plugin_refs.extend(full[..252].iter().map(String::as_str));
+        let mut plugin_refs = vec![medium_plugin, light_plugin];
+        plugin_refs.extend(full[..253].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
         assert_eq!(255, load_order.active_plugin_names().len());
 
-        plugin_refs.push(full[252].as_str());
+        plugin_refs.push(full[253].as_str());
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(255, load_order.active_plugin_names().len());
@@ -1058,24 +1075,23 @@ mod tests {
         let medium = prepare_bulk_medium_plugins(&mut load_order);
         let light = prepare_bulk_light_plugins(&mut load_order);
 
-        let mut plugin_refs = vec!["Starfield.esm"];
+        let mut plugin_refs = Vec::with_capacity(4064);
         plugin_refs.extend(full[..252].iter().map(String::as_str));
         plugin_refs.extend(medium[..256].iter().map(String::as_str));
         plugin_refs.extend(light[..4096].iter().map(String::as_str));
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_ok());
-        assert_eq!(4605, load_order.active_plugin_names().len());
+        assert_eq!(4604, load_order.active_plugin_names().len());
     }
 
     #[test]
-    fn set_active_plugins_should_error_if_given_more_than_255_full_plugins() {
+    fn set_active_plugins_should_error_if_given_more_than_254_full_plugins() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let full = prepare_bulk_full_plugins(&mut load_order);
 
-        let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(full[..255].iter().map(String::as_str));
+        let plugin_refs: Vec<_> = full[..256].iter().map(String::as_str).collect();
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
@@ -1088,8 +1104,7 @@ mod tests {
 
         let medium = prepare_bulk_medium_plugins(&mut load_order);
 
-        let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(medium[..257].iter().map(String::as_str));
+        let plugin_refs: Vec<_> = medium[..257].iter().map(String::as_str).collect();
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
@@ -1102,8 +1117,7 @@ mod tests {
 
         let light = prepare_bulk_light_plugins(&mut load_order);
 
-        let mut plugin_refs = vec!["Starfield.esm"];
-        plugin_refs.extend(light[..4097].iter().map(String::as_str));
+        let plugin_refs: Vec<_> = light[..4097].iter().map(String::as_str).collect();
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());

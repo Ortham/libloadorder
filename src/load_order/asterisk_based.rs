@@ -236,17 +236,31 @@ mod tests {
     use crate::load_order::tests::*;
     use crate::tests::{copy_to_dir, copy_to_test_dir};
     use std::fs::{create_dir_all, remove_dir_all, File};
-    use std::io;
-    use std::io::{BufRead, BufReader};
     use std::path::Path;
+    use std::time::Duration;
     use tempfile::tempdir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> AsteriskBasedLoadOrder {
-        let (game_settings, plugins) = mock_game_files(game_id, game_dir);
+        let mut game_settings = game_settings_for_test(game_id, game_dir);
+        mock_game_files(&mut game_settings);
+
+        let mut plugins = vec![Plugin::with_active("Blank.esp", &game_settings, true).unwrap()];
+
+        if game_id != GameId::Starfield {
+            plugins.push(Plugin::new("Blank - Different.esp", &game_settings).unwrap());
+        }
+
         AsteriskBasedLoadOrder {
             game_settings,
             plugins,
         }
+    }
+
+    fn read_lines(file_path: &Path) -> Vec<String> {
+        let bytes = std::fs::read(file_path).unwrap();
+        let text = encoding_rs::WINDOWS_1252.decode(&bytes).0;
+
+        text.lines().map(|l| l.to_string()).collect()
     }
 
     #[test]
@@ -399,7 +413,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blank.esp",
             "Blank - Master Dependent.esp",
@@ -429,14 +442,12 @@ mod tests {
             "Blank - Different.esp",
             "Blàñk.esp",
             "Blank.esp",
-            "Skyrim.esm",
         ];
         write_active_plugins_file(load_order.game_settings(), &filenames);
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            "Skyrim.esm",
             "Blank.esm",
             "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
@@ -458,7 +469,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
             "Blank.esp",
@@ -479,7 +489,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
             "Blank.esp",
@@ -503,7 +512,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
             "Blank.esp",
@@ -527,7 +535,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blàñk.esp",
             "Blank.esp",
@@ -575,6 +582,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
+        copy_to_test_dir("Blank.esm", "Skyrim.esm", load_order.game_settings());
         copy_to_test_dir("Blank.esm", "Update.esm", load_order.game_settings());
         load_order.load().unwrap();
         assert_eq!(Some(1), load_order.index_of("Update.esm"));
@@ -600,7 +608,7 @@ mod tests {
         write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Skyrim.esm", "Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -609,6 +617,8 @@ mod tests {
     fn load_should_succeed_when_active_plugins_file_is_missing() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
+
+        copy_to_test_dir("Blank.esm", "Skyrim.esm", load_order.game_settings());
 
         assert!(load_order.load().is_ok());
         assert_eq!(1, load_order.active_plugin_names().len());
@@ -636,7 +646,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blank.esp",
             "Blank - Different.esp",
@@ -657,7 +666,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            load_order.game_settings().master_file(),
             "Blank.esm",
             "Blank.esp",
             "Blank - Different.esp",
@@ -692,7 +700,6 @@ mod tests {
         load_order.load().unwrap();
 
         let expected_filenames = vec![
-            "Fallout4.esm",
             "DLCCoast.esm",
             "Blank.esm",
             "Blank.esp",
@@ -722,10 +729,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert_eq!(
-            vec!["Fallout4.esm", "Blank.esp"],
-            load_order.active_plugin_names()
-        );
+        assert_eq!(vec!["Blank.esp"], load_order.active_plugin_names());
     }
 
     #[test]
@@ -760,10 +764,7 @@ mod tests {
         load_order.save().unwrap();
 
         load_order.load().unwrap();
-        assert_eq!(
-            vec!["Skyrim.esm", "Blank.esp"],
-            load_order.active_plugin_names()
-        );
+        assert_eq!(vec!["Blank.esp"], load_order.active_plugin_names());
     }
 
     #[test]
@@ -781,13 +782,7 @@ mod tests {
 
         load_order.save().unwrap();
 
-        let reader =
-            BufReader::new(File::open(load_order.game_settings().active_plugins_file()).unwrap());
-
-        let lines = reader
-            .lines()
-            .collect::<Result<Vec<String>, io::Error>>()
-            .unwrap();
+        let lines = read_lines(load_order.game_settings().active_plugins_file());
 
         assert_eq!(
             vec!["*Blank.esp", "Blank - Different.esp", "ghosted.esm"],
@@ -826,13 +821,7 @@ mod tests {
 
         load_order.save().unwrap();
 
-        let reader =
-            BufReader::new(File::open(load_order.game_settings().active_plugins_file()).unwrap());
-
-        let lines = reader
-            .lines()
-            .collect::<Result<Vec<String>, io::Error>>()
-            .unwrap();
+        let lines = read_lines(load_order.game_settings().active_plugins_file());
 
         assert_eq!(vec!["*Blank.esp", "Blank - Different.esp"], lines);
     }
@@ -851,10 +840,7 @@ mod tests {
 
         load_order.save().unwrap();
 
-        let content = std::fs::read(load_order.game_settings().active_plugins_file()).unwrap();
-        let content = encoding_rs::WINDOWS_1252.decode(&content).0;
-
-        let lines = content.lines().collect::<Vec<&str>>();
+        let lines = read_lines(load_order.game_settings().active_plugins_file());
 
         assert_eq!(
             vec![
@@ -877,6 +863,12 @@ mod tests {
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
         let mut load_order = prepare(GameId::Fallout4, tmp_dir.path());
+
+        prepend_master(&mut load_order);
+        let game_master_time = load_order.plugins[1].modification_time() - Duration::from_secs(1);
+        load_order.plugins[0]
+            .set_modification_time(game_master_time)
+            .unwrap();
 
         let filename = "Blank.esp";
         let plugin_path = load_order.game_settings.plugins_directory().join(filename);
@@ -901,6 +893,12 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
 
         let mut load_order = prepare(GameId::Fallout4, tmp_dir.path());
+
+        prepend_master(&mut load_order);
+        let game_master_time = load_order.plugins[1].modification_time() - Duration::from_secs(1);
+        load_order.plugins[0]
+            .set_modification_time(game_master_time)
+            .unwrap();
 
         let filename = "Blank.esp";
         let plugin_path = load_order.game_settings.plugins_directory().join(filename);

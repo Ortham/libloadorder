@@ -265,7 +265,14 @@ mod tests {
     use tempfile::tempdir;
 
     fn prepare(game_id: GameId, game_dir: &Path) -> TimestampBasedLoadOrder {
-        let (game_settings, plugins) = mock_game_files(game_id, game_dir);
+        let mut game_settings = game_settings_for_test(game_id, game_dir);
+        mock_game_files(&mut game_settings);
+
+        let plugins = vec![
+            Plugin::with_active("Blank.esp", &game_settings, true).unwrap(),
+            Plugin::new("Blank - Different.esp", &game_settings).unwrap(),
+        ];
+
         TimestampBasedLoadOrder {
             game_settings,
             plugins,
@@ -334,7 +341,6 @@ mod tests {
                 "Blank.esm",
                 "Blank - Different.esp",
                 "Blank.esp",
-                load_order.game_settings().master_file(),
             ],
         );
 
@@ -342,7 +348,6 @@ mod tests {
 
         let expected_filenames = vec![
             "Blank.esm",
-            load_order.game_settings().master_file(),
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
@@ -371,7 +376,6 @@ mod tests {
             "Blank - Different.esp",
             "Blàñk.esp",
             "Blank.esp",
-            "Oblivion.esm",
         ];
         set_timestamps(&load_order.game_settings().plugins_directory(), &filenames);
 
@@ -380,7 +384,6 @@ mod tests {
         let expected_filenames = vec![
             "Blank.esm",
             "Blank - Master Dependent.esm",
-            "Oblivion.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blàñk.esp",
@@ -513,7 +516,6 @@ mod tests {
                 "Blank.esm",
                 "Blank - Different.esp",
                 "Blank.esp",
-                load_order.game_settings().master_file(),
             ],
         );
 
@@ -548,7 +550,6 @@ mod tests {
                 "Blank.esm",
                 "Blank - Different.esp",
                 "Blank.esp",
-                load_order.game_settings().master_file(),
             ],
         );
 
@@ -569,8 +570,6 @@ mod tests {
 
         old_timestamps.sort();
         old_timestamps.dedup_by_key(|t| *t);
-        let last_timestamp = *old_timestamps.last().unwrap();
-        old_timestamps.push(last_timestamp + 60);
 
         assert_eq!(old_timestamps, timestamps);
     }

@@ -89,9 +89,6 @@ fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings
 fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plugins_count: u16) {
     let mut plugins: Vec<String> = Vec::new();
 
-    plugins.push(game_settings.master_file().to_string());
-    copy_to_test_dir("Blank.esm", game_settings.master_file(), game_settings);
-
     // Make 10% of the load order master files.
     let masters_count = plugins_count / 10;
 
@@ -104,7 +101,7 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
         );
     }
 
-    for i in masters_count..plugins_count {
+    for i in masters_count..plugins_count + 1 {
         plugins.push(format!("Blank{}.esp", i));
         copy_to_test_dir("Blank.esp", plugins.last().unwrap(), game_settings);
     }
