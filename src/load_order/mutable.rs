@@ -68,14 +68,22 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
     fn find_plugins(&self) -> Vec<PathBuf> {
         // A game might store some plugins outside of its main plugins directory
-        // so look for those plugins. They override any of the same names that
-        // appear in the main plugins directory, so check for the additional
-        // paths first.
-        let mut directories = self
+        // so look for those plugins. For most games, they override any of the
+        // same names that appear in the main plugins directory, so check for
+        // the additional paths first. For OpenMW the main directory is listed
+        // first.
+        let main_dir_iter = std::iter::once(self.game_settings().plugins_directory());
+        let other_directories_iter = self
             .game_settings()
             .additional_plugins_directories()
-            .to_vec();
-        directories.push(self.game_settings().plugins_directory());
+            .iter()
+            .cloned();
+
+        let directories: Vec<_> = if self.game_settings().id() == GameId::OpenMW {
+            main_dir_iter.chain(other_directories_iter).collect()
+        } else {
+            other_directories_iter.chain(main_dir_iter).collect()
+        };
 
         find_plugins_in_dirs(&directories, self.game_settings().id())
     }
@@ -268,6 +276,10 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 }
 
+pub fn filename_str(file_path: &Path) -> Option<&str> {
+    file_path.file_name().and_then(|n| n.to_str())
+}
+
 pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
 where
     T: MutableLoadOrder,
@@ -433,18 +445,31 @@ fn find_plugins_in_dirs(directories: &[PathBuf], game: GameId) -> Vec<PathBuf> {
         })
         .collect();
 
-    // Sort by file modification timestamps, in ascending order. If two timestamps are equal, sort
-    // by filenames (in ascending order for Starfield, descending otherwise).
-    dir_entries.sort_unstable_by(|e1, e2| {
-        let m1 = e1.metadata().and_then(|m| m.modified()).ok();
-        let m2 = e2.metadata().and_then(|m| m.modified()).ok();
+    if game == GameId::OpenMW {
+        // Preserve the directory ordering, but sort case-sensitive
+        // lexicographically within directories.
+        dir_entries.sort_by(|e1, e2| {
+            if e1.path().parent() == e2.path().parent() {
+                e1.file_name().cmp(&e2.file_name())
+            } else {
+                Ordering::Equal
+            }
+        });
+    } else {
+        // Sort by file modification timestamps, in ascending order. If two
+        // timestamps are equal, sort by filenames (in ascending order for
+        // Starfield, descending otherwise).
+        dir_entries.sort_unstable_by(|e1, e2| {
+            let m1 = e1.metadata().and_then(|m| m.modified()).ok();
+            let m2 = e2.metadata().and_then(|m| m.modified()).ok();
 
-        match m1.cmp(&m2) {
-            Ordering::Equal if game == GameId::Starfield => e1.file_name().cmp(&e2.file_name()),
-            Ordering::Equal => e1.file_name().cmp(&e2.file_name()).reverse(),
-            x => x,
-        }
-    });
+            match m1.cmp(&m2) {
+                Ordering::Equal if game == GameId::Starfield => e1.file_name().cmp(&e2.file_name()),
+                Ordering::Equal => e1.file_name().cmp(&e2.file_name()).reverse(),
+                x => x,
+            }
+        });
+    }
 
     dir_entries.into_iter().map(|e| e.path()).collect()
 }
@@ -792,10 +817,6 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
     }
 
     Ok(())
-}
-
-fn filename_str(file_path: &Path) -> Option<&str> {
-    file_path.file_name().and_then(|n| n.to_str())
 }
 
 fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(

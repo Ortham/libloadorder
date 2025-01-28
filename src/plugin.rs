@@ -149,6 +149,13 @@ impl Plugin {
             .map_err(|e| file_error(self.data.path(), e))
     }
 
+    pub fn has_master(&self, master: &str) -> bool {
+        self.masters()
+            .unwrap_or_default()
+            .iter()
+            .any(|m| eq(m.as_str(), master))
+    }
+
     pub fn set_modification_time(&mut self, time: SystemTime) -> Result<(), Error> {
         // Always write the file time. This has a huge performance impact, but
         // is important for correctness, as otherwise external changes to plugin
@@ -210,7 +217,7 @@ pub fn has_plugin_extension(filename: &str, game: GameId) -> bool {
         .any(|e| iends_with_ascii(filename, e))
 }
 
-fn iends_with_ascii(string: &str, suffix: &str) -> bool {
+pub fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     // as_bytes().into_iter() is faster than bytes().
     string.len() >= suffix.len()
         && string

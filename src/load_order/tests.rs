@@ -92,8 +92,12 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
     let my_games_path = game_path.join("my games");
     create_dir_all(&my_games_path).unwrap();
 
-    GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, my_games_path)
-        .unwrap()
+    if game_id == GameId::OpenMW {
+        GameSettings::with_local_path(GameId::OpenMW, game_path, &my_games_path).unwrap()
+    } else {
+        GameSettings::with_local_and_my_games_paths(game_id, game_path, &local_path, my_games_path)
+            .unwrap()
+    }
 }
 
 pub fn set_timestamp_order(plugin_names: &[&str], parent_path: &Path) {
