@@ -967,6 +967,21 @@ mod tests {
     }
 
     #[test]
+    fn appdata_folder_name_for_fallout4_should_have_epic_suffix_if_eossdk_dll_is_in_game_path() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        let mut folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4", folder);
+
+        let dll_path = game_path.join("EOSSDK-Win64-Shipping.dll");
+        File::create(&dll_path).unwrap();
+
+        folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
+        assert_eq!("Fallout4 EPIC", folder);
+    }
+
+    #[test]
     #[cfg(windows)]
     fn my_games_path_should_be_in_documents_path_on_windows() {
         let empty_path = Path::new("");
@@ -1075,21 +1090,6 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(parent_path.join("Starfield"), path);
-    }
-
-    #[test]
-    fn appdata_folder_name_for_fallout4_should_have_epic_suffix_if_eossdk_dll_is_in_game_path() {
-        let tmp_dir = tempdir().unwrap();
-        let game_path = tmp_dir.path();
-
-        let mut folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
-        assert_eq!("Fallout4", folder);
-
-        let dll_path = game_path.join("EOSSDK-Win64-Shipping.dll");
-        File::create(&dll_path).unwrap();
-
-        folder = appdata_folder_name(GameId::Fallout4, game_path).unwrap();
-        assert_eq!("Fallout4 EPIC", folder);
     }
 
     #[test]
