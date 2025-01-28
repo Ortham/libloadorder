@@ -128,7 +128,7 @@ impl Plugin {
     }
 
     pub fn is_master_file(&self) -> bool {
-        self.data.is_master_file()
+        self.game_id != GameId::OpenMW && self.data.is_master_file()
     }
 
     pub fn is_light_plugin(&self) -> bool {
@@ -418,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn is_master_file_should_be_false_for_an_omwscripts_plugin() {
+    fn is_master_file_should_be_false_for_all_openmw_plugins() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
 
@@ -427,6 +427,16 @@ mod tests {
         let name = "plugin.omwscripts";
         std::fs::write(settings.plugins_directory().join(name), "").unwrap();
         let plugin = Plugin::new(name, &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let plugin = Plugin::new("Blank.esp", &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
+        let plugin = Plugin::new("Blank.esm", &settings).unwrap();
 
         assert!(!plugin.is_master_file());
     }
