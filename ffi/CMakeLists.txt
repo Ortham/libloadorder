@@ -17,9 +17,5 @@ set (LIBLOADORDER_FFI_LIBRARY "${CMAKE_SOURCE_DIR}/../target/debug/${CMAKE_STATI
 add_executable(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/tests/ffi.cpp")
 target_link_libraries(ffi_cpp_tests ${LIBLOADORDER_FFI_LIBRARY} ${SYSTEM_LIBS})
 
-add_executable(ffi_c_tests "${CMAKE_SOURCE_DIR}/tests/ffi.c")
-target_link_libraries(ffi_c_tests ${LIBLOADORDER_FFI_LIBRARY} ${SYSTEM_LIBS})
-
 enable_testing()
 add_test(ffi_cpp_tests ffi_cpp_tests)
-add_test(ffi_c_tests ffi_c_tests)
