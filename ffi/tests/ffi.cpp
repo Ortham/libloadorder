@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -82,10 +83,10 @@ lo_game_handle create_handle() {
   return handle;
 }
 
-lo_game_handle create_fo4_handle() {
+lo_game_handle create_handle(unsigned int game_code) {
   lo_game_handle handle = nullptr;
   unsigned int return_code = lo_create_handle(&handle,
-    LIBLO_GAME_FO4,
+    game_code,
     "../../testing-plugins/SkyrimSE",
     "../../testing-plugins/SkyrimSE");
 
@@ -127,7 +128,7 @@ void test_lo_fix_plugin_lists() {
 
 void test_lo_get_implicitly_active_plugins() {
   printf("testing lo_get_load_order()...\n");
-  lo_game_handle handle = create_fo4_handle();
+  lo_game_handle handle = create_handle(LIBLO_GAME_FO4);
 
   char ** plugins = nullptr;
   size_t num_plugins = 0;
@@ -143,7 +144,7 @@ void test_lo_get_implicitly_active_plugins() {
 
 void test_lo_get_early_loading_plugins() {
   printf("testing lo_get_load_order()...\n");
-  lo_game_handle handle = create_fo4_handle();
+  lo_game_handle handle = create_handle(LIBLO_GAME_FO4);
 
   char ** plugins = nullptr;
   size_t num_plugins = 0;
@@ -171,6 +172,25 @@ void test_lo_get_active_plugins_file_path() {
   assert(strcmp(path, "../../testing-plugins/Oblivion/Plugins.txt") == 0);
 #endif
   lo_free_string(path);
+  lo_destroy_handle(handle);
+}
+
+void test_lo_get_additional_plugins_directories() {
+  printf("testing lo_get_additional_plugins_directories()...\n");
+  lo_game_handle handle = create_handle(LIBLO_GAME_STARFIELD);
+
+  char ** paths = nullptr;
+  size_t num_paths = 0;
+  unsigned int return_code = lo_get_additional_plugins_directories(handle, &paths, &num_paths);
+
+  assert(return_code == 0);
+  assert(num_paths == 1);
+#ifdef _WIN32
+  assert(std::string_view(paths[0]).ends_with("Documents\\My Games\\Starfield\\Data"));
+#else
+  assert(std::string_view(paths[0]).ends_with("Documents/My Games/Starfield/Data"));
+#endif
+  lo_free_string_array(paths, num_paths);
   lo_destroy_handle(handle);
 }
 
@@ -359,6 +379,7 @@ int main(void) {
   test_lo_get_implicitly_active_plugins();
   test_lo_get_early_loading_plugins();
   test_lo_get_active_plugins_file_path();
+  test_lo_get_additional_plugins_directories();
   test_lo_set_additional_plugins_directories();
 
   test_lo_set_active_plugins();

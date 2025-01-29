@@ -261,15 +261,12 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
 
 /// Get the list of implicitly active plugins for the given handle's game.
 ///
-/// The list may be empty if the game has no implicitly active plugins. The list
-/// may include plugins that are not installed. Plugins are not necessarily
-/// listed in their load order.
+/// The list may be empty if the game has no implicitly active plugins. The list may include plugins
+/// that are not installed. Plugins are not necessarily listed in their load order.
 ///
-/// If the list is empty, the `plugins` pointer will be null and `num_plugins`
-/// will be `0`.
+/// If the list is empty, the `plugins` pointer will be null and `num_plugins` will be `0`.
 ///
-/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
-/// returned.
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
     handle: lo_game_handle,
@@ -310,22 +307,19 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
 
 /// Get the list of implicitly active plugins for the given handle's game.
 ///
-/// The list may be empty if the game has no early loading plugins. The list
-/// may include plugins that are not installed. Plugins are listed in their
-/// hardcoded load order.
+/// The list may be empty if the game has no early loading plugins. The list may include plugins
+/// that are not installed. Plugins are listed in their hardcoded load order.
 ///
-/// Note that for the original Skyrim, `Update.esm` is hardcoded to always load,
-/// but not in a specific location, unlike all other early loading plugins
-/// for all games, which must load in the given order, before any other plugins.
+/// Note that for the original Skyrim, `Update.esm` is hardcoded to always load, but not in a
+/// specific location, unlike all other early loading plugins for all games, which must load in the
+/// given order, before any other plugins.
 ///
-/// The order of Creation Club plugins as listed in `Fallout4.ccc` or
-/// `Skyrim.ccc` is as their hardcoded load order for libloadorder's purposes.
+/// The order of Creation Club plugins as listed in `Fallout4.ccc` or `Skyrim.ccc` is as their
+/// hardcoded load order for libloadorder's purposes.
 ///
-/// If the list is empty, the `plugins` pointer will be null and `num_plugins`
-/// will be `0`.
+/// If the list is empty, the `plugins` pointer will be null and `num_plugins` will be `0`.
 ///
-/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
-/// returned.
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_early_loading_plugins(
     handle: lo_game_handle,
@@ -366,9 +360,9 @@ pub unsafe extern "C" fn lo_get_early_loading_plugins(
 
 /// Get the active plugins file path for the given game handle.
 ///
-/// The active plugins file path is often within the game's local path, but its
-/// name and location varies by game and game configuration, so this function
-/// exposes the path that libloadorder chooses to use.
+/// The active plugins file path is often within the game's local path, but its name and location
+/// varies by game and game configuration, so this function exposes the path that libloadorder
+/// chooses to use.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
 /// returned.
@@ -407,11 +401,63 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
     .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
+/// Gets the additional plugins directories that are used when looking up plugin filenames.
+///
+/// Some games (Fallout 4, Starfield and OpenMW) support loading plugins from outside of the game's
+/// main plugins directory, and each game handle is initialised with those additional directories
+/// set.
+///
+/// If the list is empty, the `paths` pointer will be null and `num_paths` will be `0`.
+///
+/// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+#[no_mangle]
+pub unsafe extern "C" fn lo_get_additional_plugins_directories(
+    handle: lo_game_handle,
+    paths: *mut *mut *mut c_char,
+    num_paths: *mut size_t,
+) -> c_uint {
+    catch_unwind(|| {
+        if handle.is_null() || paths.is_null() || num_paths.is_null() {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed");
+        }
+
+        let handle = match (*handle).read() {
+            Err(e) => return error(LIBLO_ERROR_POISONED_THREAD_LOCK, &e.to_string()),
+            Ok(h) => h,
+        };
+
+        *paths = ptr::null_mut();
+        *num_paths = 0;
+
+        let path_strings: Vec<_> = handle
+            .game_settings()
+            .additional_plugins_directories()
+            .iter()
+            .filter_map(|p| p.to_str())
+            .collect();
+
+        if path_strings.is_empty() {
+            return LIBLO_OK;
+        }
+
+        match to_c_string_array(&path_strings) {
+            Ok((pointer, size)) => {
+                *paths = pointer;
+                *num_paths = size;
+            }
+            Err(x) => return error(x, "A path contained a null byte"),
+        }
+
+        LIBLO_OK
+    })
+    .unwrap_or(LIBLO_ERROR_PANICKED)
+}
+
 /// Sets the additional plugins directories to be recognised by the given handle.
 ///
 /// If the load order contains plugins that are installed outside of the game's plugins directory,
-/// this function can be used to provide the paths to the directories that those plugins are in so that libloadorder is able to
-/// find them.
+/// this function can be used to provide the paths to the directories that those plugins are in so
+/// that libloadorder is able to find them.
 ///
 /// If external plugins exist, this function must be called before performing any operations on
 /// the load order to avoid any unexpected behaviour.
