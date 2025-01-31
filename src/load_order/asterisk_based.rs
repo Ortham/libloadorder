@@ -93,7 +93,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         let plugin_tuples = self.read_from_active_plugins_file()?;
         let paths = self.find_plugins();
 
-        self.load_unique_plugins(plugin_tuples, paths);
+        self.load_unique_plugins(&plugin_tuples, &paths);
 
         self.add_implicitly_active_plugins()?;
 

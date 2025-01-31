@@ -133,7 +133,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         };
 
         let paths = self.find_plugins();
-        self.load_unique_plugins(plugin_tuples, paths);
+        self.load_unique_plugins(&plugin_tuples, &paths);
 
         if load_order_file_exists {
             load_active_plugins(self, plugin_line_mapper)?;

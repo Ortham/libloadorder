@@ -154,11 +154,11 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
     fn load_unique_plugins(
         &mut self,
-        plugin_name_tuples: Vec<(String, bool)>,
-        installed_files: Vec<PathBuf>,
+        defined_load_order: &[(String, bool)],
+        installed_files: &[PathBuf],
     ) {
-        let plugins: Vec<_> = remove_duplicates_icase(
-            plugin_name_tuples,
+        let plugins: Vec<_> = Self::total_insertion_order(
+            defined_load_order,
             installed_files,
             self.game_settings().id(),
         )
@@ -171,6 +171,39 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         for plugin in plugins {
             insert(self, plugin);
         }
+    }
+
+    fn total_insertion_order(
+        defined_load_order: &[(String, bool)],
+        installed_files: &[PathBuf],
+        game_id: GameId,
+    ) -> Vec<(String, bool)> {
+        fn get_key_from_filename(filename: &str, game_id: GameId) -> UniCase<&str> {
+            UniCase::new(trim_dot_ghost(filename, game_id))
+        }
+
+        let mut set: HashSet<_> = HashSet::with_capacity(installed_files.len());
+
+        // If the same filename is listed multiple times, keep the last entry.
+        let mut unique_tuples: Vec<_> = defined_load_order
+            .iter()
+            .rev()
+            .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
+            .map(|(filename, active)| (filename.to_string(), *active))
+            .collect();
+
+        unique_tuples.reverse();
+
+        // If multiple file paths have the same filename, keep the first path.
+        let unique_file_tuples_iter = installed_files
+            .iter()
+            .filter_map(|p| filename_str(p))
+            .filter(|filename| set.insert(get_key_from_filename(filename, game_id)))
+            .map(|f| (f.to_string(), false));
+
+        unique_tuples.extend(unique_file_tuples_iter);
+
+        unique_tuples
     }
 
     fn add_implicitly_active_plugins(&mut self) -> Result<(), Error> {
@@ -763,39 +796,6 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
 
 fn filename_str(file_path: &Path) -> Option<&str> {
     file_path.file_name().and_then(|n| n.to_str())
-}
-
-fn remove_duplicates_icase(
-    plugin_tuples: Vec<(String, bool)>,
-    file_paths: Vec<PathBuf>,
-    game_id: GameId,
-) -> Vec<(String, bool)> {
-    fn get_key_from_filename(filename: &str, game_id: GameId) -> UniCase<&str> {
-        UniCase::new(trim_dot_ghost(filename, game_id))
-    }
-
-    let mut set: HashSet<_> = HashSet::with_capacity(file_paths.len());
-
-    // If the same filename is listed multiple times, keep the last entry.
-    let mut unique_tuples: Vec<_> = plugin_tuples
-        .iter()
-        .rev()
-        .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
-        .map(|(filename, active)| (filename.to_string(), *active))
-        .collect();
-
-    unique_tuples.reverse();
-
-    // If multiple file paths have the same filename, keep the first path.
-    let unique_file_tuples_iter = file_paths
-        .iter()
-        .filter_map(|p| filename_str(p))
-        .filter(|filename| set.insert(get_key_from_filename(filename, game_id)))
-        .map(|f| (f.to_string(), false));
-
-    unique_tuples.extend(unique_file_tuples_iter);
-
-    unique_tuples
 }
 
 fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
