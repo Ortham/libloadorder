@@ -68,12 +68,14 @@ fn map_game_id(game_id: u32) -> Result<GameId, u32> {
 ///
 /// The game ID is one of the `LIBLO_GAME_*` constants.
 ///
-/// The game path is the directory where the game's executable is found.
+/// The game path is the directory where the game's executable is found. For OpenMW, that is
+/// OpenMW's executable, not Morrowind's.
 ///
-/// The local path is the game's local application data folder, found within `%LOCALAPPDATA%` on
-/// Windows. If running on Windows, the `local_path` can be null, in which case libloadorder will
-/// look the path up itself. However, on other operating systems, lookup is not possible, and this
-/// function must be used to provide the necessary path.
+/// The local path is the game's local application data folder, usually found within
+/// `%LOCALAPPDATA%` on Windows, though for OpenMW it is found within the user's My Games folder. If
+/// running on Windows, the `local_path` can be null, in which case libloadorder will look the path
+/// up itself. However, on other operating systems, lookup may not be possible and a path must be
+/// provided, except for Morrowind and OpenMW.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
@@ -306,7 +308,7 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
     .unwrap_or(LIBLO_ERROR_PANICKED)
 }
 
-/// Get the list of implicitly active plugins for the given handle's game.
+/// Get the list of plugins that load before all others for the given handle's game.
 ///
 /// The list may be empty if the game has no early loading plugins. The list may include plugins
 /// that are not installed. Plugins are listed in their hardcoded load order.

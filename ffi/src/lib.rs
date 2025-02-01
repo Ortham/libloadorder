@@ -31,6 +31,8 @@
 //! - Fallout: New Vegas
 //! - Fallout 4
 //! - Fallout 4 VR
+//! - Starfield
+//! - OpenMW
 //!
 //! ## Variable Types
 //!
@@ -73,6 +75,13 @@
 //!     - Subrecords with sizes that do not together sum to larger than the expected total
 //!       subrecords size.
 //!
+//! When the game is OpenMW:
+//!
+//! - `.omwgame`, `.omwaddon` and `.omwscripts` plugins are also supported. `.omwgame` and
+//!   `.omwaddon` plugins must be valid according to the same rules as Morrowind `.esm` and `.esp`
+//!   plugins. The contents of `.omwscripts` plugins are not used by libloadorder.
+//! - `.esm.ghost` and `.esp.ghost` are not valid plugin filename extensions.
+//!
 //! This definition is substantially more permissive than games or other utilities may be for
 //! performance reasons, and because libloadorder uses no plugin data beyond the header record, so
 //! later corruption or invalid data would not affect its behaviour.
@@ -89,7 +98,8 @@
 //! - Contains no duplicate entries.
 //! - Loads all master files (including light masters and false-flagged plugins) before all plugin
 //!   files, with the exception that a non-master file that is a master of a master file must load
-//!   between that master file and the previous master file.
+//!   between that master file and the previous master file. Note that OpenMW treats all plugins as
+//!   non-master files.
 //! - Contains no more than 255 active plugins, excluding light plugins.
 //! - Contains no more than 4096 active light plugins.
 //! - Contains all the game's implicitly active plugins that are installed (e.g. `Skyrim.esm` and

@@ -118,6 +118,10 @@ pub unsafe extern "C" fn lo_get_load_order(
 /// last master file in the load order. The order of plugin insertion is undefined besides the
 /// distinction made between master files and plugin files.
 ///
+/// Note that OpenMW treats all plugins as non-master files. It also provides no means to store the
+/// load order of inactive plugins, so setting and then getting an OpenMW load order may get a
+/// different order than what was set.
+///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
 #[no_mangle]
 pub unsafe extern "C" fn lo_set_load_order(
