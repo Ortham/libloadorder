@@ -32,6 +32,12 @@ use crate::helpers::{error, handle_error, to_c_string, to_c_string_array, to_str
 /// The output is one of the `LIBLO_METHOD_*` constants.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `method` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_load_order_method(
     handle: lo_game_handle,
@@ -71,6 +77,13 @@ pub unsafe extern "C" fn lo_get_load_order_method(
 /// `num_plugins` will point to zero.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugins` must be a dereferenceable pointer.
+/// - `num_plugins` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_load_order(
     handle: lo_game_handle,
@@ -123,6 +136,14 @@ pub unsafe extern "C" fn lo_get_load_order(
 /// different order than what was set.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugins` must be a non-null aligned pointer to a sequence of `num_plugins` initialised C
+///   strings within a single allocated object.
+/// - `num_plugins * std::mem::size_of::<*const c_char>()` must be no larger than `isize::MAX`.
 #[no_mangle]
 pub unsafe extern "C" fn lo_set_load_order(
     handle: lo_game_handle,
@@ -167,6 +188,13 @@ pub unsafe extern "C" fn lo_set_load_order(
 /// `0`, the next has a position of `1`, and so on.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugin` must be a dereferenceable pointer.
+/// - `index` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_plugin_position(
     handle: lo_game_handle,
@@ -206,6 +234,12 @@ pub unsafe extern "C" fn lo_get_plugin_position(
 /// plugin in the load order has a position of `0`, the next has a position of `1`, and so on.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugin` must be a null-terminated string contained within a single allocation.
 #[no_mangle]
 pub unsafe extern "C" fn lo_set_plugin_position(
     handle: lo_game_handle,
@@ -246,6 +280,12 @@ pub unsafe extern "C" fn lo_set_plugin_position(
 /// `0`, the next has a position of `1`, and so on.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugin` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_indexed_plugin(
     handle: lo_game_handle,

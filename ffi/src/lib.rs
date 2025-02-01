@@ -143,6 +143,10 @@ thread_local!(static ERROR_MESSAGE: RefCell<CString> = RefCell::new(CString::def
 /// numbering used is major.minor.patch.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `major`, `minor` and `patch` must be dereferenceable pointers.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_version(
     major: *mut c_uint,
@@ -194,6 +198,10 @@ pub unsafe extern "C" fn lo_get_version(
 /// stored at any one time.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `message` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_uint {
     catch_unwind(|| {
@@ -218,6 +226,14 @@ pub unsafe extern "C" fn lo_get_error_message(message: *mut *const c_char) -> c_
 ///
 /// This function should be called to free memory allocated by any API function that outputs a
 /// string, excluding `lo_get_error_message()`.
+///
+/// # Safety
+///
+/// - `string` must be a C string that was previously allocated by this library, excluding the
+///   string allocated by `lo_get_error_message()` and strings that are elements of a string array.
+///   The length of the string must not have changed since it was allocated.
+///
+/// This function must not be called more than once with the same input value.
 #[no_mangle]
 pub unsafe extern "C" fn lo_free_string(string: *mut c_char) {
     if !string.is_null() {
@@ -229,6 +245,16 @@ pub unsafe extern "C" fn lo_free_string(string: *mut c_char) {
 ///
 /// This function should be called to free memory allocated by any API function that outputs an
 /// array of strings.
+///
+/// # Safety
+///
+/// - `paths` must be a non-null aligned pointer to a sequence of `num_paths` initialised C strings
+///   within a single allocated object.
+/// - `num_paths * std::mem::size_of::<*const c_char>()` must be no larger than `isize::MAX`.
+/// - `paths` and `num_paths` must represent a single complete array of C strings that was allocated
+///   by this library.
+///
+/// This function must not be called more than once with the same `array` value.
 #[no_mangle]
 pub unsafe extern "C" fn lo_free_string_array(array: *mut *mut c_char, size: size_t) {
     if array.is_null() || size == 0 {

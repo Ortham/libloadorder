@@ -78,6 +78,13 @@ fn map_game_id(game_id: u32) -> Result<GameId, u32> {
 /// provided, except for Morrowind and OpenMW.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a dereferenceable pointer.
+/// - `game_path` must be a null-terminated string contained within a single allocation.
+/// - If not null, `local_path` must be a null-terminated string contained within a single
+///   allocation.
 #[no_mangle]
 pub unsafe extern "C" fn lo_create_handle(
     handle: *mut lo_game_handle,
@@ -155,6 +162,12 @@ pub unsafe extern "C" fn lo_create_handle(
 ///
 /// Destroys the given game handle, freeing up memory allocated during its use, excluding any
 /// memory allocated to error messages.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()`.
+///
+/// This function must not be called more than once with the same input value.
 #[no_mangle]
 pub unsafe extern "C" fn lo_destroy_handle(handle: lo_game_handle) {
     if !handle.is_null() {
@@ -166,6 +179,11 @@ pub unsafe extern "C" fn lo_destroy_handle(handle: lo_game_handle) {
 ///
 /// This function should be called whenever the load order or active state of plugins "on disk"
 /// changes, so that cached state is updated to reflect the changes.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
 #[no_mangle]
 pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint {
     catch_unwind(|| {
@@ -202,6 +220,12 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
 /// Outputs `true` if the load order state is ambiguous, and false otherwise.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `result` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bool) -> c_uint {
     catch_unwind(|| {
@@ -237,6 +261,11 @@ pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bo
 /// update the load order / active plugins systems correctly.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
 #[no_mangle]
 pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
     catch_unwind(|| {
@@ -270,6 +299,13 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
 /// If the list is empty, the `plugins` pointer will be null and `num_plugins` will be `0`.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugins` must be a dereferenceable pointer.
+/// - `num_plugins` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
     handle: lo_game_handle,
@@ -323,6 +359,13 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
 /// If the list is empty, the `plugins` pointer will be null and `num_plugins` will be `0`.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `plugins` must be a dereferenceable pointer.
+/// - `num_plugins` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_early_loading_plugins(
     handle: lo_game_handle,
@@ -369,6 +412,12 @@ pub unsafe extern "C" fn lo_get_early_loading_plugins(
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is
 /// returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `path` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_active_plugins_file_path(
     handle: lo_game_handle,
@@ -413,6 +462,13 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
 /// If the list is empty, the `paths` pointer will be null and `num_paths` will be `0`.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `paths` must be a dereferenceable pointer.
+/// - `num_paths` must be a dereferenceable pointer.
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_additional_plugins_directories(
     handle: lo_game_handle,
@@ -466,6 +522,14 @@ pub unsafe extern "C" fn lo_get_additional_plugins_directories(
 /// the load order to avoid any unexpected behaviour.
 ///
 /// Returns `LIBLO_OK` if successful, otherwise a `LIBLO_ERROR_*` code is returned.
+///
+/// # Safety
+///
+/// - `handle` must be a value that was previously set by `lo_create_handle()` and that has not been
+///   destroyed using `lo_destroy_handle()`.
+/// - `paths` must be a non-null aligned pointer to a sequence of `num_paths` initialised C strings
+///   within a single allocated object.
+/// - `num_paths * std::mem::size_of::<*const c_char>()` must be no larger than `isize::MAX`.
 #[no_mangle]
 pub unsafe extern "C" fn lo_set_additional_plugins_directories(
     handle: lo_game_handle,
