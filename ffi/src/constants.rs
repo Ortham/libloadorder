@@ -17,7 +17,7 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use libc::c_uint;
+use std::ffi::c_uint;
 
 /// Success return code.
 #[no_mangle]

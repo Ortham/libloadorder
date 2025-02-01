@@ -17,10 +17,11 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::ffi::{c_char, c_uint};
 use std::panic::catch_unwind;
 use std::ptr;
 
-use libc::{c_char, c_uint, size_t};
+use libc::size_t;
 use loadorder::LoadOrderMethod;
 
 use super::lo_game_handle;

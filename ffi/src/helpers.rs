@@ -16,13 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-use std::ffi::{CStr, CString};
+use std::ffi::{c_char, c_uint, CStr, CString};
 use std::io;
 use std::mem;
 use std::path::PathBuf;
 use std::slice;
 
-use libc::{c_char, c_uint, size_t};
+use libc::size_t;
 use loadorder::Error;
 
 use super::ERROR_MESSAGE;

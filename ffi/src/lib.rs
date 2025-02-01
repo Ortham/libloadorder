@@ -117,11 +117,11 @@
 //! activated.
 
 use std::cell::RefCell;
-use std::ffi::CString;
+use std::ffi::{c_char, c_uint, CString};
 use std::panic::catch_unwind;
 use std::ptr;
 
-use libc::{c_char, c_uint, size_t};
+use libc::size_t;
 
 mod active_plugins;
 mod constants;

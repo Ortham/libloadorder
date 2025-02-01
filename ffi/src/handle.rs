@@ -17,12 +17,13 @@
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::ffi::{c_char, c_uint};
 use std::panic::catch_unwind;
 use std::path::Path;
 use std::ptr;
 use std::sync::RwLock;
 
-use libc::{c_char, c_uint, size_t};
+use libc::size_t;
 use loadorder::GameId;
 use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
