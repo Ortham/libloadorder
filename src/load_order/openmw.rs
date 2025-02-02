@@ -304,7 +304,7 @@ mod tests {
 
     use crate::{
         load_order::tests::{game_settings_for_test, mock_game_files},
-        tests::copy_to_dir,
+        tests::{copy_to_dir, create_file},
         GameId,
     };
 
@@ -443,6 +443,29 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank.esp",
             "Blank - Different.esp",
+            "Blàñk.esp",
+        ];
+
+        assert_eq!(plugin_names, load_order.plugin_names().as_slice());
+    }
+
+    #[test]
+    fn load_should_move_game_file_immediately_below_last_early_loader() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(tmp_dir.path());
+        let main_dir = load_order.game_settings.plugins_directory();
+
+        create_file(&main_dir.join("builtin.omwscripts"));
+
+        load_order.load().unwrap();
+
+        // Blank.esm is moved up because it looks like a game file.
+        let plugin_names = &[
+            "builtin.omwscripts",
+            "Blank.esm",
+            "Blank - Different.esp",
+            "Blank - Master Dependent.esp",
+            "Blank.esp",
             "Blàñk.esp",
         ];
 
