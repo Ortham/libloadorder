@@ -3,6 +3,12 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.2.1] - 2025-02-02
+
+### Fixed
+
+- Increased the active plugin limit for OpenMW from 255 to 2147483646.
+
 ## [18.2.0] - 2025-02-01
 
 ### Added
