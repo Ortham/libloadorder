@@ -34,6 +34,32 @@ use crate::GameId;
 pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
 
+    fn max_active_full_plugins(&self) -> usize {
+        let has_active_light_plugin = if self.game_settings().id().supports_light_plugins() {
+            self.plugins()
+                .iter()
+                .any(|p| p.is_active() && p.is_light_plugin())
+        } else {
+            false
+        };
+
+        let has_active_medium_plugin = if self.game_settings().id().supports_medium_plugins() {
+            self.plugins()
+                .iter()
+                .any(|p| p.is_active() && p.is_medium_plugin())
+        } else {
+            false
+        };
+
+        if has_active_light_plugin && has_active_medium_plugin {
+            253
+        } else if has_active_light_plugin || has_active_medium_plugin {
+            254
+        } else {
+            255
+        }
+    }
+
     fn insert_position(&self, plugin: &Plugin) -> Option<usize> {
         if self.plugins().is_empty() {
             return None;

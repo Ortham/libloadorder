@@ -74,6 +74,10 @@ impl GameId {
         )
     }
 
+    pub fn supports_medium_plugins(self) -> bool {
+        self == GameId::Starfield
+    }
+
     pub fn allow_plugin_ghosting(self) -> bool {
         self != GameId::OpenMW
     }
@@ -252,6 +256,21 @@ mod tests {
         assert!(GameId::Fallout4.supports_light_plugins());
         assert!(GameId::Fallout4VR.supports_light_plugins());
         assert!(GameId::Starfield.supports_light_plugins());
+    }
+
+    #[test]
+    fn game_id_supports_medium_plugins_should_be_false_except_for_starfield() {
+        assert!(!GameId::OpenMW.supports_medium_plugins());
+        assert!(!GameId::Morrowind.supports_medium_plugins());
+        assert!(!GameId::Oblivion.supports_medium_plugins());
+        assert!(!GameId::Skyrim.supports_medium_plugins());
+        assert!(!GameId::SkyrimSE.supports_medium_plugins());
+        assert!(!GameId::SkyrimVR.supports_medium_plugins());
+        assert!(!GameId::Fallout3.supports_medium_plugins());
+        assert!(!GameId::FalloutNV.supports_medium_plugins());
+        assert!(!GameId::Fallout4.supports_medium_plugins());
+        assert!(!GameId::Fallout4VR.supports_medium_plugins());
+        assert!(GameId::Starfield.supports_medium_plugins());
     }
 
     #[test]

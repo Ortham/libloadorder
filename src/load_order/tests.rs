@@ -22,6 +22,8 @@ use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 use crate::enums::GameId;
 use crate::enums::LoadOrderMethod;
 use crate::game_settings::GameSettings;
@@ -152,9 +154,7 @@ fn set_flag(game_id: GameId, plugin_path: &Path, flag: u32, present: bool) -> io
     Ok(())
 }
 
-pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
-    let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
-
+fn insert<T: MutableLoadOrder>(load_order: &mut T, plugin: Plugin) {
     match load_order.insert_position(&plugin) {
         Some(position) => {
             load_order.plugins_mut().insert(position, plugin);
@@ -163,6 +163,12 @@ pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &st
             load_order.plugins_mut().push(plugin);
         }
     }
+}
+
+pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
+    let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
+
+    insert(load_order, plugin);
 }
 
 pub fn prepend_master<T: MutableLoadOrder>(load_order: &mut T) {
@@ -193,4 +199,42 @@ pub fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
 
     let plugin = Plugin::new(target, load_order.game_settings()).unwrap();
     load_order.plugins_mut().insert(0, plugin);
+}
+
+pub fn prepare_bulk_plugins<T, F>(
+    load_order: &mut T,
+    source_plugin_name: &str,
+    plugin_count: usize,
+    name_generator: F,
+) -> Vec<String>
+where
+    T: MutableLoadOrder,
+    F: Fn(usize) -> String,
+{
+    let names: Vec<_> = (0..plugin_count).map(name_generator).collect();
+
+    let plugins: Vec<_> = names
+        .par_iter()
+        .map(|name| {
+            copy_to_test_dir(source_plugin_name, name, load_order.game_settings());
+            Plugin::new(name, load_order.game_settings()).unwrap()
+        })
+        .collect();
+
+    for plugin in plugins {
+        insert(load_order, plugin);
+    }
+
+    names
+}
+
+pub fn prepare_bulk_full_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Vec<String> {
+    let plugin_name = if load_order.game_settings().id() == GameId::Starfield {
+        "Blank.full.esm"
+    } else {
+        "Blank.esm"
+    };
+    prepare_bulk_plugins(load_order, plugin_name, 260, |i| {
+        format!("Blank{}.full.esm", i)
+    })
 }

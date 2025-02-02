@@ -164,6 +164,16 @@ impl MutableLoadOrder for OpenMWLoadOrder {
         &mut self.plugins
     }
 
+    fn max_active_full_plugins(&self) -> usize {
+        // Stated as the limit in the FAQs here:
+        // <https://openmw.org/faq/>
+        // The code shows that plugin indexes are stored as int32_t, with 0
+        // being used as a null value and presumably save data taking up
+        // another slot like in other games:
+        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc3/components/esm/formid.hpp?ref_type=tags#L16>
+        2147483646
+    }
+
     fn total_insertion_order(
         defined_load_order: &[(String, bool)],
         installed_files: &[PathBuf],
@@ -303,7 +313,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::{
-        load_order::tests::{game_settings_for_test, mock_game_files},
+        load_order::tests::{game_settings_for_test, mock_game_files, prepare_bulk_full_plugins},
         tests::{copy_to_dir, create_file},
         GameId,
     };
@@ -668,5 +678,18 @@ mod tests {
         let lines = read_lines(&cfg_path(tmp_dir.path()));
 
         assert!(lines.is_empty());
+    }
+
+    #[test]
+    fn activate_should_allow_more_than_255_plugins_to_be_active() {
+        // The limit is over 2 billion, don't test activating that many plugins.
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(tmp_dir.path());
+
+        let plugins = prepare_bulk_full_plugins(&mut load_order);
+        for plugin in &plugins[..260] {
+            load_order.activate(plugin).unwrap();
+            assert!(load_order.is_active(plugin));
+        }
     }
 }

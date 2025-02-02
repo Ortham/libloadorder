@@ -28,7 +28,6 @@ use crate::enums::Error;
 use crate::plugin::Plugin;
 use crate::GameSettings;
 
-const MAX_ACTIVE_FULL_PLUGINS: usize = 255;
 const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 const MAX_ACTIVE_MEDIUM_PLUGINS: usize = 256;
 
@@ -154,17 +153,6 @@ impl PluginCounts {
             self.full += 1;
         }
     }
-
-    fn max_active_full_plugins(&self) -> usize {
-        let modifier = if self.medium > 0 && self.light > 0 {
-            2
-        } else if self.medium > 0 || self.light > 0 {
-            1
-        } else {
-            0
-        };
-        MAX_ACTIVE_FULL_PLUGINS - modifier
-    }
 }
 
 fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCounts {
@@ -190,6 +178,7 @@ fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize])
 
 pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
     let counts = count_active_plugins(load_order);
+    let max_active_full_plugins = load_order.max_active_full_plugins();
 
     let plugin = match load_order
         .plugins_mut()
@@ -207,7 +196,7 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
 
         if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
             || (is_medium && counts.medium == MAX_ACTIVE_MEDIUM_PLUGINS)
-            || (is_full && counts.full == counts.max_active_full_plugins())
+            || (is_full && counts.full == max_active_full_plugins)
         {
             return Err(Error::TooManyActivePlugins {
                 light_count: counts.light,
@@ -243,7 +232,7 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
 
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
-    if counts.full > counts.max_active_full_plugins()
+    if counts.full > load_order.max_active_full_plugins()
         || counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS
         || counts.light > MAX_ACTIVE_LIGHT_PLUGINS
     {
@@ -289,7 +278,6 @@ mod tests {
     use std::fs::remove_file;
     use std::path::Path;
 
-    use rayon::prelude::*;
     use tempfile::tempdir;
 
     use crate::enums::GameId;
@@ -297,8 +285,9 @@ mod tests {
     use crate::load_order::mutable::MutableLoadOrder;
     use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
     use crate::load_order::tests::{
-        game_settings_for_test, load_and_insert, mock_game_files, prepend_early_loader,
-        prepend_master, set_blueprint_flag, set_master_flag,
+        game_settings_for_test, load_and_insert, mock_game_files, prepare_bulk_full_plugins,
+        prepare_bulk_plugins, prepend_early_loader, prepend_master, set_blueprint_flag,
+        set_master_flag,
     };
     use crate::tests::copy_to_test_dir;
 
@@ -337,54 +326,6 @@ mod tests {
             game_settings,
             plugins,
         }
-    }
-
-    fn insert<T: MutableLoadOrder>(load_order: &mut T, plugin: Plugin) {
-        match load_order.insert_position(&plugin) {
-            Some(position) => {
-                load_order.plugins_mut().insert(position, plugin);
-            }
-            None => {
-                load_order.plugins_mut().push(plugin);
-            }
-        }
-    }
-
-    fn prepare_bulk_plugins<F>(
-        load_order: &mut TestLoadOrder,
-        source_plugin_name: &str,
-        plugin_count: usize,
-        name_generator: F,
-    ) -> Vec<String>
-    where
-        F: Fn(usize) -> String,
-    {
-        let names: Vec<_> = (0..plugin_count).map(name_generator).collect();
-
-        let plugins: Vec<_> = names
-            .par_iter()
-            .map(|name| {
-                copy_to_test_dir(source_plugin_name, name, load_order.game_settings());
-                Plugin::new(name, load_order.game_settings()).unwrap()
-            })
-            .collect();
-
-        for plugin in plugins {
-            insert(load_order, plugin);
-        }
-
-        names
-    }
-
-    fn prepare_bulk_full_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
-        let plugin_name = if load_order.game_settings.id() == GameId::Starfield {
-            "Blank.full.esm"
-        } else {
-            "Blank.esm"
-        };
-        prepare_bulk_plugins(load_order, plugin_name, 260, |i| {
-            format!("Blank{}.full.esm", i)
-        })
     }
 
     fn prepare_bulk_medium_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
@@ -671,7 +612,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
+        for plugin in &plugins[..254] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -685,7 +626,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
+        for plugin in &plugins[..254] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -699,7 +640,7 @@ mod tests {
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
+        for plugin in &plugins[..254] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -718,7 +659,7 @@ mod tests {
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 1] {
+        for plugin in &plugins[..254] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -737,7 +678,7 @@ mod tests {
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
+        for plugin in &plugins[..252] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -745,13 +686,13 @@ mod tests {
         load_and_insert(&mut load_order, plugin);
         activate(&mut load_order, plugin).unwrap();
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        let plugin = &plugins[253];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_ok());
         assert!(load_order.is_active(plugin));
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 1];
+        let plugin = &plugins[254];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_err());
@@ -764,7 +705,7 @@ mod tests {
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 3] {
+        for plugin in &plugins[..252] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -772,13 +713,13 @@ mod tests {
         load_and_insert(&mut load_order, plugin);
         activate(&mut load_order, plugin).unwrap();
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        let plugin = &plugins[253];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_ok());
         assert!(load_order.is_active(plugin));
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 1];
+        let plugin = &plugins[254];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_err());
@@ -791,7 +732,7 @@ mod tests {
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in &plugins[..MAX_ACTIVE_FULL_PLUGINS - 4] {
+        for plugin in &plugins[..251] {
             activate(&mut load_order, plugin).unwrap();
         }
 
@@ -800,13 +741,13 @@ mod tests {
             activate(&mut load_order, plugin).unwrap();
         }
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 3];
+        let plugin = &plugins[252];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_ok());
         assert!(load_order.is_active(plugin));
 
-        let plugin = &plugins[MAX_ACTIVE_FULL_PLUGINS - 2];
+        let plugin = &plugins[253];
         assert!(!load_order.is_active(plugin));
 
         assert!(activate(&mut load_order, plugin).is_err());
@@ -988,7 +929,7 @@ mod tests {
         let mut active_plugins = vec![blank_override.to_string()];
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
-        for plugin in plugins.into_iter().take(MAX_ACTIVE_FULL_PLUGINS) {
+        for plugin in plugins.into_iter().take(255) {
             active_plugins.push(plugin);
         }
 
