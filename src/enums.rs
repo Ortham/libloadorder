@@ -111,6 +111,9 @@ pub enum Error {
     ImplicitlyActivePlugin(String),
     NoLocalAppData,
     NoDocumentsPath,
+    NoUserConfigPath,
+    NoUserDataPath,
+    NoProgramFilesPath,
     UnrepresentedHoist {
         plugin: String,
         master: String,
@@ -168,6 +171,9 @@ impl fmt::Display for Error {
                 write!(f, "The game's local app data folder could not be detected")
             }
             Error::NoDocumentsPath => write!(f, "The user's Documents path could not be detected"),
+            Error::NoUserConfigPath => write!(f, "The user's config path could not be detected"),
+            Error::NoUserDataPath => write!(f, "The user's data path could not be detected"),
+            Error::NoProgramFilesPath => write!(f, "The Program Files path could not be obtained"),
             Error::UnrepresentedHoist { plugin, master } =>
                 write!(f, "The plugin \"{plugin}\" is a master of \"{master}\", which will hoist it"),
             Error::InstalledPlugin(plugin) =>

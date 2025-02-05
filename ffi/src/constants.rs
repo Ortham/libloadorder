@@ -87,12 +87,17 @@ pub static LIBLO_ERROR_PATH_ENCODE_FAIL: c_uint = 21;
 #[no_mangle]
 pub static LIBLO_ERROR_SYSTEM_ERROR: c_uint = 22;
 
+/// A system path definition (e.g. for local app data on Windows, or $HOME on Linux) could not be
+/// found.
+#[no_mangle]
+pub static LIBLO_ERROR_NO_PATH: c_uint = 23;
+
 /// Matches the value of the highest-numbered return code.
 ///
 /// Provided in case clients wish to incorporate additional return codes in their implementation
 /// and desire some method of avoiding value conflicts.
 #[no_mangle]
-pub static LIBLO_RETURN_MAX: c_uint = 22;
+pub static LIBLO_RETURN_MAX: c_uint = 23;
 
 /// The game handle is using the timestamp-based load order system. Morrowind, Oblivion, Fallout 3
 /// and Fallout: New Vegas all use this system.

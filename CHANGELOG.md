@@ -3,6 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.2.2] - Unreleased
+
+### Fixed
+
+- OpenMW configuration is now loaded in a similar way to how OpenMW loads it,
+  so a wider variety of config file locations are now supported, including the
+  locations used by Linux packages linked to at <https://openmw.org/downloads/>.
+
 ## [18.2.1] - 2025-02-02
 
 ### Fixed
@@ -23,13 +31,13 @@ changelog does not include libloadorder-ffi changes.
     `game_path` must be the path to the OpenMW installation directory, e.g.
     `C:\Program Files\OpenMW` on Windows, not the Morrowind install path.
   - `GameSettings::new()` will use OpenMW's `My Games\OpenMW` directory on
-    Windows and its `$HOME/.config/openmw` directory on Linux as the game's
-    local path.
+    Windows and its `$XDG_CONFIG_HOME/openmw` (or `$HOME/.config/openmw`)
+    directory on Linux as the game's local path.
   - OpenMW supports loading plugins from multiple data directories.
-    `GameSettings::plugins_directory()` will be the `resources/vfs` directory
-    within the game path, and `GameSettings::additional_plugins_directories()`
-    will contain OpenMW's local data path, followed by the data paths listed in
-    the global and user `openmw.cfg` files.
+    `GameSettings::plugins_directory()` will be the `resources/vfs` directory,
+    and `GameSettings::additional_plugins_directories()` will contain OpenMW's
+    local data path, followed by the data paths listed in the global and user
+    `openmw.cfg` files.
   - When the load order is saved, the user `openmw.cfg` will be written to,
     replacing the `content` entries with the active plugins in their load order,
     and replacing the `data` entries with the paths in

@@ -22,6 +22,7 @@ mod game_settings;
 mod ghostable_path;
 mod ini;
 mod load_order;
+mod openmw_config;
 mod plugin;
 #[cfg(test)]
 mod tests;

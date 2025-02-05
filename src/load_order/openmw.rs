@@ -3,9 +3,8 @@ use std::{collections::HashSet, path::PathBuf};
 use unicase::UniCase;
 
 use crate::{
-    game_settings::read_only_openmw_data_paths,
-    ini::{read_openmw_active_plugin_names, write_openmw_cfg},
     load_order::mutable::filename_str,
+    openmw_config::{non_user_additional_data_paths, read_active_plugin_names, write_openmw_cfg},
     plugin::{iends_with_ascii, Plugin},
     Error, GameId, GameSettings,
 };
@@ -34,7 +33,7 @@ impl OpenMWLoadOrder {
     fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
         let path = self.game_settings().active_plugins_file();
 
-        let active_plugin_tuples: Vec<_> = read_openmw_active_plugin_names(path)?
+        let active_plugin_tuples: Vec<_> = read_active_plugin_names(path)?
             .into_iter()
             .map(|v| (v, true))
             .collect();
@@ -249,12 +248,10 @@ impl WritableLoadOrder for OpenMWLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        let read_only_data_paths: HashSet<_> = read_only_openmw_data_paths(
-            self.game_settings.game_path(),
-            self.game_settings.my_games_path(),
-        )?
-        .into_iter()
-        .collect();
+        let read_only_data_paths: HashSet<_> =
+            non_user_additional_data_paths(self.game_settings.game_path())?
+                .into_iter()
+                .collect();
 
         // Filter out the additional plugins dirs that come from read-only
         // sources (e.g. hardcoded values or global config).

@@ -25,19 +25,19 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::enums::{Error, GameId, LoadOrderMethod};
-use crate::ini::{
-    read_openmw_active_plugin_names, read_openmw_data_paths, test_files, use_my_games_directory,
-};
+use crate::ini::{test_files, use_my_games_directory};
 use crate::is_enderal;
 use crate::load_order::{
     AsteriskBasedLoadOrder, OpenMWLoadOrder, TextfileBasedLoadOrder, TimestampBasedLoadOrder,
     WritableLoadOrder,
 };
+use crate::openmw_config;
 use crate::plugin::{has_plugin_extension, Plugin};
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct GameSettings {
     id: GameId,
+    game_path: PathBuf,
     plugins_directory: PathBuf,
     plugins_file_path: PathBuf,
     my_games_path: PathBuf,
@@ -131,7 +131,7 @@ impl GameSettings {
     ) -> Result<GameSettings, Error> {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
         let load_order_path = load_order_path(game_id, local_path);
-        let plugins_directory = game_path.join(plugins_folder_relative_path(game_id));
+        let plugins_directory = plugins_directory(game_id, game_path, local_path)?;
         let additional_plugins_directories =
             additional_plugins_directories(game_id, game_path, &my_games_path)?;
 
@@ -146,6 +146,7 @@ impl GameSettings {
 
         Ok(GameSettings {
             id: game_id,
+            game_path: game_path.to_path_buf(),
             plugins_directory,
             plugins_file_path,
             load_order_path,
@@ -255,23 +256,7 @@ impl GameSettings {
     }
 
     pub(crate) fn game_path(&self) -> &Path {
-        let mut ancestors = self.plugins_directory.ancestors();
-
-        let descendants_count = Path::new(plugins_folder_relative_path(self.id))
-            .components()
-            .count();
-
-        for _ in 0..descendants_count {
-            ancestors.next();
-        }
-
-        ancestors
-            .next()
-            .expect("game path to be an ancestor of plugins directory")
-    }
-
-    pub(crate) fn my_games_path(&self) -> &PathBuf {
-        &self.my_games_path
+        &self.game_path
     }
 
     pub fn plugin_path(&self, plugin_name: &str) -> PathBuf {
@@ -287,7 +272,7 @@ impl GameSettings {
         let (early_loading_plugins, implicitly_active_plugins) =
             GameSettings::load_implicitly_active_plugins(
                 self.id,
-                self.game_path(),
+                &self.game_path,
                 &self.my_games_path,
                 &self.plugins_directory,
                 &self.additional_plugins_directories,
@@ -338,11 +323,7 @@ impl GameSettings {
 #[cfg(windows)]
 fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
     if game_id == GameId::OpenMW {
-        // OpenMW doesn't have a directory in %LOCALAPPDATA%, it stores
-        // everything in its My Games folder.
-        return dirs::document_dir()
-            .map(|d| Some(d.join("My Games").join("OpenMW")))
-            .ok_or_else(|| Error::NoDocumentsPath);
+        return openmw_config::user_config_dir(game_path).map(Some);
     }
 
     let local_app_data_path = match dirs::data_local_dir() {
@@ -359,10 +340,7 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 #[cfg(not(windows))]
 fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
     if game_id == GameId::OpenMW {
-        // OpenMW is available as a native Linux application.
-        return dirs::config_dir()
-            .map(|d| Some(d.join("openmw")))
-            .ok_or_else(|| Error::NoDocumentsPath);
+        return openmw_config::user_config_dir(game_path).map(Some);
     } else if appdata_folder_name(game_id, game_path).is_none() {
         // There is no local path, the value doesn't matter.
         Ok(None)
@@ -447,8 +425,8 @@ fn my_games_path(
     local_path: &Path,
 ) -> Result<Option<PathBuf>, Error> {
     if game_id == GameId::OpenMW {
-        // OpenMW has a single "user directory", so the local path and my games
-        // path are the same value.
+        // Use the local path as the my games path, so that both refer to the
+        // user config path for OpenMW.
         return Ok(Some(local_path.to_path_buf()));
     }
 
@@ -501,49 +479,30 @@ fn documents_path(_local_path: &Path) -> Option<PathBuf> {
 
 #[cfg(not(windows))]
 fn documents_path(local_path: &Path) -> Option<PathBuf> {
-    const DOCUMENTS: &str = "Documents";
     // Get the documents path relative to the game's local path, which should end in
     // AppData/Local/<Game>.
     local_path
         .parent()
         .and_then(Path::parent)
         .and_then(Path::parent)
-        .map(|p| p.join(DOCUMENTS))
+        .map(|p| p.join("Documents"))
         .or_else(|| {
             // Fall back to creating a path that navigates up parent directories. This may give a
-            // different result if local_path involves symlinks.
-            Some(local_path.join("..").join("..").join("..").join(DOCUMENTS))
+            // different result if local_path involves symlinks, and requires local_path to exist.
+            Some(local_path.join("../../../Documents"))
         })
 }
 
-fn plugins_folder_relative_path(game_id: GameId) -> &'static str {
+fn plugins_directory(
+    game_id: GameId,
+    game_path: &Path,
+    local_path: &Path,
+) -> Result<PathBuf, Error> {
     match game_id {
-        GameId::OpenMW => "resources/vfs",
-        GameId::Morrowind => "Data Files",
-        _ => "Data",
+        GameId::OpenMW => openmw_config::resources_vfs_path(game_path, local_path),
+        GameId::Morrowind => Ok(game_path.join("Data Files")),
+        _ => Ok(game_path.join("Data")),
     }
-}
-
-pub(crate) fn read_only_openmw_data_paths(
-    game_path: &Path,
-    my_games_path: &Path,
-) -> Result<Vec<PathBuf>, Error> {
-    let mut paths = vec![my_games_path.join("data")];
-
-    paths.extend(read_openmw_data_paths(&game_path.join("openmw.cfg"))?);
-
-    Ok(paths)
-}
-
-fn additional_openmw_data_paths(
-    game_path: &Path,
-    my_games_path: &Path,
-) -> Result<Vec<PathBuf>, Error> {
-    let mut paths = read_only_openmw_data_paths(game_path, my_games_path)?;
-
-    paths.extend(read_openmw_data_paths(&my_games_path.join("openmw.cfg"))?);
-
-    Ok(paths)
 }
 
 fn additional_plugins_directories(
@@ -564,7 +523,7 @@ fn additional_plugins_directories(
     } else if game_id == GameId::Starfield {
         Ok(vec![my_games_path.join("Data")])
     } else if game_id == GameId::OpenMW {
-        additional_openmw_data_paths(game_path, my_games_path)
+        openmw_config::additional_data_paths(game_path, my_games_path)
     } else {
         Ok(Vec::new())
     }
@@ -701,10 +660,7 @@ fn early_loading_plugins(
     }
 
     if game_id == GameId::OpenMW {
-        // Load non-user content from the global openmw.cfg.
-        plugin_names.extend(read_openmw_active_plugin_names(
-            &game_path.join("openmw.cfg"),
-        )?);
+        plugin_names.extend(openmw_config::non_user_active_plugin_names(game_path)?);
     }
 
     deduplicate(&mut plugin_names);
@@ -954,19 +910,19 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn new_should_use_my_games_as_local_path_for_openmw_on_windows() {
-        let my_games_path = dirs::document_dir()
-            .unwrap()
-            .join("My Games")
-            .join("OpenMW");
+    fn new_should_determine_correct_local_path_for_openmw() {
+        let tmp_dir = tempdir().unwrap();
+        let global_cfg_path = tmp_dir.path().join("openmw.cfg");
 
-        let settings = GameSettings::new(GameId::OpenMW, Path::new("game")).unwrap();
+        std::fs::write(&global_cfg_path, "config=local").unwrap();
+
+        let settings = GameSettings::new(GameId::OpenMW, tmp_dir.path()).unwrap();
 
         assert_eq!(
-            &my_games_path.join("openmw.cfg"),
+            &tmp_dir.path().join("local/openmw.cfg"),
             settings.active_plugins_file()
         );
-        assert_eq!(my_games_path, settings.my_games_path);
+        assert_eq!(tmp_dir.path().join("local"), settings.my_games_path);
     }
 
     #[test]
@@ -979,7 +935,7 @@ mod tests {
     #[test]
     #[cfg(not(windows))]
     fn new_should_determine_correct_local_path_for_openmw_on_linux() {
-        let config_path = dirs::config_dir().unwrap().join("openmw");
+        let config_path = Path::new("/etc/openmw");
 
         let settings = GameSettings::new(GameId::OpenMW, Path::new("game")).unwrap();
 
@@ -1346,24 +1302,22 @@ mod tests {
     }
 
     #[test]
-    fn plugins_folder_relative_path_should_be_mapped_from_game_id() {
-        assert_eq!(
-            "resources/vfs",
-            plugins_folder_relative_path(GameId::OpenMW)
-        );
-        assert_eq!(
-            "Data Files",
-            plugins_folder_relative_path(GameId::Morrowind)
-        );
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Oblivion));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Skyrim));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::SkyrimSE));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::SkyrimVR));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout3));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::FalloutNV));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout4));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Fallout4VR));
-        assert_eq!("Data", plugins_folder_relative_path(GameId::Starfield));
+    fn plugins_directory_should_be_mapped_from_game_id() {
+        let data_path = Path::new("Data");
+        let empty_path = Path::new("");
+        let closure = |game_id| plugins_directory(game_id, empty_path, empty_path).unwrap();
+
+        assert_eq!(Path::new("resources/vfs"), closure(GameId::OpenMW));
+        assert_eq!(Path::new("Data Files"), closure(GameId::Morrowind));
+        assert_eq!(data_path, closure(GameId::Oblivion));
+        assert_eq!(data_path, closure(GameId::Skyrim));
+        assert_eq!(data_path, closure(GameId::SkyrimSE));
+        assert_eq!(data_path, closure(GameId::SkyrimVR));
+        assert_eq!(data_path, closure(GameId::Fallout3));
+        assert_eq!(data_path, closure(GameId::FalloutNV));
+        assert_eq!(data_path, closure(GameId::Fallout4));
+        assert_eq!(data_path, closure(GameId::Fallout4VR));
+        assert_eq!(data_path, closure(GameId::Starfield));
     }
 
     #[test]
@@ -1750,8 +1704,11 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let global_cfg_path = tmp_dir.path().join("openmw.cfg");
 
-        create_dir_all(global_cfg_path.parent().unwrap()).unwrap();
-        std::fs::write(&global_cfg_path, "content=test.esm\ncontent=test.esp").unwrap();
+        std::fs::write(
+            &global_cfg_path,
+            "config=local\ncontent=test.esm\ncontent=test.esp",
+        )
+        .unwrap();
 
         let settings = game_with_game_path(GameId::OpenMW, tmp_dir.path());
 
@@ -2102,12 +2059,12 @@ mod tests {
         let cfg_path = my_games_path.join("openmw.cfg");
 
         create_dir_all(global_cfg_path.parent().unwrap()).unwrap();
-        std::fs::write(&global_cfg_path, "data=\"/foo/bar\"").unwrap();
+        std::fs::write(&global_cfg_path, "config=\"../my games\"\ndata=\"foo/bar\"").unwrap();
 
         create_dir_all(cfg_path.parent().unwrap()).unwrap();
         std::fs::write(
             &cfg_path,
-            "data=\"C:\\Path\\&&&\"&a&&&&\\Data Files\"\ndata=/games/path",
+            "data=\"Path\\&&&\"&a&&&&\\Data Files\"\ndata=games/path",
         )
         .unwrap();
 
@@ -2115,10 +2072,9 @@ mod tests {
             GameSettings::with_local_path(GameId::OpenMW, &game_path, &my_games_path).unwrap();
 
         let expected: Vec<PathBuf> = vec![
-            my_games_path.join("data"),
-            "/foo/bar".into(),
-            "C:\\Path\\&\"a&&\\Data Files".into(),
-            "/games/path".into(),
+            game_path.join("foo/bar"),
+            my_games_path.join("Path\\&\"a&&\\Data Files"),
+            my_games_path.join("games/path"),
         ];
         assert_eq!(expected, settings.additional_plugins_directories());
     }
