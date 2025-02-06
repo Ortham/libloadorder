@@ -88,6 +88,12 @@ impl OpenMWLoadOrder {
         // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc3/components/contentselector/model/contentmodel.cpp?ref_type=tags#L638>
         let mut moved = HashSet::new();
 
+        if self.plugins.is_empty() {
+            // Return early to prevent underflow panic if there are no plugins
+            // loaded.
+            return Ok(());
+        }
+
         let mut i = self.plugins.len() - 1;
         while i > first_modifiable_index {
             let later_plugin = &self.plugins[i];
@@ -354,6 +360,19 @@ mod tests {
     fn read_lines(path: &Path) -> Vec<String> {
         let content = std::fs::read_to_string(path).unwrap();
         content.lines().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn load_should_not_panic_if_no_plugins_are_installed() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = OpenMWLoadOrder {
+            game_settings: game_settings_for_test(GameId::OpenMW, tmp_dir.path()),
+            plugins: Vec::new(),
+        };
+
+        load_order.load().unwrap();
+
+        assert!(load_order.plugins.is_empty());
     }
 
     #[test]
