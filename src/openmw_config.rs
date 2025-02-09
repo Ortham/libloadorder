@@ -180,7 +180,13 @@ fn default_global_config_dir(game_path: &Path) -> PathBuf {
         game_path.join("../etc/openmw")
     } else {
         // Probably installed from the OS package manager.
-        "/etc/openmw".into()
+        let host_etc_path = Path::new("/run/host/etc/openmw");
+        if host_etc_path.exists() {
+            // libloadorder is probably running as part of a Flatpak app.
+            host_etc_path.into()
+        } else {
+            "/etc/openmw".into()
+        }
     }
 }
 
@@ -196,11 +202,22 @@ fn default_global_data_dir(game_path: &Path) -> PathBuf {
         // Probably installed from Flathub.
         game_path.join("../share/games/openmw")
     } else {
-        let within_games_dir = PathBuf::from("/usr/share/games/openmw");
-        if within_games_dir.exists() {
+        let host_share_games_path = Path::new("/run/host/usr/share/games/openmw");
+        let host_share_path = Path::new("/run/host/usr/share/openmw");
+        let share_games_path = Path::new("/usr/share/games/openmw");
+        if host_share_games_path.exists() {
+            // libloadorder is probably running as part of a Flatpak app, and
+            // OpenMW was probably installed using Ubuntu's, Debian's or Arch's
+            // package manager.
+            host_share_games_path.into()
+        } else if host_share_path.exists() {
+            // libloadorder is probably running as part of a Flatpak app, and
+            // OpenMW was probably installed using OpenSUSE's package manager.
+            host_share_path.into()
+        } else if share_games_path.exists() {
             // Probably installed using Ubuntu's, Debian's or Arch's package
             // manager.
-            within_games_dir
+            share_games_path.into()
         } else {
             // Probably installed using OpenSUSE's package manager.
             "/usr/share/openmw".into()
