@@ -3,13 +3,15 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
-## [18.2.2] - Unreleased
+## [18.2.2] - 2025-02-10
 
 ### Fixed
 
 - OpenMW configuration is now loaded in a similar way to how OpenMW loads it,
   so a wider variety of config file locations are now supported, including the
   locations used by Linux packages linked to at <https://openmw.org/downloads/>.
+- A panic that could occur when loading an OpenMW load order that contains no
+  plugins.
 
 ## [18.2.1] - 2025-02-02
 
