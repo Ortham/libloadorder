@@ -23,7 +23,7 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[non_exhaustive]
 pub enum LoadOrderMethod {
     Timestamp,
@@ -33,7 +33,7 @@ pub enum LoadOrderMethod {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[non_exhaustive]
 pub enum GameId {
     Morrowind = 1,

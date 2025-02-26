@@ -34,7 +34,7 @@ use crate::load_order::{
 use crate::openmw_config;
 use crate::plugin::{has_plugin_extension, Plugin};
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GameSettings {
     id: GameId,
     game_path: PathBuf,

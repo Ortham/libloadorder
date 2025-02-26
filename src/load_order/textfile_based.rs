@@ -36,7 +36,7 @@ use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, trim_dot_ghost_unchecked, Plugin};
 use crate::GameId;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct TextfileBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,

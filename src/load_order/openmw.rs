@@ -16,7 +16,7 @@ use super::{
     WritableLoadOrder,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct OpenMWLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
