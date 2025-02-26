@@ -91,7 +91,7 @@ pub enum Error {
     NoFilename(PathBuf),
     DecodeError(Vec<u8>),
     EncodeError(String),
-    PluginParsingError(PathBuf, Box<dyn error::Error + Send>),
+    PluginParsingError(PathBuf, Box<dyn error::Error + Send + Sync + 'static>),
     PluginNotFound(String),
     TooManyActivePlugins {
         light_count: usize,
