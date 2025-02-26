@@ -255,7 +255,7 @@ fn is_flatpak_install(game_path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct FixedPaths {
     local: PathBuf,
     user_config: PathBuf,
@@ -309,7 +309,7 @@ impl FixedPaths {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct OpenMWConfig {
     replace: Vec<String>,
     config: Vec<PathBuf>,
@@ -495,7 +495,7 @@ fn load_config(
     }))
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct OpenMWConfigState {
     loaded_configs: Vec<OpenMWConfig>,
     user_config_dir: PathBuf,

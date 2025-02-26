@@ -33,7 +33,7 @@ use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AsteriskBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,

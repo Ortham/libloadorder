@@ -39,7 +39,7 @@ use crate::plugin::{trim_dot_ghost, Plugin};
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,

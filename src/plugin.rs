@@ -40,7 +40,7 @@ const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
 
 const VALID_EXTENSIONS_OPENMW: &[&str] = &[".esp", ".esm", ".omwaddon", ".omwgame", ".omwscripts"];
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Plugin {
     active: bool,
     modification_time: SystemTime,
