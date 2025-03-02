@@ -31,7 +31,7 @@ use crate::GameSettings;
 const MAX_ACTIVE_LIGHT_PLUGINS: usize = 4096;
 const MAX_ACTIVE_MEDIUM_PLUGINS: usize = 256;
 
-pub trait WritableLoadOrder: ReadableLoadOrder {
+pub trait WritableLoadOrder: ReadableLoadOrder + std::fmt::Debug {
     fn game_settings_mut(&mut self) -> &mut GameSettings;
 
     fn load(&mut self) -> Result<(), Error>;
