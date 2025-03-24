@@ -31,7 +31,7 @@ windows = { version = "0.61.1", features = ["Foundation_Collections", "System_Us
 
 [dev-dependencies]
 criterion = "0.5.1"
-tempfile = "3.19.0"
+tempfile = "3.19.1"
 
 [lib]
 name = "loadorder"
