@@ -3,6 +3,26 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.3.0] - 2025-03-26
+
+### Added
+
+- Implemented `Ord` and `PartialOrd` on `LoadOrderMethod`, `GameId` and
+  `GameSettings`.
+- Added `std::fmt::Debug` as a supertrait of `WritableLoadOrder`.
+
+### Changed
+
+- The `Box<dyn error::Error + Send>` stored in `Error::PluginParsingError` is
+  now `Box<dyn error::Error + Send + Sync + 'static>`.
+- `GameSettings::into_load_order()` now returns a
+  `Box<dyn WritableLoadOrder + Send + Sync + 'static>` instead of a
+  `Box<dyn WritableLoadOrder>`
+
+### Changed
+
+- Updated windows to 0.61.1.
+
 ## [18.2.2] - 2025-02-10
 
 ### Fixed
