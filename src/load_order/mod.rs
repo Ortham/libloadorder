@@ -33,18 +33,18 @@ use encoding_rs::WINDOWS_1252;
 
 use super::enums::Error;
 
-pub use self::asterisk_based::AsteriskBasedLoadOrder;
-pub use self::openmw::OpenMWLoadOrder;
+pub(crate) use self::asterisk_based::AsteriskBasedLoadOrder;
+pub(crate) use self::openmw::OpenMWLoadOrder;
 pub use self::readable::ReadableLoadOrder;
-pub use self::textfile_based::TextfileBasedLoadOrder;
-pub use self::timestamp_based::TimestampBasedLoadOrder;
+pub(crate) use self::textfile_based::TextfileBasedLoadOrder;
+pub(crate) use self::timestamp_based::TimestampBasedLoadOrder;
 pub use self::writable::WritableLoadOrder;
 
 fn strict_encode(string: &str) -> Result<Cow<'_, [u8]>, Error> {
     let (output, _, had_unmappable_chars) = WINDOWS_1252.encode(string);
 
     if had_unmappable_chars {
-        Err(Error::EncodeError(string.to_string()))
+        Err(Error::EncodeError(string.to_owned()))
     } else {
         Ok(output)
     }

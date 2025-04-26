@@ -162,12 +162,17 @@ impl GameSettings {
     }
 
     pub fn load_order_method(&self) -> LoadOrderMethod {
-        use crate::enums::GameId::*;
         match self.id {
-            OpenMW => LoadOrderMethod::OpenMW,
-            Morrowind | Oblivion | Fallout3 | FalloutNV => LoadOrderMethod::Timestamp,
-            Skyrim => LoadOrderMethod::Textfile,
-            SkyrimSE | SkyrimVR | Fallout4 | Fallout4VR | Starfield => LoadOrderMethod::Asterisk,
+            GameId::OpenMW => LoadOrderMethod::OpenMW,
+            GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => {
+                LoadOrderMethod::Timestamp
+            }
+            GameId::Skyrim => LoadOrderMethod::Textfile,
+            GameId::SkyrimSE
+            | GameId::SkyrimVR
+            | GameId::Fallout4
+            | GameId::Fallout4VR
+            | GameId::Starfield => LoadOrderMethod::Asterisk,
         }
     }
 
@@ -182,15 +187,14 @@ impl GameSettings {
 
     #[deprecated = "The master file is not necessarily of any significance: you should probably use early_loading_plugins() instead."]
     pub fn master_file(&self) -> &'static str {
-        use crate::enums::GameId::*;
         match self.id {
-            Morrowind | OpenMW => "Morrowind.esm",
-            Oblivion => "Oblivion.esm",
-            Skyrim | SkyrimSE | SkyrimVR => "Skyrim.esm",
-            Fallout3 => "Fallout3.esm",
-            FalloutNV => "FalloutNV.esm",
-            Fallout4 | Fallout4VR => "Fallout4.esm",
-            Starfield => "Starfield.esm",
+            GameId::Morrowind | GameId::OpenMW => "Morrowind.esm",
+            GameId::Oblivion => "Oblivion.esm",
+            GameId::Skyrim | GameId::SkyrimSE | GameId::SkyrimVR => "Skyrim.esm",
+            GameId::Fallout3 => "Fallout3.esm",
+            GameId::FalloutNV => "FalloutNV.esm",
+            GameId::Fallout4 | GameId::Fallout4VR => "Fallout4.esm",
+            GameId::Starfield => "Starfield.esm",
         }
     }
 
@@ -326,9 +330,8 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
         return openmw_config::user_config_dir(game_path).map(Some);
     }
 
-    let local_app_data_path = match dirs::data_local_dir() {
-        Some(x) => x,
-        None => return Err(Error::NoLocalAppData),
+    let Some(local_app_data_path) = dirs::data_local_dir() else {
+        return Err(Error::NoLocalAppData);
     };
 
     match appdata_folder_name(game_id, game_path) {
@@ -352,18 +355,17 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 
 // The local path can vary depending on where the game was bought from.
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
-    use crate::enums::GameId::*;
     match game_id {
-        Morrowind | OpenMW => None,
-        Oblivion => Some("Oblivion"),
-        Skyrim => Some(skyrim_appdata_folder_name(game_path)),
-        SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
-        SkyrimVR => Some("Skyrim VR"),
-        Fallout3 => Some("Fallout3"),
-        FalloutNV => Some(falloutnv_appdata_folder_name(game_path)),
-        Fallout4 => Some(fallout4_appdata_folder_name(game_path)),
-        Fallout4VR => Some("Fallout4VR"),
-        Starfield => Some("Starfield"),
+        GameId::Morrowind | GameId::OpenMW => None,
+        GameId::Oblivion => Some("Oblivion"),
+        GameId::Skyrim => Some(skyrim_appdata_folder_name(game_path)),
+        GameId::SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
+        GameId::SkyrimVR => Some("Skyrim VR"),
+        GameId::Fallout3 => Some("Fallout3"),
+        GameId::FalloutNV => Some(falloutnv_appdata_folder_name(game_path)),
+        GameId::Fallout4 => Some(fallout4_appdata_folder_name(game_path)),
+        GameId::Fallout4VR => Some("Fallout4VR"),
+        GameId::Starfield => Some("Starfield"),
     }
 }
 
@@ -440,10 +442,9 @@ fn my_games_path(
 }
 
 fn my_games_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
-    use crate::enums::GameId::*;
     match game_id {
-        OpenMW => Some("OpenMW"),
-        Skyrim => Some(skyrim_my_games_folder_name(game_path)),
+        GameId::OpenMW => Some("OpenMW"),
+        GameId::Skyrim => Some(skyrim_my_games_folder_name(game_path)),
         // For all other games the name is the same as the AppData\Local folder name.
         _ => appdata_folder_name(game_id, game_path),
     }
@@ -463,8 +464,7 @@ fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
     match game_id {
         GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => game_path
             .parent()
-            .map(|parent| parent.join(APPX_MANIFEST).exists())
-            .unwrap_or(false),
+            .is_some_and(|parent| parent.join(APPX_MANIFEST).exists()),
         GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield => {
             game_path.join(APPX_MANIFEST).exists()
         }
@@ -614,14 +614,14 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
     for entry in dir_iter {
         let file_name = entry.file_name();
 
-        let esp = Path::new(&file_name).with_extension("esp");
-        if let Some(esp) = esp.to_str() {
-            plugin_names.push(esp.to_string());
+        let plugin = Path::new(&file_name).with_extension("esp");
+        if let Some(esp) = plugin.to_str() {
+            plugin_names.push(esp.to_owned());
         }
 
-        let esm = Path::new(&file_name).with_extension("esm");
-        if let Some(esm) = esm.to_str() {
-            plugin_names.push(esm.to_string());
+        let master = Path::new(&file_name).with_extension("esm");
+        if let Some(esm) = master.to_str() {
+            plugin_names.push(esm.to_owned());
         }
     }
 
@@ -636,7 +636,7 @@ fn early_loading_plugins(
 ) -> Result<Vec<String>, Error> {
     let mut plugin_names: Vec<String> = hardcoded_plugins(game_id)
         .iter()
-        .map(|s| (*s).to_string())
+        .map(|s| (*s).to_owned())
         .collect();
 
     if matches!(game_id, GameId::Fallout4 | GameId::Starfield) && has_test_files {
@@ -689,11 +689,11 @@ fn implicitly_active_plugins(
     } else if game_id == GameId::Skyrim {
         // Update.esm is always active, but loads after all other masters if it is not made to load
         // earlier (e.g. by listing in plugins.txt or by being a master of another master).
-        plugin_names.push("Update.esm".to_string());
+        plugin_names.push("Update.esm".to_owned());
     } else if game_id == GameId::Starfield {
         // BlueprintShips-Starfield.esm is always active but loads after all other plugins if not
         // made to load earlier.
-        plugin_names.push("BlueprintShips-Starfield.esm".to_string());
+        plugin_names.push("BlueprintShips-Starfield.esm".to_owned());
     }
 
     deduplicate(&mut plugin_names);
@@ -715,11 +715,7 @@ fn find_map_path(directory: &Path, plugin_name: &str, game_id: GameId) -> Option
         directory.join(plugin_name).resolve_path().ok()
     } else {
         let path = directory.join(plugin_name);
-        if path.exists() {
-            Some(path)
-        } else {
-            None
-        }
+        path.exists().then_some(path)
     }
 }
 
@@ -820,8 +816,7 @@ fn find_plugins_in_directories<'a>(
         .filter(|e| {
             e.file_name()
                 .to_str()
-                .map(|f| has_plugin_extension(f, game_id))
-                .unwrap_or(false)
+                .is_some_and(|f| has_plugin_extension(f, game_id))
         })
         .collect();
 
@@ -840,13 +835,10 @@ fn find_plugins_in_directories<'a>(
 mod tests {
     #[cfg(windows)]
     use std::env;
-    use std::{
-        fs::{create_dir, create_dir_all},
-        io::Write,
-    };
+    use std::{fs::create_dir_all, io::Write};
     use tempfile::tempdir;
 
-    use crate::tests::{copy_to_dir, set_file_timestamps};
+    use crate::tests::{copy_to_dir, set_file_timestamps, NON_ASCII};
 
     use super::*;
 
@@ -887,7 +879,7 @@ mod tests {
         let mut file = File::create(path).unwrap();
 
         for plugin_name in plugin_names {
-            writeln!(file, "{}", plugin_name).unwrap();
+            writeln!(file, "{plugin_name}").unwrap();
         }
     }
 
@@ -999,7 +991,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn master_file_should_be_mapped_from_game_id() {
         let mut settings = game_with_generic_paths(GameId::OpenMW);
         assert_eq!("Morrowind.esm", settings.master_file());
@@ -1781,7 +1773,7 @@ mod tests {
         .unwrap();
 
         let mut expected_plugins = settings.early_loading_plugins().to_vec();
-        expected_plugins.push("plugin.esp".to_string());
+        expected_plugins.push("plugin.esp".to_owned());
 
         assert_eq!(expected_plugins, settings.implicitly_active_plugins());
     }
@@ -1814,7 +1806,7 @@ mod tests {
         .unwrap();
 
         let mut expected_plugins = settings.early_loading_plugins().to_vec();
-        expected_plugins.push("Blank.esp".to_string());
+        expected_plugins.push("Blank.esp".to_owned());
 
         assert_eq!(expected_plugins, settings.implicitly_active_plugins());
     }
@@ -1847,7 +1839,7 @@ mod tests {
         .unwrap();
 
         let mut expected_plugins = settings.early_loading_plugins().to_vec();
-        expected_plugins.push("Blank.esp".to_string());
+        expected_plugins.push("Blank.esp".to_owned());
 
         assert_eq!(expected_plugins, settings.implicitly_active_plugins());
     }
@@ -1858,7 +1850,7 @@ mod tests {
         let game_path = tmp_dir.path();
         let data_path = game_path.join("Data");
 
-        create_dir(&data_path).unwrap();
+        create_dir_all(&data_path).unwrap();
         File::create(data_path.join("plugin1.nam")).unwrap();
         File::create(data_path.join("plugin2.NAM")).unwrap();
 
@@ -1875,7 +1867,7 @@ mod tests {
         let settings = game_with_generic_paths(GameId::Skyrim);
         let plugins = settings.implicitly_active_plugins();
 
-        assert!(plugins.contains(&"Update.esm".to_string()));
+        assert!(plugins.contains(&"Update.esm".to_owned()));
     }
 
     #[test]
@@ -1883,7 +1875,7 @@ mod tests {
         let settings = game_with_generic_paths(GameId::Starfield);
         let plugins = settings.implicitly_active_plugins();
 
-        assert!(plugins.contains(&"BlueprintShips-Starfield.esm".to_string()));
+        assert!(plugins.contains(&"BlueprintShips-Starfield.esm".to_owned()));
     }
 
     #[test]
@@ -1893,7 +1885,7 @@ mod tests {
         let game_path = tmp_dir.path();
         let data_path = game_path.join("Data");
 
-        create_dir(&data_path).unwrap();
+        create_dir_all(&data_path).unwrap();
         File::create(data_path.join("plugin.nam")).unwrap();
 
         let settings = game_with_game_path(GameId::Fallout3, game_path);
@@ -2264,10 +2256,10 @@ mod tests {
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
-        copy_to_dir("Blank.esp", game_path, "Blàñk.esp", GameId::Oblivion);
+        copy_to_dir("Blank.esp", game_path, NON_ASCII, GameId::Oblivion);
 
         for (i, plugin_name) in plugin_names.iter().enumerate() {
             let path = game_path.join(plugin_name);
@@ -2290,15 +2282,16 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
 
+        let non_ascii = NON_ASCII;
         let plugin_names = [
             "Blank.esm",
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            non_ascii,
         ];
 
-        copy_to_dir("Blank.esp", game_path, "Blàñk.esp", GameId::Oblivion);
+        copy_to_dir("Blank.esp", game_path, non_ascii, GameId::Oblivion);
 
         for (i, plugin_name) in plugin_names.iter().enumerate() {
             let path = game_path.join(plugin_name);
@@ -2319,7 +2312,7 @@ mod tests {
             game_path.join("Blank.esp"),
             game_path.join("Blank - Master Dependent.esp"),
             game_path.join("Blank - Different.esp"),
-            game_path.join("Blàñk.esp"),
+            game_path.join(non_ascii),
         ];
 
         assert_eq!(plugin_paths, result);
@@ -2339,7 +2332,7 @@ mod tests {
             "Blank - Override.esp",
         ];
 
-        let timestamp = 1321009991;
+        let timestamp = 1_321_009_991;
 
         for plugin_name in &plugin_names {
             let path = game_path.join(plugin_name);

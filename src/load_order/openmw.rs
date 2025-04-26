@@ -17,13 +17,13 @@ use super::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct OpenMWLoadOrder {
+pub(crate) struct OpenMWLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
 }
 
 impl OpenMWLoadOrder {
-    pub fn new(game_settings: GameSettings) -> Self {
+    pub(crate) fn new(game_settings: GameSettings) -> Self {
         Self {
             game_settings,
             plugins: Vec::new(),
@@ -41,7 +41,7 @@ impl OpenMWLoadOrder {
         Ok(active_plugin_tuples)
     }
 
-    fn apply_load_order(&mut self, active_plugins: &[(String, bool)]) -> Result<(), Error> {
+    fn apply_load_order(&mut self, active_plugins: &[(String, bool)]) {
         // This takes a similar approach to that of the OpenMW Launcher so that
         // the load order that libloadorder reads should be the same as
         // displayed in the OpenMW Launcher, though the Launcher hides some
@@ -75,7 +75,7 @@ impl OpenMWLoadOrder {
                 (iends_with_ascii(p.name(), ".esm") || iends_with_ascii(p.name(), ".omwgame"))
                     && p.masters().unwrap_or_default().is_empty()
             })
-            .map(|p| p.name().to_string());
+            .map(|p| p.name().to_owned());
 
         let first_modifiable_index = self
             .plugins
@@ -90,14 +90,17 @@ impl OpenMWLoadOrder {
         if self.plugins.is_empty() {
             // Return early to prevent underflow panic if there are no plugins
             // loaded.
-            return Ok(());
+            return;
         }
 
         let mut i = self.plugins.len() - 1;
         while i > first_modifiable_index {
-            let later_plugin = &self.plugins[i];
+            let Some(later_plugin) = self.plugins.get(i) else {
+                // This should never happen.
+                break;
+            };
 
-            let key = UniCase::new(later_plugin.name().to_string());
+            let key = UniCase::new(later_plugin.name().to_owned());
             if !moved.contains(&key) {
                 let index = self
                     .plugins
@@ -149,8 +152,6 @@ impl OpenMWLoadOrder {
                 }
             }
         }
-
-        Ok(())
     }
 }
 
@@ -176,7 +177,7 @@ impl MutableLoadOrder for OpenMWLoadOrder {
         // being used as a null value and presumably save data taking up
         // another slot like in other games:
         // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc3/components/esm/formid.hpp?ref_type=tags#L16>
-        2147483646
+        0x7FFF_FFFE
     }
 
     fn total_insertion_order(
@@ -209,11 +210,8 @@ impl MutableLoadOrder for OpenMWLoadOrder {
             .filter_map(|p| filename_str(p))
             .filter_map(|f| {
                 let key = get_key_from_filename(f);
-                if set.insert(key) {
-                    Some((f.to_string(), active_set.contains(&key)))
-                } else {
-                    None
-                }
+                set.insert(key)
+                    .then_some((f.to_owned(), active_set.contains(&key)))
             })
             .collect();
 
@@ -242,7 +240,7 @@ impl WritableLoadOrder for OpenMWLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        self.apply_load_order(&plugin_tuples)?;
+        self.apply_load_order(&plugin_tuples);
 
         Ok(())
     }
@@ -309,16 +307,15 @@ impl WritableLoadOrder for OpenMWLoadOrder {
 #[cfg(test)]
 mod tests {
     use std::{
-        fs::{create_dir, create_dir_all, write},
-        path::{Path, PathBuf},
+        fs::{create_dir_all, write},
+        path::Path,
     };
 
     use tempfile::tempdir;
 
     use crate::{
         load_order::tests::{game_settings_for_test, mock_game_files, prepare_bulk_full_plugins},
-        tests::{copy_to_dir, create_file},
-        GameId,
+        tests::{copy_to_dir, create_file, NON_ASCII},
     };
 
     use super::*;
@@ -338,13 +335,15 @@ mod tests {
     }
 
     fn write_cfg(cfg_path: &Path, data_paths: &[&str], content: &[&str]) {
+        use std::fmt::Write;
+
         let mut file_content = String::new();
         for data_path in data_paths {
-            file_content.push_str(&format!("data=\"{}\"\n", data_path));
+            writeln!(file_content, "data=\"{data_path}\"").unwrap();
         }
 
         for entry in content {
-            file_content.push_str(&format!("content={}\n", entry));
+            writeln!(file_content, "content={entry}").unwrap();
         }
 
         if !cfg_path.exists() {
@@ -356,7 +355,7 @@ mod tests {
 
     fn read_lines(path: &Path) -> Vec<String> {
         let content = std::fs::read_to_string(path).unwrap();
-        content.lines().map(|s| s.to_string()).collect()
+        content.lines().map(ToOwned::to_owned).collect()
     }
 
     #[test]
@@ -382,7 +381,7 @@ mod tests {
             "Blank.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
         write_cfg(&cfg_path, &[], active_plugin_names);
@@ -406,7 +405,7 @@ mod tests {
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
             "Blank.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(plugin_names, load_order.plugin_names().as_slice());
@@ -418,8 +417,8 @@ mod tests {
 
         let other_dir_1 = tmp_dir.path().join("other1");
         let other_dir_2 = tmp_dir.path().join("other2");
-        create_dir(&other_dir_1).unwrap();
-        create_dir(&other_dir_2).unwrap();
+        create_dir_all(&other_dir_1).unwrap();
+        create_dir_all(&other_dir_2).unwrap();
 
         let cfg_path = cfg_path(tmp_dir.path());
         write_cfg(
@@ -450,12 +449,12 @@ mod tests {
             "Blank - Different.esp",
             GameId::OpenMW,
         );
-        copy_to_dir("Blank.esp", &other_dir_2, "Blàñk.esp", GameId::OpenMW);
+        copy_to_dir("Blank.esp", &other_dir_2, NON_ASCII, GameId::OpenMW);
 
         // std::fs::remove_file(main_dir.join("Blank.esm")).unwrap();
         std::fs::remove_file(main_dir.join("Blank.esp")).unwrap();
         std::fs::remove_file(main_dir.join("Blank - Different.esp")).unwrap();
-        std::fs::remove_file(main_dir.join("Blàñk.esp")).unwrap();
+        std::fs::remove_file(main_dir.join(NON_ASCII)).unwrap();
 
         load_order.load().unwrap();
 
@@ -469,7 +468,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(plugin_names, load_order.plugin_names().as_slice());
@@ -492,7 +491,7 @@ mod tests {
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
             "Blank.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(plugin_names, load_order.plugin_names().as_slice());
@@ -517,7 +516,7 @@ mod tests {
             "Blank.esp",
             "Tribunal.esm",
             "Bloodmoon.esm",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(plugin_names, load_order.plugin_names().as_slice());
@@ -529,8 +528,8 @@ mod tests {
 
         let other_dir_1 = tmp_dir.path().join("other1");
         let other_dir_2 = tmp_dir.path().join("other2");
-        create_dir(&other_dir_1).unwrap();
-        create_dir(&other_dir_2).unwrap();
+        create_dir_all(&other_dir_1).unwrap();
+        create_dir_all(&other_dir_2).unwrap();
 
         let cfg_path = cfg_path(tmp_dir.path());
         write_cfg(
@@ -547,14 +546,14 @@ mod tests {
             "Blank - Different.esp",
             GameId::OpenMW,
         );
-        copy_to_dir("Blank.esp", &other_dir_2, "Blàñk.esp", GameId::OpenMW);
+        copy_to_dir("Blank.esp", &other_dir_2, NON_ASCII, GameId::OpenMW);
 
         let mut load_order = prepare(tmp_dir.path());
         let main_dir = load_order.game_settings.plugins_directory();
 
         std::fs::remove_file(main_dir.join("Blank.esp")).unwrap();
         std::fs::remove_file(main_dir.join("Blank - Different.esp")).unwrap();
-        std::fs::remove_file(main_dir.join("Blàñk.esp")).unwrap();
+        std::fs::remove_file(main_dir.join(NON_ASCII)).unwrap();
 
         load_order.load().unwrap();
 
@@ -563,7 +562,7 @@ mod tests {
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(plugin_names, load_order.plugin_names().as_slice());
@@ -580,7 +579,7 @@ mod tests {
             "Blank.omwgame",
             "Blank - Master Dependent.esp",
             "Blank - Different.omwaddon",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.omwscripts",
             "Blank.esp",
         ];
@@ -615,7 +614,7 @@ mod tests {
             "Blank.omwgame",
             "Blank - Master Dependent.esp",
             "Blank - Different.omwaddon",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.omwscripts",
             "Blank.esp",
         ];
@@ -644,7 +643,7 @@ mod tests {
 
         let expected_lines: Vec<_> = active_plugin_names
             .iter()
-            .map(|n| format!("content={}", n))
+            .map(|n| format!("content={n}"))
             .collect();
 
         assert_eq!(expected_lines, lines);
@@ -671,7 +670,7 @@ mod tests {
 
         let lines = read_lines(&cfg_path);
 
-        let expected_lines = vec!["data=\"C:\\Path\\&&&\"a&&&&\\Data Files\"".to_string()];
+        let expected_lines = vec!["data=\"C:\\Path\\&&&\"a&&&&\\Data Files\"".to_owned()];
 
         assert_eq!(expected_lines, lines);
     }

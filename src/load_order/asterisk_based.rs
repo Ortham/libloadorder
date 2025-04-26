@@ -34,13 +34,13 @@ use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AsteriskBasedLoadOrder {
+pub(crate) struct AsteriskBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
 }
 
 impl AsteriskBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> Self {
+    pub(crate) fn new(game_settings: GameSettings) -> Self {
         Self {
             game_settings,
             plugins: Vec::new(),
@@ -167,7 +167,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             read_plugin_names(self.game_settings().active_plugins_file(), |line| {
                 plugin_line_mapper(line).and_then::<(), _>(|(name, _)| {
                     set.insert(UniCase::new(
-                        trim_dot_ghost(name, self.game_settings.id()).to_string(),
+                        trim_dot_ghost(name, self.game_settings.id()).to_owned(),
                     ));
                     None
                 })
@@ -183,7 +183,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             .plugins
             .iter()
             .filter(|plugin| !self.game_settings.is_implicitly_active(plugin.name()))
-            .all(|plugin| set.contains(&UniCase::new(plugin.name().to_string())));
+            .all(|plugin| set.contains(&UniCase::new(plugin.name().to_owned())));
 
         Ok(!plugins_listed)
     }
@@ -204,8 +204,8 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
     if line.is_empty() || line.starts_with('#') {
         None
-    } else if line.as_bytes()[0] == b'*' {
-        Some((&line[1..], true))
+    } else if let Some(remainder) = line.strip_prefix('*') {
+        Some((remainder, true))
     } else {
         Some((line, false))
     }
@@ -234,10 +234,9 @@ fn ignore_active_plugins_file_starfield(game_settings: &GameSettings) -> bool {
 mod tests {
     use super::*;
 
-    use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::{copy_to_dir, copy_to_test_dir, set_file_timestamps};
-    use std::fs::{create_dir_all, remove_dir_all, File};
+    use crate::tests::{copy_to_dir, copy_to_test_dir, set_file_timestamps, NON_ASCII};
+    use std::fs::{create_dir_all, remove_dir_all};
     use std::path::Path;
     use std::time::Duration;
     use tempfile::tempdir;
@@ -262,7 +261,7 @@ mod tests {
         let bytes = std::fs::read(file_path).unwrap();
         let text = encoding_rs::WINDOWS_1252.decode(&bytes).0;
 
-        text.lines().map(|l| l.to_string()).collect()
+        text.lines().map(std::borrow::ToOwned::to_owned).collect()
     }
 
     #[test]
@@ -419,7 +418,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -442,7 +441,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank.esm",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
         write_active_plugins_file(load_order.game_settings(), &filenames);
@@ -454,7 +453,7 @@ mod tests {
             "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
 
@@ -466,13 +465,13 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
@@ -486,13 +485,13 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm\r"]);
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
@@ -508,14 +507,14 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["#Blank.esp", "Blàñk.esp", "Blank.esm"],
+            &["#Blank.esp", NON_ASCII, "Blank.esm"],
         );
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
@@ -531,14 +530,14 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
         load_order.load().unwrap();
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
@@ -556,7 +555,7 @@ mod tests {
         assert!(load_order
             .index_of("Blank - Master Dependent.esp")
             .is_none());
-        assert!(load_order.index_of("Blàñk.esp").is_none());
+        assert!(load_order.index_of(NON_ASCII).is_none());
 
         load_order.load().unwrap();
 
@@ -564,7 +563,7 @@ mod tests {
         assert!(load_order
             .index_of("Blank - Master Dependent.esp")
             .is_some());
-        assert!(load_order.index_of("Blàñk.esp").is_some());
+        assert!(load_order.index_of(NON_ASCII).is_some());
     }
 
     #[test]
@@ -607,10 +606,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -631,9 +630,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
-        use std::fs::copy;
-
-        copy(
+        std::fs::copy(
             load_order
                 .game_settings()
                 .plugins_directory()
@@ -652,7 +649,7 @@ mod tests {
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -672,7 +669,7 @@ mod tests {
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esl.esp",
         ];
 
@@ -707,7 +704,7 @@ mod tests {
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank DLC.esp",
         ];
 
@@ -807,9 +804,9 @@ mod tests {
         load_order.plugins_mut().push(plugin);
 
         match load_order.save().unwrap_err() {
-            Error::EncodeError(s) => assert_eq!("Blȧnk.esm", s),
-            e => panic!("Expected encode error, got {:?}", e),
-        };
+            Error::EncodeError(s) => assert_eq!("Bl\u{227}nk.esm", s),
+            e => panic!("Expected encode error, got {e:?}"),
+        }
     }
 
     #[test]
@@ -850,7 +847,7 @@ mod tests {
                 "Blank.esp",
                 "*Blank - Different.esp",
                 "Blank - Master Dependent.esp",
-                "Blàñk.esp",
+                NON_ASCII,
             ],
             lines
         );
@@ -933,7 +930,7 @@ mod tests {
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
 
@@ -950,7 +947,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
         loaded_plugin_names.push("missing.esp");
 
@@ -967,7 +964,7 @@ mod tests {
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
@@ -992,7 +989,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         loaded_plugin_names.pop();

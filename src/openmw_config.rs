@@ -41,14 +41,14 @@ use std::{
 
 use crate::Error;
 
-pub fn user_config_dir(game_path: &Path) -> Result<PathBuf, Error> {
+pub(crate) fn user_config_dir(game_path: &Path) -> Result<PathBuf, Error> {
     let fixed_paths = FixedPaths::new(game_path)?;
     let config_state = load_game_configs(&fixed_paths)?;
 
     Ok(config_state.user_config_dir)
 }
 
-pub fn resources_vfs_path(game_path: &Path, local_path: &Path) -> Result<PathBuf, Error> {
+pub(crate) fn resources_vfs_path(game_path: &Path, local_path: &Path) -> Result<PathBuf, Error> {
     let config = load_game_config_with_user_config_dir(game_path, local_path)?;
 
     // Default value is relative to OpenMW's current working directory, assume
@@ -60,31 +60,33 @@ pub fn resources_vfs_path(game_path: &Path, local_path: &Path) -> Result<PathBuf
         .join("vfs"))
 }
 
-pub fn additional_data_paths(game_path: &Path, local_path: &Path) -> Result<Vec<PathBuf>, Error> {
+pub(crate) fn additional_data_paths(
+    game_path: &Path,
+    local_path: &Path,
+) -> Result<Vec<PathBuf>, Error> {
     load_game_config_with_user_config_dir(game_path, local_path)
-        .map(|c| c.into_additional_data_paths())
+        .map(OpenMWConfig::into_additional_data_paths)
 }
 
-pub fn non_user_additional_data_paths(game_path: &Path) -> Result<Vec<PathBuf>, Error> {
-    load_non_user_config(game_path).map(|c| c.into_additional_data_paths())
+pub(crate) fn non_user_additional_data_paths(game_path: &Path) -> Result<Vec<PathBuf>, Error> {
+    load_non_user_config(game_path).map(OpenMWConfig::into_additional_data_paths)
 }
 
-pub fn read_active_plugin_names(user_config_path: &Path) -> Result<Vec<String>, Error> {
-    let ini = match read_openmw_cfg(user_config_path)? {
-        Some(ini) => ini,
-        None => return Ok(Vec::new()),
+pub(crate) fn read_active_plugin_names(user_config_path: &Path) -> Result<Vec<String>, Error> {
+    let Some(ini) = read_openmw_cfg(user_config_path)? else {
+        return Ok(Vec::new());
     };
 
     let active_plugin_names: Vec<_> = ini
         .general_section()
         .get_all("content")
-        .map(|v| v.to_string())
+        .map(ToOwned::to_owned)
         .collect();
 
     Ok(active_plugin_names)
 }
 
-pub fn non_user_active_plugin_names(game_path: &Path) -> Result<Vec<String>, Error> {
+pub(crate) fn non_user_active_plugin_names(game_path: &Path) -> Result<Vec<String>, Error> {
     load_non_user_config(game_path).map(|c| c.content)
 }
 
@@ -130,41 +132,46 @@ fn default_user_data_dir(is_flatpak_install: bool) -> Result<PathBuf, Error> {
     .ok_or_else(|| Error::NoUserDataPath)
 }
 
+#[expect(
+    unsafe_code,
+    reason = "There is currently no way to get this data safely"
+)]
 #[cfg(windows)]
 fn default_global_config_dir() -> Result<PathBuf, Error> {
     // This is similar to OpenMW's approach here:
     // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc4/components/files/windowspath.cpp?ref_type=tags#L55>
     // Though it errors instead of falling back to the current working directory
     // if the Program Files path cannot be obtained.
-    use std::{
-        ffi::{c_void, OsString},
-        os::windows::ffi::OsStringExt,
-    };
+    use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows::Win32::UI::Shell;
 
-    // Unfortunately there's no safe API wrapper for this.
-    unsafe {
-        // There's nothing unsafe about calling this function with these
-        // arguments, but care is needed with the returned PWSTR.
-        let pwstr = Shell::SHGetKnownFolderPath(
+    // SAFETY: There's nothing unsafe about calling SHGetKnownFolderPath()
+    // with these arguments.
+    let pwstr = unsafe {
+        Shell::SHGetKnownFolderPath(
             &Shell::FOLDERID_ProgramFiles,
             Shell::KNOWN_FOLDER_FLAG(0),
             None,
-        )?;
+        )?
+    };
 
-        // It's not safe to call .as_wide() on a null PWSTR.
-        if pwstr.is_null() {
-            return Err(Error::NoProgramFilesPath);
-        }
+    // It's not safe to call .as_wide() on a null PWSTR.
+    if pwstr.is_null() {
+        return Err(Error::NoProgramFilesPath);
+    }
 
-        let program_files_path = PathBuf::from(OsString::from_wide(pwstr.as_wide()));
+    // SAFETY: This is safe because the pointer is definitely not null.
+    let program_files_path = unsafe { PathBuf::from(OsString::from_wide(pwstr.as_wide())) };
 
+    // SAFETY: This is safe because CoTaskMemFree() is being used with a
+    // pointer to memory that was allocated by SHGetKnownFolderPath().
+    unsafe {
         // Now free the pwstr as documented here:
         // <https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath>
-        windows::Win32::System::Com::CoTaskMemFree(Some(pwstr.as_ptr() as *const c_void));
-
-        Ok(program_files_path.join("OpenMW"))
+        windows::Win32::System::Com::CoTaskMemFree(Some(pwstr.as_ptr().cast()));
     }
+
+    Ok(program_files_path.join("OpenMW"))
 }
 
 #[cfg(not(windows))]
@@ -376,17 +383,17 @@ impl OpenMWConfig {
 fn parse_path_value(value: &str) -> String {
     // Values may be enclosed in double quotes and use & as an escape, see:
     // <https://github.com/OpenMW/openmw/blob/openmw-0.48.0/components/config/gamesettings.cpp#L124>
-    if !value.starts_with("\"") {
-        return value.to_string();
-    }
+    let Some(value) = value.strip_prefix('"') else {
+        return value.to_owned();
+    };
 
     // Although the cfg file is encoded in UTF-8, OpenMW iterates over UTF-16
     // code points. This iterates over Unicode scalar values: the only
     // difference is the absence of surrogate code points in the latter, which
     // is not a problem because they're only a representational artifact of
     // UTF-16, so the result will be the same in both cases.
-    let mut result = String::with_capacity(value.len() - 1);
-    let mut chars = value[1..].chars();
+    let mut result = String::with_capacity(value.len());
+    let mut chars = value.chars();
 
     while let Some(c) = chars.next() {
         if c == '"' {
@@ -410,33 +417,33 @@ fn resolve_path_value(
     config_dir_path: &Path,
     fixed_paths: &FixedPaths,
 ) -> Option<PathBuf> {
-    if parsed_path.is_empty() || !parsed_path.starts_with('?') {
-        if Path::new(&parsed_path).is_relative() {
-            Some(config_dir_path.join(parsed_path))
-        } else if let Some(app_path) = &fixed_paths.flatpak_app {
-            // Paths within the Flatpak app may be relative to the app's runtime
-            // mount point, so replace that with the path of the Flatpak app's
-            // files at rest on the host.
-            if let Some(suffix) = parsed_path.strip_prefix("/app/") {
-                Some(app_path.join(suffix))
+    if let Some(remainder) = parsed_path.strip_prefix('?') {
+        if let Some((token, suffix)) = remainder.split_once('?') {
+            let token_path = match token {
+                "local" => &fixed_paths.local,
+                "userconfig" => &fixed_paths.user_config,
+                "userdata" => &fixed_paths.user_data,
+                "global" => &fixed_paths.global_data,
+                _ => return None,
+            };
+            if suffix.is_empty() {
+                Some(token_path.clone())
             } else {
-                Some(parsed_path.into())
+                Some(token_path.join(suffix))
             }
         } else {
             Some(parsed_path.into())
         }
-    } else if let Some((token, suffix)) = parsed_path[1..].split_once('?') {
-        let token_path = match token {
-            "local" => &fixed_paths.local,
-            "userconfig" => &fixed_paths.user_config,
-            "userdata" => &fixed_paths.user_data,
-            "global" => &fixed_paths.global_data,
-            _ => return None,
-        };
-        if suffix.is_empty() {
-            Some(token_path.clone())
+    } else if Path::new(&parsed_path).is_relative() {
+        Some(config_dir_path.join(parsed_path))
+    } else if let Some(app_path) = &fixed_paths.flatpak_app {
+        // Paths within the Flatpak app may be relative to the app's runtime
+        // mount point, so replace that with the path of the Flatpak app's
+        // files at rest on the host.
+        if let Some(suffix) = parsed_path.strip_prefix("/app/") {
+            Some(app_path.join(suffix))
         } else {
-            Some(token_path.join(suffix))
+            Some(parsed_path.into())
         }
     } else {
         Some(parsed_path.into())
@@ -447,9 +454,8 @@ fn load_config(
     config_dir_path: &Path,
     fixed_paths: &FixedPaths,
 ) -> Result<Option<OpenMWConfig>, Error> {
-    let ini = match read_openmw_cfg(&config_dir_path.join("openmw.cfg"))? {
-        Some(ini) => ini,
-        None => return Ok(None),
+    let Some(ini) = read_openmw_cfg(&config_dir_path.join("openmw.cfg"))? else {
+        return Ok(None);
     };
 
     let path_mapper = |s| resolve_path_value(parse_path_value(s), config_dir_path, fixed_paths);
@@ -476,21 +482,21 @@ fn load_config(
     let replace: Vec<_> = ini
         .general_section()
         .get_all("replace")
-        .map(|s| s.to_string())
+        .map(ToOwned::to_owned)
         .collect();
 
     let content: Vec<_> = ini
         .general_section()
         .get_all("content")
-        .map(|v| v.to_string())
+        .map(ToOwned::to_owned)
         .collect();
 
     Ok(Some(OpenMWConfig {
-        config,
         replace,
+        config,
         resources,
-        data,
         data_local,
+        data,
         content,
     }))
 }
@@ -516,14 +522,11 @@ fn load_game_configs(fixed_paths: &FixedPaths) -> Result<OpenMWConfigState, Erro
         config = load_config(&fixed_paths.global_config, fixed_paths)?;
     }
 
-    let config = match config {
-        Some(c) => c,
-        None => {
-            return Ok(OpenMWConfigState {
-                loaded_configs: Vec::new(),
-                user_config_dir: fixed_paths.global_config.clone(),
-            })
-        }
+    let Some(config) = config else {
+        return Ok(OpenMWConfigState {
+            loaded_configs: Vec::new(),
+            user_config_dir: fixed_paths.global_config.clone(),
+        });
     };
 
     let mut already_parsed_paths = HashSet::new();
@@ -553,7 +556,7 @@ fn load_game_configs(fixed_paths: &FixedPaths) -> Result<OpenMWConfigState, Erro
         } else {
             // Record an empty config so that if this is the last (i.e. user)
             // config, we can pop it off to get the non-user configs.
-            parsed_configs.push(OpenMWConfig::default())
+            parsed_configs.push(OpenMWConfig::default());
         }
 
         active_config_paths.push(path);
@@ -563,7 +566,7 @@ fn load_game_configs(fixed_paths: &FixedPaths) -> Result<OpenMWConfigState, Erro
         loaded_configs: parsed_configs,
         user_config_dir: active_config_paths
             .last()
-            .expect("There is at least one loaded config")
+            .ok_or(Error::NoUserConfigPath)?
             .clone(),
     })
 }
@@ -642,7 +645,7 @@ fn escape_openmw_data_value(value: &Path) -> Result<String, Error> {
     Ok(result)
 }
 
-pub fn write_openmw_cfg(
+pub(crate) fn write_openmw_cfg(
     openmw_cfg_path: &Path,
     data_paths: &[PathBuf],
     active_plugin_names: &[&str],
@@ -666,8 +669,7 @@ pub fn write_openmw_cfg(
 
     // Add plugins in load order.
     for plugin_name in active_plugin_names {
-        ini.general_section_mut()
-            .append("content", plugin_name.to_string());
+        ini.general_section_mut().append("content", *plugin_name);
     }
 
     if let Some(parent_path) = openmw_cfg_path.parent().filter(|p| !p.exists()) {
@@ -715,7 +717,7 @@ mod tests {
 
         let data_paths = read_active_plugin_names(&ini_path).unwrap();
 
-        let expected_names: &[String] = &["a".to_string(), "b".to_string(), "c".to_string()];
+        let expected_names: &[String] = &["a".to_owned(), "b".to_owned(), "c".to_owned()];
         assert_eq!(expected_names, data_paths);
     }
 
@@ -1068,7 +1070,7 @@ mod tests {
         };
         let merged = second.reduce_into(first);
 
-        assert_eq!(vec!["a".to_string(), "b".into()], merged.replace);
+        assert_eq!(vec!["a".to_owned(), "b".into()], merged.replace);
 
         let third = OpenMWConfig {
             replace: vec!["c".into(), "replace".into()],
@@ -1076,7 +1078,7 @@ mod tests {
         };
         let merged = third.reduce_into(merged);
 
-        assert_eq!(vec!["c".to_string(), "replace".into()], merged.replace);
+        assert_eq!(vec!["c".to_owned(), "replace".into()], merged.replace);
     }
 
     #[test]
@@ -1141,7 +1143,7 @@ mod tests {
         };
         let merged = second.reduce_into(first);
 
-        assert_eq!(vec!["a".to_string(), "b".into()], merged.content);
+        assert_eq!(vec!["a".to_owned(), "b".into()], merged.content);
 
         let third = OpenMWConfig {
             replace: vec!["content".into()],
@@ -1150,7 +1152,7 @@ mod tests {
         };
         let merged = third.reduce_into(merged);
 
-        assert_eq!(vec!["c".to_string()], merged.content);
+        assert_eq!(vec!["c".to_owned()], merged.content);
     }
 
     #[test]
@@ -1193,7 +1195,7 @@ mod tests {
     fn resolve_path_value_should_resolve_a_relative_path_to_the_config_directory() {
         let value = "relative/path";
         let config_dir = Path::new("config/directory");
-        let resolved = resolve_path_value(value.to_string(), config_dir, &fixed_paths());
+        let resolved = resolve_path_value(value.to_owned(), config_dir, &fixed_paths());
 
         assert_eq!(Some(config_dir.join(value)), resolved);
     }
@@ -1226,7 +1228,7 @@ mod tests {
     fn resolve_path_value_should_return_absolute_path_unchanged() {
         let value = "C:\\absolute\\path";
         let config_dir = Path::new("config/directory");
-        let resolved = resolve_path_value(value.to_string(), config_dir, &fixed_paths());
+        let resolved = resolve_path_value(value.to_owned(), config_dir, &fixed_paths());
 
         assert_eq!(Some(value.into()), resolved);
     }
@@ -1235,7 +1237,7 @@ mod tests {
     fn resolve_path_value_should_not_replace_token_that_appears_after_the_start_of_the_value() {
         let value = "prefix?userconfig?";
         let config_dir = Path::new("config/directory");
-        let resolved = resolve_path_value(value.to_string(), config_dir, &fixed_paths());
+        let resolved = resolve_path_value(value.to_owned(), config_dir, &fixed_paths());
 
         assert_eq!(Some(config_dir.join(value)), resolved);
     }
@@ -1244,7 +1246,7 @@ mod tests {
     fn resolve_path_value_should_replace_local_token_prefix() {
         let value = "?local?suffix";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(fixed_paths.local.join("suffix")), resolved);
     }
@@ -1253,7 +1255,7 @@ mod tests {
     fn resolve_path_value_should_replace_userconfig_token_prefix() {
         let value = "?userconfig?suffix";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(fixed_paths.user_config.join("suffix")), resolved);
     }
@@ -1262,7 +1264,7 @@ mod tests {
     fn resolve_path_value_should_replace_userdata_token_prefix() {
         let value = "?userdata?suffix";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(fixed_paths.user_data.join("suffix")), resolved);
     }
@@ -1271,7 +1273,7 @@ mod tests {
     fn resolve_path_value_should_replace_global_token_prefix() {
         let value = "?global?suffix";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(fixed_paths.global_data.join("suffix")), resolved);
     }
@@ -1280,7 +1282,7 @@ mod tests {
     fn resolve_path_value_should_return_none_if_token_prefix_is_unrecognised() {
         let value = "?other?suffix";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert!(resolved.is_none());
     }
@@ -1289,7 +1291,7 @@ mod tests {
     fn resolve_path_value_should_handle_token_with_no_suffix() {
         let value = "?local?";
         let fixed_paths = fixed_paths();
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(fixed_paths.local), resolved);
     }
@@ -1298,7 +1300,7 @@ mod tests {
     fn resolve_path_value_should_return_a_value_starting_with_a_question_mark_but_not_containing_another_unchanged(
     ) {
         let value = "?local";
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths());
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths());
 
         assert_eq!(Some(value.into()), resolved);
     }
@@ -1346,8 +1348,8 @@ mod tests {
         let local_path = tmp_dir.path().join("local");
         let global_path = tmp_dir.path().join("global");
 
-        std::fs::create_dir(&local_path).unwrap();
-        std::fs::create_dir(&global_path).unwrap();
+        create_dir_all(&local_path).unwrap();
+        create_dir_all(&global_path).unwrap();
 
         std::fs::write(local_path.join("openmw.cfg"), "resources=./resources").unwrap();
         std::fs::write(global_path.join("openmw.cfg"), "resources=./other").unwrap();
@@ -1375,8 +1377,8 @@ mod tests {
         let local_path = tmp_dir.path().join("local");
         let global_path = tmp_dir.path().join("global");
 
-        std::fs::create_dir(&local_path).unwrap();
-        std::fs::create_dir(&global_path).unwrap();
+        create_dir_all(&local_path).unwrap();
+        create_dir_all(&global_path).unwrap();
 
         std::fs::write(global_path.join("openmw.cfg"), "resources=./other").unwrap();
 
@@ -1405,10 +1407,10 @@ mod tests {
         let other_path_2 = tmp_dir.path().join("other2");
         let other_path_3 = tmp_dir.path().join("other3");
 
-        std::fs::create_dir(&local_path).unwrap();
-        std::fs::create_dir(&other_path_1).unwrap();
-        std::fs::create_dir(&other_path_2).unwrap();
-        std::fs::create_dir(&other_path_3).unwrap();
+        create_dir_all(&local_path).unwrap();
+        create_dir_all(&other_path_1).unwrap();
+        create_dir_all(&other_path_2).unwrap();
+        create_dir_all(&other_path_3).unwrap();
 
         std::fs::write(
             local_path.join("openmw.cfg"),
@@ -1440,20 +1442,20 @@ mod tests {
             vec![
                 OpenMWConfig {
                     config: vec![other_path_1.clone(), other_path_2.clone()],
-                    content: vec!["a".to_string()],
+                    content: vec!["a".to_owned()],
                     ..Default::default()
                 },
                 OpenMWConfig {
-                    content: vec!["d".to_string()],
+                    content: vec!["d".to_owned()],
                     ..Default::default()
                 },
                 OpenMWConfig {
                     config: vec![other_path_3.clone()],
-                    content: vec!["b".to_string(), "c".to_string()],
+                    content: vec!["b".to_owned(), "c".to_owned()],
                     ..Default::default()
                 },
                 OpenMWConfig {
-                    content: vec!["e".to_string()],
+                    content: vec!["e".to_owned()],
                     ..Default::default()
                 }
             ],
@@ -1471,10 +1473,10 @@ mod tests {
         let other_path_2 = tmp_dir.path().join("other2");
         let other_path_3 = tmp_dir.path().join("other3");
 
-        std::fs::create_dir(&local_path).unwrap();
-        std::fs::create_dir(&other_path_1).unwrap();
-        std::fs::create_dir(&other_path_2).unwrap();
-        std::fs::create_dir(&other_path_3).unwrap();
+        create_dir_all(&local_path).unwrap();
+        create_dir_all(&other_path_1).unwrap();
+        create_dir_all(&other_path_2).unwrap();
+        create_dir_all(&other_path_3).unwrap();
 
         std::fs::write(
             local_path.join("openmw.cfg"),
@@ -1506,12 +1508,12 @@ mod tests {
             vec![
                 OpenMWConfig {
                     config: vec![other_path_1.clone(), other_path_2.clone()],
-                    content: vec!["a".to_string()],
+                    content: vec!["a".to_owned()],
                     ..Default::default()
                 },
                 OpenMWConfig {
-                    replace: vec!["config".to_string()],
-                    content: vec!["e".to_string()],
+                    replace: vec!["config".to_owned()],
+                    content: vec!["e".to_owned()],
                     ..Default::default()
                 }
             ],
@@ -1526,7 +1528,7 @@ mod tests {
         let local_path = tmp_dir.path().join("local");
         let other_path = tmp_dir.path().join("other1");
 
-        std::fs::create_dir(&local_path).unwrap();
+        create_dir_all(&local_path).unwrap();
 
         std::fs::write(
             local_path.join("openmw.cfg"),
@@ -1544,7 +1546,7 @@ mod tests {
             vec![
                 OpenMWConfig {
                     config: vec![other_path.clone()],
-                    content: vec!["a".to_string()],
+                    content: vec!["a".to_owned()],
                     ..Default::default()
                 },
                 OpenMWConfig::default()
@@ -1559,7 +1561,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let local_path = tmp_dir.path().join("local");
 
-        std::fs::create_dir(&local_path).unwrap();
+        create_dir_all(&local_path).unwrap();
 
         std::fs::write(
             local_path.join("openmw.cfg"),
@@ -1576,7 +1578,7 @@ mod tests {
         assert_eq!(
             vec![OpenMWConfig {
                 config: vec![local_path.clone()],
-                content: vec!["a".to_string()],
+                content: vec!["a".to_owned()],
                 ..Default::default()
             }],
             state.loaded_configs
@@ -1591,9 +1593,9 @@ mod tests {
         let other_path_1 = tmp_dir.path().join("other1");
         let other_path_2 = tmp_dir.path().join("other2");
 
-        std::fs::create_dir(&game_path).unwrap();
-        std::fs::create_dir(&other_path_1).unwrap();
-        std::fs::create_dir(&other_path_2).unwrap();
+        create_dir_all(&game_path).unwrap();
+        create_dir_all(&other_path_1).unwrap();
+        create_dir_all(&other_path_2).unwrap();
 
         std::fs::write(
             game_path.join("openmw.cfg"),
@@ -1608,7 +1610,7 @@ mod tests {
         assert_eq!(
             OpenMWConfig {
                 config: vec![other_path_1.clone()],
-                content: vec!["a".to_string(), "c".to_string()],
+                content: vec!["a".to_owned(), "c".to_owned()],
                 ..Default::default()
             },
             config
@@ -1623,9 +1625,9 @@ mod tests {
         let other_path_1 = tmp_dir.path().join("other1");
         let other_path_2 = tmp_dir.path().join("other2");
 
-        std::fs::create_dir(&game_path).unwrap();
-        std::fs::create_dir(&other_path_1).unwrap();
-        std::fs::create_dir(&other_path_2).unwrap();
+        create_dir_all(&game_path).unwrap();
+        create_dir_all(&other_path_1).unwrap();
+        create_dir_all(&other_path_2).unwrap();
 
         std::fs::write(
             game_path.join("openmw.cfg"),
@@ -1639,7 +1641,7 @@ mod tests {
         assert_eq!(
             OpenMWConfig {
                 config: vec![other_path_1.clone()],
-                content: vec!["a".to_string()],
+                content: vec!["a".to_owned()],
                 ..Default::default()
             },
             config
@@ -1652,8 +1654,8 @@ mod tests {
         let game_path = tmp_dir.path().join("game");
         let other_path = tmp_dir.path().join("other");
 
-        std::fs::create_dir(&game_path).unwrap();
-        std::fs::create_dir(&other_path).unwrap();
+        create_dir_all(&game_path).unwrap();
+        create_dir_all(&other_path).unwrap();
 
         std::fs::write(
             game_path.join("openmw.cfg"),
@@ -1667,7 +1669,7 @@ mod tests {
         assert_eq!(
             OpenMWConfig {
                 config: vec![other_path.clone()],
-                content: vec!["a".to_string()],
+                content: vec!["a".to_owned()],
                 ..Default::default()
             },
             config

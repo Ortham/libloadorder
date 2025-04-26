@@ -29,22 +29,25 @@ use crate::enums::LoadOrderMethod;
 use crate::game_settings::GameSettings;
 use crate::load_order::strict_encode;
 use crate::plugin::Plugin;
-use crate::tests::{copy_to_test_dir, set_timestamps};
+use crate::tests::{copy_to_test_dir, set_timestamps, NON_ASCII};
 
 use super::mutable::MutableLoadOrder;
 
-pub fn write_load_order_file<T: AsRef<str> + Display>(
+pub(super) fn write_load_order_file<T: AsRef<str> + Display>(
     game_settings: &GameSettings,
     filenames: &[T],
 ) {
     let mut file = File::create(game_settings.load_order_file().unwrap()).unwrap();
 
     for filename in filenames {
-        writeln!(file, "{}", filename).unwrap();
+        writeln!(file, "{filename}").unwrap();
     }
 }
 
-pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, filenames: &[T]) {
+pub(super) fn write_active_plugins_file<T: AsRef<str>>(
+    game_settings: &GameSettings,
+    filenames: &[T],
+) {
     let mut file = File::create(game_settings.active_plugins_file()).unwrap();
 
     if game_settings.id() == GameId::Morrowind {
@@ -65,7 +68,7 @@ pub fn write_active_plugins_file<T: AsRef<str>>(game_settings: &GameSettings, fi
     }
 }
 
-pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
+pub(super) fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings {
     let local_path = game_path.join("local");
     create_dir_all(&local_path).unwrap();
     let my_games_path = game_path.join("my games");
@@ -79,7 +82,7 @@ pub fn game_settings_for_test(game_id: GameId, game_path: &Path) -> GameSettings
     }
 }
 
-pub fn mock_game_files(settings: &mut GameSettings) {
+pub(super) fn mock_game_files(settings: &mut GameSettings) {
     if settings.id() == GameId::Starfield {
         copy_to_test_dir("Blank.full.esm", "Blank.full.esm", settings);
         copy_to_test_dir("Blank.medium.esm", "Blank.medium.esm", settings);
@@ -95,14 +98,14 @@ pub fn mock_game_files(settings: &mut GameSettings) {
             "Blank - Master Dependent.esp",
             settings,
         );
-        copy_to_test_dir("Blank.esp", "Blàñk.esp", settings);
+        copy_to_test_dir("Blank.esp", NON_ASCII, settings);
 
         let plugin_names = [
             "Blank.esm",
             "Blank.esp",
             "Blank - Different.esp",
             "Blank - Master Dependent.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
         set_timestamps(&settings.plugins_directory(), &plugin_names);
     }
@@ -111,16 +114,24 @@ pub fn mock_game_files(settings: &mut GameSettings) {
     settings.refresh_implicitly_active_plugins().unwrap();
 }
 
-pub fn to_owned(strs: Vec<&str>) -> Vec<String> {
+pub(super) fn to_owned(strs: Vec<&str>) -> Vec<String> {
     strs.into_iter().map(String::from).collect()
 }
 
 /// Set the master flag to be present or not for the given plugin.
-pub fn set_master_flag(game_id: GameId, plugin_path: &Path, present: bool) -> io::Result<()> {
+pub(super) fn set_master_flag(
+    game_id: GameId,
+    plugin_path: &Path,
+    present: bool,
+) -> io::Result<()> {
     set_flag(game_id, plugin_path, 0x1, present)
 }
 
-pub fn set_blueprint_flag(game_id: GameId, plugin_path: &Path, present: bool) -> io::Result<()> {
+pub(super) fn set_blueprint_flag(
+    game_id: GameId,
+    plugin_path: &Path,
+    present: bool,
+) -> io::Result<()> {
     if game_id != GameId::Starfield {
         return Ok(());
     }
@@ -165,13 +176,13 @@ fn insert<T: MutableLoadOrder>(load_order: &mut T, plugin: Plugin) {
     }
 }
 
-pub fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
+pub(super) fn load_and_insert<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) {
     let plugin = Plugin::new(plugin_name, load_order.game_settings()).unwrap();
 
     insert(load_order, plugin);
 }
 
-pub fn prepend_master<T: MutableLoadOrder>(load_order: &mut T) {
+pub(super) fn prepend_master<T: MutableLoadOrder>(load_order: &mut T) {
     let source = match load_order.game_settings().id() {
         GameId::Starfield => "Blank.full.esm",
         _ => "Blank.esm",
@@ -183,7 +194,7 @@ pub fn prepend_master<T: MutableLoadOrder>(load_order: &mut T) {
     load_order.plugins_mut().insert(0, plugin);
 }
 
-pub fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
+pub(super) fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
     let source = match load_order.game_settings().id() {
         GameId::Starfield => "Blank.full.esm",
         _ => "Blank.esm",
@@ -192,7 +203,7 @@ pub fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
     let target = match load_order.game_settings().id() {
         GameId::SkyrimSE => "Skyrim.esm",
         GameId::Starfield => "Starfield.esm",
-        _ => unimplemented!(),
+        _ => return,
     };
 
     copy_to_test_dir(source, target, load_order.game_settings());
@@ -201,7 +212,7 @@ pub fn prepend_early_loader<T: MutableLoadOrder>(load_order: &mut T) {
     load_order.plugins_mut().insert(0, plugin);
 }
 
-pub fn prepare_bulk_plugins<T, F>(
+pub(super) fn prepare_bulk_plugins<T, F>(
     load_order: &mut T,
     source_plugin_name: &str,
     plugin_count: usize,
@@ -228,13 +239,13 @@ where
     names
 }
 
-pub fn prepare_bulk_full_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Vec<String> {
+pub(super) fn prepare_bulk_full_plugins<T: MutableLoadOrder>(load_order: &mut T) -> Vec<String> {
     let plugin_name = if load_order.game_settings().id() == GameId::Starfield {
         "Blank.full.esm"
     } else {
         "Blank.esm"
     };
     prepare_bulk_plugins(load_order, plugin_name, 260, |i| {
-        format!("Blank{}.full.esm", i)
+        format!("Blank{i}.full.esm")
     })
 }

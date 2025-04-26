@@ -22,9 +22,9 @@ use std::path::{Path, PathBuf};
 
 use crate::enums::Error;
 
-pub const GHOST_FILE_EXTENSION: &str = ".ghost";
+pub(crate) const GHOST_FILE_EXTENSION: &str = ".ghost";
 
-pub trait GhostablePath {
+pub(crate) trait GhostablePath {
     fn unghost(&self) -> Result<PathBuf, Error>;
 
     fn has_ghost_extension(&self) -> bool;
@@ -36,12 +36,12 @@ pub trait GhostablePath {
 
 impl GhostablePath for Path {
     fn unghost(&self) -> Result<PathBuf, Error> {
-        if !self.has_ghost_extension() {
-            Ok(self.to_path_buf())
-        } else {
+        if self.has_ghost_extension() {
             let new_path = self.as_unghosted_path()?;
             rename(self, &new_path).map_err(|e| Error::IoError(self.to_path_buf(), e))?;
             Ok(new_path)
+        } else {
+            Ok(self.to_path_buf())
         }
     }
 
@@ -86,12 +86,12 @@ impl GhostablePath for Path {
     }
 
     fn as_unghosted_path(&self) -> Result<PathBuf, Error> {
-        if !self.has_ghost_extension() {
-            Ok(self.to_path_buf())
-        } else {
+        if self.has_ghost_extension() {
             self.file_stem()
                 .map(|f| self.with_file_name(f))
                 .ok_or_else(|| Error::NoFilename(self.to_path_buf()))
+        } else {
+            Ok(self.to_path_buf())
         }
     }
 }
@@ -100,14 +100,14 @@ impl GhostablePath for Path {
 mod tests {
     use super::*;
 
-    use std::fs::{copy, create_dir};
+    use std::fs::{copy, create_dir_all};
     use tempfile::tempdir;
 
     fn copy_to_test_dir(from_file: &str, to_file: &str, game_dir: &Path) {
         let testing_plugins_dir = Path::new("testing-plugins/Oblivion/Data");
         let data_dir = game_dir.join("Data");
         if !data_dir.exists() {
-            create_dir(&data_dir).unwrap();
+            create_dir_all(&data_dir).unwrap();
         }
         copy(testing_plugins_dir.join(from_file), data_dir.join(to_file)).unwrap();
     }

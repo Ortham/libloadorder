@@ -49,7 +49,7 @@ fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
     })
 }
 
-pub fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
+pub(crate) fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
     if ini_path.exists() {
         // My Games is used if bUseMyGamesDirectory is not present or set to 1.
         read_ini(ini_path)
@@ -102,12 +102,12 @@ fn read_test_files(ini_path: &Path) -> Result<TestFiles, Error> {
     Ok(test_files)
 }
 
-fn merge_test_files(mut base: TestFiles, overrider: TestFiles) -> TestFiles {
-    for i in 0..10 {
-        if overrider[i].is_some() {
-            base[i].clone_from(&overrider[i]);
+fn merge_test_files(mut base: TestFiles, overrider: &TestFiles) -> TestFiles {
+    base.iter_mut().zip(overrider.iter()).for_each(|(b, o)| {
+        if o.is_some() {
+            b.clone_from(o);
         }
-    }
+    });
 
     base
 }
@@ -119,7 +119,7 @@ fn filter_test_files(test_files: TestFiles) -> Vec<String> {
         .collect()
 }
 
-pub fn test_files(
+pub(crate) fn test_files(
     game_id: GameId,
     game_path: &Path,
     my_games_path: &Path,
@@ -163,13 +163,13 @@ pub fn test_files(
         GameId::Fallout4 => {
             let base_test_files = read_test_files(&my_games_path.join("Fallout4.ini"))?;
             let custom_test_files = read_test_files(&my_games_path.join("Fallout4Custom.ini"))?;
-            let test_files = merge_test_files(base_test_files, custom_test_files);
+            let test_files = merge_test_files(base_test_files, &custom_test_files);
             Ok(filter_test_files(test_files))
         }
         GameId::Fallout4VR => {
             let base_test_files = read_test_files(&my_games_path.join("Fallout4VR.ini"))?;
             let custom_test_files = read_test_files(&my_games_path.join("Fallout4VRCustom.ini"))?;
-            let test_files = merge_test_files(base_test_files, custom_test_files);
+            let test_files = merge_test_files(base_test_files, &custom_test_files);
             Ok(filter_test_files(test_files))
         }
         GameId::Starfield => {
@@ -177,11 +177,11 @@ pub fn test_files(
             let custom_test_files = read_test_files(&my_games_path.join("StarfieldCustom.ini"))?;
 
             let language = starfield_language(game_path)?;
-            let language_ini_path = my_games_path.join(format!("Starfield_{}.INI", language));
+            let language_ini_path = my_games_path.join(format!("Starfield_{language}.INI"));
             let language_test_files = read_test_files(&language_ini_path)?;
 
-            let test_files = merge_test_files(base_test_files, language_test_files);
-            let test_files = merge_test_files(test_files, custom_test_files);
+            let test_files = merge_test_files(base_test_files, &language_test_files);
+            let test_files = merge_test_files(test_files, &custom_test_files);
             Ok(filter_test_files(test_files))
         }
     }
@@ -214,7 +214,7 @@ fn read_steam_language_config(appmanifest_acf_path: &Path) -> Result<Option<Stri
 
                 keyvalues_parser::error::Error::RenderError(e) => e.to_string(),
                 keyvalues_parser::error::Error::RawRenderError { invalid_char } => {
-                    format!("Invalid character \"{}\"", invalid_char)
+                    format!("Invalid character \"{invalid_char}\"")
                 }
             };
 
@@ -270,7 +270,6 @@ fn map_windows_system_language<T: AsRef<str>>(system_language: T) -> &'static st
     match parts.next().unwrap_or("en") {
         // These language values are listed in Starfield's MicrosoftGame.Config and
         // appxmanifest.xml.
-        "en" => "en",
         "fr" => "fr",
         "es" => "es",
         "pl" => "pl",
@@ -601,7 +600,10 @@ mod tests {
 
         let ini = read_ini(&ini_path).unwrap();
 
-        assert_eq!(Some("À.esp"), ini.get_from(Some("General"), "sTestFile1"));
+        assert_eq!(
+            Some("\u{c0}.esp"),
+            ini.get_from(Some("General"), "sTestFile1")
+        );
     }
 
     #[test]
@@ -659,16 +661,16 @@ mod tests {
 
         std::fs::write(
             &ini_path,
-            br#"[General]
+            br"[General]
             a=\\\0\a\b\t\r\n\x20
-            "#,
+            ",
         )
         .unwrap();
 
         let ini = read_ini(&ini_path).unwrap();
 
         assert_eq!(
-            Some(r#"\\\0\a\b\t\r\n\x20"#),
+            Some(r"\\\0\a\b\t\r\n\x20"),
             ini.get_from(Some("General"), "a")
         );
     }
@@ -796,19 +798,19 @@ mod tests {
         let mut files1 = TestFiles::default();
         let mut files2 = TestFiles::default();
 
-        files1[0] = Some("a".to_string());
+        files1[0] = Some("a".to_owned());
 
-        files2[1] = Some("b".to_string());
-        files2[2] = Some("c".to_string());
-        files2[3] = Some("d".to_string());
-        files2[4] = Some("e".to_string());
-        files2[5] = Some("f".to_string());
-        files2[6] = Some("g".to_string());
-        files2[7] = Some("h".to_string());
-        files2[8] = Some("i".to_string());
-        files2[9] = Some("j".to_string());
+        files2[1] = Some("b".to_owned());
+        files2[2] = Some("c".to_owned());
+        files2[3] = Some("d".to_owned());
+        files2[4] = Some("e".to_owned());
+        files2[5] = Some("f".to_owned());
+        files2[6] = Some("g".to_owned());
+        files2[7] = Some("h".to_owned());
+        files2[8] = Some("i".to_owned());
+        files2[9] = Some("j".to_owned());
 
-        let output = merge_test_files(files1.clone(), files2.clone());
+        let output = merge_test_files(files1.clone(), &files2.clone());
 
         assert_eq!("a", output[0].as_ref().unwrap());
         assert_eq!("b", output[1].as_ref().unwrap());
@@ -821,9 +823,9 @@ mod tests {
         assert_eq!("i", output[8].as_ref().unwrap());
         assert_eq!("j", output[9].as_ref().unwrap());
 
-        files2[0] = Some("aa".to_string());
+        files2[0] = Some("aa".to_owned());
 
-        let output = merge_test_files(files1, files2);
+        let output = merge_test_files(files1, &files2);
 
         assert_eq!("aa", output[0].as_ref().unwrap());
     }
@@ -832,11 +834,11 @@ mod tests {
     fn filter_test_files_should_remove_none_and_empty_string_values() {
         let mut files = TestFiles::default();
 
-        files[0] = Some("a".to_string());
+        files[0] = Some("a".to_owned());
         files[1] = None;
-        files[2] = Some("c".to_string());
+        files[2] = Some("c".to_owned());
         files[3] = Some(String::new());
-        files[4] = Some("e".to_string());
+        files[4] = Some("e".to_owned());
 
         let output = filter_test_files(files);
 

@@ -21,6 +21,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rayon::prelude::*;
@@ -40,25 +41,25 @@ use crate::plugin::{trim_dot_ghost, Plugin};
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct TimestampBasedLoadOrder {
+pub(crate) struct TimestampBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
 }
 
 /// Retains the first occurrence for each unique filename that is valid Unicode.
-fn get_unique_filenames(file_paths: Vec<PathBuf>, game_id: GameId) -> Vec<String> {
+fn get_unique_filenames(file_paths: &[PathBuf], game_id: GameId) -> Vec<String> {
     let mut set = HashSet::new();
 
     file_paths
         .iter()
         .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
         .filter(|n| set.insert(UniCase::new(trim_dot_ghost(n, game_id))))
-        .map(|n| n.to_string())
+        .map(ToOwned::to_owned)
         .collect()
 }
 
 impl TimestampBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> Self {
+    pub(crate) fn new(game_settings: GameSettings) -> Self {
         Self {
             game_settings,
             plugins: Vec::new(),
@@ -68,7 +69,7 @@ impl TimestampBasedLoadOrder {
     fn load_plugins_from_dir(&self) -> Vec<Plugin> {
         let paths = self.game_settings.find_plugins();
 
-        let filenames = get_unique_filenames(paths, self.game_settings.id());
+        let filenames = get_unique_filenames(&paths, self.game_settings.id());
 
         filenames
             .par_iter()
@@ -89,8 +90,7 @@ impl TimestampBasedLoadOrder {
             .map_err(|e| Error::IoError(path.clone(), e))?;
         for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
             if self.game_settings().id() == GameId::Morrowind {
-                write!(writer, "GameFile{}=", index)
-                    .map_err(|e| Error::IoError(path.clone(), e))?;
+                write!(writer, "GameFile{index}=").map_err(|e| Error::IoError(path.clone(), e))?;
             }
             writer
                 .write_all(&strict_encode(plugin_name)?)
@@ -129,10 +129,8 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         self.plugins = self.load_plugins_from_dir();
         self.plugins.par_sort_by(plugin_sorter);
 
-        let regex = Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")
-            .expect("Hardcoded GameFile ini entry regex should be valid");
         let game_id = self.game_settings().id();
-        let line_mapper = |line: &str| plugin_line_mapper(line, &regex, game_id);
+        let line_mapper = |line: &str| plugin_line_mapper(line, game_id);
 
         load_active_plugins(self, line_mapper)?;
 
@@ -188,7 +186,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-pub fn save_load_order_using_timestamps<T: MutableLoadOrder>(
+pub(super) fn save_load_order_using_timestamps<T: MutableLoadOrder>(
     load_order: &mut T,
 ) -> Result<(), Error> {
     let timestamps = padded_unique_timestamps(load_order.plugins());
@@ -215,9 +213,18 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     }
 }
 
-fn plugin_line_mapper(mut line: &str, regex: &Regex, game_id: GameId) -> Option<String> {
+fn plugin_line_mapper(mut line: &str, game_id: GameId) -> Option<String> {
     if game_id == GameId::Morrowind {
-        line = regex
+        #[expect(
+            clippy::expect_used,
+            reason = "Only panics if the hardcoded regex string is invalid"
+        )]
+        static MORROWIND_INI_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")
+                .expect("Hardcoded GameFile ini entry regex should be valid")
+        });
+
+        line = MORROWIND_INI_REGEX
             .captures(line)
             .and_then(|c| c.get(1))
             .map_or("", |m| m.as_str());
@@ -271,12 +278,10 @@ fn get_file_prelude(game_settings: &GameSettings) -> Result<Vec<u8>, Error> {
 mod tests {
     use super::*;
 
-    use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::{copy_to_test_dir, set_file_timestamps, set_timestamps};
-    use std::convert::TryInto;
-    use std::fs::{remove_dir_all, File};
-    use std::io::{Read, Write};
+    use crate::tests::{copy_to_test_dir, set_file_timestamps, set_timestamps, NON_ASCII};
+    use std::fs::remove_dir_all;
+    use std::io::Read;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -367,7 +372,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -390,7 +395,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank.esm",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
         set_timestamps(&load_order.game_settings().plugins_directory(), &filenames);
@@ -402,7 +407,7 @@ mod tests {
             "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
 
@@ -425,10 +430,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -438,10 +443,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm\r"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -453,11 +458,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["#Blank.esp", "Blàñk.esp", "Blank.esm"],
+            &["#Blank.esp", NON_ASCII, "Blank.esm"],
         );
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -469,11 +474,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -483,10 +488,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -505,10 +510,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -538,7 +543,7 @@ mod tests {
         load_order.load().unwrap();
 
         let mut old_timestamps: Vec<u64> = load_order.plugins().iter().map(&mapper).collect();
-        old_timestamps.sort();
+        old_timestamps.sort_unstable();
 
         load_order.save().unwrap();
 
@@ -584,7 +589,7 @@ mod tests {
 
         assert_ne!(old_timestamps, timestamps);
 
-        old_timestamps.sort();
+        old_timestamps.sort_unstable();
         old_timestamps.dedup_by_key(|t| *t);
 
         assert_eq!(old_timestamps, timestamps);
@@ -630,7 +635,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.save().unwrap();
 
@@ -661,9 +666,9 @@ mod tests {
         load_order.plugins_mut().push(plugin);
 
         match load_order.save().unwrap_err() {
-            Error::EncodeError(s) => assert_eq!("Blȧnk.esm", s),
-            e => panic!("Expected encode error, got {:?}", e),
-        };
+            Error::EncodeError(s) => assert_eq!("Bl\u{227}nk.esm", s),
+            e => panic!("Expected encode error, got {e:?}"),
+        }
     }
 
     #[test]

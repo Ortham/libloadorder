@@ -18,7 +18,6 @@
  */
 use std::ffi::{c_char, c_uint, CStr, CString};
 use std::io;
-use std::mem;
 use std::path::PathBuf;
 use std::slice;
 
@@ -26,22 +25,28 @@ use libc::size_t;
 use loadorder::Error;
 
 use super::ERROR_MESSAGE;
-use crate::constants::*;
+use crate::constants::{
+    LIBLO_ERROR_FILE_NOT_FOUND, LIBLO_ERROR_FILE_PARSE_FAIL, LIBLO_ERROR_FILE_RENAME_FAIL,
+    LIBLO_ERROR_INTERNAL_LOGIC_ERROR, LIBLO_ERROR_INVALID_ARGS, LIBLO_ERROR_IO_ERROR,
+    LIBLO_ERROR_IO_PERMISSION_DENIED, LIBLO_ERROR_NO_PATH, LIBLO_ERROR_SYSTEM_ERROR,
+    LIBLO_ERROR_TEXT_DECODE_FAIL, LIBLO_ERROR_TEXT_ENCODE_FAIL,
+};
 
-pub fn error(code: c_uint, message: &str) -> c_uint {
+pub(crate) fn error(code: c_uint, message: &str) -> c_uint {
     ERROR_MESSAGE.with(|f| {
-        *f.borrow_mut() = unsafe { CString::from_vec_unchecked(message.as_bytes().to_vec()) }
+        *f.borrow_mut() =
+            CString::new(message.as_bytes()).unwrap_or(c"Failed to retrieve error message".into());
     });
     code
 }
 
-pub fn handle_error(err: Error) -> c_uint {
-    let code = map_error(&err);
-    error(code, &format!("{}", err))
+pub(crate) fn handle_error(err: &Error) -> c_uint {
+    let code = map_error(err);
+    error(code, &format!("{err}"))
 }
 
 fn map_io_error(err: &io::Error) -> c_uint {
-    use io::ErrorKind::*;
+    use io::ErrorKind::{AlreadyExists, NotFound, PermissionDenied};
     match err.kind() {
         NotFound => LIBLO_ERROR_FILE_NOT_FOUND,
         AlreadyExists => LIBLO_ERROR_FILE_RENAME_FAIL,
@@ -51,65 +56,69 @@ fn map_io_error(err: &io::Error) -> c_uint {
 }
 
 fn map_error(err: &Error) -> c_uint {
-    use Error::*;
-    match *err {
-        InvalidPath(_) => LIBLO_ERROR_FILE_NOT_FOUND,
-        IoError(_, ref x) => map_io_error(x),
-        NoFilename(_) => LIBLO_ERROR_FILE_PARSE_FAIL,
-        DecodeError(_) => LIBLO_ERROR_TEXT_DECODE_FAIL,
-        EncodeError(_) => LIBLO_ERROR_TEXT_ENCODE_FAIL,
-        PluginParsingError(_, _) => LIBLO_ERROR_FILE_PARSE_FAIL,
-        PluginNotFound(_) => LIBLO_ERROR_INVALID_ARGS,
-        TooManyActivePlugins { .. } => LIBLO_ERROR_INVALID_ARGS,
-        DuplicatePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
-        NonMasterBeforeMaster { .. } => LIBLO_ERROR_INVALID_ARGS,
-        InvalidEarlyLoadingPluginPosition { .. } => LIBLO_ERROR_INVALID_ARGS,
-        ImplicitlyActivePlugin(_) => LIBLO_ERROR_INVALID_ARGS,
-        NoLocalAppData => LIBLO_ERROR_INVALID_ARGS,
-        NoDocumentsPath => LIBLO_ERROR_INVALID_ARGS,
-        NoUserConfigPath => LIBLO_ERROR_NO_PATH,
-        NoUserDataPath => LIBLO_ERROR_NO_PATH,
-        NoProgramFilesPath => LIBLO_ERROR_NO_PATH,
-        UnrepresentedHoist { .. } => LIBLO_ERROR_INVALID_ARGS,
-        InstalledPlugin(_) => LIBLO_ERROR_INVALID_ARGS,
-        IniParsingError { .. } => LIBLO_ERROR_FILE_PARSE_FAIL,
-        VdfParsingError(_, _) => LIBLO_ERROR_FILE_PARSE_FAIL,
-        SystemError(_, _) => LIBLO_ERROR_SYSTEM_ERROR,
-        InvalidBlueprintPluginPosition { .. } => LIBLO_ERROR_INVALID_ARGS,
+    match err {
+        Error::InvalidPath(_) => LIBLO_ERROR_FILE_NOT_FOUND,
+        Error::IoError(_, x) => map_io_error(x),
+        Error::NoFilename(_)
+        | Error::PluginParsingError(_, _)
+        | Error::IniParsingError { .. }
+        | Error::VdfParsingError(_, _) => LIBLO_ERROR_FILE_PARSE_FAIL,
+        Error::DecodeError(_) => LIBLO_ERROR_TEXT_DECODE_FAIL,
+        Error::EncodeError(_) => LIBLO_ERROR_TEXT_ENCODE_FAIL,
+        Error::PluginNotFound(_)
+        | Error::TooManyActivePlugins { .. }
+        | Error::DuplicatePlugin(_)
+        | Error::NonMasterBeforeMaster { .. }
+        | Error::InvalidEarlyLoadingPluginPosition { .. }
+        | Error::ImplicitlyActivePlugin(_)
+        | Error::NoLocalAppData
+        | Error::NoDocumentsPath
+        | Error::UnrepresentedHoist { .. }
+        | Error::InstalledPlugin(_)
+        | Error::InvalidBlueprintPluginPosition { .. } => LIBLO_ERROR_INVALID_ARGS,
+        Error::NoUserConfigPath | Error::NoUserDataPath | Error::NoProgramFilesPath => {
+            LIBLO_ERROR_NO_PATH
+        }
+        Error::SystemError(_, _) => LIBLO_ERROR_SYSTEM_ERROR,
         _ => LIBLO_ERROR_INTERNAL_LOGIC_ERROR,
     }
 }
 
-pub unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
+pub(crate) unsafe fn to_str<'a>(c_string: *const c_char) -> Result<&'a str, u32> {
     if c_string.is_null() {
         Err(error(LIBLO_ERROR_INVALID_ARGS, "Null pointer passed"))
     } else {
         CStr::from_ptr(c_string)
             .to_str()
-            .map_err(|_| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))
+            .map_err(|_e| error(LIBLO_ERROR_INVALID_ARGS, "Non-UTF-8 string passed"))
     }
 }
 
-pub fn to_c_string<S: AsRef<str>>(string: S) -> Result<*mut c_char, u32> {
+pub(crate) fn to_c_string<S: AsRef<str>>(string: S) -> Result<*mut c_char, u32> {
     CString::new(string.as_ref())
         .map(CString::into_raw)
-        .map_err(|_| LIBLO_ERROR_TEXT_ENCODE_FAIL)
+        .map_err(|_e| LIBLO_ERROR_TEXT_ENCODE_FAIL)
 }
 
-pub fn to_c_string_array<S: AsRef<str>>(strings: &[S]) -> Result<(*mut *mut c_char, size_t), u32> {
-    let mut c_strings = strings
+pub(crate) fn to_c_string_array<S: AsRef<str>>(
+    strings: &[S],
+) -> Result<(*mut *mut c_char, size_t), u32> {
+    let c_strings = strings
         .iter()
         .map(to_c_string)
         .collect::<Result<Box<[*mut c_char]>, u32>>()?;
 
-    let pointer = c_strings.as_mut_ptr();
     let size = c_strings.len();
-    mem::forget(c_strings);
 
-    Ok((pointer, size))
+    // Although this is a pointer for the box and we want a pointer to the
+    // start of the slice in the box, they're actually the same value, and we
+    // can recover the box as well as the slice from the pointer and size.
+    let pointer = Box::into_raw(c_strings);
+
+    Ok((pointer.cast(), size))
 }
 
-pub unsafe fn to_str_vec<'a>(
+pub(crate) unsafe fn to_str_vec<'a>(
     array: *const *const c_char,
     array_size: usize,
 ) -> Result<Vec<&'a str>, u32> {
@@ -119,7 +128,7 @@ pub unsafe fn to_str_vec<'a>(
         .collect()
 }
 
-pub unsafe fn to_path_buf_vec(
+pub(crate) unsafe fn to_path_buf_vec(
     array: *const *const c_char,
     array_size: usize,
 ) -> Result<Vec<PathBuf>, u32> {

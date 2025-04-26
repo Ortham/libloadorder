@@ -24,7 +24,9 @@ use std::ptr;
 use libc::size_t;
 
 use super::lo_game_handle;
-use crate::constants::*;
+use crate::constants::{
+    LIBLO_ERROR_INVALID_ARGS, LIBLO_ERROR_PANICKED, LIBLO_ERROR_POISONED_THREAD_LOCK, LIBLO_OK,
+};
 use crate::helpers::{error, handle_error, to_c_string_array, to_str, to_str_vec};
 
 /// Gets the list of currently active plugins.
@@ -116,11 +118,11 @@ pub unsafe extern "C" fn lo_set_active_plugins(
         };
 
         if let Err(x) = handle.set_active_plugins(&plugins) {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.save() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK
@@ -172,11 +174,11 @@ pub unsafe extern "C" fn lo_set_plugin_active(
         };
 
         if let Err(x) = result {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.save() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK

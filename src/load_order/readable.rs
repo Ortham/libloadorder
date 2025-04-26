@@ -23,6 +23,17 @@ pub trait ReadableLoadOrderBase {
     fn plugins(&self) -> &[Plugin];
 
     fn game_settings_base(&self) -> &GameSettings;
+
+    fn find_plugin(&self, plugin_name: &str) -> Option<&Plugin> {
+        self.plugins().iter().find(|p| p.name_matches(plugin_name))
+    }
+
+    fn find_plugin_and_index(&self, plugin_name: &str) -> Option<(usize, &Plugin)> {
+        self.plugins()
+            .iter()
+            .enumerate()
+            .find(|(_, p)| p.name_matches(plugin_name))
+    }
 }
 
 pub trait ReadableLoadOrder {
@@ -67,10 +78,7 @@ impl<T: ReadableLoadOrderBase> ReadableLoadOrder for T {
     }
 
     fn is_active(&self, plugin_name: &str) -> bool {
-        self.plugins()
-            .iter()
-            .find(|p| p.name_matches(plugin_name))
-            .is_some_and(|p| p.is_active())
+        self.find_plugin(plugin_name).is_some_and(Plugin::is_active)
     }
 }
 

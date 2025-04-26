@@ -28,7 +28,12 @@ use loadorder::GameId;
 use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
 
-use crate::constants::*;
+use crate::constants::{
+    LIBLO_ERROR_INVALID_ARGS, LIBLO_ERROR_PANICKED, LIBLO_ERROR_PATH_ENCODE_FAIL,
+    LIBLO_ERROR_POISONED_THREAD_LOCK, LIBLO_GAME_FNV, LIBLO_GAME_FO3, LIBLO_GAME_FO4,
+    LIBLO_GAME_FO4VR, LIBLO_GAME_OPENMW, LIBLO_GAME_STARFIELD, LIBLO_GAME_TES3, LIBLO_GAME_TES4,
+    LIBLO_GAME_TES5, LIBLO_GAME_TES5SE, LIBLO_GAME_TES5VR, LIBLO_OK, LIBLO_WARN_LO_MISMATCH,
+};
 use crate::helpers::{
     error, handle_error, to_c_string, to_c_string_array, to_path_buf_vec, to_str,
 };
@@ -37,7 +42,7 @@ use crate::helpers::{
 ///
 /// Used to keep each game's data independent. Abstracts the definition of libloadorder's internal
 /// state while still providing type safety across the library.
-#[allow(non_camel_case_types)]
+#[expect(non_camel_case_types)]
 pub type lo_game_handle = *mut GameHandle;
 
 // This type alias is necessary to make cbindgen treat lo_game_handle as a
@@ -112,8 +117,7 @@ pub unsafe extern "C" fn lo_create_handle(
             return error(
                 LIBLO_ERROR_INVALID_ARGS,
                 &format!(
-                    "Given game path \"{:?}\" is not a valid directory",
-                    game_path
+                    "Given game path \"{game_path:?}\" is not a valid directory"
                 ),
             );
         }
@@ -122,7 +126,7 @@ pub unsafe extern "C" fn lo_create_handle(
         if local_path.is_null() {
             match GameSettings::new(game_id, game_path) {
                 Ok(x) => load_order = x.into_load_order(),
-                Err(x) => return handle_error(x),
+                Err(x) => return handle_error(&x),
             }
         } else {
             let local_path = match to_str(local_path) {
@@ -134,15 +138,14 @@ pub unsafe extern "C" fn lo_create_handle(
                 return error(
                     LIBLO_ERROR_INVALID_ARGS,
                     &format!(
-                        "Given local data path \"{:?}\" exists but is not a valid directory",
-                        local_path
+                        "Given local data path \"{local_path:?}\" exists but is not a valid directory"
                     ),
                 );
             }
 
             match GameSettings::with_local_path(game_id, game_path, local_path) {
                 Ok(x) => load_order = x.into_load_order(),
-                Err(x) => return handle_error(x),
+                Err(x) => return handle_error(&x),
             }
         }
 
@@ -153,7 +156,7 @@ pub unsafe extern "C" fn lo_create_handle(
         match is_self_consistent {
             Ok(true) => LIBLO_OK,
             Ok(false) => LIBLO_WARN_LO_MISMATCH,
-            Err(x) => handle_error(x),
+            Err(x) => handle_error(&x),
         }
     })
     .unwrap_or(LIBLO_ERROR_PANICKED)
@@ -201,11 +204,11 @@ pub unsafe extern "C" fn lo_load_current_state(handle: lo_game_handle) -> c_uint
             .game_settings_mut()
             .refresh_implicitly_active_plugins()
         {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.load() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK
@@ -241,7 +244,7 @@ pub unsafe extern "C" fn lo_is_ambiguous(handle: lo_game_handle, result: *mut bo
 
         match handle.is_ambiguous() {
             Ok(x) => *result = x,
-            Err(x) => return handle_error(x),
+            Err(x) => return handle_error(&x),
         }
 
         LIBLO_OK
@@ -280,11 +283,11 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
         };
 
         if let Err(x) = handle.load() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.save() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK
@@ -434,14 +437,11 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
             Ok(h) => h,
         };
 
-        let file_path = match handle.game_settings().active_plugins_file().to_str() {
-            Some(p) => p,
-            None => {
-                return error(
-                    LIBLO_ERROR_PATH_ENCODE_FAIL,
-                    "The active plugins file path could not be encoded in UTF-8",
-                )
-            }
+        let Some(file_path) = handle.game_settings().active_plugins_file().to_str() else {
+            return error(
+                LIBLO_ERROR_PATH_ENCODE_FAIL,
+                "The active plugins file path could not be encoded in UTF-8",
+            );
         };
 
         match to_c_string(file_path) {

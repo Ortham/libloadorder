@@ -31,8 +31,14 @@ use crate::game_settings::GameSettings;
 use crate::plugin::{trim_dot_ghost, Plugin};
 use crate::GameId;
 
-pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
+pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     fn plugins_mut(&mut self) -> &mut Vec<Plugin>;
+
+    fn find_plugin_mut(&mut self, plugin_name: &str) -> Option<&mut Plugin> {
+        self.plugins_mut()
+            .iter_mut()
+            .find(|p| p.name_matches(plugin_name))
+    }
 
     fn max_active_full_plugins(&self) -> usize {
         let has_active_light_plugin = if self.game_settings().id().supports_light_plugins() {
@@ -113,7 +119,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
                 self.plugins()
                     .par_iter()
                     .position_any(|p| p.name_matches(n))
-                    .ok_or_else(|| Error::PluginNotFound(n.to_string()))
+                    .ok_or_else(|| Error::PluginNotFound((*n).to_owned()))
             })
             .collect()
     }
@@ -150,7 +156,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             .find(|n| !unique_plugin_names.insert(UniCase::new(*n)));
 
         if let Some(n) = non_unique_plugin {
-            return Err(Error::DuplicatePlugin(n.to_string()));
+            return Err(Error::DuplicatePlugin((*n).to_owned()));
         }
 
         let mut plugins = map_to_plugins(self, plugin_names)?;
@@ -209,7 +215,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
             .iter()
             .filter_map(|p| filename_str(p))
             .filter(|filename| set.insert(get_key_from_filename(filename, game_id)))
-            .map(|f| (f.to_string(), false));
+            .map(|f| (f.to_owned(), false));
 
         unique_tuples.extend(unique_file_tuples_iter);
 
@@ -237,13 +243,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
         for early_loader in self.game_settings().early_loading_plugins() {
             let names_match = eq(plugin_name, early_loader);
 
-            let early_loader_tuple = self
-                .plugins()
-                .iter()
-                .enumerate()
-                .find(|(_, p)| p.name_matches(early_loader));
-
-            let expected_index = match early_loader_tuple {
+            let expected_index = match self.find_plugin_and_index(early_loader) {
                 Some((i, early_loading_plugin)) => {
                     // If the early loader is a blueprint plugin then it doesn't
                     // actually load early and so the index of the next early
@@ -254,7 +254,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
                     if !names_match && position == i {
                         return Err(Error::InvalidEarlyLoadingPluginPosition {
-                            name: early_loader.to_string(),
+                            name: early_loader.to_owned(),
                             pos: i + 1,
                             expected_pos: i,
                         });
@@ -267,7 +267,7 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
 
             if names_match && position != expected_index {
                 return Err(Error::InvalidEarlyLoadingPluginPosition {
-                    name: plugin_name.to_string(),
+                    name: plugin_name.to_owned(),
                     pos: position,
                     expected_pos: expected_index,
                 });
@@ -278,11 +278,11 @@ pub trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
     }
 }
 
-pub fn filename_str(file_path: &Path) -> Option<&str> {
+pub(super) fn filename_str(file_path: &Path) -> Option<&str> {
     file_path.file_name().and_then(|n| n.to_str())
 }
 
-pub fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
+pub(super) fn load_active_plugins<T, F>(load_order: &mut T, line_mapper: F) -> Result<(), Error>
 where
     T: MutableLoadOrder,
     F: Fn(&str) -> Option<String> + Send + Sync,
@@ -294,19 +294,16 @@ where
         line_mapper,
     )?;
 
-    let plugin_indices: Vec<_> = plugin_names
-        .par_iter()
-        .filter_map(|p| load_order.index_of(p))
-        .collect();
-
-    for index in plugin_indices {
-        load_order.plugins_mut()[index].activate()?;
+    for plugin_name in plugin_names {
+        if let Some(plugin) = load_order.find_plugin_mut(&plugin_name) {
+            plugin.activate()?;
+        }
     }
 
     Ok(())
 }
 
-pub fn read_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
+pub(super) fn read_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
 where
     F: FnMut(&str) -> Option<T> + Send + Sync,
     T: Send,
@@ -327,7 +324,7 @@ where
     Ok(decoded_content.lines().filter_map(line_mapper).collect())
 }
 
-pub fn plugin_line_mapper(line: &str) -> Option<String> {
+pub(super) fn plugin_line_mapper(line: &str) -> Option<String> {
     if line.is_empty() || line.starts_with('#') {
         None
     } else {
@@ -339,7 +336,7 @@ pub fn plugin_line_mapper(line: &str) -> Option<String> {
 /// be loaded directly before the ESM instead of in its usual position. This
 /// function "hoists" such masters further up the load order to match that
 /// behaviour.
-pub fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
+pub(super) fn hoist_masters(plugins: &mut Vec<Plugin>) -> Result<(), Error> {
     // Store plugins' current positions and where they need to move to.
     // Use a BTreeMap so that if a plugin needs to move for more than one ESM,
     // it will move for the earlier one and so also satisfy the later one, and
@@ -455,11 +452,7 @@ fn validate_blueprint_plugin_index(
     // they get moved after all non-blueprint plugins before conflicts are
     // resolved and don't get hoisted by non-blueprint plugins. However, they
     // do get hoisted by other blueprint plugins.
-    let preceding_plugins = if index < plugins.len() {
-        &plugins[..index]
-    } else {
-        plugins
-    };
+    let preceding_plugins = plugins.get(..index).unwrap_or(plugins);
 
     // Check that none of the preceding blueprint plugins have this plugin as a
     // master.
@@ -474,17 +467,13 @@ fn validate_blueprint_plugin_index(
             .any(|m| eq(m.as_str(), plugin.name()))
         {
             return Err(Error::UnrepresentedHoist {
-                plugin: plugin.name().to_string(),
-                master: preceding_plugin.name().to_string(),
+                plugin: plugin.name().to_owned(),
+                master: preceding_plugin.name().to_owned(),
             });
         }
     }
 
-    let following_plugins = if index < plugins.len() {
-        &plugins[index..]
-    } else {
-        &[]
-    };
+    let following_plugins = plugins.get(index..).unwrap_or(&[]);
 
     // Check that all of the following plugins are blueprint plugins.
     let last_non_blueprint_pos = following_plugins
@@ -494,7 +483,7 @@ fn validate_blueprint_plugin_index(
 
     match last_non_blueprint_pos {
         Some(i) => Err(Error::InvalidBlueprintPluginPosition {
-            name: plugin.name().to_string(),
+            name: plugin.name().to_owned(),
             pos: index,
             expected_pos: i + 1,
         }),
@@ -507,11 +496,7 @@ fn validate_master_file_index(
     plugin: &Plugin,
     index: usize,
 ) -> Result<(), Error> {
-    let preceding_plugins = if index < plugins.len() {
-        &plugins[..index]
-    } else {
-        plugins
-    };
+    let preceding_plugins = plugins.get(..index).unwrap_or(plugins);
 
     // Check that none of the preceding plugins have this plugin as a master.
     for preceding_plugin in preceding_plugins {
@@ -521,15 +506,15 @@ fn validate_master_file_index(
             .any(|m| eq(m.as_str(), plugin.name()))
         {
             return Err(Error::UnrepresentedHoist {
-                plugin: plugin.name().to_string(),
-                master: preceding_plugin.name().to_string(),
+                plugin: plugin.name().to_owned(),
+                master: preceding_plugin.name().to_owned(),
             });
         }
     }
 
     let previous_master_pos = preceding_plugins
         .iter()
-        .rposition(|p| p.is_master_file())
+        .rposition(Plugin::is_master_file)
         .unwrap_or(0);
 
     let masters = plugin.masters()?;
@@ -543,8 +528,8 @@ fn validate_master_file_index(
         .find(|p| !master_names.contains(&UniCase::new(p.name())))
     {
         return Err(Error::NonMasterBeforeMaster {
-            master: plugin.name().to_string(),
-            non_master: n.name().to_string(),
+            master: plugin.name().to_owned(),
+            non_master: n.name().to_owned(),
         });
     }
 
@@ -556,8 +541,8 @@ fn validate_master_file_index(
         .find(|p| master_names.contains(&UniCase::new(p.name())))
     {
         Err(Error::UnrepresentedHoist {
-            plugin: p.name().to_string(),
-            master: plugin.name().to_string(),
+            plugin: p.name().to_owned(),
+            master: plugin.name().to_owned(),
         })
     } else {
         Ok(())
@@ -578,8 +563,8 @@ fn validate_non_master_file_index(
             .any(|m| plugin.name_matches(m))
         {
             return Err(Error::UnrepresentedHoist {
-                plugin: plugin.name().to_string(),
-                master: master_file.name().to_string(),
+                plugin: plugin.name().to_owned(),
+                master: master_file.name().to_owned(),
             });
         }
     }
@@ -598,8 +583,8 @@ fn validate_non_master_file_index(
         Ok(())
     } else {
         Err(Error::NonMasterBeforeMaster {
-            master: next_master.name().to_string(),
-            non_master: plugin.name().to_string(),
+            master: next_master.name().to_owned(),
+            non_master: plugin.name().to_owned(),
         })
     }
 }
@@ -615,15 +600,12 @@ fn map_to_plugins<T: ReadableLoadOrderBase + Sync + ?Sized>(
 }
 
 fn insert<T: MutableLoadOrder + ?Sized>(load_order: &mut T, plugin: Plugin) -> usize {
-    match load_order.insert_position(&plugin) {
-        Some(position) => {
-            load_order.plugins_mut().insert(position, plugin);
-            position
-        }
-        None => {
-            load_order.plugins_mut().push(plugin);
-            load_order.plugins().len() - 1
-        }
+    if let Some(position) = load_order.insert_position(&plugin) {
+        load_order.plugins_mut().insert(position, plugin);
+        position
+    } else {
+        load_order.plugins_mut().push(plugin);
+        load_order.plugins().len() - 1
     }
 }
 
@@ -653,11 +635,10 @@ fn get_plugin_to_insert_at<T: MutableLoadOrder + ?Sized>(
     plugin_name: &str,
     insert_position: usize,
 ) -> Result<Plugin, Error> {
-    if let Some(p) = load_order.index_of(plugin_name) {
-        let plugin = &load_order.plugins()[p];
+    if let Some((index, plugin)) = load_order.find_plugin_and_index(plugin_name) {
         load_order.validate_index(plugin, insert_position)?;
 
-        Ok(load_order.plugins_mut().remove(p))
+        Ok(load_order.plugins_mut().remove(index))
     } else {
         let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
@@ -694,7 +675,7 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
         Some(x) => x,
     };
 
-    let mut plugin_names: HashSet<_> = HashSet::new();
+    let mut plugin_names: HashSet<UniCase<String>> = HashSet::new();
 
     // Add each plugin that isn't a master file to the hashset.
     // When a master file is encountered, remove its masters from the hashset.
@@ -706,19 +687,19 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
             .skip(first_non_master_pos)
             .take(last_master_pos - first_non_master_pos + 1)
         {
-            if !plugin.is_master_file() {
-                plugin_names.insert(UniCase::new(plugin.name().to_string()));
-            } else {
+            if plugin.is_master_file() {
                 for master in plugin.masters()? {
                     plugin_names.remove(&UniCase::new(master.clone()));
                 }
 
                 if let Some(n) = plugin_names.iter().next() {
                     return Err(Error::NonMasterBeforeMaster {
-                        master: plugin.name().to_string(),
+                        master: plugin.name().to_owned(),
                         non_master: n.to_string(),
                     });
                 }
+            } else {
+                plugin_names.insert(UniCase::new(plugin.name().to_owned()));
             }
         }
     }
@@ -740,7 +721,7 @@ fn validate_no_non_blueprint_plugins_after_blueprint_plugins(
         if let Some(last_non_blueprint_pos) = last_non_blueprint_pos {
             if last_non_blueprint_pos > first_blueprint_pos {
                 return Err(Error::InvalidBlueprintPluginPosition {
-                    name: first_blueprint_plugin.name().to_string(),
+                    name: first_blueprint_plugin.name().to_owned(),
                     pos: first_blueprint_pos,
                     expected_pos: last_non_blueprint_pos,
                 });
@@ -759,19 +740,19 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
             if let Some(m) = plugin
                 .masters()?
                 .iter()
-                .find_map(|m| plugins_map.get(&UniCase::new(m.to_string())))
+                .find_map(|m| plugins_map.get(&UniCase::new(m.to_owned())))
             {
                 // Don't error if a non-blueprint plugin depends on a blueprint plugin.
                 if plugin.is_blueprint_master() || !m.is_blueprint_master() {
                     return Err(Error::UnrepresentedHoist {
-                        plugin: m.name().to_string(),
-                        master: plugin.name().to_string(),
+                        plugin: m.name().to_owned(),
+                        master: plugin.name().to_owned(),
                     });
                 }
             }
         }
 
-        plugins_map.insert(UniCase::new(plugin.name().to_string()), plugin);
+        plugins_map.insert(UniCase::new(plugin.name().to_owned()), plugin);
     }
 
     Ok(())
@@ -781,11 +762,7 @@ fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     filename: &str,
 ) -> Result<(), Error> {
-    if let Some(plugin) = load_order
-        .plugins_mut()
-        .iter_mut()
-        .find(|p| p.name_matches(filename))
-    {
+    if let Some(plugin) = load_order.find_plugin_mut(filename) {
         plugin.activate()
     } else {
         // Ignore any errors trying to load the plugin to save checking if it's
@@ -803,18 +780,16 @@ fn find_first_non_master_position(plugins: &[Plugin]) -> Option<usize> {
 }
 
 fn find_first_blueprint_master_position(plugins: &[Plugin]) -> Option<usize> {
-    plugins.iter().position(|p| p.is_blueprint_master())
+    plugins.iter().position(Plugin::is_blueprint_master)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::enums::GameId;
-    use crate::game_settings::GameSettings;
     use crate::load_order::tests::*;
     use crate::load_order::writable::create_parent_dirs;
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_test_dir, NON_ASCII};
 
     use tempfile::tempdir;
 
@@ -1078,7 +1053,7 @@ mod tests {
 
         std::fs::write(
             plugins_dir.parent().unwrap().join("Starfield.ccc"),
-            format!("{}\n{}", blueprint_plugin_name, plugin_name),
+            format!("{blueprint_plugin_name}\n{plugin_name}"),
         )
         .unwrap();
         load_order
@@ -1154,7 +1129,9 @@ mod tests {
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
 
         // Remove non-master plugins from the load order.
-        load_order.plugins_mut().retain(|p| p.is_master_file());
+        load_order
+            .plugins_mut()
+            .retain(crate::plugin::Plugin::is_master_file);
 
         let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
@@ -1435,7 +1412,7 @@ mod tests {
                 assert_eq!(index, pos);
                 assert_eq!(1, expected_pos);
             }
-            e => panic!("Unexpected error type: {:?}", e),
+            e => panic!("Unexpected error type: {e:?}"),
         }
     }
 
@@ -1468,7 +1445,7 @@ mod tests {
                 assert_eq!(plugin_name, plugin);
                 assert_eq!(dependent_plugin, master);
             }
-            e => panic!("Unexpected error type: {:?}", e),
+            e => panic!("Unexpected error type: {e:?}"),
         }
     }
 
@@ -1511,7 +1488,7 @@ mod tests {
 
         std::fs::write(
             plugins_dir.parent().unwrap().join("Starfield.ccc"),
-            format!("Starfield.esm\n{}", plugin_name),
+            format!("Starfield.esm\n{plugin_name}"),
         )
         .unwrap();
         load_order
@@ -1542,7 +1519,7 @@ mod tests {
 
         std::fs::write(
             plugins_dir.parent().unwrap().join("Starfield.ccc"),
-            format!("Starfield.esm\n{}\n{}", blueprint_plugin, early_loader),
+            format!("Starfield.esm\n{blueprint_plugin}\n{early_loader}"),
         )
         .unwrap();
         load_order
@@ -1635,11 +1612,8 @@ mod tests {
                 assert_eq!(1, pos);
                 assert_eq!(0, expected_pos);
             }
-            e => panic!(
-                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
-                e
-            ),
-        };
+            e => panic!("Expected InvalidEarlyLoadingPluginPosition error, got {e:?}"),
+        }
 
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -1663,11 +1637,8 @@ mod tests {
                 assert_eq!(1, pos);
                 assert_eq!(0, expected_pos);
             }
-            e => panic!(
-                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
-                e
-            ),
-        };
+            e => panic!("Expected InvalidEarlyLoadingPluginPosition error, got {e:?}"),
+        }
 
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -1697,11 +1668,8 @@ mod tests {
                 assert_eq!(2, pos);
                 assert_eq!(1, expected_pos);
             }
-            e => panic!(
-                "Expected InvalidEarlyLoadingPluginPosition error, got {:?}",
-                e
-            ),
-        };
+            e => panic!("Expected InvalidEarlyLoadingPluginPosition error, got {e:?}"),
+        }
 
         assert_eq!(existing_filenames, load_order.plugin_names());
     }
@@ -1878,7 +1846,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         match load_order.replace_plugins(&filenames).unwrap_err() {
@@ -1891,7 +1859,7 @@ mod tests {
                 assert_eq!(1, pos);
                 assert_eq!(0, expected_pos);
             }
-            e => panic!("Wrong error type: {:?}", e),
+            e => panic!("Wrong error type: {e:?}"),
         }
     }
 
@@ -1908,7 +1876,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert!(load_order.replace_plugins(&filenames).is_ok());
@@ -1930,7 +1898,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert!(load_order.replace_plugins(&filenames).is_ok());
@@ -1953,7 +1921,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert!(load_order.replace_plugins(&filenames).is_ok());
@@ -2003,7 +1971,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         load_order.replace_plugins(&filenames).unwrap();
@@ -2039,7 +2007,7 @@ mod tests {
             plugin_dependent_master,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
         let mut plugins = plugin_names
@@ -2056,7 +2024,7 @@ mod tests {
             plugin_dependent_master,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         let plugin_names: Vec<_> = plugins.iter().map(Plugin::name).collect();
@@ -2128,7 +2096,7 @@ mod tests {
 
     #[test]
     fn move_elements_should_correct_later_indices_to_account_for_earlier_moves() {
-        let mut vec = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut vec = vec![0u8, 1, 2, 3, 4, 5, 6, 7, 8];
         let mut from_to_indices = BTreeMap::new();
         from_to_indices.insert(6, 3);
         from_to_indices.insert(5, 2);
@@ -2136,7 +2104,7 @@ mod tests {
 
         move_elements(&mut vec, from_to_indices);
 
-        assert_eq!(vec![0, 7, 1, 5, 2, 6, 3, 4, 8], vec);
+        assert_eq!(vec![0u8, 7, 1, 5, 2, 6, 3, 4, 8], vec);
     }
 
     #[test]
@@ -2370,7 +2338,7 @@ mod tests {
                 assert_eq!(1, pos);
                 assert_eq!(2, expected_pos);
             }
-            e => panic!("Unexpected error type: {:?}", e),
+            e => panic!("Unexpected error type: {e:?}"),
         }
     }
 
@@ -2403,7 +2371,7 @@ mod tests {
                 assert_eq!(plugin_name, plugin);
                 assert_eq!(dependent_plugin, master);
             }
-            e => panic!("Unexpected error type: {:?}", e),
+            e => panic!("Unexpected error type: {e:?}"),
         }
     }
 

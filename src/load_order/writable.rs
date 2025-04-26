@@ -57,41 +57,42 @@ pub trait WritableLoadOrder: ReadableLoadOrder + std::fmt::Debug {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error>;
 }
 
-pub fn add<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<usize, Error> {
-    match load_order.index_of(plugin_name) {
-        Some(_) => Err(Error::DuplicatePlugin(plugin_name.to_string())),
-        None => {
-            let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
+pub(super) fn add<T: MutableLoadOrder>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<usize, Error> {
+    if load_order.index_of(plugin_name).is_some() {
+        Err(Error::DuplicatePlugin(plugin_name.to_owned()))
+    } else {
+        let plugin = Plugin::new(plugin_name, load_order.game_settings())?;
 
-            match load_order.insert_position(&plugin) {
-                Some(position) => {
-                    load_order.validate_index(&plugin, position)?;
-                    load_order.plugins_mut().insert(position, plugin);
-                    Ok(position)
-                }
-                None => {
-                    load_order.validate_index(&plugin, load_order.plugins().len())?;
-                    load_order.plugins_mut().push(plugin);
-                    Ok(load_order.plugins().len() - 1)
-                }
-            }
+        if let Some(position) = load_order.insert_position(&plugin) {
+            load_order.validate_index(&plugin, position)?;
+            load_order.plugins_mut().insert(position, plugin);
+            Ok(position)
+        } else {
+            load_order.validate_index(&plugin, load_order.plugins().len())?;
+            load_order.plugins_mut().push(plugin);
+            Ok(load_order.plugins().len() - 1)
         }
     }
 }
 
-pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
-    match load_order.index_of(plugin_name) {
-        Some(index) => {
+pub(super) fn remove<T: MutableLoadOrder>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<(), Error> {
+    match load_order.find_plugin_and_index(plugin_name) {
+        Some((index, plugin)) => {
             let plugin_path = load_order.game_settings().plugin_path(plugin_name);
             if plugin_path.exists() {
-                return Err(Error::InstalledPlugin(plugin_name.to_string()));
+                return Err(Error::InstalledPlugin(plugin_name.to_owned()));
             }
 
             // If this is a master file that depends on a non-master file, it shouldn't be removed
             // without first moving the non-master file later in the load order, unless the next
             // master file also depends on that same non-master file. The non-master file also
             // doesn't need to be moved if this is the last master file in the load order.
-            let plugin = &load_order.plugins()[index];
             if plugin.is_master_file() {
                 let next_master = &load_order
                     .plugins()
@@ -112,17 +113,14 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
                     // Finally, check if any remaining masters are non-master plugins.
                     if let Some(n) = masters.iter().find(|n| {
                         load_order
-                            .plugins()
-                            .iter()
-                            .find(|p| p.name_matches(n))
-                            .map(|p| !p.is_master_file())
+                            .find_plugin(n)
                             // If the master isn't installed, assume it's a master file and so
                             // doesn't prevent removal of the target plugin.
-                            .unwrap_or(false)
+                            .is_some_and(|p| !p.is_master_file())
                     }) {
                         return Err(Error::NonMasterBeforeMaster {
-                            master: plugin_name.to_string(),
-                            non_master: n.to_string(),
+                            master: plugin_name.to_owned(),
+                            non_master: n.to_owned(),
                         });
                     }
                 }
@@ -132,7 +130,7 @@ pub fn remove<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Res
 
             Ok(())
         }
-        None => Err(Error::PluginNotFound(plugin_name.to_string())),
+        None => Err(Error::PluginNotFound(plugin_name.to_owned())),
     }
 }
 
@@ -169,24 +167,23 @@ fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize])
     let mut counts = PluginCounts::default();
 
     for index in existing_plugin_indexes {
-        let plugin = &existing_plugins[*index];
-        counts.count_plugin(plugin);
+        if let Some(plugin) = existing_plugins.get(*index) {
+            counts.count_plugin(plugin);
+        }
     }
 
     counts
 }
 
-pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
+pub(super) fn activate<T: MutableLoadOrder>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<(), Error> {
     let counts = count_active_plugins(load_order);
     let max_active_full_plugins = load_order.max_active_full_plugins();
 
-    let plugin = match load_order
-        .plugins_mut()
-        .iter_mut()
-        .find(|p| p.name_matches(plugin_name))
-    {
-        Some(p) => p,
-        None => return Err(Error::PluginNotFound(plugin_name.to_string())),
+    let Some(plugin) = load_order.find_plugin_mut(plugin_name) else {
+        return Err(Error::PluginNotFound(plugin_name.to_owned()));
     };
 
     if !plugin.is_active() {
@@ -203,28 +200,29 @@ pub fn activate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> R
                 medium_count: counts.medium,
                 full_count: counts.full,
             });
-        } else {
-            plugin.activate()?;
         }
+
+        plugin.activate()?;
     }
 
     Ok(())
 }
 
-pub fn deactivate<T: MutableLoadOrder>(load_order: &mut T, plugin_name: &str) -> Result<(), Error> {
+pub(super) fn deactivate<T: MutableLoadOrder>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<(), Error> {
     if load_order.game_settings().is_implicitly_active(plugin_name) {
-        return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+        return Err(Error::ImplicitlyActivePlugin(plugin_name.to_owned()));
     }
 
     load_order
-        .plugins_mut()
-        .iter_mut()
-        .find(|p| p.name_matches(plugin_name))
-        .ok_or_else(|| Error::PluginNotFound(plugin_name.to_string()))
-        .map(|p| p.deactivate())
+        .find_plugin_mut(plugin_name)
+        .ok_or_else(|| Error::PluginNotFound(plugin_name.to_owned()))
+        .map(Plugin::deactivate)
 }
 
-pub fn set_active_plugins<T: MutableLoadOrder>(
+pub(super) fn set_active_plugins<T: MutableLoadOrder>(
     load_order: &mut T,
     active_plugin_names: &[&str],
 ) -> Result<(), Error> {
@@ -256,16 +254,18 @@ pub fn set_active_plugins<T: MutableLoadOrder>(
     load_order.deactivate_all();
 
     for index in existing_plugin_indices {
-        load_order.plugins_mut()[index].activate()?;
+        if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
+            plugin.activate()?;
+        }
     }
 
     Ok(())
 }
 
-pub fn create_parent_dirs(path: &Path) -> Result<(), Error> {
+pub(super) fn create_parent_dirs(path: &Path) -> Result<(), Error> {
     if let Some(x) = path.parent() {
         if !x.exists() {
-            create_dir_all(x).map_err(|e| Error::IoError(x.to_path_buf(), e))?
+            create_dir_all(x).map_err(|e| Error::IoError(x.to_path_buf(), e))?;
         }
     }
     Ok(())
@@ -276,20 +276,16 @@ mod tests {
     use super::*;
 
     use std::fs::remove_file;
-    use std::path::Path;
 
     use tempfile::tempdir;
 
     use crate::enums::GameId;
-    use crate::game_settings::GameSettings;
-    use crate::load_order::mutable::MutableLoadOrder;
-    use crate::load_order::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
     use crate::load_order::tests::{
         game_settings_for_test, load_and_insert, mock_game_files, prepare_bulk_full_plugins,
         prepare_bulk_plugins, prepend_early_loader, prepend_master, set_blueprint_flag,
         set_master_flag,
     };
-    use crate::tests::copy_to_test_dir;
+    use crate::tests::{copy_to_test_dir, NON_ASCII};
 
     struct TestLoadOrder {
         game_settings: GameSettings,
@@ -330,13 +326,13 @@ mod tests {
 
     fn prepare_bulk_medium_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
         prepare_bulk_plugins(load_order, "Blank.medium.esm", 260, |i| {
-            format!("Blank{}.medium.esm", i)
+            format!("Blank{i}.medium.esm")
         })
     }
 
     fn prepare_bulk_light_plugins(load_order: &mut TestLoadOrder) -> Vec<String> {
         prepare_bulk_plugins(load_order, "Blank.small.esm", 5000, |i| {
-            format!("Blank{}.small.esm", i)
+            format!("Blank{i}.small.esm")
         })
     }
 
@@ -512,7 +508,7 @@ mod tests {
                 assert_eq!("Blank - Different Master Dependent.esm", master);
                 assert_eq!("Blank - Different.esm", non_master);
             }
-            e => panic!("Unexpected error type: {:?}", e),
+            e => panic!("Unexpected error type: {e:?}"),
         }
     }
 
@@ -886,14 +882,14 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
-        let active_plugins = ["Blank - Master Dependent.esp", "Blàñk.esp"];
+        let active_plugins = ["Blank - Master Dependent.esp", NON_ASCII];
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert!(!load_order.is_active("Blank - Master Dependent.esp"));
         assert!(load_order
             .index_of("Blank - Master Dependent.esp")
             .is_none());
-        assert!(!load_order.is_active("Blàñk.esp"));
-        assert!(load_order.index_of("Blàñk.esp").is_none());
+        assert!(!load_order.is_active(NON_ASCII));
+        assert!(load_order.index_of(NON_ASCII).is_none());
     }
 
     #[test]
@@ -926,14 +922,17 @@ mod tests {
         let blank_override = "Blank - Override.esp";
         load_and_insert(&mut load_order, blank_override);
 
-        let mut active_plugins = vec![blank_override.to_string()];
+        let mut active_plugins = vec![blank_override.to_owned()];
 
         let plugins = prepare_bulk_full_plugins(&mut load_order);
         for plugin in plugins.into_iter().take(255) {
             active_plugins.push(plugin);
         }
 
-        let active_plugins: Vec<&str> = active_plugins.iter().map(|s| s.as_str()).collect();
+        let active_plugins: Vec<&str> = active_plugins
+            .iter()
+            .map(std::string::String::as_str)
+            .collect();
 
         assert!(set_active_plugins(&mut load_order, &active_plugins).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());

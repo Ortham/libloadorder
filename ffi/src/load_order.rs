@@ -25,7 +25,11 @@ use libc::size_t;
 use loadorder::LoadOrderMethod;
 
 use super::lo_game_handle;
-use crate::constants::*;
+use crate::constants::{
+    LIBLO_ERROR_FILE_NOT_FOUND, LIBLO_ERROR_INTERNAL_LOGIC_ERROR, LIBLO_ERROR_INVALID_ARGS,
+    LIBLO_ERROR_PANICKED, LIBLO_ERROR_POISONED_THREAD_LOCK, LIBLO_METHOD_ASTERISK,
+    LIBLO_METHOD_OPENMW, LIBLO_METHOD_TEXTFILE, LIBLO_METHOD_TIMESTAMP, LIBLO_OK,
+};
 use crate::helpers::{error, handle_error, to_c_string, to_c_string_array, to_str, to_str_vec};
 
 /// Get which method is used for the load order.
@@ -171,11 +175,11 @@ pub unsafe extern "C" fn lo_set_load_order(
         };
 
         if let Err(x) = handle.set_load_order(&plugins) {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.save() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK
@@ -263,11 +267,11 @@ pub unsafe extern "C" fn lo_set_plugin_position(
         };
 
         if let Err(x) = handle.set_plugin_index(plugin, index) {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         if let Err(x) = handle.save() {
-            return handle_error(x);
+            return handle_error(&x);
         }
 
         LIBLO_OK
@@ -305,9 +309,8 @@ pub unsafe extern "C" fn lo_get_indexed_plugin(
 
         *plugin = ptr::null_mut();
 
-        let plugin_name = match handle.plugin_at(index) {
-            Some(x) => x,
-            None => return error(LIBLO_ERROR_INVALID_ARGS, "Plugin is not in the load order"),
+        let Some(plugin_name) = handle.plugin_at(index) else {
+            return error(LIBLO_ERROR_INVALID_ARGS, "Plugin is not in the load order");
         };
 
         match to_c_string(plugin_name) {

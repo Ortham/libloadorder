@@ -32,7 +32,6 @@ pub enum LoadOrderMethod {
     OpenMW,
 }
 
-#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[non_exhaustive]
 pub enum GameId {
@@ -52,25 +51,21 @@ pub enum GameId {
 impl GameId {
     pub fn to_esplugin_id(self) -> esplugin::GameId {
         match self {
-            GameId::Morrowind => esplugin::GameId::Morrowind,
-            GameId::OpenMW => esplugin::GameId::Morrowind,
+            GameId::Morrowind | GameId::OpenMW => esplugin::GameId::Morrowind,
             GameId::Oblivion => esplugin::GameId::Oblivion,
             GameId::Skyrim => esplugin::GameId::Skyrim,
-            GameId::SkyrimSE => esplugin::GameId::SkyrimSE,
-            GameId::SkyrimVR => esplugin::GameId::SkyrimSE,
+            GameId::SkyrimSE | GameId::SkyrimVR => esplugin::GameId::SkyrimSE,
             GameId::Fallout3 => esplugin::GameId::Fallout3,
             GameId::FalloutNV => esplugin::GameId::FalloutNV,
-            GameId::Fallout4 => esplugin::GameId::Fallout4,
-            GameId::Fallout4VR => esplugin::GameId::Fallout4,
+            GameId::Fallout4 | GameId::Fallout4VR => esplugin::GameId::Fallout4,
             GameId::Starfield => esplugin::GameId::Starfield,
         }
     }
 
     pub fn supports_light_plugins(self) -> bool {
-        use self::GameId::*;
         matches!(
             self,
-            Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR | Starfield
+            Self::Fallout4 | Self::Fallout4VR | Self::SkyrimSE | Self::SkyrimVR | Self::Starfield
         )
     }
 
@@ -83,6 +78,7 @@ impl GameId {
     }
 }
 
+#[expect(clippy::error_impl_error)]
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
@@ -144,15 +140,15 @@ impl From<windows::core::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::InvalidPath(path) => write!(f, "The path {path:?} is invalid"),
+            Error::InvalidPath(path) => write!(f, "The path \"{}\" is invalid", path.display()),
             Error::IoError(path, error) =>
-                write!(f, "I/O error involving the path {path:?}: {error}"),
+                write!(f, "I/O error involving the path \"{}\": {error}", path.display()),
             Error::NoFilename(path) =>
-                write!(f, "The plugin path {path:?} has no filename part"),
-            Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252, bytes are {bytes:02X?}"),
+                write!(f, "The plugin path \"{}\" has no filename part", path.display()),
+            Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252: {}", bytes.escape_ascii()),
             Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
             Error::PluginParsingError(path, err) => {
-                write!(f, "An error was encountered while parsing the plugin at {path:?}: {err}")
+                write!(f, "An error was encountered while parsing the plugin at \"{}\": {err}", path.display())
             }
             Error::PluginNotFound(name) => {
                 write!(f, "The plugin \"{name}\" is not in the load order")
@@ -183,11 +179,11 @@ impl fmt::Display for Error {
                 line,
                 column,
                 message,
-            } => write!(f, "Failed to parse ini file at {path:?}, error at line {line}, column {column}: {message}"),
+            } => write!(f, "Failed to parse ini file at \"{}\", error at line {line}, column {column}: {message}", path.display()),
             Error::VdfParsingError(path, message) =>
-                write!(f, "Failed to parse VDF file at {path:?}: {message}"),
+                write!(f, "Failed to parse VDF file at \"{}\": {message}", path.display()),
             Error::SystemError(code, message) =>
-                write!(f, "Error returned by the operating system, code {code}: {message:?}"),
+                write!(f, "Error returned by the operating system, code {code}: \"{}\"", message.as_encoded_bytes().escape_ascii()),
             Error::InvalidBlueprintPluginPosition{ name, pos, expected_pos } =>
                 write!(f, "Attempted to load the blueprint plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
         }
@@ -196,9 +192,9 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {
     fn cause(&self) -> Option<&dyn error::Error> {
-        match *self {
-            Error::IoError(_, ref x) => Some(x),
-            Error::PluginParsingError(_, ref x) => Some(x.as_ref()),
+        match self {
+            Error::IoError(_, x) => Some(x),
+            Error::PluginParsingError(_, x) => Some(x.as_ref()),
             _ => None,
         }
     }

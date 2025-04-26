@@ -18,7 +18,7 @@
  */
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{BufWriter, Read, Write};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use unicase::{eq, UniCase};
@@ -37,13 +37,13 @@ use crate::plugin::{trim_dot_ghost, trim_dot_ghost_unchecked, Plugin};
 use crate::GameId;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct TextfileBasedLoadOrder {
+pub(crate) struct TextfileBasedLoadOrder {
     game_settings: GameSettings,
     plugins: Vec<Plugin>,
 }
 
 impl TextfileBasedLoadOrder {
-    pub fn new(game_settings: GameSettings) -> Self {
+    pub(crate) fn new(game_settings: GameSettings) -> Self {
         Self {
             game_settings,
             plugins: Vec::new(),
@@ -72,7 +72,7 @@ impl TextfileBasedLoadOrder {
             let file = File::create(file_path).map_err(|e| Error::IoError(file_path.clone(), e))?;
             let mut writer = BufWriter::new(file);
             for plugin_name in self.plugin_names() {
-                writeln!(writer, "{}", plugin_name)
+                writeln!(writer, "{plugin_name}")
                     .map_err(|e| Error::IoError(file_path.clone(), e))?;
             }
         }
@@ -123,8 +123,7 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
         let load_order_file_exists = self
             .game_settings()
             .load_order_file()
-            .map(|p| p.exists())
-            .unwrap_or(false);
+            .is_some_and(|p| p.exists());
 
         let plugin_tuples = if load_order_file_exists {
             self.read_from_load_order_file()?
@@ -220,7 +219,10 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
     }
 }
 
-pub fn read_utf8_plugin_names<F, T>(file_path: &Path, line_mapper: F) -> Result<Vec<T>, Error>
+pub(super) fn read_utf8_plugin_names<F, T>(
+    file_path: &Path,
+    line_mapper: F,
+) -> Result<Vec<T>, Error>
 where
     F: Fn(&str) -> Option<T> + Send + Sync,
     T: Send,
@@ -229,9 +231,7 @@ where
         return Ok(Vec::new());
     }
 
-    let mut content: String = String::new();
-    let mut file = File::open(file_path).map_err(|e| Error::IoError(file_path.to_path_buf(), e))?;
-    file.read_to_string(&mut content)
+    let content = std::fs::read_to_string(file_path)
         .map_err(|e| Error::IoError(file_path.to_path_buf(), e))?;
 
     Ok(content.lines().filter_map(line_mapper).collect())
@@ -311,12 +311,9 @@ fn plugin_names_match(game_id: GameId, name1: &str, name2: &str) -> bool {
 mod tests {
     use super::*;
 
-    use crate::enums::GameId;
     use crate::load_order::tests::*;
-    use crate::tests::{copy_to_test_dir, set_file_timestamps};
-    use std::fs::{remove_dir_all, File};
-    use std::io::Write;
-    use std::path::Path;
+    use crate::tests::{copy_to_test_dir, set_file_timestamps, NON_ASCII};
+    use std::fs::remove_dir_all;
     use tempfile::tempdir;
 
     fn prepare(game_dir: &Path) -> TextfileBasedLoadOrder {
@@ -391,7 +388,7 @@ mod tests {
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
@@ -423,7 +420,7 @@ mod tests {
             "Blank - Master Dependent.esp",
             "Blank.esm",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
         write_load_order_file(load_order.game_settings(), &filenames);
@@ -435,7 +432,7 @@ mod tests {
             "Blank - Master Dependent.esm",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank.esp",
         ];
 
@@ -449,7 +446,7 @@ mod tests {
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
@@ -487,7 +484,7 @@ mod tests {
             "Blank.esp",
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
-            "Blàñk.esp",
+            NON_ASCII,
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
@@ -502,7 +499,7 @@ mod tests {
         assert!(load_order
             .index_of("Blank - Master Dependent.esp")
             .is_none());
-        assert!(load_order.index_of("Blàñk.esp").is_none());
+        assert!(load_order.index_of(NON_ASCII).is_none());
 
         load_order.load().unwrap();
 
@@ -510,7 +507,7 @@ mod tests {
         assert!(load_order
             .index_of("Blank - Master Dependent.esp")
             .is_some());
-        assert!(load_order.index_of("Blàñk.esp").is_some());
+        assert!(load_order.index_of(NON_ASCII).is_some());
     }
 
     #[test]
@@ -545,10 +542,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -558,10 +555,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(tmp_dir.path());
 
-        write_active_plugins_file(load_order.game_settings(), &["Blàñk.esp", "Blank.esm\r"]);
+        write_active_plugins_file(load_order.game_settings(), &[NON_ASCII, "Blank.esm\r"]);
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -573,11 +570,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["#Blank.esp", "Blàñk.esp", "Blank.esm"],
+            &["#Blank.esp", NON_ASCII, "Blank.esm"],
         );
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -589,11 +586,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
         load_order.load().unwrap();
-        let expected_filenames = vec!["Blank.esm", "Blàñk.esp"];
+        let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
@@ -614,9 +611,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(tmp_dir.path());
 
-        use std::fs::rename;
-
-        rename(
+        std::fs::rename(
             load_order
                 .game_settings()
                 .plugins_directory()
@@ -630,7 +625,7 @@ mod tests {
 
         let filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
@@ -642,7 +637,7 @@ mod tests {
 
         let expected_filenames = vec![
             "Blank.esm",
-            "Blàñk.esp",
+            NON_ASCII,
             "Blank - Master Dependent.esp",
             "Blank - Different.esp",
             "Blank.esp",
@@ -718,9 +713,9 @@ mod tests {
         load_order.plugins_mut().push(plugin);
 
         match load_order.save().unwrap_err() {
-            Error::EncodeError(s) => assert_eq!("Blȧnk.esm", s),
-            e => panic!("Expected encode error, got {:?}", e),
-        };
+            Error::EncodeError(s) => assert_eq!("Bl\u{227}nk.esm", s),
+            e => panic!("Expected encode error, got {e:?}"),
+        }
     }
 
     #[test]
@@ -749,10 +744,10 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
-        let filenames = vec!["Blàñk.esp", "missing.esp", "Blank.esm\r"];
+        let filenames = vec![NON_ASCII, "missing.esp", "Blank.esm\r"];
         write_load_order_file(load_order.game_settings(), &filenames);
 
         assert!(!load_order.is_self_consistent().unwrap());
@@ -765,11 +760,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
         // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
-        let filenames = vec!["Blàñk.esp", "Blank.esm\r", "missing.esp"];
+        let filenames = vec![NON_ASCII, "Blank.esm\r", "missing.esp"];
         write_load_order_file(load_order.game_settings(), &filenames);
 
         assert!(load_order.is_self_consistent().unwrap());
@@ -782,11 +777,11 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
         // loadorder.txt should be a case-insensitive sorted superset of plugins.txt.
-        let filenames = vec!["Blàñk.esp", "Blank.esm\r", "missing.esp"];
+        let filenames = vec![NON_ASCII, "Blank.esm\r", "missing.esp"];
 
         let mut file = File::create(load_order.game_settings().load_order_file().unwrap()).unwrap();
 
@@ -805,10 +800,10 @@ mod tests {
 
         write_active_plugins_file(
             load_order.game_settings(),
-            &["Blàñk.esp", "Blank.esm", "missing.esp"],
+            &[NON_ASCII, "Blank.esm", "missing.esp"],
         );
 
-        let expected_filenames = vec!["Blàñk.esp", "missing.esp", "Blank.esm\r"];
+        let expected_filenames = vec![NON_ASCII, "missing.esp", "Blank.esm\r"];
         write_load_order_file(load_order.game_settings(), &expected_filenames);
 
         assert!(!load_order.is_self_consistent().unwrap());
@@ -832,7 +827,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         loaded_plugin_names.pop();
@@ -851,7 +846,7 @@ mod tests {
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
@@ -868,7 +863,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         loaded_plugin_names.pop();
@@ -887,7 +882,7 @@ mod tests {
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         write_load_order_file(load_order.game_settings(), &loaded_plugin_names);
@@ -903,7 +898,7 @@ mod tests {
         let loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         let mut file = File::create(load_order.game_settings().load_order_file().unwrap()).unwrap();
@@ -925,7 +920,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         loaded_plugin_names.pop();
@@ -945,7 +940,7 @@ mod tests {
         let mut loaded_plugin_names: Vec<&str> = load_order
             .plugins
             .iter()
-            .map(|plugin| plugin.name())
+            .map(crate::plugin::Plugin::name)
             .collect();
 
         write_load_order_file(load_order.game_settings(), &loaded_plugin_names);

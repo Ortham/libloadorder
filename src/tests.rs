@@ -24,7 +24,9 @@ use std::time::{Duration, SystemTime};
 use crate::enums::GameId;
 use crate::game_settings::GameSettings;
 
-pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {
+pub(crate) const NON_ASCII: &str = "Bl\u{e0}\u{f1}k.esp";
+
+pub(crate) fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());
     let data_dir = game_settings.plugins_directory();
     if !data_dir.exists() {
@@ -33,7 +35,7 @@ pub fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSett
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
 
-pub fn copy_to_dir(from_path: &str, to_dir: &Path, to_file: &str, game_id: GameId) {
+pub(crate) fn copy_to_dir(from_path: &str, to_dir: &Path, to_file: &str, game_id: GameId) {
     let testing_plugins_dir = testing_plugins_dir(game_id);
     if !to_dir.exists() {
         create_dir_all(to_dir).unwrap();
@@ -61,21 +63,21 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
         .join(plugins_folder)
 }
 
-pub fn create_file(path: &Path) {
+pub(crate) fn create_file(path: &Path) {
     create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(path, "").unwrap();
 }
 
-pub fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
+pub(crate) fn set_timestamps<T: AsRef<str>>(plugins_directory: &Path, filenames: &[T]) {
     for (index, filename) in filenames.iter().enumerate() {
         set_file_timestamps(
             &plugins_directory.join(filename.as_ref()),
-            1321009871 + u64::try_from(index * 60).unwrap(),
+            1_321_009_871 + u64::try_from(index * 60).unwrap(),
         );
     }
 }
 
-pub fn set_file_timestamps(path: &Path, unix_seconds: u64) {
+pub(crate) fn set_file_timestamps(path: &Path, unix_seconds: u64) {
     let times = FileTimes::new()
         .set_accessed(SystemTime::UNIX_EPOCH)
         .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(unix_seconds));

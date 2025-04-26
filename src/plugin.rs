@@ -77,9 +77,8 @@ impl Plugin {
     }
 
     pub(crate) fn with_path(path: &Path, game_id: GameId, active: bool) -> Result<Plugin, Error> {
-        let filename = match path.file_name().and_then(OsStr::to_str) {
-            Some(n) => n,
-            None => return Err(Error::NoFilename(path.to_path_buf())),
+        let Some(filename) = path.file_name().and_then(OsStr::to_str) else {
+            return Err(Error::NoFilename(path.to_path_buf()));
         };
 
         if !has_plugin_extension(filename, game_id) {
@@ -106,7 +105,7 @@ impl Plugin {
             active,
             modification_time,
             data,
-            name: trim_dot_ghost(filename, game_id).to_string(),
+            name: trim_dot_ghost(filename, game_id).to_owned(),
             game_id,
         })
     }
@@ -203,7 +202,7 @@ impl Plugin {
     }
 }
 
-pub fn has_plugin_extension(filename: &str, game: GameId) -> bool {
+pub(crate) fn has_plugin_extension(filename: &str, game: GameId) -> bool {
     let valid_extensions = if game == GameId::OpenMW {
         VALID_EXTENSIONS_OPENMW
     } else if game.supports_light_plugins() {
@@ -217,7 +216,7 @@ pub fn has_plugin_extension(filename: &str, game: GameId) -> bool {
         .any(|e| iends_with_ascii(filename, e))
 }
 
-pub fn iends_with_ascii(string: &str, suffix: &str) -> bool {
+pub(crate) fn iends_with_ascii(string: &str, suffix: &str) -> bool {
     // as_bytes().into_iter() is faster than bytes().
     string.len() >= suffix.len()
         && string
@@ -228,7 +227,7 @@ pub fn iends_with_ascii(string: &str, suffix: &str) -> bool {
             .all(|(string_byte, suffix_byte)| string_byte.eq_ignore_ascii_case(suffix_byte))
 }
 
-pub fn trim_dot_ghost(string: &str, game_id: GameId) -> &str {
+pub(crate) fn trim_dot_ghost(string: &str, game_id: GameId) -> &str {
     if game_id.allow_plugin_ghosting() {
         trim_dot_ghost_unchecked(string)
     } else {
@@ -236,11 +235,16 @@ pub fn trim_dot_ghost(string: &str, game_id: GameId) -> &str {
     }
 }
 
-pub fn trim_dot_ghost_unchecked(string: &str) -> &str {
+pub(crate) fn trim_dot_ghost_unchecked(string: &str) -> &str {
     use crate::ghostable_path::GHOST_FILE_EXTENSION;
 
-    if iends_with_ascii(string, GHOST_FILE_EXTENSION) {
-        &string[..(string.len() - GHOST_FILE_EXTENSION.len())]
+    let suffix_start_index = string.len().saturating_sub(GHOST_FILE_EXTENSION.len());
+    if let Some((first, last)) = string.split_at_checked(suffix_start_index) {
+        if last.eq_ignore_ascii_case(GHOST_FILE_EXTENSION) {
+            first
+        } else {
+            string
+        }
     } else {
         string
     }
@@ -259,7 +263,7 @@ mod tests {
     use super::*;
 
     use crate::tests::{copy_to_test_dir, create_file};
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::tempdir;
 
@@ -322,9 +326,9 @@ mod tests {
         copy_to_test_dir(name, ghosted_name, &settings);
         match Plugin::with_active(ghosted_name, &settings, false).unwrap_err() {
             Error::InvalidPath(p) => {
-                assert_eq!(game_dir.join("resources/vfs").join(ghosted_name), p)
+                assert_eq!(game_dir.join("resources/vfs").join(ghosted_name), p);
             }
-            e => panic!("Expected invalid path error, got {:?}", e),
+            e => panic!("Expected invalid path error, got {e:?}"),
         }
     }
 
@@ -620,7 +624,7 @@ mod tests {
             active: false,
             modification_time: SystemTime::now(),
             data,
-            name: plugin_name.to_string(),
+            name: plugin_name.to_owned(),
             game_id: GameId::OpenMW,
         };
 
