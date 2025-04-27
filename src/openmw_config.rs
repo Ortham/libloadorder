@@ -110,7 +110,7 @@ fn default_user_config_dir(game_path: &Path) -> Result<PathBuf, Error> {
         // as part of a Flatpak app.
         std::env::var_os("HOST_XDG_CONFIG_HOME")
             .and_then(is_absolute_path)
-            .or_else(|| dirs::config_dir())
+            .or_else(dirs::config_dir)
             .map(|p| p.join("openmw"))
     }
     .ok_or_else(|| Error::NoUserConfigPath)
@@ -126,7 +126,7 @@ fn default_user_data_dir(is_flatpak_install: bool) -> Result<PathBuf, Error> {
         // running as part of a Flatpak app.
         std::env::var_os("HOST_XDG_DATA_HOME")
             .and_then(is_absolute_path)
-            .or_else(|| dirs::data_local_dir())
+            .or_else(dirs::data_local_dir)
             .map(|p| p.join("openmw"))
     }
     .ok_or_else(|| Error::NoUserDataPath)
@@ -235,11 +235,7 @@ fn default_global_data_dir(game_path: &Path) -> PathBuf {
 #[cfg(not(windows))]
 fn is_absolute_path(value: OsString) -> Option<PathBuf> {
     let path = PathBuf::from(value);
-    if path.is_absolute() {
-        Some(path)
-    } else {
-        None
-    }
+    path.is_absolute().then_some(path)
 }
 
 #[cfg(not(windows))]
@@ -1203,7 +1199,7 @@ mod tests {
     #[test]
     #[cfg(not(windows))]
     fn resolve_path_value_should_replace_app_prefix_if_flatpak_app_path_is_defined() {
-        let value = "/app/path/to/somewhere".to_string();
+        let value = "/app/path/to/somewhere".to_owned();
         let resolved = resolve_path_value(value, Path::new(""), &fixed_paths());
 
         assert_eq!(
@@ -1218,7 +1214,7 @@ mod tests {
         let value = "/app/path/to/somewhere";
         let mut fixed_paths = fixed_paths();
         fixed_paths.flatpak_app = None;
-        let resolved = resolve_path_value(value.to_string(), Path::new(""), &fixed_paths);
+        let resolved = resolve_path_value(value.to_owned(), Path::new(""), &fixed_paths);
 
         assert_eq!(Some(value.into()), resolved);
     }

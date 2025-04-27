@@ -17,6 +17,16 @@ jobs:
           cargo fmt -- --version
           cargo fmt --all -- --check
 
+  clippy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run clippy
+        run: |
+          cargo clippy -- --version
+          cargo clippy --all --all-targets -- -Dwarnings
+
   build:
     strategy:
       matrix:

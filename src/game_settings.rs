@@ -343,7 +343,7 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 #[cfg(not(windows))]
 fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Error> {
     if game_id == GameId::OpenMW {
-        return openmw_config::user_config_dir(game_path).map(Some);
+        openmw_config::user_config_dir(game_path).map(Some)
     } else if appdata_folder_name(game_id, game_path).is_none() {
         // There is no local path, the value doesn't matter.
         Ok(None)

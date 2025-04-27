@@ -728,7 +728,7 @@ mod tests {
             crate::lo_free_string_array(plugins, num_plugins);
         }
 
-        std::fs::create_dir_all(&ini_path.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(ini_path.parent().unwrap()).unwrap();
         std::fs::write(&ini_path, "[General]\nsTestFile1=Blank.esp").unwrap();
 
         unsafe {

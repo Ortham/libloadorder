@@ -260,6 +260,10 @@ fn get_windows_system_language() -> Result<Option<String>, Error> {
 }
 
 #[cfg(not(windows))]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "To match the Windows function signature"
+)]
 fn get_windows_system_language() -> Result<Option<String>, Error> {
     Ok(None)
 }
