@@ -8,6 +8,7 @@ Libloadorder is a cross-platform library for manipulating the load order and
 active status of plugins for the following games:
 
 - TES III: Morrowind
+- OpenMW
 - TES IV: Oblivion
 - TES V: Skyrim
 - TES V: Skyrim Special Edition
@@ -16,6 +17,7 @@ active status of plugins for the following games:
 - Fallout: New Vegas
 - Fallout 4
 - Fallout 4 VR
+- Starfield
 
 This repository hosts two Rust crates: `libloadorder` is the Rust library, and
 `libloadorder-ffi` is the C FFI that wraps it. The `doc` directory also hosts an
