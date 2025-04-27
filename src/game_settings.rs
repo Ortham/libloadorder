@@ -107,6 +107,8 @@ const MS_FO4_VAULT_TEC_PATH: &str = "../../Fallout 4- Vault-Tec Workshop (PC)/Co
 
 const PLUGINS_TXT: &str = "Plugins.txt";
 
+const OBLIVION_REMASTERED_RELATIVE_DATA_PATH: &str = "OblivionRemastered/Content/Dev/ObvData/Data";
+
 impl GameSettings {
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
         let local_path = local_path(game_id, game_path)?.unwrap_or_default();
@@ -130,7 +132,7 @@ impl GameSettings {
         my_games_path: PathBuf,
     ) -> Result<GameSettings, Error> {
         let plugins_file_path = plugins_file_path(game_id, game_path, local_path)?;
-        let load_order_path = load_order_path(game_id, local_path);
+        let load_order_path = load_order_path(game_id, local_path, &plugins_file_path);
         let plugins_directory = plugins_directory(game_id, game_path, local_path)?;
         let additional_plugins_directories =
             additional_plugins_directories(game_id, game_path, &my_games_path)?;
@@ -167,7 +169,7 @@ impl GameSettings {
             GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => {
                 LoadOrderMethod::Timestamp
             }
-            GameId::Skyrim => LoadOrderMethod::Textfile,
+            GameId::Skyrim | GameId::OblivionRemastered => LoadOrderMethod::Textfile,
             GameId::SkyrimSE
             | GameId::SkyrimVR
             | GameId::Fallout4
@@ -189,7 +191,7 @@ impl GameSettings {
     pub fn master_file(&self) -> &'static str {
         match self.id {
             GameId::Morrowind | GameId::OpenMW => "Morrowind.esm",
-            GameId::Oblivion => "Oblivion.esm",
+            GameId::Oblivion | GameId::OblivionRemastered => "Oblivion.esm",
             GameId::Skyrim | GameId::SkyrimSE | GameId::SkyrimVR => "Skyrim.esm",
             GameId::Fallout3 => "Fallout3.esm",
             GameId::FalloutNV => "FalloutNV.esm",
@@ -356,7 +358,7 @@ fn local_path(game_id: GameId, game_path: &Path) -> Result<Option<PathBuf>, Erro
 // The local path can vary depending on where the game was bought from.
 fn appdata_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     match game_id {
-        GameId::Morrowind | GameId::OpenMW => None,
+        GameId::Morrowind | GameId::OpenMW | GameId::OblivionRemastered => None,
         GameId::Oblivion => Some("Oblivion"),
         GameId::Skyrim => Some(skyrim_appdata_folder_name(game_path)),
         GameId::SkyrimSE => Some(skyrim_se_appdata_folder_name(game_path)),
@@ -444,6 +446,7 @@ fn my_games_path(
 fn my_games_folder_name(game_id: GameId, game_path: &Path) -> Option<&'static str> {
     match game_id {
         GameId::OpenMW => Some("OpenMW"),
+        GameId::OblivionRemastered => Some("Oblivion Remastered"),
         GameId::Skyrim => Some(skyrim_my_games_folder_name(game_path)),
         // For all other games the name is the same as the AppData\Local folder name.
         _ => appdata_folder_name(game_id, game_path),
@@ -465,7 +468,7 @@ fn is_microsoft_store_install(game_id: GameId, game_path: &Path) -> bool {
         GameId::Morrowind | GameId::Oblivion | GameId::Fallout3 | GameId::FalloutNV => game_path
             .parent()
             .is_some_and(|parent| parent.join(APPX_MANIFEST).exists()),
-        GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield => {
+        GameId::SkyrimSE | GameId::Fallout4 | GameId::Starfield | GameId::OblivionRemastered => {
             game_path.join(APPX_MANIFEST).exists()
         }
         _ => false,
@@ -501,6 +504,7 @@ fn plugins_directory(
     match game_id {
         GameId::OpenMW => openmw_config::resources_vfs_path(game_path, local_path),
         GameId::Morrowind => Ok(game_path.join("Data Files")),
+        GameId::OblivionRemastered => Ok(game_path.join(OBLIVION_REMASTERED_RELATIVE_DATA_PATH)),
         _ => Ok(game_path.join("Data")),
     }
 }
@@ -529,9 +533,15 @@ fn additional_plugins_directories(
     }
 }
 
-fn load_order_path(game_id: GameId, local_path: &Path) -> Option<PathBuf> {
+fn load_order_path(
+    game_id: GameId,
+    local_path: &Path,
+    plugins_file_path: &Path,
+) -> Option<PathBuf> {
+    const LOADORDER_TXT: &str = "loadorder.txt";
     match game_id {
-        GameId::Skyrim => Some(local_path.join("loadorder.txt")),
+        GameId::Skyrim => Some(local_path.join(LOADORDER_TXT)),
+        GameId::OblivionRemastered => plugins_file_path.parent().map(|p| p.join(LOADORDER_TXT)),
         _ => None,
     }
 }
@@ -545,6 +555,9 @@ fn plugins_file_path(
         GameId::OpenMW => Ok(local_path.join("openmw.cfg")),
         GameId::Morrowind => Ok(game_path.join("Morrowind.ini")),
         GameId::Oblivion => oblivion_plugins_file_path(game_path, local_path),
+        GameId::OblivionRemastered => Ok(game_path
+            .join(OBLIVION_REMASTERED_RELATIVE_DATA_PATH)
+            .join(PLUGINS_TXT)),
         // Although the launchers for Fallout 3, Fallout NV and Skyrim all create plugins.txt, the
         // games themselves read Plugins.txt.
         _ => Ok(local_path.join(PLUGINS_TXT)),

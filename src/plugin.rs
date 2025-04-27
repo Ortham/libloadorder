@@ -127,7 +127,7 @@ impl Plugin {
     }
 
     pub fn is_master_file(&self) -> bool {
-        self.game_id != GameId::OpenMW && self.data.is_master_file()
+        self.game_id.treats_master_files_differently() && self.data.is_master_file()
     }
 
     pub fn is_light_plugin(&self) -> bool {
@@ -438,6 +438,24 @@ mod tests {
         let plugin = Plugin::new(name, &settings).unwrap();
 
         assert!(!plugin.is_master_file());
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let plugin = Plugin::new("Blank.esp", &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+
+        copy_to_test_dir("Blank.esm", "Blank.esm", &settings);
+        let plugin = Plugin::new("Blank.esm", &settings).unwrap();
+
+        assert!(!plugin.is_master_file());
+    }
+
+    #[test]
+    fn is_master_file_should_be_false_for_all_oblivion_remastered_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::OblivionRemastered, game_dir);
 
         copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
         let plugin = Plugin::new("Blank.esp", &settings).unwrap();

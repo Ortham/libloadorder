@@ -47,7 +47,7 @@ fn testing_plugins_dir(game_id: GameId) -> PathBuf {
     use GameId::*;
     let game_folder = match game_id {
         Morrowind | OpenMW => "Morrowind",
-        Oblivion => "Oblivion",
+        Oblivion | OblivionRemastered => "Oblivion",
         Fallout4 | Fallout4VR | SkyrimSE | SkyrimVR => "SkyrimSE",
         Starfield => "Starfield",
         _ => "Skyrim",

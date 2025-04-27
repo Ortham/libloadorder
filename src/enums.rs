@@ -48,13 +48,14 @@ pub enum GameId {
     SkyrimVR,
     Starfield,
     OpenMW,
+    OblivionRemastered,
 }
 
 impl GameId {
     pub fn to_esplugin_id(self) -> esplugin::GameId {
         match self {
             GameId::Morrowind | GameId::OpenMW => esplugin::GameId::Morrowind,
-            GameId::Oblivion => esplugin::GameId::Oblivion,
+            GameId::Oblivion | GameId::OblivionRemastered => esplugin::GameId::Oblivion,
             GameId::Skyrim => esplugin::GameId::Skyrim,
             GameId::SkyrimSE | GameId::SkyrimVR => esplugin::GameId::SkyrimSE,
             GameId::Fallout3 => esplugin::GameId::Fallout3,
@@ -77,6 +78,10 @@ impl GameId {
 
     pub fn allow_plugin_ghosting(self) -> bool {
         self != GameId::OpenMW
+    }
+
+    pub(crate) fn treats_master_files_differently(self) -> bool {
+        !matches!(self, GameId::OpenMW | GameId::OblivionRemastered)
     }
 }
 
@@ -294,6 +299,23 @@ mod tests {
         assert!(GameId::Fallout4.allow_plugin_ghosting());
         assert!(GameId::Fallout4VR.allow_plugin_ghosting());
         assert!(GameId::Starfield.allow_plugin_ghosting());
+    }
+
+    #[test]
+    fn game_id_treats_master_files_differently_should_be_false_for_openmw_and_oblivion_remastered_only(
+    ) {
+        assert!(!GameId::OpenMW.treats_master_files_differently());
+        assert!(GameId::Morrowind.treats_master_files_differently());
+        assert!(GameId::Oblivion.treats_master_files_differently());
+        assert!(!GameId::OblivionRemastered.treats_master_files_differently());
+        assert!(GameId::Skyrim.treats_master_files_differently());
+        assert!(GameId::SkyrimSE.treats_master_files_differently());
+        assert!(GameId::SkyrimVR.treats_master_files_differently());
+        assert!(GameId::Fallout3.treats_master_files_differently());
+        assert!(GameId::FalloutNV.treats_master_files_differently());
+        assert!(GameId::Fallout4.treats_master_files_differently());
+        assert!(GameId::Fallout4VR.treats_master_files_differently());
+        assert!(GameId::Starfield.treats_master_files_differently());
     }
 
     #[test]

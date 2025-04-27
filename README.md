@@ -10,6 +10,7 @@ active status of plugins for the following games:
 - TES III: Morrowind
 - OpenMW
 - TES IV: Oblivion
+- TES IV: Oblivion Remastered
 - TES V: Skyrim
 - TES V: Skyrim Special Edition
 - TES V: Skyrim VR

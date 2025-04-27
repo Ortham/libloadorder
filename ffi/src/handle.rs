@@ -31,8 +31,9 @@ use loadorder::WritableLoadOrder;
 use crate::constants::{
     LIBLO_ERROR_INVALID_ARGS, LIBLO_ERROR_PANICKED, LIBLO_ERROR_PATH_ENCODE_FAIL,
     LIBLO_ERROR_POISONED_THREAD_LOCK, LIBLO_GAME_FNV, LIBLO_GAME_FO3, LIBLO_GAME_FO4,
-    LIBLO_GAME_FO4VR, LIBLO_GAME_OPENMW, LIBLO_GAME_STARFIELD, LIBLO_GAME_TES3, LIBLO_GAME_TES4,
-    LIBLO_GAME_TES5, LIBLO_GAME_TES5SE, LIBLO_GAME_TES5VR, LIBLO_OK, LIBLO_WARN_LO_MISMATCH,
+    LIBLO_GAME_FO4VR, LIBLO_GAME_OBLIVION_REMASTERED, LIBLO_GAME_OPENMW, LIBLO_GAME_STARFIELD,
+    LIBLO_GAME_TES3, LIBLO_GAME_TES4, LIBLO_GAME_TES5, LIBLO_GAME_TES5SE, LIBLO_GAME_TES5VR,
+    LIBLO_OK, LIBLO_WARN_LO_MISMATCH,
 };
 use crate::helpers::{
     error, handle_error, to_c_string, to_c_string_array, to_path_buf_vec, to_str,
@@ -62,6 +63,7 @@ fn map_game_id(game_id: u32) -> Result<GameId, u32> {
         x if x == LIBLO_GAME_FO4VR => Ok(GameId::Fallout4VR),
         x if x == LIBLO_GAME_STARFIELD => Ok(GameId::Starfield),
         x if x == LIBLO_GAME_OPENMW => Ok(GameId::OpenMW),
+        x if x == LIBLO_GAME_OBLIVION_REMASTERED => Ok(GameId::OblivionRemastered),
         _ => Err(LIBLO_ERROR_INVALID_ARGS),
     }
 }

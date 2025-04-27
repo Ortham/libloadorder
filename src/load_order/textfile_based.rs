@@ -140,7 +140,9 @@ impl WritableLoadOrder for TextfileBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
-        hoist_masters(&mut self.plugins)?;
+        if self.game_settings.id().treats_master_files_differently() {
+            hoist_masters(&mut self.plugins)?;
+        }
 
         Ok(())
     }
@@ -317,7 +319,15 @@ mod tests {
     use tempfile::tempdir;
 
     fn prepare(game_dir: &Path) -> TextfileBasedLoadOrder {
-        let mut game_settings = game_settings_for_test(GameId::Skyrim, game_dir);
+        prepare_game(GameId::Skyrim, game_dir)
+    }
+
+    fn prepare_oblivion_remastered(game_dir: &Path) -> TextfileBasedLoadOrder {
+        prepare_game(GameId::OblivionRemastered, game_dir)
+    }
+
+    fn prepare_game(game_id: GameId, game_dir: &Path) -> TextfileBasedLoadOrder {
+        let mut game_settings = game_settings_for_test(game_id, game_dir);
         mock_game_files(&mut game_settings);
 
         let plugins = vec![
@@ -437,6 +447,33 @@ mod tests {
         ];
 
         assert_eq!(expected_filenames, load_order.plugin_names());
+    }
+
+    #[test]
+    fn load_should_not_hoist_masters_for_oblivion_remastered() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare_oblivion_remastered(tmp_dir.path());
+
+        let master_dependent_master = "Blank - Master Dependent.esm";
+        copy_to_test_dir(
+            master_dependent_master,
+            master_dependent_master,
+            load_order.game_settings(),
+        );
+
+        let filenames = vec![
+            "Blank - Master Dependent.esm",
+            "Blank - Master Dependent.esp",
+            "Blank.esm",
+            "Blank - Different.esp",
+            NON_ASCII,
+            "Blank.esp",
+        ];
+        write_load_order_file(load_order.game_settings(), &filenames);
+
+        load_order.load().unwrap();
+
+        assert_eq!(filenames, load_order.plugin_names());
     }
 
     #[test]

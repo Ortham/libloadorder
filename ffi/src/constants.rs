@@ -159,3 +159,7 @@ pub static LIBLO_GAME_STARFIELD: c_uint = 10;
 /// Game code for OpenMW.
 #[no_mangle]
 pub static LIBLO_GAME_OPENMW: c_uint = 11;
+
+/// Game code for The Elder Scrolls IV: Oblivion Remastered.
+#[no_mangle]
+pub static LIBLO_GAME_OBLIVION_REMASTERED: c_uint = 12;

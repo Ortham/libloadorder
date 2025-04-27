@@ -125,7 +125,7 @@ pub(crate) fn test_files(
     my_games_path: &Path,
 ) -> Result<Vec<String>, Error> {
     match game_id {
-        GameId::Morrowind | GameId::OpenMW => Ok(Vec::new()),
+        GameId::Morrowind | GameId::OpenMW | GameId::OblivionRemastered => Ok(Vec::new()),
         GameId::Oblivion => {
             let ini_path = game_path.join("Oblivion.ini");
 
