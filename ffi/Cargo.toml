@@ -3,7 +3,6 @@ name = "libloadorder-ffi"
 version = "18.3.0"
 authors = ["Oliver Hamlet <oliver@ortham.net>"]
 description = "A wrapper library providing a C FFI for libloadorder."
-documentation = "https://docs.rs/libloadorder-ffi"
 repository = "https://github.com/Ortham/libloadorder.git"
 readme = "../README.md"
 categories = ["games"]

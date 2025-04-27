@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/Ortham/libloadorder/workflows/CI/badge.svg?branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/Ortham/libloadorder/badge.svg?branch=master)](https://coveralls.io/github/Ortham/libloadorder?branch=master)
-[![docs](https://docs.rs/libloadorder-ffi/badge.svg)](https://docs.rs/crate/libloadorder-ffi)
+[![docs](https://docs.rs/libloadorder/badge.svg)](https://docs.rs/crate/libloadorder)
 
 Libloadorder is a cross-platform library for manipulating the load order and
 active status of plugins for the following games:
