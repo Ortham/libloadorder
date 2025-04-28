@@ -3,6 +3,28 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.4.0] - 2025-05-01
+
+### Added
+
+- Support for TES IV: Oblivion Remastered using the new
+  `GameId::OblivionRemastered` enum variant. Oblivion Remastered uses the
+  textfile-based load order system, and libloadorder will read and write
+  `loadorder.txt` next to `Plugins.txt` in the game's Data directory.
+
+### Fixed
+
+- A panic would occur when reading OpenMW config that did not define any user
+  config paths. An error is now returned instead.
+
+### Changed
+
+- Binary content in error messages (including paths) will now be output as ASCII
+  strings with character escapes instead of hexadecimal byte arrays.
+- Some code that used functions that could panic has been rewritten to avoid
+  the risk of changes accidentally introducing panics.
+- Updated esplugin to 6.1.3.
+
 ## [18.3.0] - 2025-03-26
 
 ### Added

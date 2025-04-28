@@ -413,7 +413,7 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 
 [[package]]
 name = "libloadorder"
-version = "18.3.0"
+version = "18.4.0"
 dependencies = [
  "criterion",
  "dirs",
@@ -430,7 +430,7 @@ dependencies = [
 
 [[package]]
 name = "libloadorder-ffi"
-version = "18.3.0"
+version = "18.4.0"
 dependencies = [
  "libc",
  "libloadorder",

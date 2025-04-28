@@ -3,6 +3,24 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [18.4.0] - 2025-05-01
+
+### Added
+
+- Support for TES IV: Oblivion Remastered using the new
+  `LIBLO_GAME_OBLIVION_REMASTERED` constant.
+
+### Fixed
+
+- If an error message contains a nul byte, instead of using it and causing the
+  message to be truncated and leaking the rest of the string, the nul byte will
+  be escaped and that escaped message will be used instead.
+
+### Changed
+
+- Updated to libloadorder v18.4.0.
+- Updated to libc v0.2.172.
+
 ## [18.3.0] - 2025-03-26
 
 ### Changed
