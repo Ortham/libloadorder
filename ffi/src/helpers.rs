@@ -34,8 +34,9 @@ use crate::constants::{
 
 pub(crate) fn error(code: c_uint, message: &str) -> c_uint {
     ERROR_MESSAGE.with(|f| {
-        *f.borrow_mut() =
-            CString::new(message.as_bytes()).unwrap_or(c"Failed to retrieve error message".into());
+        *f.borrow_mut() = CString::new(message.as_bytes())
+            .or_else(|_e| CString::new(message.replace('\0', "\\0").as_bytes()))
+            .unwrap_or_else(|_e| c"Failed to retrieve error message".into());
     });
     code
 }
