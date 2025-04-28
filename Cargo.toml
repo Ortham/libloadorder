@@ -3,18 +3,13 @@ name = "libloadorder"
 version = "18.3.0"
 authors = ["Oliver Hamlet <oliver@ortham.net>"]
 description = "A cross-platform library for manipulating the load order and active status of plugins for the Elder Scrolls and Fallout games."
-documentation = "https://docs.rs/libloadorder"
 repository = "https://github.com/Ortham/libloadorder.git"
-readme = "README.md"
 categories = ["games", "parsing"]
 license = "GPL-3.0"
 edition = "2021"
 exclude = [
     "target/*",
 ]
-
-[badges]
-coveralls = { repository = "Ortham/libloadorder" }
 
 [dependencies]
 dirs = "6.0"
