@@ -21,7 +21,9 @@ use std::error;
 use std::ffi::OsString;
 use std::fmt;
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
+use std::slice::EscapeAscii;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[non_exhaustive]
@@ -140,15 +142,15 @@ impl From<windows::core::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::InvalidPath(path) => write!(f, "The path \"{}\" is invalid", path.display()),
+            Error::InvalidPath(path) => write!(f, "The path \"{}\" is invalid", escape_ascii(path)),
             Error::IoError(path, error) =>
-                write!(f, "I/O error involving the path \"{}\": {error}", path.display()),
+                write!(f, "I/O error involving the path \"{}\": {error}", escape_ascii(path)),
             Error::NoFilename(path) =>
-                write!(f, "The plugin path \"{}\" has no filename part", path.display()),
+                write!(f, "The plugin path \"{}\" has no filename part", escape_ascii(path)),
             Error::DecodeError(bytes) => write!(f, "String could not be decoded from Windows-1252: {}", bytes.escape_ascii()),
             Error::EncodeError(string) => write!(f, "The string \"{string}\" could not be encoded to Windows-1252"),
             Error::PluginParsingError(path, err) => {
-                write!(f, "An error was encountered while parsing the plugin at \"{}\": {err}", path.display())
+                write!(f, "An error was encountered while parsing the plugin at \"{}\": {err}", escape_ascii(path))
             }
             Error::PluginNotFound(name) => {
                 write!(f, "The plugin \"{name}\" is not in the load order")
@@ -179,9 +181,9 @@ impl fmt::Display for Error {
                 line,
                 column,
                 message,
-            } => write!(f, "Failed to parse ini file at \"{}\", error at line {line}, column {column}: {message}", path.display()),
+            } => write!(f, "Failed to parse ini file at \"{}\", error at line {line}, column {column}: {message}", escape_ascii(path)),
             Error::VdfParsingError(path, message) =>
-                write!(f, "Failed to parse VDF file at \"{}\": {message}", path.display()),
+                write!(f, "Failed to parse VDF file at \"{}\": {message}", escape_ascii(path)),
             Error::SystemError(code, message) =>
                 write!(f, "Error returned by the operating system, code {code}: \"{}\"", message.as_encoded_bytes().escape_ascii()),
             Error::InvalidBlueprintPluginPosition{ name, pos, expected_pos } =>
@@ -198,6 +200,10 @@ impl error::Error for Error {
             _ => None,
         }
     }
+}
+
+fn escape_ascii(path: &Path) -> EscapeAscii {
+    path.as_os_str().as_encoded_bytes().escape_ascii()
 }
 
 #[cfg(test)]

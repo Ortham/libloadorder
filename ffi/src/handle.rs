@@ -117,7 +117,8 @@ pub unsafe extern "C" fn lo_create_handle(
             return error(
                 LIBLO_ERROR_INVALID_ARGS,
                 &format!(
-                    "Given game path \"{game_path:?}\" is not a valid directory"
+                    "Given game path \"{}\" is not a valid directory",
+                    game_path.as_os_str().as_encoded_bytes().escape_ascii()
                 ),
             );
         }
@@ -138,7 +139,8 @@ pub unsafe extern "C" fn lo_create_handle(
                 return error(
                     LIBLO_ERROR_INVALID_ARGS,
                     &format!(
-                        "Given local data path \"{local_path:?}\" exists but is not a valid directory"
+                        "Given local data path \"{}\" exists but is not a valid directory",
+                        local_path.as_os_str().as_encoded_bytes().escape_ascii()
                     ),
                 );
             }
