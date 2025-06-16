@@ -247,7 +247,7 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
         if load_order.index_of(plugin_name).is_some()
             && !active_plugin_names.iter().any(|p| eq(*p, plugin_name))
         {
-            return Err(Error::ImplicitlyActivePlugin(plugin_name.to_string()));
+            return Err(Error::ImplicitlyActivePlugin(plugin_name.clone()));
         }
     }
 

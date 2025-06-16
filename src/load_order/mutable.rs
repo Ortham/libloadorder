@@ -205,7 +205,7 @@ pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + S
             .iter()
             .rev()
             .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
-            .map(|(filename, active)| (filename.to_string(), *active))
+            .map(|(filename, active)| (filename.clone(), *active))
             .collect();
 
         unique_tuples.reverse();
