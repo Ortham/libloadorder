@@ -88,3 +88,13 @@ pub(crate) fn set_file_timestamps(path: &Path, unix_seconds: u64) {
         .set_times(times)
         .unwrap();
 }
+
+#[cfg(windows)]
+pub(crate) fn symlink_file(original: &Path, link: &Path) {
+    std::os::windows::fs::symlink_file(original, link).unwrap();
+}
+
+#[cfg(unix)]
+pub(crate) fn symlink_file(original: &Path, link: &Path) {
+    std::os::unix::fs::symlink(original, link).unwrap();
+}

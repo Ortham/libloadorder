@@ -56,7 +56,7 @@
     clippy::exit,
     clippy::exhaustive_enums,
     clippy::expect_used,
-    // clippy::filetype_is_file,
+    clippy::filetype_is_file,
     clippy::float_cmp_const,
     clippy::fn_to_numeric_cast_any,
     clippy::get_unwrap,
@@ -111,12 +111,13 @@
     clippy::unwrap_in_result,
     clippy::unwrap_used,
     clippy::use_debug,
-    clippy::verbose_file_reads,
+    clippy::verbose_file_reads
 )]
 #![cfg_attr(
     test,
     allow(
         clippy::assertions_on_result_states,
+        clippy::filetype_is_file,
         clippy::indexing_slicing,
         clippy::panic,
         clippy::unwrap_used,

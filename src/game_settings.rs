@@ -18,11 +18,12 @@
  */
 
 use std::cmp::Ordering;
-use std::fs::{read_dir, DirEntry, File};
+use std::fs::{read_dir, DirEntry, File, FileType};
 use std::io::{BufRead, BufReader};
 use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use crate::enums::{Error, GameId, LoadOrderMethod};
 use crate::ini::{test_files, use_my_games_directory};
@@ -624,7 +625,7 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
         .read_dir()
         .map_err(|e| Error::IoError(plugins_path.to_path_buf(), e))?
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
+        .filter(|e| is_file_type_supported(e, GameId::FalloutNV))
         .filter(|e| {
             e.path()
                 .extension()
@@ -647,6 +648,35 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
     }
 
     Ok(plugin_names)
+}
+
+fn is_file_type_supported(dir_entry: &DirEntry, game_id: GameId) -> bool {
+    dir_entry
+        .file_type()
+        .map(|f| keep_file_type(f, game_id))
+        .unwrap_or(false)
+}
+
+#[cfg(unix)]
+#[expect(
+    clippy::filetype_is_file,
+    reason = "Only files and symlinks are supported"
+)]
+fn keep_file_type(f: FileType, _game_id: GameId) -> bool {
+    f.is_file() || f.is_symlink()
+}
+
+#[cfg(windows)]
+#[expect(
+    clippy::filetype_is_file,
+    reason = "Only files and sometimes symlinks are supported"
+)]
+fn keep_file_type(f: FileType, game_id: GameId) -> bool {
+    if matches!(game_id, GameId::OblivionRemastered | GameId::OpenMW) {
+        f.is_file() || f.is_symlink()
+    } else {
+        f.is_file()
+    }
 }
 
 fn early_loading_plugins(
@@ -794,8 +824,8 @@ fn plugin_path(
 fn sort_plugins_dir_entries(a: &DirEntry, b: &DirEntry) -> Ordering {
     // Sort by file modification timestamps, in ascending order. If two
     // timestamps are equal, sort by filenames in descending order.
-    let m_a = a.metadata().and_then(|m| m.modified()).ok();
-    let m_b = b.metadata().and_then(|m| m.modified()).ok();
+    let m_a = get_target_modified_timestamp(a);
+    let m_b = get_target_modified_timestamp(b);
 
     match m_a.cmp(&m_b) {
         Ordering::Equal => a.file_name().cmp(&b.file_name()).reverse(),
@@ -806,13 +836,23 @@ fn sort_plugins_dir_entries(a: &DirEntry, b: &DirEntry) -> Ordering {
 fn sort_plugins_dir_entries_starfield(a: &DirEntry, b: &DirEntry) -> Ordering {
     // Sort by file modification timestamps, in ascending order. If two
     // timestamps are equal, sort by filenames in ascending order.
-    let m_a = a.metadata().and_then(|m| m.modified()).ok();
-    let m_b = b.metadata().and_then(|m| m.modified()).ok();
+    let m_a = get_target_modified_timestamp(a);
+    let m_b = get_target_modified_timestamp(b);
 
     match m_a.cmp(&m_b) {
         Ordering::Equal => a.file_name().cmp(&b.file_name()),
         x => x,
     }
+}
+
+fn get_target_modified_timestamp(entry: &DirEntry) -> Option<SystemTime> {
+    let metadata = if entry.file_type().is_ok_and(|f| f.is_symlink()) {
+        entry.path().metadata()
+    } else {
+        entry.metadata()
+    };
+
+    metadata.and_then(|m| m.modified()).ok()
 }
 
 fn sort_plugins_dir_entries_openmw(a: &DirEntry, b: &DirEntry) -> Ordering {
@@ -833,7 +873,7 @@ fn find_plugins_in_directories<'a>(
         .flat_map(read_dir)
         .flatten()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|f| f.is_file()).unwrap_or(false))
+        .filter(|e| is_file_type_supported(e, game_id))
         .filter(|e| {
             e.file_name()
                 .to_str()
@@ -859,7 +899,7 @@ mod tests {
     use std::{fs::create_dir_all, io::Write};
     use tempfile::tempdir;
 
-    use crate::tests::{copy_to_dir, set_file_timestamps, NON_ASCII};
+    use crate::tests::{copy_to_dir, set_file_timestamps, symlink_file, NON_ASCII};
 
     use super::*;
 
@@ -902,6 +942,34 @@ mod tests {
         for plugin_name in plugin_names {
             writeln!(file, "{plugin_name}").unwrap();
         }
+    }
+
+    fn generate_file_file_type() -> FileType {
+        let tmp_dir = tempdir().unwrap();
+        let file_path = tmp_dir.path().join("file");
+
+        File::create(&file_path).unwrap();
+
+        let file_file_type = file_path.metadata().unwrap().file_type();
+
+        assert!(file_file_type.is_file());
+
+        file_file_type
+    }
+
+    fn generate_symlink_file_type() -> FileType {
+        let tmp_dir = tempdir().unwrap();
+        let file_path = tmp_dir.path().join("file");
+        let symlink_path = tmp_dir.path().join("symlink");
+
+        File::create(&file_path).unwrap();
+        symlink_file(&file_path, &symlink_path);
+
+        let symlink_file_type = symlink_path.symlink_metadata().unwrap().file_type();
+
+        assert!(symlink_file_type.is_symlink());
+
+        symlink_file_type
     }
 
     #[test]
@@ -1415,6 +1483,86 @@ mod tests {
             game_path.join("Plugins.txt"),
             *settings.active_plugins_file()
         );
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn find_nam_plugins_should_also_find_symlinks_to_nam_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let data_path = tmp_dir.path().join("Data");
+        let other_path = tmp_dir.path().join("other");
+
+        create_dir_all(&data_path).unwrap();
+        create_dir_all(&other_path).unwrap();
+        File::create(data_path.join("plugin1.nam")).unwrap();
+
+        let original = other_path.join("plugin2.NAM");
+        File::create(&original).unwrap();
+        symlink_file(&original, &data_path.join("plugin2.NAM"));
+
+        let mut plugins = find_nam_plugins(&data_path).unwrap();
+        plugins.sort();
+
+        let expected_plugins = vec!["plugin1.esm", "plugin1.esp", "plugin2.esm", "plugin2.esp"];
+
+        assert_eq!(expected_plugins, plugins);
+    }
+
+    #[test]
+    fn keep_file_type_should_return_true_for_files_for_all_games() {
+        let file = generate_file_file_type();
+
+        assert!(keep_file_type(file, GameId::Morrowind));
+        assert!(keep_file_type(file, GameId::OpenMW));
+        assert!(keep_file_type(file, GameId::Oblivion));
+        assert!(keep_file_type(file, GameId::OblivionRemastered));
+        assert!(keep_file_type(file, GameId::Skyrim));
+        assert!(keep_file_type(file, GameId::SkyrimSE));
+        assert!(keep_file_type(file, GameId::SkyrimVR));
+        assert!(keep_file_type(file, GameId::Fallout3));
+        assert!(keep_file_type(file, GameId::FalloutNV));
+        assert!(keep_file_type(file, GameId::Fallout4));
+        assert!(keep_file_type(file, GameId::Fallout4VR));
+        assert!(keep_file_type(file, GameId::Starfield));
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn keep_file_type_should_return_true_for_symlinks_for_all_games_on_linux() {
+        let symlink = generate_symlink_file_type();
+
+        assert!(keep_file_type(symlink, GameId::Morrowind));
+        assert!(keep_file_type(symlink, GameId::OpenMW));
+        assert!(keep_file_type(symlink, GameId::Oblivion));
+        assert!(keep_file_type(symlink, GameId::OblivionRemastered));
+        assert!(keep_file_type(symlink, GameId::Skyrim));
+        assert!(keep_file_type(symlink, GameId::SkyrimSE));
+        assert!(keep_file_type(symlink, GameId::SkyrimVR));
+        assert!(keep_file_type(symlink, GameId::Fallout3));
+        assert!(keep_file_type(symlink, GameId::FalloutNV));
+        assert!(keep_file_type(symlink, GameId::Fallout4));
+        assert!(keep_file_type(symlink, GameId::Fallout4VR));
+        assert!(keep_file_type(symlink, GameId::Starfield));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn keep_file_type_should_return_true_for_symlinks_for_openmw_and_oblivion_remastered_on_windows(
+    ) {
+        let symlink = generate_symlink_file_type();
+
+        assert!(!keep_file_type(symlink, GameId::Morrowind));
+        assert!(keep_file_type(symlink, GameId::OpenMW));
+        assert!(!keep_file_type(symlink, GameId::Oblivion));
+        assert!(keep_file_type(symlink, GameId::OblivionRemastered));
+        assert!(!keep_file_type(symlink, GameId::Skyrim));
+        assert!(!keep_file_type(symlink, GameId::SkyrimSE));
+        assert!(!keep_file_type(symlink, GameId::SkyrimVR));
+        assert!(!keep_file_type(symlink, GameId::Fallout3));
+        assert!(!keep_file_type(symlink, GameId::FalloutNV));
+        assert!(!keep_file_type(symlink, GameId::Fallout4));
+        assert!(!keep_file_type(symlink, GameId::Fallout4VR));
+        assert!(!keep_file_type(symlink, GameId::Starfield));
     }
 
     #[test]
@@ -2288,6 +2436,45 @@ mod tests {
     }
 
     #[test]
+    fn get_target_modified_timestamp_should_return_the_modified_timestamp_of_a_symlinks_target_file(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let file_path = tmp_dir.path().join("file");
+        let symlink_path = tmp_dir.path().join("symlink");
+
+        std::fs::File::create(&file_path).unwrap();
+
+        symlink_file(&file_path, &symlink_path);
+
+        let symlink_timestamp = symlink_path.symlink_metadata().unwrap().modified().unwrap();
+        let file_timestamp = symlink_timestamp - std::time::Duration::from_secs(1);
+        assert_ne!(symlink_timestamp, file_timestamp);
+        let file = File::options().append(true).open(file_path).unwrap();
+        file.set_modified(file_timestamp).unwrap();
+
+        let mut dir_entries = tmp_dir
+            .path()
+            .read_dir()
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        dir_entries.sort_by_key(DirEntry::file_name);
+
+        assert!(dir_entries[0].file_type().unwrap().is_file());
+        assert_eq!(
+            file_timestamp,
+            get_target_modified_timestamp(&dir_entries[0]).unwrap()
+        );
+
+        assert!(dir_entries[1].file_type().unwrap().is_symlink());
+        assert_eq!(
+            file_timestamp,
+            get_target_modified_timestamp(&dir_entries[1]).unwrap()
+        );
+    }
+
+    #[test]
     fn find_plugins_in_directories_should_sort_files_by_modification_timestamp() {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
@@ -2391,6 +2578,27 @@ mod tests {
             game_path.join("Blank.medium.esm"),
             game_path.join("Blank.small.esm"),
         ];
+
+        assert_eq!(plugin_paths, result);
+    }
+
+    #[test]
+    fn find_plugins_in_directories_should_find_symlinks_to_plugins() {
+        const BLANK_ESM: &str = "Blank.esm";
+        const BLANK_ESP: &str = "Blank.esp";
+
+        let tmp_dir = tempdir().unwrap();
+        let data_path = tmp_dir.path().join("game");
+        let other_path = tmp_dir.path().join("other");
+
+        copy_to_dir(BLANK_ESM, &data_path, BLANK_ESM, GameId::OpenMW);
+        copy_to_dir(BLANK_ESP, &other_path, BLANK_ESP, GameId::OpenMW);
+
+        symlink_file(&other_path.join(BLANK_ESP), &data_path.join(BLANK_ESP));
+
+        let result = find_plugins_in_directories(once(&data_path), GameId::OpenMW);
+
+        let plugin_paths = vec![data_path.join(BLANK_ESM), data_path.join(BLANK_ESP)];
 
         assert_eq!(plugin_paths, result);
     }

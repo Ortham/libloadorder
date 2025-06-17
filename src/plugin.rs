@@ -262,7 +262,7 @@ fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
 mod tests {
     use super::*;
 
-    use crate::tests::{copy_to_test_dir, create_file};
+    use crate::tests::{copy_to_dir, copy_to_test_dir, create_file, symlink_file};
     use std::path::PathBuf;
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::tempdir;
@@ -330,6 +330,38 @@ mod tests {
             }
             e => panic!("Expected invalid path error, got {e:?}"),
         }
+    }
+
+    #[test]
+    fn with_path_should_load_symlinked_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let data_path = tmp_dir.path();
+
+        let name = "Blank - Master Dependent - symlinked.esm";
+        let symlink_name = "Blank - Master Dependent - symlink.esm";
+        copy_to_dir(
+            "Blank - Master Dependent.esm",
+            data_path,
+            name,
+            GameId::OpenMW,
+        );
+
+        let file_path = data_path.join(name);
+        let symlink_path = data_path.join(symlink_name);
+        symlink_file(&file_path, &symlink_path);
+
+        let symlink_timestamp = symlink_path.symlink_metadata().unwrap().modified().unwrap();
+        let file_timestamp = symlink_timestamp - Duration::from_secs(1);
+        assert_ne!(symlink_timestamp, file_timestamp);
+        let file = File::options().append(true).open(file_path).unwrap();
+        file.set_modified(file_timestamp).unwrap();
+
+        let plugin = Plugin::with_path(&symlink_path, GameId::OpenMW, false).unwrap();
+
+        assert_eq!(symlink_name, plugin.name());
+        assert!(!plugin.is_master_file());
+        assert_eq!(vec!["Blank.esm"], plugin.masters().unwrap());
+        assert_eq!(file_timestamp, plugin.modification_time());
     }
 
     #[test]
