@@ -525,7 +525,15 @@ fn additional_plugins_directories(
             game_path.join(MS_FO4_CONTRAPTIONS_PATH),
         ])
     } else if game_id == GameId::Starfield {
-        Ok(vec![my_games_path.join("Data")])
+        if is_microsoft_store_install(game_id, game_path) {
+            Ok(vec![
+                my_games_path.join("Data"),
+                game_path.join("../../Old Mars/Content/Data"),
+                game_path.join("../../Shattered Space/Content/Data"),
+            ])
+        } else {
+            Ok(vec![my_games_path.join("Data")])
+        }
     } else if game_id == GameId::OpenMW {
         openmw_config::additional_data_paths(game_path, my_games_path)
     } else {
@@ -2051,6 +2059,25 @@ mod tests {
 
         assert_eq!(
             vec![Path::new("my games").join("Data")],
+            settings.additional_plugins_directories()
+        );
+    }
+
+    #[test]
+    fn additional_plugins_directories_should_include_dlc_paths_if_game_is_ms_store_starfield() {
+        let tmp_dir = tempdir().unwrap();
+        let game_path = tmp_dir.path();
+
+        File::create(game_path.join("appxmanifest.xml")).unwrap();
+
+        let settings = game_with_game_path(GameId::Starfield, game_path);
+
+        assert_eq!(
+            vec![
+                Path::new("Data"),
+                &game_path.join("../../Old Mars/Content/Data"),
+                &game_path.join("../../Shattered Space/Content/Data"),
+            ],
             settings.additional_plugins_directories()
         );
     }
