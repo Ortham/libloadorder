@@ -607,6 +607,7 @@ fn read_openmw_cfg(openmw_cfg_path: &Path) -> Result<Option<ini::Ini>, Error> {
         ini::ParseOption {
             enabled_quote: false,
             enabled_escape: false,
+            ..ini::ParseOption::default()
         },
     )
     .map(Some)

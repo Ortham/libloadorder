@@ -39,6 +39,7 @@ fn read_ini(ini_path: &Path) -> Result<ini::Ini, Error> {
         ini::ParseOption {
             enabled_quote: false,
             enabled_escape: false,
+            ..ini::ParseOption::default()
         },
     )
     .map_err(|e| Error::IniParsingError {
