@@ -20,7 +20,7 @@ fn write_load_order_file<T: AsRef<str> + Display>(game_settings: &GameSettings, 
     let mut file = File::create(game_settings.load_order_file().unwrap()).unwrap();
 
     for filename in filenames {
-        writeln!(file, "{}", filename).unwrap();
+        writeln!(file, "{filename}").unwrap();
     }
 }
 
@@ -93,7 +93,7 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     let masters_count = plugins_count / 10;
 
     for i in 0..masters_count {
-        plugins.push(format!("Blank{}.esm", i));
+        plugins.push(format!("Blank{i}.esm"));
         copy_to_test_dir(
             "Blank - Different.esm",
             plugins.last().unwrap(),
@@ -102,7 +102,7 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     }
 
     for i in masters_count..plugins_count + 1 {
-        plugins.push(format!("Blank{}.esp", i));
+        plugins.push(format!("Blank{i}.esp"));
         copy_to_test_dir("Blank.esp", plugins.last().unwrap(), game_settings);
     }
 

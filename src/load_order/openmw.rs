@@ -47,8 +47,7 @@ impl OpenMWLoadOrder {
         // displayed in the OpenMW Launcher, though the Launcher hides some
         // plugins when their master is inactive.
         // For reference the launcher implementation is at:
-        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.48.0/components/contentselector/model/contentmodel.cpp?ref_type=tags#L536>
-        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc3/components/contentselector/model/contentmodel.cpp?ref_type=tags#L601>
+        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/components/contentselector/model/contentmodel.cpp?ref_type=tags#L538>
 
         // At this point libloadorder has inserted the early loaders in order at
         // the top of the load order, but everything else in their file path
@@ -84,7 +83,7 @@ impl OpenMWLoadOrder {
             .unwrap_or(self.plugins.len());
 
         // This is adapted from OpenMW's logic at
-        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-49-rc3/components/contentselector/model/contentmodel.cpp?ref_type=tags#L638>
+        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/components/contentselector/model/contentmodel.cpp?ref_type=tags#L575>
         let mut moved = HashSet::new();
 
         if self.plugins.is_empty() {
@@ -130,7 +129,7 @@ impl OpenMWLoadOrder {
         // Finally, sort the active plugins according to their defined load
         // order. This is equivalent to the approach that the OpenMW Launcher
         // takes:
-        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.48.0/components/contentselector/model/contentmodel.cpp?ref_type=tags#L611>
+        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/components/contentselector/model/contentmodel.cpp?ref_type=tags#L655>
         let mut previous_index = 0;
         for name_tuple in active_plugins {
             if !name_tuple.1 {
@@ -189,7 +188,7 @@ impl MutableLoadOrder for OpenMWLoadOrder {
         // directories, and sorting files by case-sensitive name within each
         // directory. That's already handled by GameSettings::find_plugins().
         // The OpenMW Launcher implementation is here:
-        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.48.0/apps/launcher/datafilespage.cpp?ref_type=tags#L221>
+        // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/apps/launcher/datafilespage.cpp?ref_type=tags#L348>
 
         fn get_key_from_filename(filename: &str) -> UniCase<&str> {
             UniCase::new(filename)

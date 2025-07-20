@@ -378,7 +378,7 @@ impl OpenMWConfig {
 
 fn parse_path_value(value: &str) -> String {
     // Values may be enclosed in double quotes and use & as an escape, see:
-    // <https://github.com/OpenMW/openmw/blob/openmw-0.48.0/components/config/gamesettings.cpp#L124>
+    // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/components/config/gamesettings.cpp?ref_type=tags#L168>
     let Some(value) = value.strip_prefix('"') else {
         return value.to_owned();
     };
@@ -601,7 +601,7 @@ fn read_openmw_cfg(openmw_cfg_path: &Path) -> Result<Option<ini::Ini>, Error> {
     }
 
     // openmw.cfg is encoded in UTF-8, see:
-    // <https://github.com/OpenMW/openmw/blob/openmw-0.48.0/components/config/gamesettings.cpp#L237>
+    // <https://gitlab.com/OpenMW/openmw/-/blob/openmw-0.49.0/components/config/gamesettings.cpp#L293>
     ini::Ini::load_from_file_opt(
         openmw_cfg_path,
         ini::ParseOption {

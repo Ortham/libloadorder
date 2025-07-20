@@ -582,7 +582,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES5,
                 game_path.as_ptr(),
                 local_path.as_ptr(),
@@ -601,7 +601,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES5,
                 game_path.as_ptr(),
                 local_path.as_ptr(),
@@ -631,7 +631,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES5,
                 game_path.as_ptr(),
                 local_path.as_ptr(),
@@ -649,7 +649,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES3,
                 game_path.as_ptr(),
                 std::ptr::null(),
@@ -668,7 +668,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES4,
                 game_path.as_ptr(),
                 std::ptr::null(),
@@ -687,7 +687,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES4,
                 game_path.as_ptr(),
                 std::ptr::null(),
@@ -713,7 +713,7 @@ mod tests {
 
         unsafe {
             let result = lo_create_handle(
-                &mut handle,
+                &raw mut handle,
                 LIBLO_GAME_TES4,
                 game_path.as_ptr(),
                 local_path.as_ptr(),
@@ -725,7 +725,8 @@ mod tests {
             let mut plugins: *mut *mut c_char = std::ptr::null_mut();
             let mut num_plugins: size_t = 0;
 
-            let result = lo_get_implicitly_active_plugins(handle, &mut plugins, &mut num_plugins);
+            let result =
+                lo_get_implicitly_active_plugins(handle, &raw mut plugins, &raw mut num_plugins);
             assert_eq!(LIBLO_OK, result);
             assert_eq!(0, num_plugins);
 
@@ -744,7 +745,8 @@ mod tests {
             let mut plugins: *mut *mut c_char = std::ptr::null_mut();
             let mut num_plugins: size_t = 0;
 
-            let result = lo_get_implicitly_active_plugins(handle, &mut plugins, &mut num_plugins);
+            let result =
+                lo_get_implicitly_active_plugins(handle, &raw mut plugins, &raw mut num_plugins);
             assert_eq!(LIBLO_OK, result);
             assert_eq!(1, num_plugins);
 
