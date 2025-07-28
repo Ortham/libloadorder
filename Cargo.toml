@@ -25,7 +25,7 @@ keyvalues-parser = "0.2.0"
 windows = { version = "0.61.3", features = ["Foundation_Collections", "System_UserProfile", "Win32_System_Com", "Win32_UI_Shell"] }
 
 [dev-dependencies]
-criterion = "0.6.0"
+criterion = "0.7.0"
 tempfile = "3.20.0"
 
 [lib]
