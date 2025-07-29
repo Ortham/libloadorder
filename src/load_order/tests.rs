@@ -55,9 +55,9 @@ pub(super) fn write_active_plugins_file<T: AsRef<str>>(
         writeln!(file, "[Game Files]").unwrap();
     }
 
-    for filename in filenames {
+    for (i, filename) in filenames.iter().enumerate() {
         if game_settings.id() == GameId::Morrowind {
-            write!(file, "GameFile0=").unwrap();
+            write!(file, "GameFile{i}=").unwrap();
         } else if game_settings.load_order_method() == LoadOrderMethod::Asterisk {
             write!(file, "*").unwrap();
         }

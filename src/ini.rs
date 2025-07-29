@@ -60,6 +60,27 @@ pub(crate) fn use_my_games_directory(ini_path: &Path) -> Result<bool, Error> {
     }
 }
 
+pub(crate) fn read_morrowind_active_plugins(ini_path: &Path) -> Result<Vec<String>, Error> {
+    let ini = read_ini(ini_path)?;
+
+    let mut plugins = Vec::new();
+    if let Some(section) = ini.section(Some("Game Files")) {
+        for i in 0..section.len() {
+            if let Some(plugin) = section.get(format!("GameFile{i}")) {
+                if let Some((_, extension)) = plugin.rsplit_once('.') {
+                    if extension.eq_ignore_ascii_case("esm")
+                        || extension.eq_ignore_ascii_case("esp")
+                    {
+                        plugins.push(plugin.to_owned());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(plugins)
+}
+
 fn read_test_files(ini_path: &Path) -> Result<TestFiles, Error> {
     if !ini_path.exists() {
         return Ok(TestFiles::default());
@@ -733,6 +754,40 @@ mod tests {
         std::fs::write(&ini_path, "[General]\nbUseMyGamesDirectory=1\n").unwrap();
 
         assert!(use_my_games_directory(&ini_path).unwrap());
+    }
+
+    #[test]
+    fn read_morrowind_active_plugins_should_return_valid_lines() {
+        let tmp_dir = tempdir().unwrap();
+        let ini_path = tmp_dir.path().join("ini.ini");
+
+        std::fs::write(
+            &ini_path,
+            "[General]\n\
+            GameFile0=ignored.esm\n\
+            [Game Files]\n \
+            GameFile0 = Morrowind.esm \n\
+            gamefile1=plugin.esp\n\
+            #GameFile2=plugin2.esp\n\
+            GameFile2=Morrowind.bsa\n\
+            GameFile3=plugin3.ESP\n\
+            GameFile4=
+            GameFile5=plugin4.ESM\n\
+            GameFile=plugin5.esp",
+        )
+        .unwrap();
+
+        let plugins = read_morrowind_active_plugins(&ini_path).unwrap();
+
+        assert_eq!(
+            vec![
+                "Morrowind.esm".to_owned(),
+                "plugin.esp".to_owned(),
+                "plugin3.ESP".to_owned(),
+                "plugin4.ESM".to_owned()
+            ],
+            plugins
+        );
     }
 
     #[test]

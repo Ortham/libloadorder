@@ -401,7 +401,6 @@ dependencies = [
  "esplugin",
  "keyvalues-parser",
  "rayon",
- "regex",
  "rust-ini",
  "tempfile",
  "unicase",

@@ -21,11 +21,9 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rayon::prelude::*;
-use regex::Regex;
 use unicase::UniCase;
 
 use super::mutable::{hoist_masters, load_active_plugins, MutableLoadOrder};
@@ -36,6 +34,7 @@ use super::writable::{
 };
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
+use crate::ini::read_morrowind_active_plugins;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
 const GAME_FILES_HEADER: &[u8] = b"[Game Files]";
@@ -100,6 +99,21 @@ impl TimestampBasedLoadOrder {
 
         Ok(())
     }
+
+    fn load_active_morrowind_plugins(&mut self) -> Result<(), Error> {
+        self.deactivate_all();
+
+        let plugin_names =
+            read_morrowind_active_plugins(self.game_settings().active_plugins_file())?;
+
+        for plugin_name in plugin_names {
+            if let Some(plugin) = self.find_plugin_mut(&plugin_name) {
+                plugin.activate()?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl ReadableLoadOrderBase for TimestampBasedLoadOrder {
@@ -130,9 +144,11 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
         self.plugins.par_sort_by(plugin_sorter);
 
         let game_id = self.game_settings().id();
-        let line_mapper = |line: &str| plugin_line_mapper(line, game_id);
-
-        load_active_plugins(self, line_mapper)?;
+        if game_id == GameId::Morrowind {
+            self.load_active_morrowind_plugins()?;
+        } else {
+            load_active_plugins(self, plugin_line_mapper)?;
+        }
 
         self.add_implicitly_active_plugins()?;
 
@@ -213,23 +229,7 @@ fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     }
 }
 
-fn plugin_line_mapper(mut line: &str, game_id: GameId) -> Option<String> {
-    if game_id == GameId::Morrowind {
-        #[expect(
-            clippy::expect_used,
-            reason = "Only panics if the hardcoded regex string is invalid"
-        )]
-        static MORROWIND_INI_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-            Regex::new(r"(?i)GameFile[0-9]{1,3}=(.+\.es(?:m|p))")
-                .expect("Hardcoded GameFile ini entry regex should be valid")
-        });
-
-        line = MORROWIND_INI_REGEX
-            .captures(line)
-            .and_then(|c| c.get(1))
-            .map_or("", |m| m.as_str());
-    }
-
+fn plugin_line_mapper(line: &str) -> Option<String> {
     if line.is_empty() || line.starts_with('#') {
         None
     } else {
@@ -514,6 +514,35 @@ mod tests {
 
         load_order.load().unwrap();
         let expected_filenames = vec!["Blank.esm", NON_ASCII];
+
+        assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_skip_morrowind_gamefile_entries_after_a_break_in_their_indexes() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
+
+        let filenames: [(u8, &str); 3] = [
+            (0, "Blank.esm"),
+            (1, "Blank.esp"),
+            (3, "Blank - Different.esp"),
+        ];
+        {
+            let mut file = File::create(load_order.game_settings().active_plugins_file()).unwrap();
+
+            writeln!(file, "[Game Files]").unwrap();
+
+            for (i, filename) in filenames {
+                write!(file, "GameFile{i}=").unwrap();
+
+                file.write_all(&strict_encode(filename).unwrap()).unwrap();
+                writeln!(file).unwrap();
+            }
+        }
+
+        load_order.load().unwrap();
+        let expected_filenames = vec!["Blank.esm", "Blank.esp"];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
     }
