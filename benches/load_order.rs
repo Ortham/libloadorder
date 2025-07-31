@@ -1,7 +1,7 @@
-use std::convert::TryFrom;
+#![allow(clippy::unwrap_used)]
 use std::fmt;
 use std::fmt::Display;
-use std::fs::{copy, create_dir, File, FileTimes};
+use std::fs::{copy, create_dir_all, File, FileTimes};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -81,7 +81,7 @@ fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());
     let data_dir = game_settings.plugins_directory();
     if !data_dir.exists() {
-        create_dir(&data_dir).unwrap();
+        create_dir_all(&data_dir).unwrap();
     }
     copy(testing_plugins_dir.join(from_path), data_dir.join(to_file)).unwrap();
 }
@@ -90,6 +90,11 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
     let mut plugins: Vec<String> = Vec::new();
 
     // Make 10% of the load order master files.
+    #[expect(
+        clippy::integer_division,
+        clippy::integer_division_remainder_used,
+        reason = "Loss of precision is not important"
+    )]
     let masters_count = plugins_count / 10;
 
     for i in 0..masters_count {
@@ -101,7 +106,7 @@ fn initialise_state(game_settings: &GameSettings, plugins_count: u16, active_plu
         );
     }
 
-    for i in masters_count..plugins_count + 1 {
+    for i in masters_count..=plugins_count {
         plugins.push(format!("Blank{i}.esp"));
         copy_to_test_dir("Blank.esp", plugins.last().unwrap(), game_settings);
     }
@@ -132,7 +137,7 @@ impl Parameters {
         let directory = TempDir::new().unwrap();
         let local_path = directory.path().join("local");
 
-        create_dir(&local_path).unwrap();
+        create_dir_all(&local_path).unwrap();
 
         let settings =
             GameSettings::with_local_path(game_id, directory.path(), &local_path).unwrap();
@@ -160,6 +165,7 @@ impl Parameters {
 }
 
 impl fmt::Display for Parameters {
+    #[expect(clippy::use_debug, reason = "No display impl for GameId")]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -194,7 +200,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
-            b.iter(|| load_order.plugin_names())
+            b.iter(|| load_order.plugin_names());
         }
     );
 
@@ -209,7 +215,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
                 .plugin_at(parameters.plugins_count.into())
                 .unwrap();
 
-            b.iter(|| load_order.index_of(plugin))
+            b.iter(|| load_order.index_of(plugin));
         }
     );
 
@@ -220,7 +226,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
-            b.iter(|| load_order.plugin_at(10))
+            b.iter(|| load_order.plugin_at(10));
         }
     );
 
@@ -231,7 +237,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
-            b.iter(|| load_order.active_plugin_names())
+            b.iter(|| load_order.active_plugin_names());
         }
     );
 
@@ -247,7 +253,7 @@ fn readable_load_order_benchmark(c: &mut Criterion) {
                 .unwrap()
                 .to_owned();
 
-            b.iter(|| load_order.is_active(&plugin))
+            b.iter(|| load_order.is_active(&plugin));
         }
     );
 }
@@ -270,7 +276,7 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.load_order();
 
-            b.iter(|| load_order.load())
+            b.iter(|| load_order.load());
         }
     );
 
@@ -284,7 +290,7 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
             let plugins = to_owned(load_order.plugin_names());
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
-            b.iter(|| load_order.set_load_order(&plugin_refs).unwrap())
+            b.iter(|| load_order.set_load_order(&plugin_refs).unwrap());
         }
     );
 
@@ -295,7 +301,7 @@ fn benchmarks_writable_load_order_slow(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            b.iter(|| load_order.save().unwrap())
+            b.iter(|| load_order.save().unwrap());
         }
     );
 }
@@ -317,9 +323,9 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            let plugin_name = load_order.plugin_at(5).unwrap().to_string();
+            let plugin_name = load_order.plugin_at(5).unwrap().to_owned();
 
-            b.iter(|| load_order.set_plugin_index(&plugin_name, 10).unwrap())
+            b.iter(|| load_order.set_plugin_index(&plugin_name, 10).unwrap());
         }
     );
 
@@ -330,7 +336,7 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let load_order = parameters.loaded_load_order();
 
-            b.iter(|| load_order.is_self_consistent().unwrap())
+            b.iter(|| load_order.is_self_consistent().unwrap());
         }
     );
 
@@ -341,9 +347,9 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            let plugin_name = load_order.plugin_at(5).unwrap().to_string();
+            let plugin_name = load_order.plugin_at(5).unwrap().to_owned();
 
-            b.iter(|| load_order.activate(&plugin_name).unwrap())
+            b.iter(|| load_order.activate(&plugin_name).unwrap());
         }
     );
 
@@ -354,9 +360,9 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
         |b, parameters| {
             let mut load_order = parameters.loaded_load_order();
 
-            let plugin_name = load_order.plugin_at(5).unwrap().to_string();
+            let plugin_name = load_order.plugin_at(5).unwrap().to_owned();
 
-            b.iter(|| load_order.deactivate(&plugin_name).unwrap())
+            b.iter(|| load_order.deactivate(&plugin_name).unwrap());
         }
     );
 
@@ -370,7 +376,7 @@ fn writable_load_order_benchmark(c: &mut Criterion) {
             let plugins = to_owned(load_order.active_plugin_names());
             let plugin_refs: Vec<&str> = plugins.iter().map(AsRef::as_ref).collect();
 
-            b.iter(|| load_order.set_active_plugins(&plugin_refs).unwrap())
+            b.iter(|| load_order.set_active_plugins(&plugin_refs).unwrap());
         }
     );
 }
