@@ -1,6 +1,6 @@
 # Libloadorder
 
-![CI](https://github.com/Ortham/libloadorder/workflows/CI/badge.svg?branch=master)
+![CI](https://github.com/Ortham/libloadorder/actions/workflows/ci.yml/badge.svg?branch=master&event=push)
 [![Coverage Status](https://coveralls.io/repos/github/Ortham/libloadorder/badge.svg?branch=master)](https://coveralls.io/github/Ortham/libloadorder?branch=master)
 [![docs](https://docs.rs/libloadorder/badge.svg)](https://docs.rs/crate/libloadorder)
 
