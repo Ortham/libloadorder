@@ -3,6 +3,27 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.5.0] - 2025-08-01
+
+### Added
+
+- Support for DLC install paths used by the Microsoft Store's distribution of
+  Starfield.
+- Support for plugin file symlinks for all games on Linux, and for OpenMW and
+  Oblivion Remastered on Windows.
+
+### Fixed
+
+- Reading active plugins from Morrowind.ini now handles whitespace, entries in
+  the wrong section and gaps in the index sequence in the same way as
+  Morrowind's launcher.
+
+### Changed
+
+- Updated rust-ini to 0.21.2.
+- Updated windows to 0.61.3.
+- Removed the regex dependency.
+
 ## [18.4.0] - 2025-05-01
 
 ### Added

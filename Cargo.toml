@@ -38,7 +38,7 @@ harness = false
 members = ["ffi"]
 
 [workspace.package]
-version = "18.4.0"
+version = "18.5.0"
 authors = ["Oliver Hamlet <oliver@ortham.net>"]
 repository = "https://github.com/Ortham/libloadorder.git"
 categories = ["games"]
