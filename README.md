@@ -27,7 +27,7 @@ introduction to load orders.
 
 To build libloadorder and its C FFI and generate C/C++ headers for it, install
 [Rust](https://www.rust-lang.org/) and run
-`cargo build --release --all --all-features`.
+`cargo build --release --workspace --all-features`.
 
 ## Tests
 
