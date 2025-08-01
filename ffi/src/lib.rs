@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with libloadorder. If not, see <http://www.gnu.org/licenses/>.
  */
-// Deny some rustc lints that are allow-by-default.
-#![allow(unsafe_code)]
-// Allow a few clippy pedantic lints.
-#![allow(clippy::doc_markdown)]
-#![allow(clippy::must_use_candidate)]
-#![allow(clippy::missing_errors_doc)]
+#![allow(
+    unsafe_code,
+    clippy::doc_markdown,
+    clippy::must_use_candidate,
+    clippy::missing_errors_doc
+)]
 #![cfg_attr(
     test,
     allow(
