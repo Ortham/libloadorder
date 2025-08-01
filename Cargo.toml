@@ -1,15 +1,12 @@
 [package]
 name = "libloadorder"
-version = "18.4.0"
-authors = ["Oliver Hamlet <oliver@ortham.net>"]
 description = "A cross-platform library for manipulating the load order and active status of plugins for the Elder Scrolls and Fallout games."
-repository = "https://github.com/Ortham/libloadorder.git"
-categories = ["games", "parsing"]
-license = "GPL-3.0"
-edition = "2021"
-exclude = [
-    "target/*",
-]
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+categories.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 dirs = "6.0"
@@ -39,6 +36,14 @@ harness = false
 
 [workspace]
 members = ["ffi"]
+
+[workspace.package]
+version = "18.4.0"
+authors = ["Oliver Hamlet <oliver@ortham.net>"]
+repository = "https://github.com/Ortham/libloadorder.git"
+categories = ["games"]
+license = "GPL-3.0"
+edition = "2021"
 
 # Deny some rustc lints that are allow-by-default.
 [workspace.lints.rust]
