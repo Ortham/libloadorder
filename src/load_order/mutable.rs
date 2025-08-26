@@ -570,9 +570,8 @@ fn validate_non_master_file_index(
     }
 
     // Check that the next master file has this plugin as a master.
-    let next_master = match plugins.iter().skip(index).find(|p| p.is_master_file()) {
-        None => return Ok(()),
-        Some(p) => p,
+    let Some(next_master) = plugins.iter().skip(index).find(|p| p.is_master_file()) else {
+        return Ok(());
     };
 
     if next_master
@@ -667,12 +666,11 @@ fn validate_no_unhoisted_non_masters_before_masters(plugins: &[Plugin]) -> Resul
     };
 
     // Ignore blueprint plugins because they load after non-masters.
-    let last_master_pos = match plugins
+    let Some(last_master_pos) = plugins
         .iter()
         .rposition(|p| p.is_master_file() && !p.is_blueprint_master())
-    {
-        None => return Ok(()),
-        Some(x) => x,
+    else {
+        return Ok(());
     };
 
     let mut plugin_names: HashSet<UniCase<String>> = HashSet::new();
