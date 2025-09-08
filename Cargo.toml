@@ -18,7 +18,7 @@ rust-ini = { version = "0.21.3", features = ["case-insensitive"] }
 keyvalues-parser = "0.2.0"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61.3", features = ["Foundation_Collections", "System_UserProfile", "Win32_System_Com", "Win32_UI_Shell"] }
+windows = { version = "0.62.0", features = ["Foundation_Collections", "System_UserProfile", "Win32_System_Com", "Win32_UI_Shell"] }
 
 [dev-dependencies]
 criterion = "0.7.0"
