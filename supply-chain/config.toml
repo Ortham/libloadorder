@@ -22,20 +22,12 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [policy.libloadorder]
 audit-as-crates-io = false
 
-[[exemptions.block-buffer]]
-version = "0.10.4"
-criteria = "safe-to-deploy"
-
 [[exemptions.const-random]]
 version = "0.1.18"
 criteria = "safe-to-deploy"
 
 [[exemptions.const-random-macro]]
 version = "0.1.16"
-criteria = "safe-to-deploy"
-
-[[exemptions.cpufeatures]]
-version = "0.2.17"
 criteria = "safe-to-deploy"
 
 [[exemptions.criterion]]
@@ -58,10 +50,6 @@ criteria = "safe-to-deploy"
 version = "0.8.21"
 criteria = "safe-to-deploy"
 
-[[exemptions.digest]]
-version = "0.10.7"
-criteria = "safe-to-deploy"
-
 [[exemptions.dirs]]
 version = "6.0.0"
 criteria = "safe-to-deploy"
@@ -80,10 +68,6 @@ criteria = "safe-to-run"
 
 [[exemptions.esplugin]]
 version = "6.1.3"
-criteria = "safe-to-deploy"
-
-[[exemptions.generic-array]]
-version = "0.14.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.getrandom]]
@@ -134,18 +118,6 @@ criteria = "safe-to-deploy"
 version = "2.8.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.pest_derive]]
-version = "2.8.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.pest_generator]]
-version = "2.8.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.pest_meta]]
-version = "2.8.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.plotters]]
 version = "0.3.7"
 criteria = "safe-to-run"
@@ -183,15 +155,7 @@ version = "2.0.101"
 criteria = "safe-to-deploy"
 
 [[exemptions.thiserror]]
-version = "1.0.69"
-criteria = "safe-to-deploy"
-
-[[exemptions.thiserror]]
 version = "2.0.12"
-criteria = "safe-to-deploy"
-
-[[exemptions.thiserror-impl]]
-version = "1.0.69"
 criteria = "safe-to-deploy"
 
 [[exemptions.thiserror-impl]]
@@ -202,16 +166,8 @@ criteria = "safe-to-deploy"
 version = "2.0.2"
 criteria = "safe-to-deploy"
 
-[[exemptions.typenum]]
-version = "1.18.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.ucd-trie]]
 version = "0.1.7"
-criteria = "safe-to-deploy"
-
-[[exemptions.version_check]]
-version = "0.9.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.walkdir]]
