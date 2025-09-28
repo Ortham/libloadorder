@@ -7,6 +7,9 @@ version = "0.10"
 [imports.google]
 url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 
+[imports.mozilla]
+url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
+
 [policy.libloadorder]
 audit-as-crates-io = false
 
@@ -62,10 +65,6 @@ criteria = "safe-to-deploy"
 version = "0.8.21"
 criteria = "safe-to-deploy"
 
-[[exemptions.crunchy]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.crypto-common]]
 version = "0.1.6"
 criteria = "safe-to-deploy"
@@ -84,10 +83,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.dlv-list]]
 version = "0.5.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.encoding_rs]]
-version = "0.8.35"
 criteria = "safe-to-deploy"
 
 [[exemptions.errno]]
@@ -165,10 +160,6 @@ criteria = "safe-to-deploy"
 [[exemptions.oorandom]]
 version = "11.1.5"
 criteria = "safe-to-run"
-
-[[exemptions.option-ext]]
-version = "0.2.0"
-criteria = "safe-to-deploy"
 
 [[exemptions.ordered-multimap]]
 version = "0.7.3"
