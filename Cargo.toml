@@ -9,20 +9,20 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirs = "6.0"
-encoding_rs = "0.8"
-esplugin = "6.1.2"
-unicase = "2.8.1"
-rayon = "1.11.0"
-rust-ini = { version = "0.21.3", features = ["case-insensitive"] }
-keyvalues-parser = "0.2.0"
+dirs = ">= 1.0.0, < 7"
+encoding_rs = ">= 0.4.0, < 0.9"
+esplugin = "6.1"
+unicase = "2"
+rayon = ">= 0.9.0, < 2"
+rust-ini = { version = ">= 0.19.0, < 0.22", features = ["case-insensitive"] }
+keyvalues-parser = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.62.0", features = ["Foundation_Collections", "System_UserProfile", "Win32_System_Com", "Win32_UI_Shell"] }
+windows = { version = ">= 0.53.0, < 0.63", features = ["Foundation_Collections", "System_UserProfile", "Win32_System_Com", "Win32_UI_Shell"] }
 
 [dev-dependencies]
-criterion = "0.7.0"
-tempfile = "3.22.0"
+criterion = ">= 0.3.0, < 0.8"
+tempfile = "3"
 
 [lib]
 name = "loadorder"
