@@ -3,6 +3,13 @@
 
 [audits]
 
+[[trusted.libc]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2024-08-15"
+end = "2026-09-28"
+notes = "rust-lang-owner is a bot run by the Rust Infrastructure Team, so libc is hopefully as trustworthy as the Rust toolchain."
+
 [[trusted.windows]]
 criteria = "safe-to-deploy"
 user-id = 64539 # Kenny Kerr (kennykerr)
