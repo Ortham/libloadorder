@@ -7,6 +7,9 @@ version = "0.10"
 [imports.bytecode-alliance]
 url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
 
+[imports.esplugin]
+url = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
 [imports.google]
 url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 
@@ -22,14 +25,6 @@ audit-as-crates-io = false
 [[exemptions.block-buffer]]
 version = "0.10.4"
 criteria = "safe-to-deploy"
-
-[[exemptions.clap]]
-version = "4.5.37"
-criteria = "safe-to-run"
-
-[[exemptions.clap_builder]]
-version = "4.5.37"
-criteria = "safe-to-run"
 
 [[exemptions.const-random]]
 version = "0.1.18"
@@ -94,10 +89,6 @@ criteria = "safe-to-deploy"
 [[exemptions.getrandom]]
 version = "0.2.16"
 criteria = "safe-to-deploy"
-
-[[exemptions.half]]
-version = "2.6.0"
-criteria = "safe-to-run"
 
 [[exemptions.hashbrown]]
 version = "0.14.5"
@@ -171,10 +162,6 @@ criteria = "safe-to-run"
 version = "0.3.7"
 criteria = "safe-to-run"
 
-[[exemptions.proc-macro2]]
-version = "1.0.95"
-criteria = "safe-to-deploy"
-
 [[exemptions.r-efi]]
 version = "5.2.0"
 criteria = "safe-to-run"
@@ -198,10 +185,6 @@ criteria = "safe-to-run"
 [[exemptions.syn]]
 version = "2.0.101"
 criteria = "safe-to-deploy"
-
-[[exemptions.tempfile]]
-version = "3.22.0"
-criteria = "safe-to-run"
 
 [[exemptions.thiserror]]
 version = "1.0.69"
