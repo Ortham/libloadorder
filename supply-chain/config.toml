@@ -4,6 +4,9 @@
 [cargo-vet]
 version = "0.10"
 
+[imports.bytecode-alliance]
+url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
+
 [imports.google]
 url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 
@@ -16,17 +19,9 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [policy.libloadorder]
 audit-as-crates-io = false
 
-[[exemptions.anes]]
-version = "0.1.6"
-criteria = "safe-to-run"
-
 [[exemptions.block-buffer]]
 version = "0.10.4"
 criteria = "safe-to-deploy"
-
-[[exemptions.bumpalo]]
-version = "3.17.0"
-criteria = "safe-to-run"
 
 [[exemptions.clap]]
 version = "4.5.37"
@@ -68,10 +63,6 @@ criteria = "safe-to-deploy"
 version = "0.8.21"
 criteria = "safe-to-deploy"
 
-[[exemptions.crypto-common]]
-version = "0.1.6"
-criteria = "safe-to-deploy"
-
 [[exemptions.digest]]
 version = "0.10.7"
 criteria = "safe-to-deploy"
@@ -96,10 +87,6 @@ criteria = "safe-to-run"
 version = "6.1.3"
 criteria = "safe-to-deploy"
 
-[[exemptions.fastrand]]
-version = "2.3.0"
-criteria = "safe-to-run"
-
 [[exemptions.generic-array]]
 version = "0.14.7"
 criteria = "safe-to-deploy"
@@ -115,10 +102,6 @@ criteria = "safe-to-run"
 [[exemptions.hashbrown]]
 version = "0.14.5"
 criteria = "safe-to-deploy"
-
-[[exemptions.itertools]]
-version = "0.13.0"
-criteria = "safe-to-run"
 
 [[exemptions.js-sys]]
 version = "0.3.77"
@@ -138,10 +121,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.linux-raw-sys]]
 version = "0.9.4"
-criteria = "safe-to-run"
-
-[[exemptions.log]]
-version = "0.4.27"
 criteria = "safe-to-run"
 
 [[exemptions.memchr]]
@@ -250,10 +229,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.ucd-trie]]
 version = "0.1.7"
-criteria = "safe-to-deploy"
-
-[[exemptions.unicase]]
-version = "2.8.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.version_check]]
@@ -379,7 +354,3 @@ criteria = "safe-to-deploy"
 [[exemptions.windows_x86_64_msvc]]
 version = "0.52.6"
 criteria = "safe-to-deploy"
-
-[[exemptions.wit-bindgen-rt]]
-version = "0.39.0"
-criteria = "safe-to-run"
