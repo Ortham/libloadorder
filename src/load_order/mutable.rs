@@ -117,8 +117,8 @@ pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + S
             .par_iter()
             .map(|n| {
                 self.plugins()
-                    .par_iter()
-                    .position_any(|p| p.name_matches(n))
+                    .iter()
+                    .position(|p| p.name_matches(n))
                     .ok_or_else(|| Error::PluginNotFound((*n).to_owned()))
             })
             .collect()
@@ -435,8 +435,8 @@ fn to_plugin(
     game_settings: &GameSettings,
 ) -> Result<Plugin, Error> {
     existing_plugins
-        .par_iter()
-        .find_any(|p| p.name_matches(plugin_name))
+        .iter()
+        .find(|p| p.name_matches(plugin_name))
         .map_or_else(
             || Plugin::new(plugin_name, game_settings),
             |p| Ok(p.clone()),
