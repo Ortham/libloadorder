@@ -3,6 +3,18 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [18.5.1] - 2025-09-29
+
+### Changed
+
+- Changes to the versions of top-level non-dev dependencies of libloadorder and
+  libloadorder-ffi in Cargo.lock are now tracked in this changelog.
+- Updates esplugin to v6.1.4.
+- Updated keyvalues-parser to v0.2.1.
+- Updated libc to v0.2.175.
+- Updated rayon to 1.11.0.
+- Updated rust-ini to 0.21.3.
+
 ## [18.5.0] - 2025-08-01
 
 ### Changed

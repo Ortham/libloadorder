@@ -3,6 +3,16 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.5.1] - 2025-09-29
+
+### Changed
+
+- The accepted dependency version ranges have been widened to include older
+  versions. The oldest accepted version for each dependency is the oldest that
+  libloadorder will build and pass its tests with on x86-64 Windows and Linux.
+- The windows dependency has been replaced by direct dependencies on windows-sys
+  and windows-result.
+
 ## [18.5.0] - 2025-08-01
 
 ### Added
@@ -20,9 +30,13 @@ changelog does not include libloadorder-ffi changes.
 
 ### Changed
 
+- Releases are now published to crates.io using Trusted Publishing.
 - Updated rust-ini to 0.21.2.
 - Updated windows to 0.61.3.
-- Removed the regex dependency.
+
+### Removed
+
+- The regex dependency.
 
 ## [18.4.0] - 2025-05-01
 
