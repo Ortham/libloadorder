@@ -138,8 +138,8 @@ pub enum Error {
 }
 
 #[cfg(windows)]
-impl From<windows::core::Error> for Error {
-    fn from(error: windows::core::Error) -> Self {
+impl From<windows_result::Error> for Error {
+    fn from(error: windows_result::Error) -> Self {
         Error::SystemError(error.code().0, error.message().into())
     }
 }

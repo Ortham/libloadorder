@@ -21,57 +21,8 @@ when = "2025-08-11"
 user-id = 55123
 user-login = "rust-lang-owner"
 
-[[publisher.windows]]
-version = "0.62.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-collections]]
-version = "0.3.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-core]]
-version = "0.62.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-future]]
-version = "0.3.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-implement]]
-version = "0.60.0"
-when = "2025-03-18"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-interface]]
-version = "0.59.1"
-when = "2025-03-18"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
 [[publisher.windows-link]]
 version = "0.2.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-numerics]]
-version = "0.3.0"
 when = "2025-09-04"
 user-id = 64539
 user-login = "kennykerr"
@@ -84,23 +35,9 @@ user-id = 64539
 user-login = "kennykerr"
 user-name = "Kenny Kerr"
 
-[[publisher.windows-strings]]
-version = "0.5.0"
-when = "2025-09-04"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
 [[publisher.windows-sys]]
 version = "0.61.1"
 when = "2025-09-25"
-user-id = 64539
-user-login = "kennykerr"
-user-name = "Kenny Kerr"
-
-[[publisher.windows-threading]]
-version = "0.2.0"
-when = "2025-09-04"
 user-id = 64539
 user-login = "kennykerr"
 user-name = "Kenny Kerr"

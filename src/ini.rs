@@ -269,16 +269,74 @@ fn map_steam_language<T: AsRef<str>>(steam_language: T) -> &'static str {
     }
 }
 
+#[expect(
+    unsafe_code,
+    reason = "windows::System::UserProfile::GlobalizationPreferences::Languages() could be used to get this safely, but windows pulls in several more dependencies that aren't used."
+)]
 #[cfg(windows)]
 fn get_windows_system_language() -> Result<Option<String>, Error> {
     // Languages are BCP-47 language tags, e.g. "en-GB", "es-AR", "fr-FR"
-    // to_string_lossy() is fine here because language tags are ASCII-only.
-    let language = windows::System::UserProfile::GlobalizationPreferences::Languages()?
-        .into_iter()
+    use windows_sys::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+
+    // Get the size of the buffer that's needed.
+    let mut language_count = 0;
+    let mut buffer_size = 0;
+
+    // SAFETY: GetUserPreferredUILanguages is called with valid output pointers
+    // for its non-optional pointer parameters.
+    let result = unsafe {
+        GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &raw mut language_count,
+            std::ptr::null_mut(),
+            &raw mut buffer_size,
+        )
+    };
+
+    windows_result::BOOL(result).ok()?;
+
+    // Create and fill the buffer.
+    let mut buffer;
+
+    // SAFETY: GetUserPreferredUILanguages is called with the buffer size value
+    // that was used to initialise the buffer that's passed in.
+    let result = unsafe {
+        buffer = vec![0; to_usize(buffer_size)];
+
+        GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &raw mut language_count,
+            buffer.as_mut_ptr(),
+            &raw mut buffer_size,
+        )
+    };
+
+    windows_result::BOOL(result).ok()?;
+
+    if language_count == 0 {
+        return Ok(None);
+    }
+
+    // We just want the first language, so just get a slice of the buffer until
+    // the first null value, and read that as a UTF-16 string.
+    // from_string_lossy() is fine here because language tags are ASCII-only.
+    let language = buffer
+        .split(|v| *v == 0)
         .next()
-        .map(|l| l.to_string_lossy());
+        .map(String::from_utf16_lossy);
 
     Ok(language)
+}
+
+#[expect(
+    clippy::as_conversions,
+    reason = "A compile-time assertion ensures that this conversion will be lossless on all relevant target platforms, and try_from and try_into are not stable in const contexts"
+)]
+#[cfg(windows)]
+const fn to_usize(value: u32) -> usize {
+    // Error at compile time if this conversion isn't lossless.
+    const _: () = assert!(u32::BITS <= usize::BITS, "cannot fit a u32 into a usize!");
+    value as usize
 }
 
 #[cfg(not(windows))]

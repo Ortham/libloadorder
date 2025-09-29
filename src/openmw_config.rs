@@ -143,32 +143,47 @@ fn default_global_config_dir() -> Result<PathBuf, Error> {
     // Though it errors instead of falling back to the current working directory
     // if the Program Files path cannot be obtained.
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
-    use windows::Win32::UI::Shell;
+    use windows_sys::core::PWSTR;
+    use windows_sys::Win32::UI::Shell;
 
+    let mut pwstr: PWSTR = std::ptr::null_mut();
     // SAFETY: There's nothing unsafe about calling SHGetKnownFolderPath()
     // with these arguments.
-    let pwstr = unsafe {
+    let result = unsafe {
         Shell::SHGetKnownFolderPath(
             &Shell::FOLDERID_ProgramFiles,
-            Shell::KNOWN_FOLDER_FLAG(0),
-            None,
-        )?
+            0,
+            std::ptr::null_mut(),
+            &raw mut pwstr,
+        )
     };
 
-    // It's not safe to call .as_wide() on a null PWSTR.
-    if pwstr.is_null() {
-        return Err(Error::NoProgramFilesPath);
-    }
+    windows_result::HRESULT(result).ok()?;
 
-    // SAFETY: This is safe because the pointer is definitely not null.
-    let program_files_path = unsafe { PathBuf::from(OsString::from_wide(pwstr.as_wide())) };
+    // SAFETY: This is safe because the pointer is definitely not null when wcslen is called.
+    let pwstr_length = unsafe {
+        unsafe extern "C" {
+            fn wcslen(s: *const u16) -> usize;
+        }
+
+        if pwstr.is_null() {
+            return Err(Error::NoProgramFilesPath);
+        }
+
+        wcslen(pwstr)
+    };
+
+    // SAFETY: pwstr and pwstr_length satisfy the safety conditions of from_raw_parts().
+    let wide_slice = unsafe { core::slice::from_raw_parts(pwstr, pwstr_length) };
+
+    let program_files_path = PathBuf::from(OsString::from_wide(wide_slice));
 
     // SAFETY: This is safe because CoTaskMemFree() is being used with a
     // pointer to memory that was allocated by SHGetKnownFolderPath().
     unsafe {
         // Now free the pwstr as documented here:
         // <https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath>
-        windows::Win32::System::Com::CoTaskMemFree(Some(pwstr.as_ptr().cast()));
+        windows_sys::Win32::System::Com::CoTaskMemFree(pwstr.cast());
     }
 
     Ok(program_files_path.join("OpenMW"))
