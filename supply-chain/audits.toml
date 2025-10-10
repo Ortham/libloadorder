@@ -19,59 +19,10 @@ start = "2024-08-15"
 end = "2026-09-28"
 notes = "rust-lang-owner is a bot run by the Rust Infrastructure Team, so libc is hopefully as trustworthy as the Rust toolchain."
 
-[[trusted.windows]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-01-15"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-collections]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2025-02-06"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-core]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2021-11-15"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-future]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2025-02-10"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-implement]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2022-01-27"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-interface]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2022-02-18"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
 [[trusted.windows-link]]
 criteria = "safe-to-deploy"
 user-id = 64539 # Kenny Kerr (kennykerr)
 start = "2024-07-17"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-numerics]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2023-05-15"
 end = "2026-09-28"
 notes = "kennykerr is on the Windows team at Microsoft."
 
@@ -82,23 +33,9 @@ start = "2024-02-02"
 end = "2026-09-28"
 notes = "kennykerr is on the Windows team at Microsoft."
 
-[[trusted.windows-strings]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2024-02-02"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
 [[trusted.windows-sys]]
 criteria = "safe-to-deploy"
 user-id = 64539 # Kenny Kerr (kennykerr)
 start = "2021-11-15"
-end = "2026-09-28"
-notes = "kennykerr is on the Windows team at Microsoft."
-
-[[trusted.windows-threading]]
-criteria = "safe-to-deploy"
-user-id = 64539 # Kenny Kerr (kennykerr)
-start = "2025-04-29"
 end = "2026-09-28"
 notes = "kennykerr is on the Windows team at Microsoft."
