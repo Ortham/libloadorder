@@ -275,7 +275,7 @@ pub unsafe extern "C" fn lo_free_string_array(array: *mut *mut c_char, size: siz
         return;
     }
 
-    let strings = Box::from_raw(std::slice::from_raw_parts_mut(array, size));
+    let strings = Box::from_raw(std::ptr::slice_from_raw_parts_mut(array, size));
     for string in &strings {
         lo_free_string(*string);
     }
