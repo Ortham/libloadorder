@@ -14,7 +14,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Check formatting
         run: |
@@ -24,7 +24,7 @@ jobs:
   clippy:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Run clippy
         run: |
@@ -38,7 +38,7 @@ jobs:
       CARGO_VET_REV: c178261c96c9f820f67817e9c5458db655ddc21f # 0.10.1
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - uses: actions/cache@v4
       id: cache-cargo-vet
@@ -68,7 +68,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/cache@v4
         id: cache-cargo
