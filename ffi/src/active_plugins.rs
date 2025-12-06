@@ -21,8 +21,6 @@ use std::ffi::{c_char, c_uint};
 use std::panic::catch_unwind;
 use std::ptr;
 
-use libc::size_t;
-
 use super::lo_game_handle;
 use crate::constants::{
     LIBLO_ERROR_INVALID_ARGS, LIBLO_ERROR_PANICKED, LIBLO_ERROR_POISONED_THREAD_LOCK, LIBLO_OK,
@@ -46,7 +44,7 @@ use crate::helpers::{error, handle_error, to_c_string_array, to_str, to_str_vec}
 pub unsafe extern "C" fn lo_get_active_plugins(
     handle: lo_game_handle,
     plugins: *mut *mut *mut c_char,
-    num_plugins: *mut size_t,
+    num_plugins: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
@@ -100,7 +98,7 @@ pub unsafe extern "C" fn lo_get_active_plugins(
 pub unsafe extern "C" fn lo_set_active_plugins(
     handle: lo_game_handle,
     plugins: *const *const c_char,
-    num_plugins: size_t,
+    num_plugins: usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() {

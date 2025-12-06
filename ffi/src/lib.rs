@@ -135,8 +135,6 @@ use std::ffi::{c_char, c_uint, CString};
 use std::panic::catch_unwind;
 use std::ptr;
 
-use libc::size_t;
-
 mod active_plugins;
 mod constants;
 mod handle;
@@ -270,7 +268,7 @@ pub unsafe extern "C" fn lo_free_string(string: *mut c_char) {
 ///
 /// This function must not be called more than once with the same `array` value.
 #[no_mangle]
-pub unsafe extern "C" fn lo_free_string_array(array: *mut *mut c_char, size: size_t) {
+pub unsafe extern "C" fn lo_free_string_array(array: *mut *mut c_char, size: usize) {
     if array.is_null() || size == 0 {
         return;
     }

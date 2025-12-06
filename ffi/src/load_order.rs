@@ -21,7 +21,6 @@ use std::ffi::{c_char, c_uint};
 use std::panic::catch_unwind;
 use std::ptr;
 
-use libc::size_t;
 use loadorder::LoadOrderMethod;
 
 use super::lo_game_handle;
@@ -93,7 +92,7 @@ pub unsafe extern "C" fn lo_get_load_order_method(
 pub unsafe extern "C" fn lo_get_load_order(
     handle: lo_game_handle,
     plugins: *mut *mut *mut c_char,
-    num_plugins: *mut size_t,
+    num_plugins: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
@@ -153,7 +152,7 @@ pub unsafe extern "C" fn lo_get_load_order(
 pub unsafe extern "C" fn lo_set_load_order(
     handle: lo_game_handle,
     plugins: *const *const c_char,
-    num_plugins: size_t,
+    num_plugins: usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() {
@@ -204,7 +203,7 @@ pub unsafe extern "C" fn lo_set_load_order(
 pub unsafe extern "C" fn lo_get_plugin_position(
     handle: lo_game_handle,
     plugin: *const c_char,
-    index: *mut size_t,
+    index: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugin.is_null() || index.is_null() {
@@ -249,7 +248,7 @@ pub unsafe extern "C" fn lo_get_plugin_position(
 pub unsafe extern "C" fn lo_set_plugin_position(
     handle: lo_game_handle,
     plugin: *const c_char,
-    index: size_t,
+    index: usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugin.is_null() {
@@ -294,7 +293,7 @@ pub unsafe extern "C" fn lo_set_plugin_position(
 #[no_mangle]
 pub unsafe extern "C" fn lo_get_indexed_plugin(
     handle: lo_game_handle,
-    index: size_t,
+    index: usize,
     plugin: *mut *mut c_char,
 ) -> c_uint {
     catch_unwind(|| {

@@ -23,7 +23,6 @@ use std::path::Path;
 use std::ptr;
 use std::sync::RwLock;
 
-use libc::size_t;
 use loadorder::GameId;
 use loadorder::GameSettings;
 use loadorder::WritableLoadOrder;
@@ -318,7 +317,7 @@ pub unsafe extern "C" fn lo_fix_plugin_lists(handle: lo_game_handle) -> c_uint {
 pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
     handle: lo_game_handle,
     plugins: *mut *mut *mut c_char,
-    num_plugins: *mut size_t,
+    num_plugins: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
@@ -378,7 +377,7 @@ pub unsafe extern "C" fn lo_get_implicitly_active_plugins(
 pub unsafe extern "C" fn lo_get_early_loading_plugins(
     handle: lo_game_handle,
     plugins: *mut *mut *mut c_char,
-    num_plugins: *mut size_t,
+    num_plugins: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || plugins.is_null() || num_plugins.is_null() {
@@ -478,7 +477,7 @@ pub unsafe extern "C" fn lo_get_active_plugins_file_path(
 pub unsafe extern "C" fn lo_get_additional_plugins_directories(
     handle: lo_game_handle,
     paths: *mut *mut *mut c_char,
-    num_paths: *mut size_t,
+    num_paths: *mut usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || paths.is_null() || num_paths.is_null() {
@@ -539,7 +538,7 @@ pub unsafe extern "C" fn lo_get_additional_plugins_directories(
 pub unsafe extern "C" fn lo_set_additional_plugins_directories(
     handle: lo_game_handle,
     paths: *const *const c_char,
-    num_paths: size_t,
+    num_paths: usize,
 ) -> c_uint {
     catch_unwind(|| {
         if handle.is_null() || (paths.is_null() && num_paths != 0) {
@@ -723,7 +722,7 @@ mod tests {
 
         unsafe {
             let mut plugins: *mut *mut c_char = std::ptr::null_mut();
-            let mut num_plugins: size_t = 0;
+            let mut num_plugins: usize = 0;
 
             let result =
                 lo_get_implicitly_active_plugins(handle, &raw mut plugins, &raw mut num_plugins);
@@ -743,7 +742,7 @@ mod tests {
 
         unsafe {
             let mut plugins: *mut *mut c_char = std::ptr::null_mut();
-            let mut num_plugins: size_t = 0;
+            let mut num_plugins: usize = 0;
 
             let result =
                 lo_get_implicitly_active_plugins(handle, &raw mut plugins, &raw mut num_plugins);

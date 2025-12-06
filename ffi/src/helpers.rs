@@ -21,7 +21,6 @@ use std::io;
 use std::path::PathBuf;
 use std::slice;
 
-use libc::size_t;
 use loadorder::Error;
 
 use super::ERROR_MESSAGE;
@@ -103,7 +102,7 @@ pub(crate) fn to_c_string<S: AsRef<str>>(string: S) -> Result<*mut c_char, u32> 
 
 pub(crate) fn to_c_string_array<S: AsRef<str>>(
     strings: &[S],
-) -> Result<(*mut *mut c_char, size_t), u32> {
+) -> Result<(*mut *mut c_char, usize), u32> {
     let c_strings = strings
         .iter()
         .map(to_c_string)
