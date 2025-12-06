@@ -362,7 +362,6 @@ dependencies = [
 name = "libloadorder-ffi"
 version = "18.5.1"
 dependencies = [
- "libc",
  "libloadorder",
  "tempfile",
 ]
