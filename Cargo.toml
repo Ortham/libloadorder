@@ -22,7 +22,7 @@ windows-sys = { version = ">= 0.59.0, < 0.62", features = ["Win32_Globalization"
 windows-result = ">= 0.3.1, < 0.5"
 
 [dev-dependencies]
-criterion = ">= 0.3.0, < 0.8"
+criterion = ">= 0.3.0, < 0.9"
 tempfile = "3"
 
 [lib]
