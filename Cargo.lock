@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "keyvalues-parser"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a08dbe66b5c751fa0ccb33b447931646bf7dc055e8d48562dfed7fa6ee216bf"
+checksum = "3b1d591f0c9482810347586bd2ae842bbd1fc4e0849283c611244930ff44e90f"
 dependencies = [
  "pest",
 ]
