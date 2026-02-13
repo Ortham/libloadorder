@@ -39,11 +39,11 @@ Run `cargo test` and `cargo bench` to run the Rust tests and benchmarks
 respectively.
 
 To run the FFI tests, make sure you have CMake and C and C++ toolchains
-installed (e.g. MSVC on Windows, GCC on Linux), then create a directory at
-`ffi/build`, then from that directory run:
+installed (e.g. MSVC on Windows, GCC on Linux), then run:
 
 ```
-cmake ..
-cmake --build .
-ctest
+mkdir ffi/build
+cmake -B ffi/build ffi
+cmake --build ffi/build
+ctest --test-dir ffi/build --output-on-failure
 ```
