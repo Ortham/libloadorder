@@ -132,6 +132,6 @@ jobs:
       - name: Build and run C++ tests
         shell: bash
         run: |
-          cmake -B ffi/build ffi
-          cmake --build ffi/build
-          ctest --test-dir ffi/build --output-on-failure
+          cmake -B ffi/build ffi -DCMAKE_BUILD_TYPE=Debug
+          cmake --build ffi/build --config Debug
+          ctest --test-dir ffi/build --build-config Debug --output-on-failure

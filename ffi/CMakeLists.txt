@@ -1,23 +1,27 @@
-cmake_minimum_required(VERSION 2.8)
-project(libloadorder-ffi-tests CXX C)
+cmake_minimum_required(VERSION 3.10)
+project(libloadorder-ffi-tests CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories("${CMAKE_SOURCE_DIR}/include")
+if(LINUX)
+    set(SYSTEM_LIBS pthread dl m)
+elseif(WIN32)
+    set(SYSTEM_LIBS ntdll ws2_32)
+endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set (SYSTEM_LIBS pthread dl m)
-endif ()
+set(TARGET_PATH "${CMAKE_SOURCE_DIR}/../target")
+set(LIBLOADORDER_FFI_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}loadorder_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-if (MSVC)
-    set (SYSTEM_LIBS ntdll windowsapp Userenv Propsys)
-endif ()
-
-set (LIBLOADORDER_FFI_LIBRARY "${CMAKE_SOURCE_DIR}/../target/debug/${CMAKE_STATIC_LIBRARY_PREFIX}loadorder_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}")
+add_library(libloadorder_ffi INTERFACE)
+target_include_directories(libloadorder_ffi INTERFACE "${CMAKE_SOURCE_DIR}/include")
+target_link_libraries(libloadorder_ffi INTERFACE
+        optimized "${TARGET_PATH}/release/${LIBLOADORDER_FFI_LIB_NAME}"
+        debug "${TARGET_PATH}/debug/${LIBLOADORDER_FFI_LIB_NAME}"
+        ${SYSTEM_LIBS})
 
 add_executable(ffi_cpp_tests "${CMAKE_SOURCE_DIR}/tests/ffi.cpp")
-target_link_libraries(ffi_cpp_tests ${LIBLOADORDER_FFI_LIBRARY} ${SYSTEM_LIBS})
+target_link_libraries(ffi_cpp_tests PRIVATE libloadorder_ffi)
 
 enable_testing()
-add_test(ffi_cpp_tests ffi_cpp_tests)
+add_test(NAME ffi_cpp_tests COMMAND ffi_cpp_tests)
