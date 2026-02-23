@@ -161,46 +161,6 @@ This crate contains no `unsafe` code and no unnecessary use of the standard
 library.
 """
 
-[[audits.esplugin.audits.clap]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "4.5.32 -> 4.5.37"
-notes = "This just incremented the version of the clap_builder dependency."
-
-[[audits.esplugin.audits.clap_builder]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "4.5.32 -> 4.5.37"
-
-[[audits.esplugin.audits.half]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "2.5.0 -> 2.6.0"
-notes = "The only changes are to derive additional zerocopy traits and to fix some dependency minimum versions."
-
-[[audits.esplugin.audits.proc-macro2]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "1.0.94 -> 1.0.95"
-notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
-
-[[audits.esplugin.audits.tempfile]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "3.21.0 -> 3.22.0"
-notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
-
-[[audits.esplugin.audits.unicase]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "2.8.1 -> 2.9.0"
-
-[[audits.esplugin.audits.winapi-util]]
-who = "Oliver Hamlet <git@ortham.net>"
-criteria = "safe-to-deploy"
-delta = "0.1.9 -> 0.1.11"
-notes = "The only change is to the allowed range of windows-sys dependency versions."
-
 [[audits.google.audits.aho-corasick]]
 who = "Ying Hsu <yinghsu@chromium.org>"
 criteria = "safe-to-run"
@@ -1555,3 +1515,50 @@ criteria = "safe-to-deploy"
 delta = "2.6.0 -> 2.8.1"
 notes = "Update to Unicode 15.0.0"
 aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
+
+[[audits.ortham.audits.clap]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "4.5.32 -> 4.5.37"
+notes = "This just incremented the version of the clap_builder dependency."
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.clap_builder]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "4.5.32 -> 4.5.37"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.half]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.5.0 -> 2.6.0"
+notes = "The only changes are to derive additional zerocopy traits and to fix some dependency minimum versions."
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.proc-macro2]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.0.94 -> 1.0.95"
+notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.tempfile]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "3.21.0 -> 3.22.0"
+notes = "The only significant change is updating its maximum accepted version of the windows-sys dependency to allow v0.61.x."
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.unicase]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.8.1 -> 2.9.0"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.winapi-util]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "0.1.9 -> 0.1.11"
+notes = "The only change is to the allowed range of windows-sys dependency versions."
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
