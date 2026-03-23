@@ -164,6 +164,10 @@ impl GameSettings {
         self.id
     }
 
+    pub(crate) fn supports_blueprint_ships_plugins(&self) -> bool {
+        self.id == GameId::Starfield
+    }
+
     pub fn load_order_method(&self) -> LoadOrderMethod {
         match self.id {
             GameId::OpenMW => LoadOrderMethod::OpenMW,
@@ -741,10 +745,6 @@ fn implicitly_active_plugins(
         // Update.esm is always active, but loads after all other masters if it is not made to load
         // earlier (e.g. by listing in plugins.txt or by being a master of another master).
         plugin_names.push("Update.esm".to_owned());
-    } else if game_id == GameId::Starfield {
-        // BlueprintShips-Starfield.esm is always active but loads after all other plugins if not
-        // made to load earlier.
-        plugin_names.push("BlueprintShips-Starfield.esm".to_owned());
     }
 
     deduplicate(&mut plugin_names);
@@ -1031,6 +1031,45 @@ mod tests {
     fn id_should_be_the_id_the_struct_was_created_with() {
         let settings = game_with_generic_paths(GameId::Morrowind);
         assert_eq!(GameId::Morrowind, settings.id());
+    }
+
+    #[test]
+    fn supports_blueprint_ships_plugins_should_be_true_for_starfield_only() {
+        let mut settings = game_with_generic_paths(GameId::Morrowind);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::OpenMW);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Oblivion);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::OblivionRemastered);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Skyrim);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::SkyrimSE);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::SkyrimVR);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Fallout3);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::FalloutNV);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Fallout4);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Fallout4VR);
+        assert!(!settings.supports_blueprint_ships_plugins());
+
+        settings = game_with_generic_paths(GameId::Starfield);
+        assert!(settings.supports_blueprint_ships_plugins());
     }
 
     #[test]
@@ -2037,14 +2076,6 @@ mod tests {
         let plugins = settings.implicitly_active_plugins();
 
         assert!(plugins.contains(&"Update.esm".to_owned()));
-    }
-
-    #[test]
-    fn implicitly_active_plugins_should_include_blueprintships_starfield_esm_for_starfield() {
-        let settings = game_with_generic_paths(GameId::Starfield);
-        let plugins = settings.implicitly_active_plugins();
-
-        assert!(plugins.contains(&"BlueprintShips-Starfield.esm".to_owned()));
     }
 
     #[test]

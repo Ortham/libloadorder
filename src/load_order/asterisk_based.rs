@@ -31,6 +31,8 @@ use super::writable::{
 };
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
+use crate::load_order::timestamp_based::save_partial_load_order_using_timestamps;
+use crate::load_order::writable::blueprint_ships_base_plugin_name;
 use crate::plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -61,8 +63,41 @@ impl AsteriskBasedLoadOrder {
     fn ignore_active_plugins_file(&self) -> bool {
         // Fallout 4 and Starfield ignore plugins.txt if there are any sTestFile plugins listed in
         // the ini files.
-        ignore_active_plugins_file_fallout4(&self.game_settings)
-            || ignore_active_plugins_file_starfield(&self.game_settings)
+        matches!(
+            self.game_settings.id(),
+            GameId::Fallout4 | GameId::Fallout4VR | GameId::Starfield
+        ) && self.game_settings.implicitly_active_plugins().len()
+            > self.game_settings.early_loading_plugins().len()
+    }
+
+    fn activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
+        let active_basenames: HashSet<UniCase<String>> = self
+            .plugins()
+            .iter()
+            .filter_map(|p| {
+                if p.is_active() {
+                    p.name()
+                        .get(..p.name().len() - 4)
+                        .map(str::to_owned)
+                        .map(UniCase::new)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for plugin in &mut self.plugins {
+            if let Some(base_plugin_name) = blueprint_ships_base_plugin_name(plugin.name())
+                .map(str::to_owned)
+                .map(UniCase::new)
+            {
+                if active_basenames.contains(&base_plugin_name) {
+                    plugin.activate()?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -97,6 +132,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
 
         self.add_implicitly_active_plugins()?;
 
+        if self.game_settings.id() == GameId::Starfield {
+            self.activate_blueprint_ships_plugins()?;
+        }
+
         hoist_masters(&mut self.plugins)?;
 
         Ok(())
@@ -129,7 +168,26 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             // writing to it, but it won't actually have any impact on the load
             // order used by the game. In that case, the only way to set the
             // load order is to modify plugin timestamps, so do that.
-            save_load_order_using_timestamps(self)?;
+            save_load_order_using_timestamps(&mut self.plugins)?;
+        } else if self.game_settings.id() == GameId::Starfield {
+            // Blueprint plugins and BlueprintShips plugins get removed from
+            // plugins.txt by Starfield after the file is read. However,
+            // BlueprintShips plugins are still implicitly active if the plugin
+            // referenced by their filename suffix is active, so their load
+            // order is relatively important.
+            // Blueprint masters get loaded after all other plugins, and if not
+            // explicitly active they get loaded in timestamp order, so set
+            // their timestamps to reflect their load order, so that they'll
+            // load in the intended order even after Starfield strips them from
+            // plugins.txt.
+            // This doesn't help with non-master blueprint plugins, or with
+            // BlueprintShips plugins that are not blueprint plugins, but all
+            // official BlueprintShips plugins (as of 2026-03-26) are blueprint
+            // masters, and there are no other official blueprint plugins.
+            // I don't know how common blueprint plugins are in mods.
+            let blueprint_masters_iter =
+                self.plugins.iter_mut().filter(|p| p.is_blueprint_master());
+            save_partial_load_order_using_timestamps(blueprint_masters_iter)?;
         }
 
         Ok(())
@@ -179,10 +237,26 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         // Plugins that are active but not implicitly active, and plugins that
         // are inactive, only have a load order position if they're listed in
         // plugins.txt, so check that they're all listed.
+        // Starfield removes blueprint plugins from plugins.txt, which means
+        // inactive blueprint plugins' positions become ambiguous after each
+        // game session, but resolving that ambiguity will just be undone the
+        // next time the game is loaded, so there's not really any point
+        // reporting it.
+        // Starfield will also load plugins named BlueprintShips-<X>.esm for any
+        // active plugins with the basename <X> (e.g. <X>.esp, <X>.esm,
+        // <X>.esl), even if the BlueprintShips plugin is not a blueprint
+        // plugin and/or not listed in plugins.txt. Like blueprint plugins,
+        // BlueprintShips plugins are removed from plugins.txt whether they're
+        // active or not, so also skip them.
         let plugins_listed = self
             .plugins
             .iter()
-            .filter(|plugin| !self.game_settings.is_implicitly_active(plugin.name()))
+            .filter(|plugin| {
+                !(self.game_settings.is_implicitly_active(plugin.name())
+                    || plugin.is_blueprint_plugin()
+                    || (self.game_settings.supports_blueprint_ships_plugins()
+                        && is_blueprint_ships_plugin(plugin.name())))
+            })
             .all(|plugin| set.contains(&UniCase::new(plugin.name().to_owned())));
 
         Ok(!plugins_listed)
@@ -201,6 +275,10 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 }
 
+fn is_blueprint_ships_plugin(plugin_name: &str) -> bool {
+    blueprint_ships_base_plugin_name(plugin_name).is_some()
+}
+
 fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
     if line.is_empty() || line.starts_with('#') {
         None
@@ -213,21 +291,6 @@ fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
 
 fn owning_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
     plugin_line_mapper(line).map(|(name, active)| (name.to_owned(), active))
-}
-
-fn ignore_active_plugins_file_fallout4(game_settings: &GameSettings) -> bool {
-    // The implicitly active plugins are the early loading plugins plus test file plugins.
-    matches!(game_settings.id(), GameId::Fallout4 | GameId::Fallout4VR)
-        && game_settings.implicitly_active_plugins().len()
-            > game_settings.early_loading_plugins().len()
-}
-
-fn ignore_active_plugins_file_starfield(game_settings: &GameSettings) -> bool {
-    // The implicitly active plugins are the early loading plugins plus test file plugins plus
-    // BlueprintShips-Starfield.esm.
-    game_settings.id() == GameId::Starfield
-        && game_settings.implicitly_active_plugins().len()
-            > game_settings.early_loading_plugins().len() + 1
 }
 
 #[cfg(test)]
@@ -262,6 +325,16 @@ mod tests {
         let text = encoding_rs::WINDOWS_1252.decode(&bytes).0;
 
         text.lines().map(std::borrow::ToOwned::to_owned).collect()
+    }
+
+    fn copy_as_blueprint_plugin(settings: &GameSettings, plugin_name: &str) {
+        copy_to_test_dir("Blank.full.esm", plugin_name, settings);
+        set_blueprint_flag(
+            settings.id(),
+            &settings.plugins_directory().join(plugin_name),
+            true,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -732,6 +805,39 @@ mod tests {
     }
 
     #[test]
+    fn load_should_activate_blueprint_ships_plugins_for_active_starfield_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let filenames = &[
+            "starfield.esm",
+            "BlueprintShips-Starfield.esm",
+            "A.esm",
+            "BlueprintShips-a.esm",
+            "BlueprintShips-B.esm",
+            "BlueprintShips-Blank.esm",
+        ];
+
+        for filename in filenames {
+            copy_to_test_dir("Blank.full.esm", filename, load_order.game_settings());
+        }
+
+        write_active_plugins_file(load_order.game_settings(), &["A.esm"]);
+
+        load_order.load().unwrap();
+
+        assert_eq!(
+            &[
+                "starfield.esm",
+                "A.esm",
+                "BlueprintShips-Starfield.esm",
+                "BlueprintShips-a.esm"
+            ],
+            load_order.active_plugin_names().as_slice()
+        );
+    }
+
+    #[test]
     fn save_should_create_active_plugins_file_parent_directory_if_it_does_not_exist() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
@@ -915,6 +1021,48 @@ mod tests {
     }
 
     #[test]
+    fn save_should_update_blueprint_master_timestamps_to_reflect_load_order() {
+        let tmp_dir = tempdir().unwrap();
+
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name1 = "Blueprint1.esp";
+        let plugin_name2 = "Blueprint2.esp";
+        copy_as_blueprint_plugin(&load_order.game_settings, plugin_name1);
+        copy_as_blueprint_plugin(&load_order.game_settings, plugin_name2);
+
+        let plugin_path1 = load_order
+            .game_settings
+            .plugins_directory()
+            .join(plugin_name1);
+        let plugin_path2 = load_order
+            .game_settings
+            .plugins_directory()
+            .join(plugin_name2);
+
+        let first_timestamp = plugin_path1.metadata().unwrap().modified().unwrap();
+        File::options()
+            .write(true)
+            .open(&plugin_path2)
+            .unwrap()
+            .set_modified(first_timestamp + Duration::from_secs(1))
+            .unwrap();
+
+        load_order.load().unwrap();
+
+        let last_index = load_order.plugins.len() - 1;
+        load_order.plugins.swap(last_index - 1, last_index);
+
+        load_order.save().unwrap();
+
+        let plugin_timestamp1 = plugin_path1.metadata().unwrap().modified().unwrap();
+        let plugin_timestamp2 = plugin_path2.metadata().unwrap().modified().unwrap();
+
+        assert_eq!(first_timestamp, plugin_timestamp2);
+        assert_eq!(first_timestamp + Duration::from_secs(1), plugin_timestamp1);
+    }
+
+    #[test]
     fn is_self_consistent_should_return_true() {
         let tmp_dir = tempdir().unwrap();
         let load_order = prepare(GameId::SkyrimSE, tmp_dir.path());
@@ -957,7 +1105,28 @@ mod tests {
     }
 
     #[test]
-    fn is_ambiguous_should_ignore_loaded_implicitly_active_plugins() {
+    fn is_ambiguous_should_ignore_blueprint_plugins() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let loaded_plugin_names: Vec<&str> = load_order
+            .plugins
+            .iter()
+            .map(crate::plugin::Plugin::name)
+            .collect();
+
+        write_active_plugins_file(load_order.game_settings(), &loaded_plugin_names);
+
+        let blueprint_plugin_name = "Blueprint.esp";
+        copy_as_blueprint_plugin(&load_order.game_settings, blueprint_plugin_name);
+        let plugin = Plugin::new(blueprint_plugin_name, load_order.game_settings()).unwrap();
+        load_order.plugins_mut().push(plugin);
+
+        assert!(!load_order.is_ambiguous().unwrap());
+    }
+
+    #[test]
+    fn is_ambiguous_should_ignore_blueprint_ships_plugins() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
 
@@ -971,11 +1140,10 @@ mod tests {
 
         copy_to_test_dir(
             "Blank.full.esm",
-            "BlueprintShips-Starfield.esm",
+            "BlueprintShips-Blank.esm",
             load_order.game_settings(),
         );
-        let plugin =
-            Plugin::new("BlueprintShips-Starfield.esm", load_order.game_settings()).unwrap();
+        let plugin = Plugin::new("BlueprintShips-Blank.esm", load_order.game_settings()).unwrap();
         load_order.plugins_mut().push(plugin);
 
         assert!(!load_order.is_ambiguous().unwrap());

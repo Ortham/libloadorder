@@ -138,8 +138,12 @@ impl Plugin {
         self.data.is_medium_plugin()
     }
 
+    pub fn is_blueprint_plugin(&self) -> bool {
+        self.data.is_blueprint_plugin()
+    }
+
     pub fn is_blueprint_master(&self) -> bool {
-        self.data.is_blueprint_plugin() && self.is_master_file()
+        self.is_blueprint_plugin() && self.is_master_file()
     }
 
     pub fn masters(&self) -> Result<Vec<String>, Error> {

@@ -158,7 +158,7 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        save_load_order_using_timestamps(self)?;
+        save_load_order_using_timestamps(&mut self.plugins)?;
 
         self.save_active_plugins()
     }
@@ -202,14 +202,26 @@ impl WritableLoadOrder for TimestampBasedLoadOrder {
     }
 }
 
-pub(super) fn save_load_order_using_timestamps<T: MutableLoadOrder>(
-    load_order: &mut T,
-) -> Result<(), Error> {
-    let timestamps = padded_unique_timestamps(load_order.plugins());
+pub(super) fn save_load_order_using_timestamps(plugins: &mut [Plugin]) -> Result<(), Error> {
+    let timestamps = padded_unique_timestamps(plugins.iter());
 
-    load_order
-        .plugins_mut()
-        .iter_mut()
+    set_plugin_timestamps(plugins.iter_mut(), timestamps)
+}
+
+pub(super) fn save_partial_load_order_using_timestamps<'a>(
+    plugins_iter: impl Iterator<Item = &'a mut Plugin>,
+) -> Result<(), Error> {
+    let plugins: Vec<&mut Plugin> = plugins_iter.collect();
+    let timestamps = padded_unique_timestamps(plugins.iter().map(|p| &**p));
+
+    set_plugin_timestamps(plugins.into_iter(), timestamps)
+}
+
+fn set_plugin_timestamps<'a>(
+    plugins: impl Iterator<Item = &'a mut Plugin>,
+    timestamps: Vec<SystemTime>,
+) -> Result<(), Error> {
+    plugins
         .zip(timestamps)
         .map(|(ref mut plugin, timestamp)| plugin.set_modification_time(timestamp))
         .collect::<Result<Vec<_>, Error>>()
@@ -237,13 +249,15 @@ fn plugin_line_mapper(line: &str) -> Option<String> {
     }
 }
 
-fn padded_unique_timestamps(plugins: &[Plugin]) -> Vec<SystemTime> {
-    let mut timestamps: Vec<SystemTime> = plugins.iter().map(Plugin::modification_time).collect();
+fn padded_unique_timestamps<'a>(plugins: impl Iterator<Item = &'a Plugin>) -> Vec<SystemTime> {
+    let mut timestamps: Vec<SystemTime> = plugins.map(Plugin::modification_time).collect();
 
     timestamps.sort();
+
+    let old_len = timestamps.len();
     timestamps.dedup();
 
-    while timestamps.len() < plugins.len() {
+    while timestamps.len() < old_len {
         let timestamp = *timestamps.last().unwrap_or(&UNIX_EPOCH) + Duration::from_secs(60);
         timestamps.push(timestamp);
     }

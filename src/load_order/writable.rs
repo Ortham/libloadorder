@@ -163,6 +163,24 @@ fn count_active_plugins<T: ReadableLoadOrderBase>(load_order: &T) -> PluginCount
     counts
 }
 
+fn validate_plugin_counts(
+    counts: &PluginCounts,
+    max_active_full_plugins: usize,
+) -> Result<(), Error> {
+    if (counts.light > MAX_ACTIVE_LIGHT_PLUGINS)
+        || (counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS)
+        || (counts.full > max_active_full_plugins)
+    {
+        Err(Error::TooManyActivePlugins {
+            light_count: counts.light,
+            medium_count: counts.medium,
+            full_count: counts.full,
+        })
+    } else {
+        Ok(())
+    }
+}
+
 fn count_plugins(existing_plugins: &[Plugin], existing_plugin_indexes: &[usize]) -> PluginCounts {
     let mut counts = PluginCounts::default();
 
@@ -179,7 +197,14 @@ pub(super) fn activate<T: MutableLoadOrder>(
     load_order: &mut T,
     plugin_name: &str,
 ) -> Result<(), Error> {
-    let counts = count_active_plugins(load_order);
+    if load_order
+        .game_settings()
+        .supports_blueprint_ships_plugins()
+    {
+        return activate_with_blueprint_ships_plugin(load_order, plugin_name);
+    }
+
+    let mut counts = count_active_plugins(load_order);
     let max_active_full_plugins = load_order.max_active_full_plugins();
 
     let Some(plugin) = load_order.find_plugin_mut(plugin_name) else {
@@ -187,25 +212,68 @@ pub(super) fn activate<T: MutableLoadOrder>(
     };
 
     if !plugin.is_active() {
-        let is_light = plugin.is_light_plugin();
-        let is_medium = plugin.is_medium_plugin();
-        let is_full = !is_light && !is_medium;
+        counts.count_plugin(plugin);
 
-        if (is_light && counts.light == MAX_ACTIVE_LIGHT_PLUGINS)
-            || (is_medium && counts.medium == MAX_ACTIVE_MEDIUM_PLUGINS)
-            || (is_full && counts.full == max_active_full_plugins)
-        {
-            return Err(Error::TooManyActivePlugins {
-                light_count: counts.light,
-                medium_count: counts.medium,
-                full_count: counts.full,
-            });
-        }
+        validate_plugin_counts(&counts, max_active_full_plugins)?;
 
         plugin.activate()?;
     }
 
     Ok(())
+}
+
+fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
+    load_order: &mut T,
+    plugin_name: &str,
+) -> Result<(), Error> {
+    let Some((plugin_index, plugin)) = load_order.find_plugin_and_index(plugin_name) else {
+        return Err(Error::PluginNotFound(plugin_name.to_owned()));
+    };
+
+    if !plugin.is_active() {
+        let max_active_full_plugins = load_order.max_active_full_plugins();
+        let mut counts = count_active_plugins(load_order);
+
+        counts.count_plugin(plugin);
+
+        // If the game supports implicitly active blueprint ships plugins, check
+        // if a matching inactive plugin is present and record its index (to
+        // avoid holding two mut refs at the same time, as the compiler can't
+        // see they're disjoint).
+        let blueprint_ships_plugin_index =
+            find_blueprint_ships_plugin_for_plugin(load_order, plugin_name)
+                .filter(|(_, p)| !p.is_active())
+                .inspect(|(_, p)| counts.count_plugin(p))
+                .map(|(i, _)| i);
+
+        validate_plugin_counts(&counts, max_active_full_plugins)?;
+
+        if let Some(plugin) = load_order.plugins_mut().get_mut(plugin_index) {
+            plugin.activate()?;
+        }
+
+        if let Some(index) = blueprint_ships_plugin_index {
+            if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
+                plugin.activate()?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn find_blueprint_ships_plugin_for_plugin<'a, T: ReadableLoadOrderBase>(
+    load_order: &'a T,
+    plugin_name: &str,
+) -> Option<(usize, &'a Plugin)> {
+    if load_order
+        .game_settings()
+        .supports_blueprint_ships_plugins()
+    {
+        blueprint_ships_plugin_name(plugin_name).and_then(|n| load_order.find_plugin_and_index(&n))
+    } else {
+        None
+    }
 }
 
 pub(super) fn deactivate<T: MutableLoadOrder>(
@@ -230,24 +298,29 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
 
     let counts = count_plugins(load_order.plugins(), &existing_plugin_indices);
 
-    if counts.full > load_order.max_active_full_plugins()
-        || counts.medium > MAX_ACTIVE_MEDIUM_PLUGINS
-        || counts.light > MAX_ACTIVE_LIGHT_PLUGINS
-    {
-        return Err(Error::TooManyActivePlugins {
-            light_count: counts.light,
-            medium_count: counts.medium,
-            full_count: counts.full,
-        });
-    }
+    validate_plugin_counts(&counts, load_order.max_active_full_plugins())?;
 
     for plugin_name in load_order.game_settings().implicitly_active_plugins() {
         // If the plugin isn't installed, don't check that it's in the active
         // plugins list. Installed plugins will have already been loaded.
-        if load_order.index_of(plugin_name).is_some()
-            && !active_plugin_names.iter().any(|p| eq(*p, plugin_name))
-        {
-            return Err(Error::ImplicitlyActivePlugin(plugin_name.clone()));
+        validate_plugin_is_active(load_order, active_plugin_names, plugin_name)?;
+    }
+
+    if load_order
+        .game_settings()
+        .supports_blueprint_ships_plugins()
+    {
+        // Check that for any active plugins that would also cause a
+        // BlueprintShips to be implicitly active, that the BlueprintShips
+        // plugin is also listed.
+        for active_plugin in active_plugin_names {
+            if let Some(blueprint_ships_plugin_name) = blueprint_ships_plugin_name(active_plugin) {
+                validate_plugin_is_active(
+                    load_order,
+                    active_plugin_names,
+                    &blueprint_ships_plugin_name,
+                )?;
+            }
         }
     }
 
@@ -257,6 +330,44 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
         if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
             plugin.activate()?;
         }
+    }
+
+    Ok(())
+}
+
+fn blueprint_ships_plugin_name(plugin_name: &str) -> Option<String> {
+    // Supported extensions are .esm, .esp, .esl
+    const EXTENSION_LENGTH: usize = 4;
+
+    plugin_name
+        .get(..plugin_name.len() - EXTENSION_LENGTH)
+        .map(|n| format!("BlueprintShips-{n}.esm"))
+}
+
+pub(super) fn blueprint_ships_base_plugin_name(blueprint_ships_plugin_name: &str) -> Option<&str> {
+    const BLUEPRINT_SHIPS_PREFIX: &str = "BlueprintShips-";
+    const BLUEPRINT_SHIPS_SUFFIX: &str = ".esm";
+
+    blueprint_ships_plugin_name
+        .split_at_checked(BLUEPRINT_SHIPS_PREFIX.len())
+        .filter(|(prefix, _)| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
+        .and_then(|(_, remainder)| {
+            remainder
+                .split_at_checked(remainder.len() - BLUEPRINT_SHIPS_SUFFIX.len())
+                .filter(|(_, suffix)| BLUEPRINT_SHIPS_SUFFIX.eq_ignore_ascii_case(suffix))
+                .map(|(base, _)| base)
+        })
+}
+
+fn validate_plugin_is_active<T: MutableLoadOrder>(
+    load_order: &T,
+    active_plugin_names: &[&str],
+    plugin_name: &str,
+) -> Result<(), Error> {
+    if load_order.index_of(plugin_name).is_some()
+        && !active_plugin_names.iter().any(|p| eq(*p, plugin_name))
+    {
+        return Err(Error::ImplicitlyActivePlugin(plugin_name.to_owned()));
     }
 
     Ok(())
@@ -795,6 +906,86 @@ mod tests {
     }
 
     #[test]
+    fn activate_with_blueprint_ship_base_plugin_should_also_activate_blueprint_ships_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name = "Blank.esp";
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        add(&mut load_order, blueprint_ships).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(!load_order.is_active(blueprint_ships));
+
+        activate(&mut load_order, plugin_name).unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+    }
+
+    #[test]
+    fn activate_should_succeed_if_blueprint_ships_plugins_are_supported_but_not_present() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name = "Blank.esp";
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+
+        activate(&mut load_order, plugin_name).unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+    }
+
+    #[test]
+    fn activate_with_blueprint_ship_base_plugin_should_count_activating_blueprint_ships_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name = "Blank.esp";
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        let plugins = prepare_bulk_full_plugins(&mut load_order);
+        for plugin in &plugins[..254] {
+            activate(&mut load_order, plugin).unwrap();
+        }
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        add(&mut load_order, blueprint_ships).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(!load_order.is_active(blueprint_ships));
+
+        let err = activate(&mut load_order, plugin_name).unwrap_err();
+
+        match err {
+            Error::TooManyActivePlugins {
+                light_count,
+                medium_count,
+                full_count,
+            } => {
+                assert_eq!(0, light_count);
+                assert_eq!(0, medium_count);
+                assert_eq!(256, full_count);
+            }
+            e => panic!("Unexpected error type: {e:?}"),
+        }
+    }
+
+    #[test]
     fn deactivate_should_deactivate_the_plugin_with_the_given_filename() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
@@ -1061,5 +1252,27 @@ mod tests {
 
         assert!(set_active_plugins(&mut load_order, &plugin_refs).is_err());
         assert_eq!(1, load_order.active_plugin_names().len());
+    }
+
+    #[test]
+    fn set_active_plugins_should_error_if_an_implicitly_active_blueprint_ships_plugin_is_not_given()
+    {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        add(&mut load_order, blueprint_ships).unwrap();
+
+        let err = set_active_plugins(&mut load_order, &["Blank.esp"]).unwrap_err();
+
+        match err {
+            Error::ImplicitlyActivePlugin(n) => assert_eq!(blueprint_ships, n),
+            e => panic!("Unexpected error type: {e:?}"),
+        }
     }
 }
