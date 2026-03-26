@@ -3,12 +3,24 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog only contains libloadorder-ffi changes.
 
+## [18.6.0] - 2026-03-26
+
+### Changed
+
+- Updated to libloadorder v18.6.0.
+- Update unicase to v2.9.0.
+
+### Removed
+
+- The dependency on the libc crate.
+
 ## [18.5.1] - 2025-09-29
 
 ### Changed
 
 - Changes to the versions of top-level non-dev dependencies of libloadorder and
   libloadorder-ffi in Cargo.lock are now tracked in this changelog.
+- Updated to libloadorder v18.5.1.
 - Updates esplugin to v6.1.4.
 - Updated keyvalues-parser to v0.2.1.
 - Updated libc to v0.2.175.

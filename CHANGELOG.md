@@ -3,6 +3,50 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.6.0] - 2026-03-26
+
+### Added
+
+- Added support for implicitly activating Starfield BlueprintShips plugins.
+
+  Starfield treats a plugin named `BlueprintShips-X.esm` (where `X` can be
+  anything) as active even if it is not listed as active in plugins.txt (or not
+  listed in plugins.txt at all), so long as there is an active plugin named
+  `X.esm`, `X.esp` or `X.esl`. I.e. activating `X.esm` will also activate
+  `BlueprintShips-X.esm` is if exists.
+
+  libloadorder now follows this behaviour when `WritableLoadOrder::load()` or
+  `WritableLoadOrder::activate()` are called. When activating a plugin, it now
+  validates that any implicitly-activated BlueprintShips plugin would not
+  increase the active plugins counts past their limits.
+  `WritableLoadOrder::set_active_plugins()` now validates that the given plugins
+  include all BlueprintShips plugins that would be implicitly activated by other
+  plugins given to the function.
+
+  libloadorder does *not* automatically deactivate a BlueprintShips plugin that
+  was implicitly activated by another plugin when that other plugin is
+  deactivated, as libloadorder doesn't currently track whether a plugin was
+  implicitly or explicitly activated.
+- Add support for persisting blueprint master load order across Starfield
+  starts.
+
+  When Starfield starts, it reads `plugins.txt`, and then removes all blueprint
+  plugins and BlueprintShips plugins from `plugins.txt`. This means that those
+  plugins cannot have their load order persisted in `plugins.txt` across
+  multiple Starfield starts. However, any blueprint masters that are
+  implicitly (not explicitly) active are appended to the load order in
+  ascending order of their modification timestamps.
+
+  `WritableLoadOrder::save()` now writes the modification timestamps of any
+  blueprint masters present so that they match the load order being saved. This
+  is done in addition to including the blueprint masters in `plugins.txt`.
+
+  This preserves the order of implicitly-active blueprint masters (which all
+  current official blueprint and BlueprintShips plugins are) across multiple
+  Starfield startups. However, it is unable to preserve the order of any other
+  blueprint plugins, or of BlueprintShips plugins that are not
+  blueprint-flagged.
+
 ## [18.5.1] - 2025-09-29
 
 ### Changed
