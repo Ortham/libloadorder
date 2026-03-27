@@ -13,7 +13,7 @@ changelog does not include libloadorder-ffi changes.
   anything) as active even if it is not listed as active in plugins.txt (or not
   listed in plugins.txt at all), so long as there is an active plugin named
   `X.esm`, `X.esp` or `X.esl`. I.e. activating `X.esm` will also activate
-  `BlueprintShips-X.esm` is if exists.
+  `BlueprintShips-X.esm` if it exists.
 
   libloadorder now follows this behaviour when `WritableLoadOrder::load()` or
   `WritableLoadOrder::activate()` are called. When activating a plugin, it now
@@ -46,6 +46,12 @@ changelog does not include libloadorder-ffi changes.
   Starfield startups. However, it is unable to preserve the order of any other
   blueprint plugins, or of BlueprintShips plugins that are not
   blueprint-flagged.
+
+- `WritableLoadOrder::is_ambiguous()` now ignores blueprint plugins and
+  BlueprintShips plugins for Starfield, since it's not possible to stop the game
+  from making their load order positions ambiguous, so returning true makes it
+  more difficult to identify when there is ambiguity that can be permanently
+  resolved.
 
 ## [18.5.1] - 2025-09-29
 
