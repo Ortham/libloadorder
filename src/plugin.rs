@@ -78,7 +78,7 @@ impl Plugin {
             use crate::ghostable_path::GhostablePath;
 
             if active.is_active() {
-                filepath.unghost()?
+                filepath
             } else {
                 filepath.resolve_path()?
             }
@@ -207,6 +207,18 @@ impl Plugin {
         Ok(())
     }
 
+    /// This does not un-ghost ghosted plugins.
+    pub(crate) fn set_explicitly_active(&mut self) {
+        self.active = ActiveState::ExplicitlyActive;
+    }
+
+    pub(crate) fn set_implicitly_active_if_inactive(&mut self) {
+        if self.active == ActiveState::Inactive {
+            self.active = ActiveState::ImplicitlyActive;
+        }
+    }
+
+    /// This un-ghosts plugins that are currently inactive.
     pub fn activate(&mut self) -> Result<(), Error> {
         // A plugin only needs to be un-ghosted if it's currently inactive.
         if !self.is_active() && self.game_id.allow_plugin_ghosting() {
@@ -225,18 +237,6 @@ impl Plugin {
         }
 
         self.active = ActiveState::ExplicitlyActive;
-        Ok(())
-    }
-
-    pub(crate) fn implicitly_activate(&mut self) -> Result<(), Error> {
-        let was_inactive = self.active == ActiveState::Inactive;
-
-        self.activate()?;
-
-        if was_inactive {
-            self.active = ActiveState::ImplicitlyActive;
-        }
-
         Ok(())
     }
 
@@ -765,7 +765,7 @@ mod tests {
         copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
         let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
 
-        plugin.implicitly_activate().unwrap();
+        plugin.set_implicitly_active_if_inactive();
 
         assert!(plugin.is_active());
         assert_eq!(ActiveState::ImplicitlyActive, plugin.active);
@@ -784,7 +784,7 @@ mod tests {
         let mut plugin =
             Plugin::with_active("Blank.esp", &settings, ActiveState::ExplicitlyActive).unwrap();
 
-        plugin.implicitly_activate().unwrap();
+        plugin.set_implicitly_active_if_inactive();
 
         assert!(plugin.is_active());
         assert_eq!(ActiveState::ExplicitlyActive, plugin.active);

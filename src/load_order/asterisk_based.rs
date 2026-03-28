@@ -70,7 +70,7 @@ impl AsteriskBasedLoadOrder {
             > self.game_settings.early_loading_plugins().len()
     }
 
-    fn implicitly_activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
+    fn implicitly_activate_blueprint_ships_plugins(&mut self) {
         let active_base_names: HashSet<UniCase<&str>> = self
             .plugins()
             .iter()
@@ -93,11 +93,9 @@ impl AsteriskBasedLoadOrder {
 
         for index in indexes {
             if let Some(plugin) = self.plugins.get_mut(index) {
-                plugin.implicitly_activate()?;
+                plugin.set_implicitly_active_if_inactive();
             }
         }
-
-        Ok(())
     }
 }
 
@@ -133,7 +131,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         self.add_implicitly_active_plugins()?;
 
         if self.game_settings.id() == GameId::Starfield {
-            self.implicitly_activate_blueprint_ships_plugins()?;
+            self.implicitly_activate_blueprint_ships_plugins();
         }
 
         hoist_masters(&mut self.plugins)?;

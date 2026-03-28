@@ -255,7 +255,7 @@ fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
 
     if let Some(index) = blueprint_ships_plugin_index {
         if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
-            plugin.implicitly_activate()?;
+            plugin.set_implicitly_active_if_inactive();
         }
     }
 
@@ -969,8 +969,7 @@ mod tests {
         load_order
             .find_plugin_mut(plugin_name)
             .unwrap()
-            .implicitly_activate()
-            .unwrap();
+            .set_implicitly_active_if_inactive();
 
         assert!(load_order.is_active(plugin_name));
         assert!(!load_order
@@ -1031,8 +1030,7 @@ mod tests {
         load_order
             .find_plugin_mut(plugin_name)
             .unwrap()
-            .implicitly_activate()
-            .unwrap();
+            .set_implicitly_active_if_inactive();
 
         let blueprint_ships = "BlueprintShips-Blank.esm";
         copy_to_test_dir(
@@ -1240,7 +1238,7 @@ mod tests {
             load_order.game_settings(),
         );
         let index = add(&mut load_order, blueprint_ships).unwrap();
-        load_order.plugins[index].implicitly_activate().unwrap();
+        load_order.plugins[index].set_implicitly_active_if_inactive();
 
         let plugin_name = "Blank.esp";
         assert!(load_order.is_active(plugin_name));
@@ -1294,7 +1292,7 @@ mod tests {
             load_order.game_settings(),
         );
         let index = add(&mut load_order, blueprint_ships).unwrap();
-        load_order.plugins[index].implicitly_activate().unwrap();
+        load_order.plugins[index].set_implicitly_active_if_inactive();
 
         let plugin_name = "Blank.esp";
         assert!(load_order.is_active(plugin_name));
@@ -1319,7 +1317,7 @@ mod tests {
             load_order.game_settings(),
         );
         let index = add(&mut load_order, blueprint_ships).unwrap();
-        load_order.plugins[index].implicitly_activate().unwrap();
+        load_order.plugins[index].set_implicitly_active_if_inactive();
 
         std::fs::write(
             load_order

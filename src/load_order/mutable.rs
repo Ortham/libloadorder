@@ -304,7 +304,9 @@ where
 
     for plugin_name in plugin_names {
         if let Some(plugin) = load_order.find_plugin_mut(&plugin_name) {
-            plugin.activate()?;
+            // No need to un-ghost plugins since this is loading existing active
+            // state so the plugins must already be non-ghosted.
+            plugin.set_explicitly_active();
         }
     }
 
@@ -769,7 +771,8 @@ fn implicitly_activate<T: MutableLoadOrder + ?Sized>(
     filename: &str,
 ) -> Result<(), Error> {
     if let Some(plugin) = load_order.find_plugin_mut(filename) {
-        plugin.implicitly_activate()
+        plugin.set_implicitly_active_if_inactive();
+        Ok(())
     } else {
         // Ignore any errors trying to load the plugin to save checking if it's
         // valid and then loading it if it is.

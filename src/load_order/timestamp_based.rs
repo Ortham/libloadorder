@@ -110,7 +110,9 @@ impl TimestampBasedLoadOrder {
 
         for plugin_name in plugin_names {
             if let Some(plugin) = self.find_plugin_mut(&plugin_name) {
-                plugin.activate()?;
+                // No need to un-ghost plugins since this is loading existing
+                // active state so the plugins must already be non-ghosted.
+                plugin.set_explicitly_active();
             }
         }
 
