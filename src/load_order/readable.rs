@@ -92,6 +92,7 @@ mod tests {
 
     use crate::enums::GameId;
     use crate::load_order::tests::{game_settings_for_test, mock_game_files};
+    use crate::plugin::ActiveState;
     use crate::tests::copy_to_test_dir;
 
     struct TestLoadOrder {
@@ -114,7 +115,8 @@ mod tests {
         mock_game_files(&mut game_settings);
 
         let plugins = vec![
-            Plugin::with_active("Blank.esp", &game_settings, true).unwrap(),
+            Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                .unwrap(),
             Plugin::new("Blank - Different.esp", &game_settings).unwrap(),
         ];
 

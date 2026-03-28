@@ -70,10 +70,11 @@ impl AsteriskBasedLoadOrder {
             > self.game_settings.early_loading_plugins().len()
     }
 
-    fn activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
+    fn implicitly_activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
         let active_base_names: HashSet<UniCase<&str>> = self
             .plugins()
             .iter()
+            // Implicitly-active plugins can activate BlueprintShips plugins.
             .filter(|p| p.is_active())
             .filter_map(|p| p.name().get(..p.name().len() - 4).map(UniCase::new))
             .collect();
@@ -92,7 +93,7 @@ impl AsteriskBasedLoadOrder {
 
         for index in indexes {
             if let Some(plugin) = self.plugins.get_mut(index) {
-                plugin.activate()?;
+                plugin.implicitly_activate()?;
             }
         }
 
@@ -132,7 +133,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
         self.add_implicitly_active_plugins()?;
 
         if self.game_settings.id() == GameId::Starfield {
-            self.activate_blueprint_ships_plugins()?;
+            self.implicitly_activate_blueprint_ships_plugins()?;
         }
 
         hoist_masters(&mut self.plugins)?;
@@ -289,7 +290,7 @@ fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
 }
 
 fn owning_plugin_line_mapper(line: &str) -> Option<(String, bool)> {
-    plugin_line_mapper(line).map(|(name, active)| (name.to_owned(), active))
+    plugin_line_mapper(line).map(|(name, explicitly_active)| (name.to_owned(), explicitly_active))
 }
 
 #[cfg(test)]
@@ -297,6 +298,7 @@ mod tests {
     use super::*;
 
     use crate::load_order::tests::*;
+    use crate::plugin::ActiveState;
     use crate::tests::{copy_to_dir, copy_to_test_dir, set_file_timestamps, NON_ASCII};
     use std::fs::{create_dir_all, remove_dir_all};
     use std::path::Path;
@@ -307,7 +309,11 @@ mod tests {
         let mut game_settings = game_settings_for_test(game_id, game_dir);
         mock_game_files(&mut game_settings);
 
-        let mut plugins = vec![Plugin::with_active("Blank.esp", &game_settings, true).unwrap()];
+        let mut plugins =
+            vec![
+                Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                    .unwrap(),
+            ];
 
         if game_id != GameId::Starfield {
             plugins.push(Plugin::new("Blank - Different.esp", &game_settings).unwrap());
@@ -834,6 +840,22 @@ mod tests {
             ],
             load_order.active_plugin_names().as_slice()
         );
+        assert!(!load_order
+            .find_plugin("starfield.esm")
+            .unwrap()
+            .is_explicitly_active());
+        assert!(load_order
+            .find_plugin("A.esm")
+            .unwrap()
+            .is_explicitly_active());
+        assert!(!load_order
+            .find_plugin("BlueprintShips-Starfield.esm")
+            .unwrap()
+            .is_explicitly_active());
+        assert!(!load_order
+            .find_plugin("BlueprintShips-a.esm")
+            .unwrap()
+            .is_explicitly_active());
     }
 
     #[test]

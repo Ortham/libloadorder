@@ -314,6 +314,7 @@ mod tests {
 
     use crate::{
         load_order::tests::{game_settings_for_test, mock_game_files, prepare_bulk_full_plugins},
+        plugin::ActiveState,
         tests::{copy_to_dir, create_file, NON_ASCII},
     };
 
@@ -631,8 +632,12 @@ mod tests {
         std::fs::write(parent_path.join("Blank.omwscripts"), "").unwrap();
 
         for plugin_name in active_plugin_names {
-            let plugin =
-                Plugin::with_active(plugin_name, load_order.game_settings(), true).unwrap();
+            let plugin = Plugin::with_active(
+                plugin_name,
+                load_order.game_settings(),
+                ActiveState::ExplicitlyActive,
+            )
+            .unwrap();
             load_order.plugins.push(plugin);
         }
 

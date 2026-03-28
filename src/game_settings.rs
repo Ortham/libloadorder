@@ -33,7 +33,7 @@ use crate::load_order::{
     WritableLoadOrder,
 };
 use crate::openmw_config;
-use crate::plugin::{has_plugin_extension, Plugin};
+use crate::plugin::{has_plugin_extension, ActiveState, Plugin};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GameSettings {
@@ -317,7 +317,7 @@ impl GameSettings {
                     plugins_directory,
                     additional_plugins_directories,
                 );
-                Plugin::with_path(&path, game_id, false).is_ok()
+                Plugin::with_path(&path, game_id, ActiveState::Inactive).is_ok()
             });
         }
 

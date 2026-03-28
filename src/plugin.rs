@@ -40,9 +40,22 @@ const VALID_EXTENSIONS_WITH_ESL: &[&str] = &[
 
 const VALID_EXTENSIONS_OPENMW: &[&str] = &[".esp", ".esm", ".omwaddon", ".omwgame", ".omwscripts"];
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum ActiveState {
+    Inactive,
+    ImplicitlyActive,
+    ExplicitlyActive,
+}
+
+impl ActiveState {
+    fn is_active(self) -> bool {
+        !matches!(self, Self::Inactive)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Plugin {
-    active: bool,
+    active: ActiveState,
     modification_time: SystemTime,
     data: esplugin::Plugin,
     name: String,
@@ -51,20 +64,20 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn new(filename: &str, game_settings: &GameSettings) -> Result<Plugin, Error> {
-        Plugin::with_active(filename, game_settings, false)
+        Plugin::with_active(filename, game_settings, ActiveState::Inactive)
     }
 
     pub fn with_active(
         filename: &str,
         game_settings: &GameSettings,
-        active: bool,
+        active: ActiveState,
     ) -> Result<Plugin, Error> {
         let filepath = game_settings.plugin_path(filename);
 
         let filepath = if game_settings.id().allow_plugin_ghosting() {
             use crate::ghostable_path::GhostablePath;
 
-            if active {
+            if active.is_active() {
                 filepath.unghost()?
             } else {
                 filepath.resolve_path()?
@@ -76,7 +89,11 @@ impl Plugin {
         Plugin::with_path(&filepath, game_settings.id(), active)
     }
 
-    pub(crate) fn with_path(path: &Path, game_id: GameId, active: bool) -> Result<Plugin, Error> {
+    pub(crate) fn with_path(
+        path: &Path,
+        game_id: GameId,
+        active: ActiveState,
+    ) -> Result<Plugin, Error> {
         let Some(filename) = path.file_name().and_then(OsStr::to_str) else {
             return Err(Error::NoFilename(path.to_path_buf()));
         };
@@ -123,7 +140,11 @@ impl Plugin {
     }
 
     pub fn is_active(&self) -> bool {
-        self.active
+        self.active.is_active()
+    }
+
+    pub fn is_explicitly_active(&self) -> bool {
+        self.active == ActiveState::ExplicitlyActive
     }
 
     pub fn is_master_file(&self) -> bool {
@@ -180,29 +201,42 @@ impl Plugin {
     }
 
     pub fn activate(&mut self) -> Result<(), Error> {
-        if !self.is_active() {
-            if self.game_id.allow_plugin_ghosting() {
-                use crate::ghostable_path::GhostablePath;
+        // A plugin only needs to be un-ghosted if it's currently inactive.
+        if !self.is_active() && self.game_id.allow_plugin_ghosting() {
+            use crate::ghostable_path::GhostablePath;
 
-                if self.data.path().has_ghost_extension() {
-                    let new_path = self.data.path().unghost()?;
+            if self.data.path().has_ghost_extension() {
+                let new_path = self.data.path().unghost()?;
 
-                    self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);
-                    self.data
-                        .parse_file(ParseOptions::header_only())
-                        .map_err(|e| file_error(self.data.path(), e))?;
-                    let modification_time = self.modification_time();
-                    self.set_modification_time(modification_time)?;
-                }
+                self.data = esplugin::Plugin::new(self.data.game_id(), &new_path);
+                self.data
+                    .parse_file(ParseOptions::header_only())
+                    .map_err(|e| file_error(self.data.path(), e))?;
+                let modification_time = self.modification_time();
+                self.set_modification_time(modification_time)?;
             }
-
-            self.active = true;
         }
+
+        self.active = ActiveState::ExplicitlyActive;
         Ok(())
     }
 
+    pub(crate) fn implicitly_activate(&mut self) -> Result<(), Error> {
+        let was_inactive = self.active == ActiveState::Inactive;
+
+        self.activate()?;
+
+        if was_inactive {
+            self.active = ActiveState::ImplicitlyActive;
+        }
+
+        Ok(())
+    }
+
+    /// This should only be called after checking that the plugin isn't
+    /// considered implicitly active.
     pub fn deactivate(&mut self) {
-        self.active = false;
+        self.active = ActiveState::Inactive;
     }
 }
 
@@ -282,6 +316,13 @@ mod tests {
     }
 
     #[test]
+    fn active_state_is_active_should_be_false_for_inactive_only() {
+        assert!(ActiveState::ExplicitlyActive.is_active());
+        assert!(ActiveState::ImplicitlyActive.is_active());
+        assert!(!ActiveState::Inactive.is_active());
+    }
+
+    #[test]
     fn with_active_should_unghost_active_ghosted_plugin_paths() {
         let tmp_dir = tempdir().unwrap();
         let game_dir = tmp_dir.path();
@@ -292,7 +333,8 @@ mod tests {
         let ghosted_name = "Blank.esp.ghost";
 
         copy_to_test_dir(name, ghosted_name, &settings);
-        let plugin = Plugin::with_active(ghosted_name, &settings, true).unwrap();
+        let plugin =
+            Plugin::with_active(ghosted_name, &settings, ActiveState::ExplicitlyActive).unwrap();
 
         assert_eq!(name, plugin.name());
         assert!(game_dir.join("Data").join(name).exists());
@@ -310,7 +352,7 @@ mod tests {
         let ghosted_name = "Blank.esp.ghost";
 
         copy_to_test_dir(name, ghosted_name, &settings);
-        let plugin = Plugin::with_active(ghosted_name, &settings, false).unwrap();
+        let plugin = Plugin::with_active(ghosted_name, &settings, ActiveState::Inactive).unwrap();
 
         assert_eq!(name, plugin.name());
         assert!(!game_dir.join("Data").join(name).exists());
@@ -328,7 +370,7 @@ mod tests {
         let ghosted_name = "Blank.esp.ghost";
 
         copy_to_test_dir(name, ghosted_name, &settings);
-        match Plugin::with_active(ghosted_name, &settings, false).unwrap_err() {
+        match Plugin::with_active(ghosted_name, &settings, ActiveState::Inactive).unwrap_err() {
             Error::InvalidPath(p) => {
                 assert_eq!(game_dir.join("resources/vfs").join(ghosted_name), p);
             }
@@ -360,7 +402,8 @@ mod tests {
         let file = File::options().append(true).open(file_path).unwrap();
         file.set_modified(file_timestamp).unwrap();
 
-        let plugin = Plugin::with_path(&symlink_path, GameId::OpenMW, false).unwrap();
+        let plugin =
+            Plugin::with_path(&symlink_path, GameId::OpenMW, ActiveState::Inactive).unwrap();
 
         assert_eq!(symlink_name, plugin.name());
         assert!(!plugin.is_master_file());
@@ -652,6 +695,7 @@ mod tests {
         plugin.activate().unwrap();
 
         assert!(plugin.is_active());
+        assert_eq!(ActiveState::ExplicitlyActive, plugin.active);
         assert_eq!("Blank.esp", plugin.name());
         assert!(game_dir.join("Data").join("Blank.esp").exists());
     }
@@ -675,7 +719,7 @@ mod tests {
         );
 
         let mut plugin = Plugin {
-            active: false,
+            active: ActiveState::Inactive,
             modification_time: SystemTime::now(),
             data,
             name: plugin_name.to_owned(),
@@ -685,6 +729,58 @@ mod tests {
         plugin.activate().unwrap();
         assert!(plugin.is_active());
         assert_eq!(plugin_name, plugin.name());
+    }
+
+    #[test]
+    fn activate_should_make_an_implicitly_active_plugin_explicitly_active() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::Oblivion, game_dir);
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let mut plugin =
+            Plugin::with_active("Blank.esp", &settings, ActiveState::ImplicitlyActive).unwrap();
+
+        plugin.activate().unwrap();
+
+        assert!(plugin.is_active());
+        assert_eq!(ActiveState::ExplicitlyActive, plugin.active);
+    }
+
+    #[test]
+    fn implicitly_activate_should_unghost_a_ghosted_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::Oblivion, game_dir);
+
+        copy_to_test_dir("Blank.esp", "Blank.esp.ghost", &settings);
+        let mut plugin = Plugin::new("Blank.esp", &settings).unwrap();
+
+        plugin.implicitly_activate().unwrap();
+
+        assert!(plugin.is_active());
+        assert_eq!(ActiveState::ImplicitlyActive, plugin.active);
+        assert_eq!("Blank.esp", plugin.name());
+        assert!(game_dir.join("Data").join("Blank.esp").exists());
+    }
+
+    #[test]
+    fn implicitly_activate_should_not_change_state_of_explicitly_active_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let game_dir = tmp_dir.path();
+
+        let settings = game_settings(GameId::Oblivion, game_dir);
+
+        copy_to_test_dir("Blank.esp", "Blank.esp", &settings);
+        let mut plugin =
+            Plugin::with_active("Blank.esp", &settings, ActiveState::ExplicitlyActive).unwrap();
+
+        plugin.implicitly_activate().unwrap();
+
+        assert!(plugin.is_active());
+        assert_eq!(ActiveState::ExplicitlyActive, plugin.active);
     }
 
     #[test]

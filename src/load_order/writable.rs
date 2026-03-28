@@ -254,7 +254,7 @@ fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
 
         if let Some(index) = blueprint_ships_plugin_index {
             if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
-                plugin.activate()?;
+                plugin.implicitly_activate()?;
             }
         }
     }
@@ -328,6 +328,8 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
 
     for index in existing_plugin_indices {
         if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
+            // set_active_plugins explicitly activates all given plugins,
+            // including those that were previously implicitly active.
             plugin.activate()?;
         }
     }
@@ -396,6 +398,7 @@ mod tests {
         prepare_bulk_plugins, prepend_early_loader, prepend_master, set_blueprint_flag,
         set_master_flag,
     };
+    use crate::plugin::ActiveState;
     use crate::tests::{copy_to_test_dir, NON_ASCII};
 
     struct TestLoadOrder {
@@ -423,7 +426,11 @@ mod tests {
         let mut game_settings = game_settings_for_test(game_id, game_dir);
         mock_game_files(&mut game_settings);
 
-        let mut plugins = vec![Plugin::with_active("Blank.esp", &game_settings, true).unwrap()];
+        let mut plugins =
+            vec![
+                Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                    .unwrap(),
+            ];
 
         if game_id != GameId::Starfield {
             plugins.push(Plugin::new("Blank - Different.esp", &game_settings).unwrap());
@@ -928,6 +935,14 @@ mod tests {
 
         assert!(load_order.is_active(plugin_name));
         assert!(load_order.is_active(blueprint_ships));
+        assert!(load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
+        assert!(!load_order
+            .find_plugin(blueprint_ships)
+            .unwrap()
+            .is_explicitly_active());
     }
 
     #[test]
@@ -943,6 +958,10 @@ mod tests {
         activate(&mut load_order, plugin_name).unwrap();
 
         assert!(load_order.is_active(plugin_name));
+        assert!(load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
     }
 
     #[test]

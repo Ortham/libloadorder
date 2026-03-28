@@ -28,7 +28,7 @@ use unicase::{eq, UniCase};
 use super::readable::{ReadableLoadOrder, ReadableLoadOrderBase};
 use crate::enums::Error;
 use crate::game_settings::GameSettings;
-use crate::plugin::{trim_dot_ghost, Plugin};
+use crate::plugin::{trim_dot_ghost, ActiveState, Plugin};
 use crate::GameId;
 
 pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + Sync {
@@ -179,7 +179,15 @@ pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + S
             self.game_settings().id(),
         )
         .into_par_iter()
-        .filter_map(|(filename, active)| {
+        .filter_map(|(filename, explicitly_active)| {
+            let active = if explicitly_active {
+                ActiveState::ExplicitlyActive
+            } else {
+                // Treat implicitly active plugins as inactive here, as it's
+                // easier to mark those plugins as implicitly active separately
+                // once they've been loaded.
+                ActiveState::Inactive
+            };
             Plugin::with_active(&filename, self.game_settings(), active).ok()
         })
         .collect();
@@ -205,7 +213,7 @@ pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + S
             .iter()
             .rev()
             .filter(|(filename, _)| set.insert(get_key_from_filename(filename, game_id)))
-            .map(|(filename, active)| (filename.clone(), *active))
+            .map(|(filename, explicitly_active)| (filename.clone(), *explicitly_active))
             .collect();
 
         unique_tuples.reverse();
@@ -226,7 +234,7 @@ pub(super) trait MutableLoadOrder: ReadableLoadOrder + ReadableLoadOrderBase + S
         let plugin_names = self.game_settings().implicitly_active_plugins().to_vec();
 
         for plugin_name in plugin_names {
-            activate_unvalidated(self, &plugin_name)?;
+            implicitly_activate(self, &plugin_name)?;
         }
 
         Ok(())
@@ -756,20 +764,24 @@ fn validate_plugins_load_before_their_masters(plugins: &[Plugin]) -> Result<(), 
     Ok(())
 }
 
-fn activate_unvalidated<T: MutableLoadOrder + ?Sized>(
+fn implicitly_activate<T: MutableLoadOrder + ?Sized>(
     load_order: &mut T,
     filename: &str,
 ) -> Result<(), Error> {
     if let Some(plugin) = load_order.find_plugin_mut(filename) {
-        plugin.activate()
+        plugin.implicitly_activate()
     } else {
         // Ignore any errors trying to load the plugin to save checking if it's
         // valid and then loading it if it is.
-        Plugin::with_active(filename, load_order.game_settings(), true)
-            .map(|plugin| {
-                insert(load_order, plugin);
-            })
-            .or(Ok(()))
+        Plugin::with_active(
+            filename,
+            load_order.game_settings(),
+            ActiveState::ImplicitlyActive,
+        )
+        .map(|plugin| {
+            insert(load_order, plugin);
+        })
+        .or(Ok(()))
     }
 }
 
@@ -816,7 +828,11 @@ mod tests {
         let mut game_settings = game_settings_for_test(game_id, game_path);
         mock_game_files(&mut game_settings);
 
-        let mut plugins = vec![Plugin::with_active("Blank.esp", &game_settings, true).unwrap()];
+        let mut plugins =
+            vec![
+                Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                    .unwrap(),
+            ];
 
         if game_id != GameId::Starfield {
             plugins.push(Plugin::new("Blank - Different.esp", &game_settings).unwrap());

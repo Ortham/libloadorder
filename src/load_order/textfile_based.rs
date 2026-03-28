@@ -85,6 +85,7 @@ impl TextfileBasedLoadOrder {
 
         let file = File::create(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut writer = BufWriter::new(file);
+
         for plugin_name in self.active_plugin_names() {
             writer
                 .write_all(&strict_encode(plugin_name)?)
@@ -314,6 +315,7 @@ mod tests {
     use super::*;
 
     use crate::load_order::tests::*;
+    use crate::plugin::ActiveState;
     use crate::tests::{copy_to_test_dir, set_file_timestamps, NON_ASCII};
     use std::fs::remove_dir_all;
     use tempfile::tempdir;
@@ -331,7 +333,8 @@ mod tests {
         mock_game_files(&mut game_settings);
 
         let plugins = vec![
-            Plugin::with_active("Blank.esp", &game_settings, true).unwrap(),
+            Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                .unwrap(),
             Plugin::new("Blank - Different.esp", &game_settings).unwrap(),
         ];
 

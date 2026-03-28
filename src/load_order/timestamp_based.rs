@@ -87,10 +87,12 @@ impl TimestampBasedLoadOrder {
         writer
             .write_all(&prelude)
             .map_err(|e| Error::IoError(path.clone(), e))?;
+
         for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
             if self.game_settings().id() == GameId::Morrowind {
                 write!(writer, "GameFile{index}=").map_err(|e| Error::IoError(path.clone(), e))?;
             }
+
             writer
                 .write_all(&strict_encode(plugin_name)?)
                 .map_err(|e| Error::IoError(path.clone(), e))?;
@@ -293,6 +295,7 @@ mod tests {
     use super::*;
 
     use crate::load_order::tests::*;
+    use crate::plugin::ActiveState;
     use crate::tests::{copy_to_test_dir, set_file_timestamps, set_timestamps, NON_ASCII};
     use std::fs::remove_dir_all;
     use std::io::Read;
@@ -304,7 +307,8 @@ mod tests {
         mock_game_files(&mut game_settings);
 
         let plugins = vec![
-            Plugin::with_active("Blank.esp", &game_settings, true).unwrap(),
+            Plugin::with_active("Blank.esp", &game_settings, ActiveState::ExplicitlyActive)
+                .unwrap(),
             Plugin::new("Blank - Different.esp", &game_settings).unwrap(),
         ];
 
