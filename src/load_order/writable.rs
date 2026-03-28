@@ -287,7 +287,24 @@ pub(super) fn deactivate<T: MutableLoadOrder>(
     load_order
         .find_plugin_mut(plugin_name)
         .ok_or_else(|| Error::PluginNotFound(plugin_name.to_owned()))
-        .map(Plugin::deactivate)
+        .map(Plugin::deactivate)?;
+
+    if load_order
+        .game_settings()
+        .supports_blueprint_ships_plugins()
+    {
+        // Find a BlueprintShips plugin that is implicitly active but not due to
+        // game config or another active plugin, and deactivate it.
+        if let Some(plugin) = blueprint_ships_plugin_name(plugin_name)
+            .filter(|n| !is_implicitly_active(load_order, n))
+            .and_then(|n| load_order.find_plugin_mut(&n))
+            .filter(|p| !p.is_explicitly_active())
+        {
+            plugin.deactivate();
+        }
+    }
+
+    Ok(())
 }
 
 fn is_implicitly_active<T: ReadableLoadOrder + ReadableLoadOrderBase>(
@@ -1139,6 +1156,124 @@ mod tests {
         deactivate(&mut load_order, blueprint_ships).unwrap();
 
         assert!(!load_order.is_active(blueprint_ships));
+    }
+
+    #[test]
+    fn deactivate_should_deactivate_a_related_implicitly_active_blueprint_ships_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        let index = add(&mut load_order, blueprint_ships).unwrap();
+        load_order.plugins[index].implicitly_activate().unwrap();
+
+        let plugin_name = "Blank.esp";
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(!load_order.is_active(blueprint_ships));
+    }
+
+    #[test]
+    fn deactivate_should_not_deactivate_a_related_blueprint_ships_that_is_explicitly_active() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        add(&mut load_order, blueprint_ships).unwrap();
+        activate(&mut load_order, blueprint_ships).unwrap();
+
+        let plugin_name = "Blank.esp";
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+    }
+
+    #[test]
+    fn deactivate_should_not_deactivate_a_related_blueprint_ships_that_is_implicitly_active_due_to_another_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name = "Blank.esm";
+        copy_to_test_dir("Blank.full.esm", plugin_name, load_order.game_settings());
+        add(&mut load_order, plugin_name).unwrap();
+        activate(&mut load_order, plugin_name).unwrap();
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        let index = add(&mut load_order, blueprint_ships).unwrap();
+        load_order.plugins[index].implicitly_activate().unwrap();
+
+        let plugin_name = "Blank.esp";
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+    }
+
+    #[test]
+    fn deactivate_should_not_deactivate_a_related_blueprint_ships_that_is_implicitly_active_due_to_game_settings(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        let index = add(&mut load_order, blueprint_ships).unwrap();
+        load_order.plugins[index].implicitly_activate().unwrap();
+
+        std::fs::write(
+            load_order
+                .game_settings
+                .plugins_directory()
+                .parent()
+                .unwrap()
+                .join("Starfield.ccc"),
+            blueprint_ships,
+        )
+        .unwrap();
+        load_order
+            .game_settings
+            .refresh_implicitly_active_plugins()
+            .unwrap();
+
+        let plugin_name = "Blank.esp";
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+
+        deactivate(&mut load_order, plugin_name).unwrap();
+
+        assert!(!load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
     }
 
     #[test]
