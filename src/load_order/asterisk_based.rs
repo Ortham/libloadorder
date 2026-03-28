@@ -76,7 +76,7 @@ impl AsteriskBasedLoadOrder {
             .iter()
             // Implicitly-active plugins can activate BlueprintShips plugins.
             .filter(|p| p.is_active())
-            .filter_map(|p| p.name().get(..p.name().len() - 4).map(UniCase::new))
+            .map(|p| UniCase::new(p.name_without_extension()))
             .collect();
 
         let indexes: Vec<_> = self

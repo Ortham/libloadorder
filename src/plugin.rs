@@ -131,6 +131,13 @@ impl Plugin {
         &self.name
     }
 
+    pub fn name_without_extension(&self) -> &str {
+        self.name
+            .rfind('.')
+            .and_then(|i| self.name.get(..i))
+            .unwrap_or_default()
+    }
+
     pub fn name_matches(&self, string: &str) -> bool {
         eq(self.name(), trim_dot_ghost(string, self.game_id))
     }
