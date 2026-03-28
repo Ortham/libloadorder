@@ -71,29 +71,28 @@ impl AsteriskBasedLoadOrder {
     }
 
     fn activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
-        let active_basenames: HashSet<UniCase<String>> = self
+        let active_base_names: HashSet<UniCase<&str>> = self
             .plugins()
             .iter()
-            .filter_map(|p| {
-                if p.is_active() {
-                    p.name()
-                        .get(..p.name().len() - 4)
-                        .map(str::to_owned)
-                        .map(UniCase::new)
-                } else {
-                    None
-                }
-            })
+            .filter(|p| p.is_active())
+            .filter_map(|p| p.name().get(..p.name().len() - 4).map(UniCase::new))
             .collect();
 
-        for plugin in &mut self.plugins {
-            if let Some(base_plugin_name) = blueprint_ships_base_plugin_name(plugin.name())
-                .map(str::to_owned)
-                .map(UniCase::new)
-            {
-                if active_basenames.contains(&base_plugin_name) {
-                    plugin.activate()?;
-                }
+        let indexes: Vec<_> = self
+            .plugins
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| {
+                blueprint_ships_base_plugin_name(p.name())
+                    .map(UniCase::new)
+                    .is_some_and(|n| active_base_names.contains(&n))
+            })
+            .map(|(i, _)| i)
+            .collect();
+
+        for index in indexes {
+            if let Some(plugin) = self.plugins.get_mut(index) {
+                plugin.activate()?;
             }
         }
 
