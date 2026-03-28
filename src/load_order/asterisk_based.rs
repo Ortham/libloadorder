@@ -154,7 +154,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 continue;
             }
 
-            if plugin.is_active() {
+            if plugin.is_explicitly_active() {
                 write!(writer, "*").map_err(|e| Error::IoError(path.clone(), e))?;
             }
             writer

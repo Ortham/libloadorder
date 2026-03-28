@@ -261,7 +261,11 @@ impl WritableLoadOrder for OpenMWLoadOrder {
             .collect();
 
         let cfg_path = self.game_settings.active_plugins_file();
-        write_openmw_cfg(cfg_path, &data_paths, &self.active_plugin_names())?;
+        write_openmw_cfg(
+            cfg_path,
+            &data_paths,
+            &self.explicitly_active_plugin_names(),
+        )?;
 
         Ok(())
     }

@@ -86,7 +86,7 @@ impl TextfileBasedLoadOrder {
         let file = File::create(path).map_err(|e| Error::IoError(path.clone(), e))?;
         let mut writer = BufWriter::new(file);
 
-        for plugin_name in self.active_plugin_names() {
+        for plugin_name in self.explicitly_active_plugin_names() {
             writer
                 .write_all(&strict_encode(plugin_name)?)
                 .map_err(|e| Error::IoError(path.clone(), e))?;

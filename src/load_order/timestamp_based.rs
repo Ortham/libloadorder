@@ -88,7 +88,7 @@ impl TimestampBasedLoadOrder {
             .write_all(&prelude)
             .map_err(|e| Error::IoError(path.clone(), e))?;
 
-        for (index, plugin_name) in self.active_plugin_names().iter().enumerate() {
+        for (index, plugin_name) in self.explicitly_active_plugin_names().iter().enumerate() {
             if self.game_settings().id() == GameId::Morrowind {
                 write!(writer, "GameFile{index}=").map_err(|e| Error::IoError(path.clone(), e))?;
             }

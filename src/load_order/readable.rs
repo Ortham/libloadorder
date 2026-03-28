@@ -34,6 +34,14 @@ pub trait ReadableLoadOrderBase {
             .enumerate()
             .find(|(_, p)| p.name_matches(plugin_name))
     }
+
+    fn explicitly_active_plugin_names(&self) -> Vec<&str> {
+        self.plugins()
+            .iter()
+            .filter(|p| p.is_explicitly_active())
+            .map(Plugin::name)
+            .collect()
+    }
 }
 
 pub trait ReadableLoadOrder {
