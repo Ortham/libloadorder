@@ -7,6 +7,7 @@ repository.workspace = true
 categories.workspace = true
 license.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 dirs = ">= 1.0.0, < 7"
@@ -45,6 +46,7 @@ repository = "https://github.com/Ortham/libloadorder.git"
 categories = ["games"]
 license = "GPL-3.0"
 edition = "2021"
+rust-version = "1.82"
 
 # Deny some rustc lints that are allow-by-default.
 [workspace.lints.rust]

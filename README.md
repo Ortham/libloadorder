@@ -47,3 +47,7 @@ cmake -B ffi/build ffi
 cmake --build ffi/build
 ctest --test-dir ffi/build --output-on-failure
 ```
+
+## Minimum supported Rust version
+
+The minimum supported Rust version is `1.82`. This may change at any time, but there is a CI job to check that it does not change unexpectedly.
