@@ -215,11 +215,9 @@ pub(super) fn activate<T: MutableLoadOrder>(
         counts.count_plugin(plugin);
 
         validate_plugin_counts(&counts, max_active_full_plugins)?;
-
-        plugin.activate()?;
     }
 
-    Ok(())
+    plugin.activate()
 }
 
 fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
@@ -230,32 +228,34 @@ fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
         return Err(Error::PluginNotFound(plugin_name.to_owned()));
     };
 
+    // If the game supports implicitly active blueprint ships plugins, check if
+    // a matching inactive plugin is present.
+    let blueprint_ships_pair = find_blueprint_ships_plugin_for_plugin(load_order, plugin_name)
+        .filter(|(_, p)| !p.is_active());
+
     if !plugin.is_active() {
         let max_active_full_plugins = load_order.max_active_full_plugins();
         let mut counts = count_active_plugins(load_order);
 
         counts.count_plugin(plugin);
 
-        // If the game supports implicitly active blueprint ships plugins, check
-        // if a matching inactive plugin is present and record its index (to
-        // avoid holding two mut refs at the same time, as the compiler can't
-        // see they're disjoint).
-        let blueprint_ships_plugin_index =
-            find_blueprint_ships_plugin_for_plugin(load_order, plugin_name)
-                .filter(|(_, p)| !p.is_active())
-                .inspect(|(_, p)| counts.count_plugin(p))
-                .map(|(i, _)| i);
-
-        validate_plugin_counts(&counts, max_active_full_plugins)?;
-
-        if let Some(plugin) = load_order.plugins_mut().get_mut(plugin_index) {
-            plugin.activate()?;
+        if let Some((_, blueprint_ships_plugin)) = blueprint_ships_pair {
+            counts.count_plugin(blueprint_ships_plugin);
         }
 
-        if let Some(index) = blueprint_ships_plugin_index {
-            if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
-                plugin.implicitly_activate()?;
-            }
+        validate_plugin_counts(&counts, max_active_full_plugins)?;
+    }
+
+    // Drop the BlueprintShips plugin reference.
+    let blueprint_ships_plugin_index = blueprint_ships_pair.map(|(i, _)| i);
+
+    if let Some(plugin) = load_order.plugins_mut().get_mut(plugin_index) {
+        plugin.activate()?;
+    }
+
+    if let Some(index) = blueprint_ships_plugin_index {
+        if let Some(plugin) = load_order.plugins_mut().get_mut(index) {
+            plugin.implicitly_activate()?;
         }
     }
 
@@ -961,6 +961,33 @@ mod tests {
     }
 
     #[test]
+    fn activate_should_explicitly_activate_an_implicitly_active_plugin() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
+
+        let plugin_name = "Blank - Different.esp";
+        load_order
+            .find_plugin_mut(plugin_name)
+            .unwrap()
+            .implicitly_activate()
+            .unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+        assert!(!load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
+
+        activate(&mut load_order, plugin_name).unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
+    }
+
+    #[test]
     fn activate_with_blueprint_ship_base_plugin_should_also_activate_blueprint_ships_plugin() {
         let tmp_dir = tempdir().unwrap();
         let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
@@ -977,6 +1004,49 @@ mod tests {
         add(&mut load_order, blueprint_ships).unwrap();
 
         assert!(!load_order.is_active(plugin_name));
+        assert!(!load_order.is_active(blueprint_ships));
+
+        activate(&mut load_order, plugin_name).unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+        assert!(load_order.is_active(blueprint_ships));
+        assert!(load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
+        assert!(!load_order
+            .find_plugin(blueprint_ships)
+            .unwrap()
+            .is_explicitly_active());
+    }
+
+    #[test]
+    fn activate_should_explicitly_activate_an_implicitly_active_plugin_and_implicitly_active_its_blueprintships_plugin(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name = "Blank.esp";
+        deactivate(&mut load_order, plugin_name).unwrap();
+        load_order
+            .find_plugin_mut(plugin_name)
+            .unwrap()
+            .implicitly_activate()
+            .unwrap();
+
+        let blueprint_ships = "BlueprintShips-Blank.esm";
+        copy_to_test_dir(
+            "Blank.full.esm",
+            blueprint_ships,
+            load_order.game_settings(),
+        );
+        add(&mut load_order, blueprint_ships).unwrap();
+
+        assert!(load_order.is_active(plugin_name));
+        assert!(!load_order
+            .find_plugin(plugin_name)
+            .unwrap()
+            .is_explicitly_active());
         assert!(!load_order.is_active(blueprint_ships));
 
         activate(&mut load_order, plugin_name).unwrap();
