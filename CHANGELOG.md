@@ -3,6 +3,43 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.7.0] - 2026-04-07
+
+### Added
+
+- libloadorder's Cargo config now includes `package.rust-version`, set to
+  `1.82`.
+- Starfield's new `SFBGS00D.esm`, `SFBGS047.esm` and `SFBGS050.esm` plugins are
+  now recognised as hardcoded to load in that order, following `SFBGS008.esm`.
+
+### Changed
+
+- Libloadorder now tracks whether plugins are explicitly or implicitly active.
+  Plugins that are activated by `plugins.txt` (or the game's equivalent, e.g.
+  `Morrowind.ini` for Morrowind) entries are treated as explicitly active, while
+  other reasons for being active (such as being hardcoded by the game to always
+  be active, listed in CCC files, specified as test files in game .ini files,
+  identified by .nam files, or activated by other plugins being active) are
+  treated as implicitly active.
+
+  `WritableLoadOrder::activate()` and `WritableLoadOrder::set_active_plugins()`
+  explicitly activate the plugins that they are given.
+
+  `WritableLoadOrder::save()`'s behaviour is unchanged, so while it may record
+  some implicitly active plugins as explicitly active when writing to
+  `plugins.txt` (or equivalent files), it will not make the same changes to
+  libloadorder's current state.
+- `WritableLoadOrder::deactivate()` will now error if you try to deactivate a
+  plugin that is implicitly activated by another plugin. For example, if the
+  game is Starfield and `A.esp` is active, then you can't deactivate
+  `BlueprintShips-A.esm`.
+- `WritableLoadOrder::deactivate()` will now also deactivate any other plugins
+  that are implicitly active only due to the given plugin. For example, if the
+  game is Starfield and `A.esp` is active, then deactivating it will also
+  deactivate `BlueprintShips-A.esm`, unless the latter is explicitly active or
+  has another reason for being implicitly active (e.g. because `A.esm` is
+  active).
+
 ## [18.6.0] - 2026-03-26
 
 ### Added
