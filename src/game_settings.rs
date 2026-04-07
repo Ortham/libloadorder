@@ -90,6 +90,9 @@ pub(crate) const STARFIELD_HARDCODED_PLUGINS: &[&str] = &[
     "SFBGS006.esm",
     "SFBGS007.esm",
     "SFBGS008.esm",
+    "SFBGS00D.esm",
+    "SFBGS047.esm",
+    "SFBGS050.esm",
 ];
 
 const OPENMW_HARDCODED_PLUGINS: &[&str] = &["builtin.omwscripts"];
@@ -1675,6 +1678,9 @@ mod tests {
             "SFBGS006.esm",
             "SFBGS007.esm",
             "SFBGS008.esm",
+            "SFBGS00D.esm",
+            "SFBGS047.esm",
+            "SFBGS050.esm",
         ];
         assert_eq!(plugins, settings.early_loading_plugins());
     }
@@ -1769,6 +1775,9 @@ mod tests {
             "SFBGS006.esm",
             "SFBGS007.esm",
             "SFBGS008.esm",
+            "SFBGS00D.esm",
+            "SFBGS047.esm",
+            "SFBGS050.esm",
             "test.esm",
         ];
         assert_eq!(expected, settings.early_loading_plugins());
@@ -1800,6 +1809,9 @@ mod tests {
             "SFBGS006.esm",
             "SFBGS007.esm",
             "SFBGS008.esm",
+            "SFBGS00D.esm",
+            "SFBGS047.esm",
+            "SFBGS050.esm",
             "test.esm",
         ];
         assert_eq!(expected, settings.early_loading_plugins());
@@ -1832,6 +1844,9 @@ mod tests {
             "SFBGS006.esm",
             "SFBGS007.esm",
             "SFBGS008.esm",
+            "SFBGS00D.esm",
+            "SFBGS047.esm",
+            "SFBGS050.esm",
             "test2.esm",
         ];
         assert_eq!(expected, settings.early_loading_plugins());
@@ -1946,6 +1961,9 @@ mod tests {
             "SFBGS006.esm",
             "SFBGS007.esm",
             "SFBGS008.esm",
+            "SFBGS00D.esm",
+            "SFBGS047.esm",
+            "SFBGS050.esm",
             "test.esm",
         ];
         assert_eq!(expected, settings.early_loading_plugins());
