@@ -154,6 +154,16 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 continue;
             }
 
+            if is_blueprint_ships_plugin(plugin.name()) || plugin.is_blueprint_plugin() {
+                // Skip these since they get removed from plugins.txt by the
+                // game. This means that the load order being saved might not be
+                // respected by the game when it loads, if the affected plugins
+                // have different load order positions than where they load when
+                // only implicitly active, but that's an unusual edge-case that
+                // can only be enforced by basically fighting the game.
+                continue;
+            }
+
             if plugin.is_active() {
                 write!(writer, "*").map_err(|e| Error::IoError(path.clone(), e))?;
             }
@@ -178,11 +188,11 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
             // Blueprint masters get loaded after all other plugins, and if not
             // explicitly active they get loaded in timestamp order, so set
             // their timestamps to reflect their load order, so that they'll
-            // load in the intended order even after Starfield strips them from
+            // load in the intended order even though they're not written to
             // plugins.txt.
             // This doesn't help with non-master blueprint plugins, or with
             // BlueprintShips plugins that are not blueprint plugins, but all
-            // official BlueprintShips plugins (as of 2026-03-26) are blueprint
+            // official BlueprintShips plugins (as of 2026-04-13) are blueprint
             // masters, and there are no other official blueprint plugins.
             // I don't know how common blueprint plugins are in mods.
             let blueprint_masters_iter =
@@ -1039,6 +1049,56 @@ mod tests {
         let new_timestamp = plugin_path.metadata().unwrap().modified().unwrap();
 
         assert_eq!(original_timestamp, new_timestamp);
+    }
+
+    #[test]
+    fn save_should_not_write_blueprint_plugins_to_plugins_txt() {
+        let tmp_dir = tempdir().unwrap();
+
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name1 = "Blueprint1.esp";
+        let plugin_name2 = "Blueprint2.esp";
+        copy_as_blueprint_plugin(&load_order.game_settings, plugin_name1);
+        copy_as_blueprint_plugin(&load_order.game_settings, plugin_name2);
+        load_order.add(plugin_name1).unwrap();
+        load_order
+            .find_plugin_mut(plugin_name1)
+            .unwrap()
+            .activate()
+            .unwrap();
+        load_order.add(plugin_name2).unwrap();
+
+        load_order.save().unwrap();
+
+        let contents =
+            std::fs::read_to_string(load_order.game_settings.active_plugins_file()).unwrap();
+        assert_eq!("*Blank.esp\n", contents);
+    }
+
+    #[test]
+    fn save_should_not_write_blueprint_ships_plugins_to_plugins_txt() {
+        let tmp_dir = tempdir().unwrap();
+
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name1 = "BlueprintShips-A.esm";
+        let plugin_name2 = "BlueprintShips-B.esm";
+        copy_to_test_dir("Blank.full.esm", plugin_name1, &load_order.game_settings);
+        copy_to_test_dir("Blank.full.esm", plugin_name2, &load_order.game_settings);
+        load_order.add(plugin_name1).unwrap();
+        load_order
+            .find_plugin_mut(plugin_name1)
+            .unwrap()
+            .activate()
+            .unwrap();
+        load_order.add(plugin_name2).unwrap();
+
+        load_order.save().unwrap();
+
+        let contents =
+            std::fs::read_to_string(load_order.game_settings.active_plugins_file()).unwrap();
+        assert_eq!("*Blank.esp\n", contents);
     }
 
     #[test]
