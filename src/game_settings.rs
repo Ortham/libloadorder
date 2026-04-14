@@ -18,6 +18,7 @@
  */
 
 use std::cmp::Ordering;
+use std::ffi::OsStr;
 use std::fs::{read_dir, DirEntry, File, FileType};
 use std::io::{BufRead, BufReader};
 use std::iter::once;
@@ -826,25 +827,23 @@ fn plugin_path(
 
 fn sort_plugins_dir_entries(a: &DirEntry, b: &DirEntry) -> Ordering {
     // Sort by file modification timestamps, in ascending order. If two
-    // timestamps are equal, sort by filenames in descending order.
+    // timestamps are equal, sort by uppercased filenames in descending order.
     let m_a = get_target_modified_timestamp(a);
     let m_b = get_target_modified_timestamp(b);
 
     match m_a.cmp(&m_b) {
-        Ordering::Equal => a.file_name().cmp(&b.file_name()).reverse(),
+        Ordering::Equal => compare_uppercased_filenames(&a.file_name(), &b.file_name()).reverse(),
         x => x,
     }
 }
 
-fn sort_plugins_dir_entries_starfield(a: &DirEntry, b: &DirEntry) -> Ordering {
-    // Sort by file modification timestamps, in ascending order. If two
-    // timestamps are equal, sort by filenames in ascending order.
-    let m_a = get_target_modified_timestamp(a);
-    let m_b = get_target_modified_timestamp(b);
-
-    match m_a.cmp(&m_b) {
-        Ordering::Equal => a.file_name().cmp(&b.file_name()),
-        x => x,
+fn compare_uppercased_filenames(a: &OsStr, b: &OsStr) -> Ordering {
+    match (a.to_str(), b.to_str()) {
+        (Some(a), Some(b)) => a.to_uppercase().cmp(&b.to_uppercase()),
+        // The remaining cases are practically impossible for game plugins, but are included for
+        // completeness. If the filename can't be represented as a UTF-8 string then there's no way
+        // to know how to transform its case correctly, so they can only be compared as they are.
+        _ => a.cmp(b),
     }
 }
 
@@ -886,7 +885,6 @@ fn find_plugins_in_directories<'a>(
 
     let compare = match game_id {
         GameId::OpenMW => sort_plugins_dir_entries_openmw,
-        GameId::Starfield => sort_plugins_dir_entries_starfield,
         _ => sort_plugins_dir_entries,
     };
 
@@ -2553,7 +2551,7 @@ mod tests {
     }
 
     #[test]
-    fn find_plugins_in_directories_should_sort_files_by_descending_filename_if_timestamps_are_equal(
+    fn find_plugins_in_directories_should_sort_files_by_descending_uppercased_filename_if_timestamps_are_equal(
     ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
@@ -2581,6 +2579,9 @@ mod tests {
         set_file_timestamps(&game_path.join("Blank - Different.esp"), timestamp);
         set_file_timestamps(&game_path.join("Blank - Master Dependent.esp"), timestamp);
 
+        copy_to_dir("Blank.esp", game_path, "a.esp", GameId::Oblivion);
+        set_file_timestamps(&game_path.join("a.esp"), timestamp);
+
         let result = find_plugins_in_directories(once(&game_path.to_path_buf()), GameId::Oblivion);
 
         let plugin_paths = vec![
@@ -2588,6 +2589,7 @@ mod tests {
             game_path.join("Blank.esp"),
             game_path.join("Blank - Master Dependent.esp"),
             game_path.join("Blank - Different.esp"),
+            game_path.join("a.esp"),
             game_path.join(non_ascii),
         ];
 
@@ -2595,7 +2597,7 @@ mod tests {
     }
 
     #[test]
-    fn find_plugins_in_directories_should_sort_files_by_ascending_filename_if_timestamps_are_equal_and_game_is_starfield(
+    fn find_plugins_in_directories_should_sort_files_by_descending_uppercased_filename_if_timestamps_are_equal_and_game_is_starfield(
     ) {
         let tmp_dir = tempdir().unwrap();
         let game_path = tmp_dir.path();
@@ -2606,26 +2608,34 @@ mod tests {
             "Blank.medium.esm",
             "Blank.esp",
             "Blank - Override.esp",
+            "a.esp",
         ];
 
         let timestamp = 1_321_009_991;
 
-        for plugin_name in &plugin_names {
+        for plugin_name in &plugin_names[..plugin_names.len() - 1] {
             let path = game_path.join(plugin_name);
             if !path.exists() {
                 copy_to_dir(plugin_name, game_path, plugin_name, GameId::Starfield);
             }
             set_file_timestamps(&path, timestamp);
         }
+        copy_to_dir(
+            "Blank.esp",
+            game_path,
+            plugin_names.last().unwrap(),
+            GameId::Starfield,
+        );
 
         let result = find_plugins_in_directories(once(&game_path.to_path_buf()), GameId::Starfield);
 
         let plugin_paths = vec![
-            game_path.join("Blank - Override.esp"),
-            game_path.join("Blank.esp"),
-            game_path.join("Blank.full.esm"),
-            game_path.join("Blank.medium.esm"),
             game_path.join("Blank.small.esm"),
+            game_path.join("Blank.medium.esm"),
+            game_path.join("Blank.full.esm"),
+            game_path.join("Blank.esp"),
+            game_path.join("Blank - Override.esp"),
+            game_path.join("a.esp"),
         ];
 
         assert_eq!(plugin_paths, result);

@@ -233,7 +233,11 @@ fn set_plugin_timestamps<'a>(
 fn plugin_sorter(a: &Plugin, b: &Plugin) -> Ordering {
     if a.is_master_file() == b.is_master_file() {
         match a.modification_time().cmp(&b.modification_time()) {
-            Ordering::Equal => a.name().cmp(b.name()).reverse(),
+            Ordering::Equal => a
+                .name()
+                .to_uppercase()
+                .cmp(&b.name().to_uppercase())
+                .reverse(),
             x => x,
         }
     } else if a.is_master_file() {
@@ -764,16 +768,36 @@ mod tests {
         let mut plugin1 = Plugin::new("Blank.esp", load_order.game_settings()).unwrap();
         let mut plugin2 = Plugin::new("Blank - Different.esp", load_order.game_settings()).unwrap();
 
-        plugin1
-            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
-            .unwrap();
+        let time = UNIX_EPOCH + Duration::new(2, 0);
 
-        plugin2
-            .set_modification_time(UNIX_EPOCH + Duration::new(2, 0))
-            .unwrap();
+        plugin1.set_modification_time(time).unwrap();
+        plugin2.set_modification_time(time).unwrap();
 
         let ordering = plugin_sorter(&plugin1, &plugin2);
 
         assert_eq!(Ordering::Less, ordering);
+    }
+
+    #[test]
+    fn plugin_sorter_should_sort_in_descending_uppercased_filename_order_if_timestamps_are_equal() {
+        let tmp_dir = tempdir().unwrap();
+        let load_order = prepare(GameId::Morrowind, tmp_dir.path());
+
+        let plugin_name1 = "a.esp";
+        let plugin_name2 = "[.esp";
+        copy_to_test_dir("Blank.esp", plugin_name1, load_order.game_settings());
+        copy_to_test_dir("Blank.esp", plugin_name2, load_order.game_settings());
+
+        let mut plugin1 = Plugin::new(plugin_name1, load_order.game_settings()).unwrap();
+        let mut plugin2 = Plugin::new(plugin_name2, load_order.game_settings()).unwrap();
+
+        let time = UNIX_EPOCH + Duration::new(2, 0);
+
+        plugin1.set_modification_time(time).unwrap();
+        plugin2.set_modification_time(time).unwrap();
+
+        let ordering = plugin_sorter(&plugin1, &plugin2);
+
+        assert_eq!(Ordering::Greater, ordering);
     }
 }

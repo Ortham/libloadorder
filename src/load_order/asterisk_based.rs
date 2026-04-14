@@ -854,7 +854,7 @@ mod tests {
                 "starfield.esm",
                 "A.esm",
                 "BlueprintShips-Starfield.esm",
-                "BlueprintShips-a.esm"
+                "BlueprintShips-a.esm",
             ],
             load_order.active_plugin_names().as_slice()
         );
