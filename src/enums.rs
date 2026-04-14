@@ -112,6 +112,8 @@ pub enum Error {
         expected_pos: usize,
     },
     ImplicitlyActivePlugin(String),
+    BlueprintPluginImplicitlyActiveOnly(String),
+    BlueprintShipsPluginImplicitlyActiveOnly(String),
     NoLocalAppData,
     NoDocumentsPath,
     NoUserConfigPath,
@@ -170,6 +172,10 @@ impl fmt::Display for Error {
                 write!(f, "Attempted to load the early-loading plugin \"{name}\" at position {pos}, its expected position is {expected_pos}"),
             Error::ImplicitlyActivePlugin(name) =>
                 write!(f, "The implicitly active plugin \"{name}\" cannot be deactivated"),
+            Error::BlueprintPluginImplicitlyActiveOnly(name) =>
+                write!(f, "The blueprint plugin \"{name}\" cannot be explicitly activated because that state will not be recorded when the load order is saved"),
+            Error::BlueprintShipsPluginImplicitlyActiveOnly(name) =>
+                write!(f, "The BlueprintShips plugin \"{name}\" cannot be explicitly activated because that state will not be recorded when the load order is saved"),
             Error::NoLocalAppData => {
                 write!(f, "The game's local app data folder could not be detected")
             }

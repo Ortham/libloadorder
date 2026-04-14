@@ -224,9 +224,30 @@ fn activate_with_blueprint_ships_plugin<T: MutableLoadOrder>(
     load_order: &mut T,
     plugin_name: &str,
 ) -> Result<(), Error> {
+    if starts_with_blueprint_ships(plugin_name) {
+        // Don't allow a BlueprintShips plugin to be explicitly activated, since
+        // it won't be recorded in plugins.txt and so can only be implicitly
+        // activated.
+        return Err(Error::BlueprintPluginImplicitlyActiveOnly(
+            plugin_name.to_owned(),
+        ));
+    }
+
     let Some((plugin_index, plugin)) = load_order.find_plugin_and_index(plugin_name) else {
         return Err(Error::PluginNotFound(plugin_name.to_owned()));
     };
+
+    // Currently only Starfield supports blueprint plugins, and it also supports
+    // BlueprintShips plugins, so this check doesn't need to be copied into
+    // activate().
+    if plugin.is_blueprint_plugin() {
+        // Don't allow a blueprint plugin to be explicitly activated, since it
+        // won't be recorded in plugins.txt and so can only be implicitly
+        // activated.
+        return Err(Error::BlueprintPluginImplicitlyActiveOnly(
+            plugin.name().to_owned(),
+        ));
+    }
 
     // If the game supports implicitly active blueprint ships plugins, check if
     // a matching inactive plugin is present.
@@ -358,10 +379,25 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
         .game_settings()
         .supports_blueprint_ships_plugins()
     {
-        // Check that for any active plugins that would also cause a
-        // BlueprintShips to be implicitly active, that the BlueprintShips
-        // plugin is also listed.
         for active_plugin in active_plugin_names {
+            // Check that for all active BlueprintShips plugins that their base
+            // plugins are also listed.
+            // TODO: What about plugins that only start with BlueprintShips-? They won't be implicitly activated, but they'll still get removed from plugins.txt.
+            if let Some(base_plugin) = blueprint_ships_base_plugin_name(active_plugin) {
+                if !active_plugin_names.iter().any(|p| eq(*p, base_plugin)) {
+                    return Err(Error::BlueprintShipsPluginImplicitlyActiveOnly((*active_plugin).to_owned()));
+                }
+            }
+
+            // All blueprint plugins get removed from plugins.txt, so don't allow them to be explicitly activated.
+            // TODO: This may overlap with the above: a blueprint plugin that is a BlueprintShips plugin that is implicitly activated by another listed plugin should not cause an error.
+            if load_order.find_plugin(*active_plugin).filter(|p| p.is_blueprint_plugin()).is_some() {
+                return Err(Error::BlueprintPluginImplicitlyActiveOnly((*active_plugin).to_owned()));
+            }
+
+            // Check that for any active plugins that would also cause a
+            // BlueprintShips to be implicitly active, that the BlueprintShips
+            // plugin is also listed.
             if let Some(blueprint_ships_plugin_name) = blueprint_ships_plugin_name(active_plugin) {
                 validate_plugin_is_active(
                     load_order,
@@ -383,6 +419,18 @@ pub(super) fn set_active_plugins<T: MutableLoadOrder>(
     }
 
     Ok(())
+}
+
+pub(super) fn starts_with_blueprint_ships(plugin_name: &str) -> bool {
+    // Plugins that start with BlueprintShips- (case-insensitively compared) are
+    // removed from plugins.txt, even if they don't have the .esm file
+    // extension.
+    const BLUEPRINT_SHIPS_PREFIX: &str = "BlueprintShips-";
+
+    plugin_name
+        .get(..BLUEPRINT_SHIPS_PREFIX.len())
+        .filter(|prefix| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
+        .is_some()
 }
 
 fn blueprint_ships_plugin_name(plugin_name: &str) -> Option<String> {

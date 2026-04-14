@@ -32,7 +32,7 @@ use super::writable::{
 use crate::enums::{Error, GameId};
 use crate::game_settings::GameSettings;
 use crate::load_order::timestamp_based::save_partial_load_order_using_timestamps;
-use crate::load_order::writable::blueprint_ships_base_plugin_name;
+use crate::load_order::writable::{blueprint_ships_base_plugin_name, starts_with_blueprint_ships};
 use crate::plugin::{trim_dot_ghost, Plugin};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -297,18 +297,6 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     fn set_active_plugins(&mut self, active_plugin_names: &[&str]) -> Result<(), Error> {
         set_active_plugins(self, active_plugin_names)
     }
-}
-
-fn starts_with_blueprint_ships(plugin_name: &str) -> bool {
-    // Plugins that start with BlueprintShips- (case-insensitively compared) are
-    // removed from plugins.txt, even if they don't have the .esm file
-    // extension.
-    const BLUEPRINT_SHIPS_PREFIX: &str = "BlueprintShips-";
-
-    plugin_name
-        .get(..BLUEPRINT_SHIPS_PREFIX.len())
-        .filter(|prefix| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
-        .is_some()
 }
 
 fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
