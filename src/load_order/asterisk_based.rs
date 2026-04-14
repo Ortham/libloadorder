@@ -154,7 +154,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 continue;
             }
 
-            if is_blueprint_ships_plugin(plugin.name()) || plugin.is_blueprint_plugin() {
+            if starts_with_blueprint_ships(plugin.name()) || plugin.is_blueprint_plugin() {
                 // Skip these since they get removed from plugins.txt by the
                 // game. This means that the load order being saved might not be
                 // respected by the game when it loads, if the affected plugins
@@ -265,7 +265,7 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 !(self.game_settings.is_implicitly_active(plugin.name())
                     || plugin.is_blueprint_plugin()
                     || (self.game_settings.supports_blueprint_ships_plugins()
-                        && is_blueprint_ships_plugin(plugin.name())))
+                        && starts_with_blueprint_ships(plugin.name())))
             })
             .all(|plugin| set.contains(&UniCase::new(plugin.name().to_owned())));
 
@@ -285,8 +285,16 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
     }
 }
 
-fn is_blueprint_ships_plugin(plugin_name: &str) -> bool {
-    blueprint_ships_base_plugin_name(plugin_name).is_some()
+fn starts_with_blueprint_ships(plugin_name: &str) -> bool {
+    // Plugins that start with BlueprintShips- (case-insensitively compared) are
+    // removed from plugins.txt, even if they don't have the .esm file
+    // extension.
+    const BLUEPRINT_SHIPS_PREFIX: &str = "BlueprintShips-";
+
+    plugin_name
+        .get(..BLUEPRINT_SHIPS_PREFIX.len())
+        .filter(|prefix| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
+        .is_some()
 }
 
 fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {
@@ -1084,6 +1092,31 @@ mod tests {
 
         let plugin_name1 = "BlueprintShips-A.esm";
         let plugin_name2 = "BlueprintShips-B.esm";
+        copy_to_test_dir("Blank.full.esm", plugin_name1, &load_order.game_settings);
+        copy_to_test_dir("Blank.full.esm", plugin_name2, &load_order.game_settings);
+        load_order.add(plugin_name1).unwrap();
+        load_order
+            .find_plugin_mut(plugin_name1)
+            .unwrap()
+            .activate()
+            .unwrap();
+        load_order.add(plugin_name2).unwrap();
+
+        load_order.save().unwrap();
+
+        let contents =
+            std::fs::read_to_string(load_order.game_settings.active_plugins_file()).unwrap();
+        assert_eq!("*Blank.esp\n", contents);
+    }
+
+    #[test]
+    fn save_should_not_write_plugins_that_start_with_blueprint_ships_to_plugins_txt() {
+        let tmp_dir = tempdir().unwrap();
+
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        let plugin_name1 = "BlueprintShips-A.esp";
+        let plugin_name2 = "BlueprintShips-B.esp";
         copy_to_test_dir("Blank.full.esm", plugin_name1, &load_order.game_settings);
         copy_to_test_dir("Blank.full.esm", plugin_name2, &load_order.game_settings);
         load_order.add(plugin_name1).unwrap();
