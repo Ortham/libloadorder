@@ -51,7 +51,20 @@ impl AsteriskBasedLoadOrder {
 
     fn read_from_active_plugins_file(&self) -> Result<Vec<(String, bool)>, Error> {
         if self.ignore_active_plugins_file() {
-            Ok(Vec::new())
+            if self.game_settings.id() == GameId::Starfield {
+                // For Starfield, if the active plugins file is being ignored, it's because there
+                // are test files set, and they load in the order of their entries indexes, before
+                // any other non-early-loader plugins that are found, which effectively means that
+                // the entries replace plugins.txt.
+                Ok(self
+                    .game_settings
+                    .test_files()
+                    .iter()
+                    .map(|s| (s.clone(), true))
+                    .collect())
+            } else {
+                Ok(Vec::new())
+            }
         } else {
             read_plugin_names(
                 self.game_settings().active_plugins_file(),
@@ -66,8 +79,7 @@ impl AsteriskBasedLoadOrder {
         matches!(
             self.game_settings.id(),
             GameId::Fallout4 | GameId::Fallout4VR | GameId::Starfield
-        ) && self.game_settings.implicitly_active_plugins().len()
-            > self.game_settings.early_loading_plugins().len()
+        ) && !self.game_settings.test_files().is_empty()
     }
 
     fn implicitly_activate_blueprint_ships_plugins(&mut self) -> Result<(), Error> {
@@ -825,6 +837,40 @@ mod tests {
         load_order.load().unwrap();
 
         assert_eq!(vec!["Blank.esp"], load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_use_test_files_in_place_of_plugins_txt_for_starfield() {
+        let tmp_dir = tempdir().unwrap();
+
+        let ini_path = tmp_dir.path().join("my games/StarfieldCustom.ini");
+        create_parent_dirs(&ini_path).unwrap();
+        std::fs::write(
+            &ini_path,
+            "[General]\nsTestFile1=Blank.full.esm\nsTestFile2=Blank.medium.esm",
+        )
+        .unwrap();
+
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        write_active_plugins_file(load_order.game_settings(), &["Blank.esp"]);
+
+        load_order.load().unwrap();
+
+        assert_eq!(
+            vec!["Blank.full.esm", "Blank.medium.esm"],
+            load_order.active_plugin_names()
+        );
+        assert_eq!(
+            vec![
+                "Blank.full.esm",
+                "Blank.medium.esm",
+                "Blank.small.esm",
+                "Blank.esp",
+                "Blank - Override.esp"
+            ],
+            load_order.plugin_names()
+        );
     }
 
     #[test]

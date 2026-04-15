@@ -46,6 +46,7 @@ pub struct GameSettings {
     load_order_path: Option<PathBuf>,
     implicitly_active_plugins: Vec<String>,
     early_loading_plugins: Vec<String>,
+    test_files: Vec<String>,
     additional_plugins_directories: Vec<PathBuf>,
 }
 
@@ -114,6 +115,12 @@ const PLUGINS_TXT: &str = "Plugins.txt";
 
 const OBLIVION_REMASTERED_RELATIVE_DATA_PATH: &str = "OblivionRemastered/Content/Dev/ObvData/Data";
 
+struct ImplicitlyActivePlugins {
+    early_loading_plugins: Vec<String>,
+    test_files: Vec<String>,
+    all: Vec<String>,
+}
+
 impl GameSettings {
     pub fn new(game_id: GameId, game_path: &Path) -> Result<GameSettings, Error> {
         let local_path = local_path(game_id, game_path)?.unwrap_or_default();
@@ -142,14 +149,17 @@ impl GameSettings {
         let additional_plugins_directories =
             additional_plugins_directories(game_id, game_path, &my_games_path)?;
 
-        let (early_loading_plugins, implicitly_active_plugins) =
-            GameSettings::load_implicitly_active_plugins(
-                game_id,
-                game_path,
-                &my_games_path,
-                &plugins_directory,
-                &additional_plugins_directories,
-            )?;
+        let ImplicitlyActivePlugins {
+            early_loading_plugins,
+            test_files,
+            all: implicitly_active_plugins,
+        } = GameSettings::load_implicitly_active_plugins(
+            game_id,
+            game_path,
+            &my_games_path,
+            &plugins_directory,
+            &additional_plugins_directories,
+        )?;
 
         Ok(GameSettings {
             id: game_id,
@@ -160,6 +170,7 @@ impl GameSettings {
             my_games_path,
             implicitly_active_plugins,
             early_loading_plugins,
+            test_files,
             additional_plugins_directories,
         })
     }
@@ -231,6 +242,10 @@ impl GameSettings {
             .any(|p| eq(p.as_str(), plugin))
     }
 
+    pub(crate) fn test_files(&self) -> &[String] {
+        &self.test_files
+    }
+
     pub fn plugins_directory(&self) -> PathBuf {
         self.plugins_directory.clone()
     }
@@ -284,17 +299,21 @@ impl GameSettings {
     }
 
     pub fn refresh_implicitly_active_plugins(&mut self) -> Result<(), Error> {
-        let (early_loading_plugins, implicitly_active_plugins) =
-            GameSettings::load_implicitly_active_plugins(
-                self.id,
-                &self.game_path,
-                &self.my_games_path,
-                &self.plugins_directory,
-                &self.additional_plugins_directories,
-            )?;
+        let ImplicitlyActivePlugins {
+            early_loading_plugins,
+            test_files,
+            all: implicitly_active_plugins,
+        } = GameSettings::load_implicitly_active_plugins(
+            self.id,
+            &self.game_path,
+            &self.my_games_path,
+            &self.plugins_directory,
+            &self.additional_plugins_directories,
+        )?;
 
         self.early_loading_plugins = early_loading_plugins;
         self.implicitly_active_plugins = implicitly_active_plugins;
+        self.test_files = test_files;
 
         Ok(())
     }
@@ -305,7 +324,7 @@ impl GameSettings {
         my_games_path: &Path,
         plugins_directory: &Path,
         additional_plugins_directories: &[PathBuf],
-    ) -> Result<(Vec<String>, Vec<String>), Error> {
+    ) -> Result<ImplicitlyActivePlugins, Error> {
         let mut test_files = test_files(game_id, game_path, my_games_path)?;
 
         if matches!(
@@ -331,7 +350,11 @@ impl GameSettings {
         let implicitly_active_plugins =
             implicitly_active_plugins(game_id, game_path, &early_loading_plugins, &test_files)?;
 
-        Ok((early_loading_plugins, implicitly_active_plugins))
+        Ok(ImplicitlyActivePlugins {
+            early_loading_plugins,
+            test_files,
+            all: implicitly_active_plugins,
+        })
     }
 }
 
