@@ -430,7 +430,7 @@ fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize>
 
     hoisted_index.or_else(|| {
         if plugin.is_master_file() {
-            find_first_non_master_position(plugins)
+            find_first_blueprint_master_or_non_master_position(plugins)
         } else {
             find_first_blueprint_master_position(plugins)
         }
@@ -793,6 +793,12 @@ fn find_first_blueprint_master_position(plugins: &[Plugin]) -> Option<usize> {
     plugins.iter().position(Plugin::is_blueprint_master)
 }
 
+fn find_first_blueprint_master_or_non_master_position(plugins: &[Plugin]) -> Option<usize> {
+    plugins
+        .iter()
+        .position(|p| !p.is_master_file() || p.is_blueprint_master())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1132,6 +1138,36 @@ mod tests {
         prepend_master(&mut load_order);
 
         let plugin = Plugin::new("Blank.esm", load_order.game_settings()).unwrap();
+        let position = load_order.insert_position(&plugin);
+
+        assert_eq!(1, position.unwrap());
+    }
+
+    #[test]
+    fn insert_position_should_return_the_first_blueprint_master_index_if_given_a_master_plugin_and_there_are_no_non_masters(
+    ) {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Starfield, tmp_dir.path());
+
+        prepend_master(&mut load_order);
+        load_order.plugins.pop();
+
+        let plugin_name = "Blueprint.esm";
+        copy_to_test_dir("Blank.full.esm", plugin_name, load_order.game_settings());
+        set_blueprint_flag(
+            GameId::Starfield,
+            &load_order
+                .game_settings
+                .plugins_directory()
+                .join(plugin_name),
+            true,
+        )
+        .unwrap();
+        load_order
+            .plugins
+            .push(Plugin::new(plugin_name, load_order.game_settings()).unwrap());
+
+        let plugin = Plugin::new("Blank.full.esm", load_order.game_settings()).unwrap();
         let position = load_order.insert_position(&plugin);
 
         assert_eq!(1, position.unwrap());
