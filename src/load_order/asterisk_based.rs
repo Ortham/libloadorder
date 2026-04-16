@@ -166,7 +166,9 @@ impl WritableLoadOrder for AsteriskBasedLoadOrder {
                 continue;
             }
 
-            if starts_with_blueprint_ships(plugin.name()) || plugin.is_blueprint_plugin() {
+            if self.game_settings().id() == GameId::Starfield
+                && (starts_with_blueprint_ships(plugin.name()) || plugin.is_blueprint_plugin())
+            {
                 // Skip these since they get removed from plugins.txt by the
                 // game. This means that the load order being saved might not be
                 // respected by the game when it loads, if the affected plugins
