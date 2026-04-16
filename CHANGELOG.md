@@ -3,6 +3,45 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.8.0] - 2026-04-16
+
+### Fixed
+
+- In situations where games sort plugins by timestamp, libloadorder's fallback
+  sorting for when two plugins have the same timestamp was to sort by
+  case-sensitive filename comparison. Testing found that the games actually sort
+  by uppercased filenames, so libloadorder has been updated to match that
+  behaviour.
+- In situations where Starfield sorts plugins by timestamp, testing previously
+  found that it sorted by ascending filename order, but in recent testing of
+  Starfield v1.16.236.0 it used descending filename order (matching most other
+  supported games), so libloadorder has been updated to match that behaviour.
+- When Starfield's ini files have `sTestFile` entries, testing had previously
+  found that the plugins given by those entries were loaded in timestamp order,
+  but testing with Starfield v1.16.236.0 found that it loaded the plugins in
+  order of the `sTestFile` entry indexes, and would update `plugins.txt` to list
+  all other (non-hardcoded) plugins after the `sTestFile` entry plugins, so
+  libloadorder has been updated to match that behaviour.
+- When loading a load order that contained an inactive master, one or more
+  blueprint masters and no non-master plugins, the inactive master was
+  incorrectly positioned after the blueprint masters if it had a more recent
+  modification timestamp.
+
+### Changed
+
+- When saving a Starfield load order, blueprint plugins and plugins with names
+  that start with `BlueprintShips-` are no longer written to `plugins.txt`, to
+  reflect that Starfield will remove them when it starts. This means that it is
+  effectively no longer possible to explicitly activate such plugins, or to
+  give them consistent load order positions unless they are blueprint masters.
+
+  Blueprint non-masters and plugins with names that begin with `BlueprintShips-`
+  but do not have a `.esm` file extension and/or that are not blueprint plugins
+  should be considered unsupported and their use avoided, as Starfield's
+  behaviour indicates that it probably intends for all blueprint plugins to be
+  blueprint masters, and for all `BlueprintShips-` plugins to be blueprint
+  masters that use the `.esm` file extension.
+
 ## [18.7.0] - 2026-04-07
 
 ### Added
