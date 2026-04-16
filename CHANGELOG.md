@@ -3,7 +3,14 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.8.1] - 2026-04-16
+
+This is a re-release of v18.8.0 with the correct commit tagged and the version
+number incremented to distinguish it from the yanked release.
+
 ## [18.8.0] - 2026-04-16
+
+This release was yanked because the wrong commit was tagged as the release.
 
 ### Fixed
 
