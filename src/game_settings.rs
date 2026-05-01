@@ -684,8 +684,7 @@ fn find_nam_plugins(plugins_path: &Path) -> Result<Vec<String>, Error> {
 fn is_file_type_supported(dir_entry: &DirEntry, game_id: GameId) -> bool {
     dir_entry
         .file_type()
-        .map(|f| keep_file_type(f, game_id))
-        .unwrap_or(false)
+        .is_ok_and(|f| keep_file_type(f, game_id))
 }
 
 #[cfg(unix)]

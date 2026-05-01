@@ -92,34 +92,34 @@ fn read_test_files(ini_path: &Path) -> Result<TestFiles, Error> {
 
     test_files[0] = ini
         .get_from(Some("General"), "sTestFile1")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[1] = ini
         .get_from(Some("General"), "sTestFile2")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[2] = ini
         .get_from(Some("General"), "sTestFile3")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[3] = ini
         .get_from(Some("General"), "sTestFile4")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[4] = ini
         .get_from(Some("General"), "sTestFile5")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[5] = ini
         .get_from(Some("General"), "sTestFile6")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[6] = ini
         .get_from(Some("General"), "sTestFile7")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[7] = ini
         .get_from(Some("General"), "sTestFile8")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[8] = ini
         .get_from(Some("General"), "sTestFile9")
-        .map(ToString::to_string);
+        .map(str::to_owned);
     test_files[9] = ini
         .get_from(Some("General"), "sTestFile10")
-        .map(ToString::to_string);
+        .map(str::to_owned);
 
     Ok(test_files)
 }
@@ -250,7 +250,7 @@ fn read_steam_language_config(appmanifest_acf_path: &Path) -> Result<Option<Stri
         .and_then(|o| o.get("language"))
         .and_then(|v| v.first())
         .and_then(keyvalues_parser::Value::get_str)
-        .map(ToString::to_string);
+        .map(str::to_owned);
 
     Ok(language)
 }

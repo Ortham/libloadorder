@@ -307,8 +307,7 @@ fn starts_with_blueprint_ships(plugin_name: &str) -> bool {
 
     plugin_name
         .get(..BLUEPRINT_SHIPS_PREFIX.len())
-        .filter(|prefix| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
-        .is_some()
+        .is_some_and(|prefix| BLUEPRINT_SHIPS_PREFIX.eq_ignore_ascii_case(prefix))
 }
 
 fn plugin_line_mapper(line: &str) -> Option<(&str, bool)> {

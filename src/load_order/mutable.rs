@@ -411,8 +411,7 @@ fn validate_early_loader_positions(
 fn generic_insert_position(plugins: &[Plugin], plugin: &Plugin) -> Option<usize> {
     let is_master_of = |p: &Plugin| {
         p.masters()
-            .map(|masters| masters.iter().any(|m| plugin.name_matches(m)))
-            .unwrap_or(false)
+            .is_ok_and(|masters| masters.iter().any(|m| plugin.name_matches(m)))
     };
 
     if plugin.is_blueprint_master() {
