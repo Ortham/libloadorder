@@ -106,12 +106,11 @@ fn default_user_config_dir(game_path: &Path) -> Result<PathBuf, Error> {
         // value.
         dirs::home_dir().map(|d| d.join(".var/app/org.openmw.OpenMW/config/openmw"))
     } else {
-        // Checking $HOST_XDG_CONFIG_HOME first in case libloadorder is running
-        // as part of a Flatpak app.
-        std::env::var_os("HOST_XDG_CONFIG_HOME")
-            .and_then(is_absolute_path)
-            .or_else(dirs::config_dir)
-            .map(|p| p.join("openmw"))
+        xdg_home(
+            "HOST_XDG_CONFIG_HOME",
+            Path::new(".config"),
+            dirs::config_dir,
+        )
     }
     .ok_or_else(|| Error::NoUserConfigPath)
 }
@@ -122,14 +121,42 @@ fn default_user_data_dir(is_flatpak_install: bool) -> Result<PathBuf, Error> {
     if is_flatpak_install {
         dirs::home_dir().map(|d| d.join(".var/app/org.openmw.OpenMW/data/openmw"))
     } else {
-        // Checking $HOST_XDG_DATA_HOME first in case libloadorder is
-        // running as part of a Flatpak app.
-        std::env::var_os("HOST_XDG_DATA_HOME")
-            .and_then(is_absolute_path)
-            .or_else(dirs::data_local_dir)
-            .map(|p| p.join("openmw"))
+        xdg_home(
+            "HOST_XDG_DATA_HOME",
+            Path::new(".local/share"),
+            dirs::data_local_dir,
+        )
     }
     .ok_or_else(|| Error::NoUserDataPath)
+}
+
+/// Get the relevant XDG home directory, accounting for possibly running inside
+/// a Flatpak sandbox.
+///
+/// Check the given HOST_XDG_*_HOME env var first, which is set to the host's
+/// XDG_*_HOME value if that env var is set and this code is running inside a
+/// Flatpak sandbox.
+/// If running inside a Flatpak sandbox but XDG_*_HOME is not set on the host,
+/// use HOME and the given home path suffix to get the correct host path.
+/// Otherwise, just use the given getter.
+#[cfg(not(windows))]
+fn xdg_home(
+    flatpak_host_env_var: &str,
+    home_path_suffix: &Path,
+    non_flatpak_getter: impl Fn() -> Option<PathBuf>,
+) -> Option<PathBuf> {
+    std::env::var_os(flatpak_host_env_var)
+        .and_then(is_absolute_path)
+        .or_else(|| fallback_xdg_home(home_path_suffix))
+        .or_else(non_flatpak_getter)
+        .map(|p| p.join("openmw"))
+}
+
+#[cfg(not(windows))]
+fn fallback_xdg_home(path_suffix: &Path) -> Option<PathBuf> {
+    std::env::var_os("FLATPAK_ID")
+        .and_then(|_| std::env::var_os("HOME"))
+        .map(|s| Path::new(&s).join(path_suffix))
 }
 
 #[expect(
