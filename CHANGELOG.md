@@ -3,6 +3,17 @@
 Version numbers are shared between libloadorder and libloadorder-ffi. This
 changelog does not include libloadorder-ffi changes.
 
+## [18.8.2] - 2026-05-04
+
+### Fixed
+
+- Resolving the default user config and user data directories referenced in
+  OpenMW configuration when libloadorder is running inside a Flatpak sandbox
+  and OpenMW was not installed as a Flatpak application and the host did not
+  have the `XDG_CONFIG_HOME` and/or `XDG_DATA_HOME` environment variables
+  defined would incorrectly look for the directories inside the current
+  Flatpak's XDG directories instead of on the host.
+
 ## [18.8.1] - 2026-04-16
 
 This is a re-release of v18.8.0 with the correct commit tagged and the version
