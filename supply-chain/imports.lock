@@ -1549,6 +1549,12 @@ delta = "1.0.94 -> 1.0.95"
 notes = "The only changes were to reflect changes in semver-exempt APIs to support nightly Rust changes."
 aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
 
+[[audits.ortham.audits.rayon]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "1.11.0 -> 1.12.0"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
 [[audits.ortham.audits.rustix]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-run"
