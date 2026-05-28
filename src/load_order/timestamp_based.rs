@@ -105,8 +105,12 @@ impl TimestampBasedLoadOrder {
     fn load_active_morrowind_plugins(&mut self) -> Result<(), Error> {
         self.deactivate_all();
 
-        let plugin_names =
-            read_morrowind_active_plugins(self.game_settings().active_plugins_file())?;
+        let file_path = self.game_settings().active_plugins_file();
+        if !file_path.exists() {
+            return Ok(());
+        }
+
+        let plugin_names = read_morrowind_active_plugins(file_path)?;
 
         for plugin_name in plugin_names {
             if let Some(plugin) = self.find_plugin_mut(&plugin_name) {
@@ -538,6 +542,16 @@ mod tests {
         let expected_filenames = vec!["Blank.esm", NON_ASCII];
 
         assert_eq!(expected_filenames, load_order.active_plugin_names());
+    }
+
+    #[test]
+    fn load_should_succeed_for_morrowind_even_if_morrowind_ini_does_not_exist() {
+        let tmp_dir = tempdir().unwrap();
+        let mut load_order = prepare(GameId::Morrowind, tmp_dir.path());
+
+        load_order.load().unwrap();
+
+        assert!(load_order.active_plugin_names().is_empty());
     }
 
     #[test]
