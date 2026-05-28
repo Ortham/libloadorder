@@ -289,15 +289,13 @@ fn is_flatpak_install(game_path: &Path) -> bool {
     // Flatpak app's top-level deploy directory (where the metadata file is).
     let metadata_file_path = game_path.join("../../metadata");
 
-    ini::Ini::load_from_file(metadata_file_path)
-        .map(|ini| {
-            if let Some(name) = ini.get_from(Some("Application"), "name") {
-                name == "org.openmw.OpenMW"
-            } else {
-                false
-            }
-        })
-        .unwrap_or(false)
+    ini::Ini::load_from_file(metadata_file_path).is_ok_and(|ini| {
+        if let Some(name) = ini.get_from(Some("Application"), "name") {
+            name == "org.openmw.OpenMW"
+        } else {
+            false
+        }
+    })
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
