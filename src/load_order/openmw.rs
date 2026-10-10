@@ -315,7 +315,7 @@ mod tests {
     use crate::{
         load_order::tests::{game_settings_for_test, mock_game_files, prepare_bulk_full_plugins},
         plugin::ActiveState,
-        tests::{copy_to_dir, create_file, NON_ASCII},
+        tests::{assert_eq_empty_string_slice, copy_to_dir, create_file, NON_ASCII},
     };
 
     use super::*;
@@ -368,7 +368,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert!(load_order.plugins.is_empty());
+        assert_eq!(load_order.plugins, []);
     }
 
     #[test]
@@ -696,7 +696,7 @@ mod tests {
 
         let lines = read_lines(&cfg_path(tmp_dir.path()));
 
-        assert!(lines.is_empty());
+        assert_eq_empty_string_slice!(lines);
     }
 
     #[test]

@@ -311,7 +311,9 @@ fn file_error(file_path: &Path, error: esplugin::Error) -> Error {
 mod tests {
     use super::*;
 
-    use crate::tests::{copy_to_dir, copy_to_test_dir, create_file, symlink_file};
+    use crate::tests::{
+        assert_eq_empty_string_slice, copy_to_dir, copy_to_test_dir, create_file, symlink_file,
+    };
     use std::path::PathBuf;
     use std::time::{Duration, UNIX_EPOCH};
     use tempfile::tempdir;
@@ -639,7 +641,7 @@ mod tests {
         create_file(&settings.plugins_directory().join(name));
         let plugin = Plugin::new(name, &settings).unwrap();
 
-        assert!(plugin.masters().unwrap().is_empty());
+        assert_eq_empty_string_slice!(plugin.masters().unwrap());
     }
 
     #[test]

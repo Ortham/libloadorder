@@ -722,6 +722,8 @@ pub(crate) fn write_openmw_cfg(
 mod tests {
     use tempfile::tempdir;
 
+    use crate::tests::assert_eq_empty_string_slice;
+
     use super::*;
 
     fn fixed_paths() -> FixedPaths {
@@ -762,7 +764,7 @@ mod tests {
     fn read_active_plugin_names_should_not_error_if_the_given_path_does_not_exist() {
         let data_paths = read_active_plugin_names(Path::new("missing")).unwrap();
 
-        assert!(data_paths.is_empty());
+        assert_eq_empty_string_slice!(data_paths);
     }
 
     #[test]
@@ -1375,7 +1377,7 @@ mod tests {
         let fixed_paths = fixed_paths();
         let state = load_game_configs(&fixed_paths).unwrap();
 
-        assert!(state.loaded_configs.is_empty());
+        assert_eq!(state.loaded_configs, []);
         assert_eq!(fixed_paths.global_config, state.user_config_dir);
     }
 

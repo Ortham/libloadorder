@@ -922,7 +922,9 @@ mod tests {
     use std::{fs::create_dir_all, io::Write};
     use tempfile::tempdir;
 
-    use crate::tests::{copy_to_dir, set_file_timestamps, symlink_file, NON_ASCII};
+    use crate::tests::{
+        assert_eq_empty_string_slice, copy_to_dir, set_file_timestamps, symlink_file, NON_ASCII,
+    };
 
     use super::*;
 
@@ -1672,16 +1674,16 @@ mod tests {
         assert_eq!(plugins, settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Morrowind);
-        assert!(settings.early_loading_plugins().is_empty());
+        assert_eq_empty_string_slice!(settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Oblivion);
-        assert!(settings.early_loading_plugins().is_empty());
+        assert_eq_empty_string_slice!(settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Fallout3);
-        assert!(settings.early_loading_plugins().is_empty());
+        assert_eq_empty_string_slice!(settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::FalloutNV);
-        assert!(settings.early_loading_plugins().is_empty());
+        assert_eq_empty_string_slice!(settings.early_loading_plugins());
 
         settings = game_with_generic_paths(GameId::Fallout4VR);
         plugins = vec!["Fallout4.esm", "Fallout4_VR.esm"];
@@ -2127,7 +2129,7 @@ mod tests {
         File::create(data_path.join("plugin.nam")).unwrap();
 
         let settings = game_with_game_path(GameId::Fallout3, game_path);
-        assert!(settings.implicitly_active_plugins().is_empty());
+        assert_eq_empty_string_slice!(settings.implicitly_active_plugins());
     }
 
     #[test]
@@ -2234,7 +2236,7 @@ mod tests {
         for game_id in game_ids {
             let settings = game_with_game_path(game_id, game_path);
 
-            assert!(settings.additional_plugins_directories().is_empty());
+            assert_eq_empty_string_slice!(settings.additional_plugins_directories());
         }
     }
 
@@ -2243,7 +2245,7 @@ mod tests {
     {
         let settings = game_with_generic_paths(GameId::Fallout4);
 
-        assert!(settings.additional_plugins_directories().is_empty());
+        assert_eq_empty_string_slice!(settings.additional_plugins_directories());
     }
 
     #[test]

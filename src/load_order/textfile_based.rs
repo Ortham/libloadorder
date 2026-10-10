@@ -558,7 +558,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert!(load_order.plugins().is_empty());
+        assert_eq!(load_order.plugins(), []);
     }
 
     #[test]
