@@ -26,6 +26,14 @@ use crate::game_settings::GameSettings;
 
 pub(crate) const NON_ASCII: &str = "Bl\u{e0}\u{f1}k.esp";
 
+macro_rules! assert_eq_empty_string_slice {
+    ($cond:expr) => {{
+        let empty: [String; 0] = [];
+        assert_eq!($cond, &empty);
+    }};
+}
+pub(crate) use assert_eq_empty_string_slice;
+
 pub(crate) fn copy_to_test_dir(from_path: &str, to_file: &str, game_settings: &GameSettings) {
     let testing_plugins_dir = testing_plugins_dir(game_settings.id());
     let data_dir = game_settings.plugins_directory();

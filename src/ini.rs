@@ -384,6 +384,8 @@ mod tests {
 
     use tempfile::tempdir;
 
+    use crate::tests::assert_eq_empty_string_slice;
+
     use super::*;
 
     fn prep_dirs(tempdir: &tempfile::TempDir) -> (PathBuf, PathBuf) {
@@ -968,7 +970,7 @@ mod tests {
         let files =
             test_files(GameId::Morrowind, &PathBuf::default(), &PathBuf::default()).unwrap();
 
-        assert!(files.is_empty());
+        assert_eq_empty_string_slice!(files);
     }
 
     #[test]

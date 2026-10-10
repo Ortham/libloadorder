@@ -304,7 +304,10 @@ mod tests {
 
     use crate::load_order::tests::*;
     use crate::plugin::ActiveState;
-    use crate::tests::{copy_to_test_dir, set_file_timestamps, set_timestamps, NON_ASCII};
+    use crate::tests::{
+        assert_eq_empty_string_slice, copy_to_test_dir, set_file_timestamps, set_timestamps,
+        NON_ASCII,
+    };
     use std::fs::remove_dir_all;
     use std::io::Read;
     use std::path::Path;
@@ -448,7 +451,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert!(load_order.plugins().is_empty());
+        assert_eq!(load_order.plugins(), []);
     }
 
     #[test]
@@ -528,7 +531,7 @@ mod tests {
         let mut load_order = prepare(GameId::Oblivion, tmp_dir.path());
 
         assert!(load_order.load().is_ok());
-        assert!(load_order.active_plugin_names().is_empty());
+        assert_eq_empty_string_slice!(load_order.active_plugin_names());
     }
 
     #[test]
@@ -551,7 +554,7 @@ mod tests {
 
         load_order.load().unwrap();
 
-        assert!(load_order.active_plugin_names().is_empty());
+        assert_eq_empty_string_slice!(load_order.active_plugin_names());
     }
 
     #[test]
