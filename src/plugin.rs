@@ -72,6 +72,10 @@ impl Plugin {
         game_settings: &GameSettings,
         active: ActiveState,
     ) -> Result<Plugin, Error> {
+        if !has_plugin_extension(filename, game_settings.id()) {
+            return Err(Error::InvalidPath(filename.into()));
+        }
+
         let filepath = game_settings.plugin_path(filename);
 
         let filepath = if game_settings.id().allow_plugin_ghosting() {
@@ -379,7 +383,7 @@ mod tests {
         copy_to_test_dir(name, ghosted_name, &settings);
         match Plugin::with_active(ghosted_name, &settings, ActiveState::Inactive).unwrap_err() {
             Error::InvalidPath(p) => {
-                assert_eq!(game_dir.join("resources/vfs").join(ghosted_name), p);
+                assert_eq!(Path::new(ghosted_name), p);
             }
             e => panic!("Expected invalid path error, got {e:?}"),
         }
