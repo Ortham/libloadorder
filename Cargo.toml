@@ -10,7 +10,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-dirs = ">= 1.0.0, < 7"
+dirs = ">= 1.0.0, < 8"
 encoding_rs = ">= 0.4.0, < 0.9"
 esplugin = "6.1"
 unicase = "2.6"

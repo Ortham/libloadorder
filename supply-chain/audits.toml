@@ -1,6 +1,11 @@
 
 # cargo-vet audits file
 
+[[audits.dirs]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "6.0.0 -> 7.0.0"
+
 [[audits.keyvalues-parser]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
