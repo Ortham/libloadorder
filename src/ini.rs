@@ -227,7 +227,7 @@ fn read_steam_language_config(appmanifest_acf_path: &Path) -> Result<Option<Stri
     let content = std::fs::read_to_string(appmanifest_acf_path)
         .map_err(|e| Error::IoError(appmanifest_acf_path.to_path_buf(), e))?;
 
-    let language = keyvalues_parser::Vdf::parse(&content)
+    let language = keyvalues_parser::parse(&content)
         .map_err(|e| {
             let detail = match e {
                 keyvalues_parser::error::Error::EscapedParseError(e) => e.to_string(),

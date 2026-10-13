@@ -11,6 +11,11 @@ who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "0.2.0 -> 0.2.1"
 
+[[audits.keyvalues-parser]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.4"
+
 [[audits.rust-ini]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
