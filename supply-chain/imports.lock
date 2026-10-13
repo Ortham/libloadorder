@@ -1535,6 +1535,12 @@ criteria = "safe-to-deploy"
 delta = "4.5.32 -> 4.5.37"
 aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
 
+[[audits.ortham.audits.errno]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+version = "0.3.14"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/svg_to_ico/refs/heads/master/supply-chain/audits.toml"
+
 [[audits.ortham.audits.half]]
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
@@ -1571,6 +1577,12 @@ aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/
 who = "Oliver Hamlet <git@ortham.net>"
 criteria = "safe-to-deploy"
 delta = "2.8.1 -> 2.9.0"
+aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
+
+[[audits.ortham.audits.unicase]]
+who = "Oliver Hamlet <git@ortham.net>"
+criteria = "safe-to-deploy"
+delta = "2.9.0 -> 2.10.0"
 aggregated-from = "https://raw.githubusercontent.com/Ortham/esplugin/refs/heads/master/supply-chain/audits.toml"
 
 [[audits.ortham.audits.winapi-util]]
